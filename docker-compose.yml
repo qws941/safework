@@ -94,6 +94,7 @@ services:
       APP_PORT: 4545
       TZ: Asia/Seoul
     volumes:
+      - ./app:/app
       - app_uploads:/app/uploads
     ports:
       - "4545:4545"

@@ -1,0 +1,465 @@
+<!-- Admin Sidebar Navigation -->
+<div class="admin-sidebar">
+    <div class="sidebar-header">
+        <h4><i class="bi bi-speedometer2"></i> 관리자 메뉴</h4>
+    </div>
+    
+    <ul class="sidebar-menu">
+        <!-- 대시보드 -->
+        <li class="menu-item {{ 'active' if request.endpoint == 'admin.dashboard' }}">
+            <a href="{{ url_for('admin.dashboard') }}">
+                <i class="bi bi-house-door"></i> 기존 대시보드
+            </a>
+        </li>
+        
+        <!-- SafeWork 대시보드 -->
+        <li class="menu-item {{ 'active' if request.endpoint == 'admin.safework_dashboard' }}">
+            <a href="{{ url_for('admin.safework_dashboard') }}">
+                <i class="bi bi-shield-check"></i> SafeWork 대시보드
+            </a>
+        </li>
+        
+        <!-- 건강검진 관리 -->
+        <li class="menu-item has-submenu">
+            <a href="#" class="menu-toggle">
+                <i class="bi bi-clipboard-pulse"></i> 건강검진 관리
+                <i class="bi bi-chevron-down"></i>
+            </a>
+            <ul class="submenu">
+                <li>
+                    <a href="{{ url_for('survey.admin_dashboard') }}">
+                        <i class="bi bi-list-check"></i> 제출 현황
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('survey.admin_001_musculoskeletal') }}">
+                        <i class="bi bi-body"></i> 근골격계 (001)
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('survey.admin_002_new_employee') }}">
+                        <i class="bi bi-person-plus"></i> 신규입사자 (002)
+                    </a>
+                </li>
+                <li class="divider"></li>
+                <li>
+                    <a href="{{ url_for('survey.admin_dashboard', form_type='001') }}">
+                        <i class="bi bi-download"></i> 001 Excel 다운로드
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('survey.admin_dashboard', form_type='002') }}">
+                        <i class="bi bi-download"></i> 002 Excel 다운로드
+                    </a>
+                </li>
+            </ul>
+        </li>
+        
+        <!-- 보건관리 -->
+        <li class="menu-item has-submenu">
+            <a href="#" class="menu-toggle">
+                <i class="bi bi-hospital"></i> 보건관리
+                <i class="bi bi-chevron-down"></i>
+            </a>
+            <ul class="submenu">
+                <li>
+                    <a href="/admin/safework/medical-visits">
+                        <i class="bi bi-capsule"></i> 의무실 관리
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/safework/consultations">
+                        <i class="bi bi-chat-dots"></i> 건강상담 기록
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/safework/health-programs">
+                        <i class="bi bi-heart-pulse"></i> 건강증진 프로그램
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/safework/special-management">
+                        <i class="bi bi-person-exclamation"></i> 특별관리 대상자
+                    </a>
+                </li>
+            </ul>
+        </li>
+        
+        <!-- 작업환경 관리 -->
+        <li class="menu-item has-submenu">
+            <a href="#" class="menu-toggle">
+                <i class="bi bi-shield-exclamation"></i> 작업환경 관리
+                <i class="bi bi-chevron-down"></i>
+            </a>
+            <ul class="submenu">
+                <li>
+                    <a href="/admin/safework/environment-measurements">
+                        <i class="bi bi-thermometer"></i> 작업환경측정
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/safework/risk-assessment">
+                        <i class="bi bi-exclamation-triangle"></i> 위험성 평가
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/safework/msds">
+                        <i class="bi bi-radioactive"></i> MSDS 관리
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/safework/protective-equipment">
+                        <i class="bi bi-tools"></i> 보호구 관리
+                    </a>
+                </li>
+            </ul>
+        </li>
+        
+        <!-- 근로자 관리 -->
+        <li class="menu-item has-submenu">
+            <a href="#" class="menu-toggle">
+                <i class="bi bi-people"></i> 근로자 관리
+                <i class="bi bi-chevron-down"></i>
+            </a>
+            <ul class="submenu">
+                <li>
+                    <a href="/admin/safework/workers">
+                        <i class="bi bi-person-lines-fill"></i> 근로자 목록
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/safework/education">
+                        <i class="bi bi-mortarboard"></i> 교육 이수 현황
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/safework/certifications">
+                        <i class="bi bi-award"></i> 자격/면허 관리
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/safework/departments">
+                        <i class="bi bi-building"></i> 부서별 현황
+                    </a>
+                </li>
+            </ul>
+        </li>
+        
+        <!-- 법규 준수 -->
+        <li class="menu-item has-submenu">
+            <a href="#" class="menu-toggle">
+                <i class="bi bi-book"></i> 법규 준수
+                <i class="bi bi-chevron-down"></i>
+            </a>
+            <ul class="submenu">
+                <li>
+                    <a href="#">
+                        <i class="bi bi-check2-square"></i> 중대재해처벌법
+                    </a>
+                </li>
+                <li>
+                    <a href="#">
+                        <i class="bi bi-clipboard-check"></i> 산업안전보건법
+                    </a>
+                </li>
+                <li>
+                    <a href="#">
+                        <i class="bi bi-calendar-check"></i> 점검 일정
+                    </a>
+                </li>
+                <li>
+                    <a href="#">
+                        <i class="bi bi-file-text"></i> 법정 서류
+                    </a>
+                </li>
+            </ul>
+        </li>
+        
+        <!-- 문서 관리 -->
+        <li class="menu-item has-submenu">
+            <a href="#" class="menu-toggle">
+                <i class="bi bi-folder"></i> 문서 관리
+                <i class="bi bi-chevron-down"></i>
+            </a>
+            <ul class="submenu">
+                <li>
+                    <a href="{{ url_for('document_admin.index') }}">
+                        <i class="bi bi-file-earmark"></i> 문서 목록
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('document_admin.upload') }}">
+                        <i class="bi bi-upload"></i> 문서 업로드
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('document_admin.categories') }}">
+                        <i class="bi bi-tags"></i> 카테고리 관리
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('document.templates') }}">
+                        <i class="bi bi-file-ruled"></i> 양식/템플릿
+                    </a>
+                </li>
+            </ul>
+        </li>
+        
+        <!-- 통계/분석 -->
+        <li class="menu-item has-submenu">
+            <a href="#" class="menu-toggle">
+                <i class="bi bi-graph-up"></i> 통계/분석
+                <i class="bi bi-chevron-down"></i>
+            </a>
+            <ul class="submenu">
+                <li>
+                    <a href="#">
+                        <i class="bi bi-bar-chart"></i> 건강 통계
+                    </a>
+                </li>
+                <li>
+                    <a href="#">
+                        <i class="bi bi-pie-chart"></i> 부서별 분석
+                    </a>
+                </li>
+                <li>
+                    <a href="#">
+                        <i class="bi bi-activity"></i> KPI 관리
+                    </a>
+                </li>
+                <li>
+                    <a href="#">
+                        <i class="bi bi-calendar3"></i> 월별 보고서
+                    </a>
+                </li>
+            </ul>
+        </li>
+        
+        <!-- 시스템 관리 -->
+        <li class="menu-item has-submenu">
+            <a href="#" class="menu-toggle">
+                <i class="bi bi-gear"></i> 시스템 관리
+                <i class="bi bi-chevron-down"></i>
+            </a>
+            <ul class="submenu">
+                <li>
+                    <a href="{{ url_for('admin.users') }}">
+                        <i class="bi bi-person-gear"></i> 사용자 관리
+                    </a>
+                </li>
+                <li>
+                    <a href="#">
+                        <i class="bi bi-key"></i> 권한 설정
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('migration.migration_status') }}">
+                        <i class="bi bi-database"></i> DB 마이그레이션
+                    </a>
+                </li>
+                <li>
+                    <a href="#">
+                        <i class="bi bi-journal-text"></i> 시스템 로그
+                    </a>
+                </li>
+                <li>
+                    <a href="#">
+                        <i class="bi bi-sliders"></i> 환경 설정
+                    </a>
+                </li>
+            </ul>
+        </li>
+    </ul>
+    
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <i class="bi bi-person-circle"></i>
+            <span>{{ current_user.username }}</span>
+        </div>
+        <a href="{{ url_for('auth.logout') }}" class="logout-btn">
+            <i class="bi bi-box-arrow-right"></i> 로그아웃
+        </a>
+    </div>
+</div>
+
+<style>
+.admin-sidebar {
+    width: 250px;
+    background: #1a1d23;
+    color: #fff;
+    height: 100vh;
+    position: fixed;
+    left: 0;
+    top: 0;
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+.sidebar-header {
+    padding: 20px;
+    background: #141721;
+    border-bottom: 1px solid #2a2d35;
+}
+
+.sidebar-header h4 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: #fff;
+}
+
+.sidebar-menu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.menu-item {
+    position: relative;
+}
+
+.menu-item > a {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    color: #b8bcc8;
+    text-decoration: none;
+    transition: all 0.3s;
+}
+
+.menu-item > a:hover {
+    background: #2a2d35;
+    color: #fff;
+}
+
+.menu-item.active > a {
+    background: #667eea;
+    color: #fff;
+}
+
+.menu-item i {
+    margin-right: 10px;
+    width: 20px;
+    text-align: center;
+}
+
+.menu-toggle {
+    justify-content: space-between !important;
+}
+
+.menu-toggle i:last-child {
+    margin-left: auto;
+    margin-right: 0;
+    transition: transform 0.3s;
+}
+
+.menu-item.open .menu-toggle i:last-child {
+    transform: rotate(180deg);
+}
+
+.submenu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    background: #0d0f14;
+    display: none;
+}
+
+.menu-item.open .submenu {
+    display: block;
+}
+
+.submenu li a {
+    display: flex;
+    align-items: center;
+    padding: 10px 20px 10px 40px;
+    color: #8b91a7;
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: all 0.3s;
+}
+
+.submenu li a:hover {
+    background: #1a1d23;
+    color: #fff;
+}
+
+.submenu .divider {
+    height: 1px;
+    background: #2a2d35;
+    margin: 5px 0;
+}
+
+.sidebar-footer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 15px;
+    background: #141721;
+    border-top: 1px solid #2a2d35;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    color: #b8bcc8;
+}
+
+.user-info i {
+    margin-right: 8px;
+    font-size: 1.2rem;
+}
+
+.logout-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    background: #dc3545;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 5px;
+    transition: all 0.3s;
+}
+
+.logout-btn:hover {
+    background: #c82333;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .admin-sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s;
+    }
+    
+    .admin-sidebar.active {
+        transform: translateX(0);
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle submenu
+    const menuToggles = document.querySelectorAll('.menu-toggle');
+    menuToggles.forEach(toggle => {
+        toggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            const parent = this.parentElement;
+            parent.classList.toggle('open');
+        });
+    });
+    
+    // Keep current submenu open
+    const currentPath = window.location.pathname;
+    document.querySelectorAll('.submenu a').forEach(link => {
+        if (link.getAttribute('href') === currentPath) {
+            link.closest('.menu-item').classList.add('open');
+            link.style.color = '#fff';
+            link.style.background = '#1a1d23';
+        }
+    });
+});
+</script>

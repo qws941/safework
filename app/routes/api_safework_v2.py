@@ -1,0 +1,681 @@
+"""SafeWork API 라우트 (v2.0) - 확장된 API 엔드포인트"""
+
+from datetime import datetime, date
+from flask import Blueprint, jsonify, request
+from flask_login import login_required, current_user
+from sqlalchemy import text, func
+from models import db
+from models_safework_v2 import (
+    SafeworkWorker, SafeworkHealthCheck, SafeworkMedicalVisit,
+    SafeworkMedication, SafeworkMedicationLog, SafeworkHealthPlan
+)
+
+api_safework_bp = Blueprint('api_safework', __name__)
+
+
+# 근로자 관리 API
+@api_safework_bp.route('/workers', methods=['GET'])
+@login_required
+def get_workers():
+    """근로자 목록 조회"""
+    try:
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 20, type=int)
+        department = request.args.get('department')
+        search = request.args.get('search')
+        
+        query = SafeworkWorker.query
+        
+        if department:
+            query = query.filter_by(department=department)
+        if search:
+            query = query.filter(
+                db.or_(
+                    SafeworkWorker.name.contains(search),
+                    SafeworkWorker.employee_number.contains(search)
+                )
+            )
+        
+        workers = query.paginate(page=page, per_page=per_page, error_out=False)
+        
+        return jsonify({
+            'success': True,
+            'data': [{
+                'id': w.id,
+                'employee_number': w.employee_number,
+                'name': w.name,
+                'department': w.department,
+                'position': w.position,
+                'phone': w.phone,
+                'email': w.email,
+                'is_active': w.is_active
+            } for w in workers.items],
+            'total': workers.total,
+            'page': page,
+            'per_page': per_page
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_safework_bp.route('/workers', methods=['POST'])
+@login_required
+def create_worker():
+    """근로자 등록"""
+    try:
+        data = request.get_json()
+        
+        # 중복 체크
+        if SafeworkWorker.query.filter_by(employee_number=data['employee_number']).first():
+            return jsonify({'success': False, 'error': '이미 등록된 사번입니다.'}), 400
+        
+        worker = SafeworkWorker(
+            employee_number=data['employee_number'],
+            name=data['name'],
+            department=data.get('department'),
+            position=data.get('position'),
+            birth_date=datetime.strptime(data['birth_date'], '%Y-%m-%d').date() if data.get('birth_date') else None,
+            gender=data.get('gender'),
+            phone=data.get('phone'),
+            email=data.get('email'),
+            emergency_contact=data.get('emergency_contact'),
+            emergency_relationship=data.get('emergency_relationship'),
+            address=data.get('address'),
+            hire_date=datetime.strptime(data['hire_date'], '%Y-%m-%d').date() if data.get('hire_date') else None,
+            blood_type=data.get('blood_type'),
+            medical_conditions=data.get('medical_conditions'),
+            allergies=data.get('allergies')
+        )
+        
+        db.session.add(worker)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': '근로자가 등록되었습니다.',
+            'worker_id': worker.id
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_safework_bp.route('/workers/<int:worker_id>', methods=['PUT'])
+@login_required
+def update_worker(worker_id):
+    """근로자 정보 수정"""
+    try:
+        worker = SafeworkWorker.query.get_or_404(worker_id)
+        data = request.get_json()
+        
+        # 업데이트 가능한 필드들
+        for field in ['name', 'department', 'position', 'phone', 'email', 
+                     'emergency_contact', 'emergency_relationship', 'address',
+                     'blood_type', 'medical_conditions', 'allergies', 'is_active']:
+            if field in data:
+                setattr(worker, field, data[field])
+        
+        # 날짜 필드 처리
+        if 'birth_date' in data and data['birth_date']:
+            worker.birth_date = datetime.strptime(data['birth_date'], '%Y-%m-%d').date()
+        if 'hire_date' in data and data['hire_date']:
+            worker.hire_date = datetime.strptime(data['hire_date'], '%Y-%m-%d').date()
+        
+        worker.updated_at = datetime.utcnow()
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': '근로자 정보가 수정되었습니다.'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# 의무실 방문 기록 API
+@api_safework_bp.route('/medical-visits', methods=['GET'])
+@login_required
+def get_medical_visits():
+    """의무실 방문 기록 조회"""
+    try:
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 20, type=int)
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        worker_id = request.args.get('worker_id', type=int)
+        
+        query = SafeworkMedicalVisit.query.join(SafeworkWorker)
+        
+        if worker_id:
+            query = query.filter(SafeworkMedicalVisit.worker_id == worker_id)
+        if start_date:
+            query = query.filter(SafeworkMedicalVisit.visit_date >= start_date)
+        if end_date:
+            query = query.filter(SafeworkMedicalVisit.visit_date <= end_date)
+        
+        visits = query.order_by(SafeworkMedicalVisit.visit_date.desc()).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
+        
+        return jsonify({
+            'success': True,
+            'data': [{
+                'id': v.id,
+                'worker_name': v.worker.name,
+                'employee_number': v.worker.employee_number,
+                'department': v.worker.department,
+                'visit_date': v.visit_date.strftime('%Y-%m-%d %H:%M'),
+                'chief_complaint': v.chief_complaint,
+                'diagnosis': v.diagnosis,
+                'treatment': v.treatment,
+                'follow_up_needed': v.follow_up_needed,
+                'follow_up_date': v.follow_up_date.strftime('%Y-%m-%d') if v.follow_up_date else None
+            } for v in visits.items],
+            'total': visits.total,
+            'page': page,
+            'per_page': per_page
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_safework_bp.route('/medical-visits', methods=['POST'])
+@login_required
+def create_medical_visit():
+    """의무실 방문 기록 생성"""
+    try:
+        data = request.get_json()
+        
+        visit = SafeworkMedicalVisit(
+            worker_id=data['worker_id'],
+            visit_date=datetime.strptime(data['visit_date'], '%Y-%m-%dT%H:%M'),
+            chief_complaint=data.get('chief_complaint'),
+            blood_pressure=data.get('blood_pressure'),
+            heart_rate=data.get('heart_rate', type=int) if data.get('heart_rate') else None,
+            body_temp=data.get('body_temp', type=float) if data.get('body_temp') else None,
+            resp_rate=data.get('resp_rate', type=int) if data.get('resp_rate') else None,
+            diagnosis=data.get('diagnosis'),
+            treatment=data.get('treatment'),
+            medication_given=data.get('medication_given'),
+            follow_up_needed=data.get('follow_up_needed', False),
+            follow_up_date=datetime.strptime(data['follow_up_date'], '%Y-%m-%d').date() if data.get('follow_up_date') else None,
+            nurse_name=data.get('nurse_name', current_user.username),
+            notes=data.get('notes')
+        )
+        
+        db.session.add(visit)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': '의무실 방문 기록이 저장되었습니다.',
+            'visit_id': visit.id
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# 의약품 관리 API
+@api_safework_bp.route('/medications', methods=['GET'])
+@login_required
+def get_medications():
+    """의약품 목록 조회"""
+    try:
+        category = request.args.get('category')
+        stock_status = request.args.get('stock_status')
+        
+        query = SafeworkMedication.query
+        
+        if category:
+            query = query.filter_by(category=category)
+        
+        medications = query.all()
+        
+        # 재고 상태 필터링
+        if stock_status:
+            filtered = []
+            for med in medications:
+                if stock_status == 'out' and med.current_stock == 0:
+                    filtered.append(med)
+                elif stock_status == 'low' and 0 < med.current_stock <= med.minimum_stock:
+                    filtered.append(med)
+                elif stock_status == 'normal' and med.current_stock > med.minimum_stock:
+                    filtered.append(med)
+            medications = filtered
+        
+        return jsonify({
+            'success': True,
+            'data': [{
+                'id': m.id,
+                'name': m.name,
+                'category': m.category,
+                'unit': m.unit,
+                'current_stock': m.current_stock,
+                'minimum_stock': m.minimum_stock,
+                'expiry_date': m.expiry_date.strftime('%Y-%m-%d') if m.expiry_date else None,
+                'is_expired': m.expiry_date < datetime.now().date() if m.expiry_date else False,
+                'stock_status': 'out' if m.current_stock == 0 else 
+                              'low' if m.current_stock <= m.minimum_stock else 'normal'
+            } for m in medications]
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_safework_bp.route('/medications', methods=['POST'])
+@login_required
+def create_medication():
+    """의약품 등록"""
+    try:
+        data = request.get_json()
+        
+        medication = SafeworkMedication(
+            name=data['name'],
+            category=data.get('category'),
+            unit=data.get('unit'),
+            current_stock=data.get('current_stock', 0),
+            minimum_stock=data.get('minimum_stock', 0),
+            expiry_date=datetime.strptime(data['expiry_date'], '%Y-%m-%d').date() if data.get('expiry_date') else None,
+            supplier=data.get('supplier'),
+            price_per_unit=data.get('price_per_unit', type=float) if data.get('price_per_unit') else None,
+            location=data.get('location'),
+            notes=data.get('notes')
+        )
+        
+        db.session.add(medication)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': '의약품이 등록되었습니다.',
+            'medication_id': medication.id
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_safework_bp.route('/medications/<int:med_id>/adjust-stock', methods=['POST'])
+@login_required
+def adjust_medication_stock(med_id):
+    """의약품 재고 조정"""
+    try:
+        medication = SafeworkMedication.query.get_or_404(med_id)
+        data = request.get_json()
+        
+        adjust_type = data['adjust_type']  # in, out, use, disposal
+        quantity = int(data['quantity'])
+        
+        # 재고 조정
+        if adjust_type == 'in':
+            medication.current_stock += quantity
+        else:
+            if medication.current_stock < quantity:
+                return jsonify({'success': False, 'error': '재고가 부족합니다.'}), 400
+            medication.current_stock -= quantity
+        
+        # 로그 기록
+        log = SafeworkMedicationLog(
+            medication_id=med_id,
+            worker_id=data.get('worker_id'),
+            action_type=adjust_type,
+            quantity=quantity,
+            reason=data.get('reason'),
+            performed_by=current_user.username
+        )
+        
+        medication.updated_at = datetime.utcnow()
+        db.session.add(log)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': '재고가 조정되었습니다.',
+            'new_stock': medication.current_stock
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# 건강검진 관리 API
+@api_safework_bp.route('/health-checks', methods=['POST'])
+@login_required
+def create_health_check():
+    """건강검진 기록 생성"""
+    try:
+        data = request.get_json()
+        
+        health_check = SafeworkHealthCheck(
+            worker_id=data['worker_id'],
+            check_type=data.get('check_type'),
+            check_date=datetime.strptime(data['check_date'], '%Y-%m-%d').date(),
+            hospital=data.get('hospital'),
+            result=data.get('result'),
+            blood_pressure=data.get('blood_pressure'),
+            blood_sugar=data.get('blood_sugar'),
+            cholesterol=data.get('cholesterol'),
+            bmi=data.get('bmi', type=float) if data.get('bmi') else None,
+            vision_left=data.get('vision_left'),
+            vision_right=data.get('vision_right'),
+            hearing_left=data.get('hearing_left'),
+            hearing_right=data.get('hearing_right'),
+            chest_xray=data.get('chest_xray'),
+            findings=data.get('findings'),
+            recommendations=data.get('recommendations'),
+            next_check_date=datetime.strptime(data['next_check_date'], '%Y-%m-%d').date() if data.get('next_check_date') else None
+        )
+        
+        db.session.add(health_check)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': '건강검진 기록이 저장되었습니다.',
+            'check_id': health_check.id
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# 대시보드 통계 API
+@api_safework_bp.route('/dashboard/stats', methods=['GET'])
+@login_required
+def get_dashboard_stats():
+    """대시보드 통계 데이터"""
+    try:
+        # 근로자 통계
+        total_workers = SafeworkWorker.query.filter_by(is_active=True).count()
+        
+        # 오늘 의무실 방문
+        today = datetime.now().date()
+        today_visits = SafeworkMedicalVisit.query.filter(
+            db.func.date(SafeworkMedicalVisit.visit_date) == today
+        ).count()
+        
+        # 이번달 건강검진
+        current_month = datetime.now().month
+        current_year = datetime.now().year
+        month_checks = SafeworkHealthCheck.query.filter(
+            db.extract('year', SafeworkHealthCheck.check_date) == current_year,
+            db.extract('month', SafeworkHealthCheck.check_date) == current_month
+        ).count()
+        
+        # 재고 부족 의약품
+        low_stock_meds = SafeworkMedication.query.filter(
+            SafeworkMedication.current_stock <= SafeworkMedication.minimum_stock,
+            SafeworkMedication.current_stock > 0
+        ).count()
+        
+        # 후속조치 필요
+        followup_needed = SafeworkMedicalVisit.query.filter(
+            SafeworkMedicalVisit.follow_up_needed == True,
+            SafeworkMedicalVisit.follow_up_date >= today
+        ).count()
+        
+        return jsonify({
+            'success': True,
+            'stats': {
+                'total_workers': total_workers,
+                'today_visits': today_visits,
+                'month_checks': month_checks,
+                'low_stock_meds': low_stock_meds,
+                'followup_needed': followup_needed
+            }
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# 고급 의약품 재고 관리 API
+@api_safework_bp.route('/medications/alerts', methods=['GET'])
+@login_required
+def get_medication_alerts():
+    """의약품 재고 알림 조회 (재고 부족, 유효기간 임박)"""
+    try:
+        # 재고 부족 의약품
+        low_stock = db.session.execute(text("""
+            SELECT id, name, current_stock, minimum_stock, 
+                   CASE 
+                       WHEN current_stock = 0 THEN 'out_of_stock'
+                       WHEN current_stock <= minimum_stock THEN 'low_stock'
+                       ELSE 'normal'
+                   END as alert_type
+            FROM safework_medications 
+            WHERE current_stock <= minimum_stock AND is_active = 1
+            ORDER BY current_stock ASC
+        """)).fetchall()
+        
+        # 유효기간 임박 의약품 (30일 이내)
+        expiring_soon = db.session.execute(text("""
+            SELECT id, name, expiry_date, current_stock,
+                   DATEDIFF(expiry_date, CURDATE()) as days_until_expiry
+            FROM safework_medications 
+            WHERE expiry_date IS NOT NULL 
+            AND expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+            AND current_stock > 0 AND is_active = 1
+            ORDER BY expiry_date ASC
+        """)).fetchall()
+        
+        # 이미 만료된 의약품
+        expired = db.session.execute(text("""
+            SELECT id, name, expiry_date, current_stock
+            FROM safework_medications 
+            WHERE expiry_date < CURDATE() AND current_stock > 0 AND is_active = 1
+            ORDER BY expiry_date ASC
+        """)).fetchall()
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'low_stock': [dict(row._mapping) for row in low_stock],
+                'expiring_soon': [dict(row._mapping) for row in expiring_soon],
+                'expired': [dict(row._mapping) for row in expired],
+                'total_alerts': len(low_stock) + len(expiring_soon) + len(expired)
+            }
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_safework_bp.route('/medications/usage-analytics', methods=['GET'])
+@login_required
+def get_medication_usage_analytics():
+    """의약품 사용량 분석"""
+    try:
+        # 최근 30일 사용량
+        days = request.args.get('days', 30, type=int)
+        
+        usage_data = db.session.execute(text("""
+            SELECT 
+                m.id,
+                m.name,
+                m.category,
+                COUNT(ml.id) as usage_count,
+                SUM(CASE WHEN ml.action_type = 'use' THEN ml.quantity ELSE 0 END) as total_used,
+                AVG(CASE WHEN ml.action_type = 'use' THEN ml.quantity ELSE NULL END) as avg_per_use,
+                MAX(ml.created_at) as last_used
+            FROM safework_medications m
+            LEFT JOIN safework_medication_logs ml ON m.id = ml.medication_id 
+                AND ml.created_at >= DATE_SUB(NOW(), INTERVAL :days DAY)
+                AND ml.action_type = 'use'
+            WHERE m.is_active = 1
+            GROUP BY m.id, m.name, m.category
+            ORDER BY total_used DESC
+        """), {'days': days}).fetchall()
+        
+        # 카테고리별 사용량
+        category_usage = db.session.execute(text("""
+            SELECT 
+                m.category,
+                COUNT(ml.id) as usage_count,
+                SUM(CASE WHEN ml.action_type = 'use' THEN ml.quantity ELSE 0 END) as total_used
+            FROM safework_medications m
+            LEFT JOIN safework_medication_logs ml ON m.id = ml.medication_id 
+                AND ml.created_at >= DATE_SUB(NOW(), INTERVAL :days DAY)
+                AND ml.action_type = 'use'
+            WHERE m.is_active = 1 AND m.category IS NOT NULL
+            GROUP BY m.category
+            ORDER BY total_used DESC
+        """), {'days': days}).fetchall()
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'medication_usage': [dict(row._mapping) for row in usage_data],
+                'category_usage': [dict(row._mapping) for row in category_usage],
+                'period_days': days
+            }
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_safework_bp.route('/medications/auto-reorder-suggestions', methods=['GET'])
+@login_required
+def get_auto_reorder_suggestions():
+    """자동 재주문 제안"""
+    try:
+        # 사용 패턴을 기반으로 재주문 제안
+        suggestions = db.session.execute(text("""
+            WITH usage_stats AS (
+                SELECT 
+                    m.id,
+                    m.name,
+                    m.current_stock,
+                    m.minimum_stock,
+                    m.supplier,
+                    m.price_per_unit,
+                    AVG(CASE WHEN ml.action_type = 'use' THEN ml.quantity ELSE 0 END) as avg_daily_usage,
+                    COUNT(CASE WHEN ml.action_type = 'use' THEN ml.id ELSE NULL END) / 30.0 as usage_frequency
+                FROM safework_medications m
+                LEFT JOIN safework_medication_logs ml ON m.id = ml.medication_id 
+                    AND ml.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                WHERE m.is_active = 1
+                GROUP BY m.id
+            )
+            SELECT 
+                *,
+                CASE 
+                    WHEN avg_daily_usage > 0 THEN 
+                        CEIL(current_stock / (avg_daily_usage * usage_frequency))
+                    ELSE 999
+                END as estimated_days_remaining,
+                CASE 
+                    WHEN avg_daily_usage > 0 THEN
+                        CEIL((avg_daily_usage * usage_frequency * 60) - current_stock)
+                    ELSE minimum_stock * 2
+                END as suggested_order_quantity
+            FROM usage_stats
+            WHERE current_stock <= minimum_stock * 1.5 
+               OR (avg_daily_usage > 0 AND current_stock / (avg_daily_usage * usage_frequency) <= 14)
+            ORDER BY estimated_days_remaining ASC
+        """)).fetchall()
+        
+        return jsonify({
+            'success': True,
+            'data': [dict(row._mapping) for row in suggestions]
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_safework_bp.route('/medications/<int:med_id>/set-auto-reorder', methods=['POST'])
+@login_required
+def set_medication_auto_reorder(med_id):
+    """의약품 자동 재주문 설정"""
+    try:
+        medication = SafeworkMedication.query.get_or_404(med_id)
+        data = request.get_json()
+        
+        # 자동 재주문 설정 업데이트
+        medication.auto_reorder_enabled = data.get('enabled', False)
+        medication.reorder_point = data.get('reorder_point', medication.minimum_stock)
+        medication.reorder_quantity = data.get('reorder_quantity')
+        medication.preferred_supplier = data.get('preferred_supplier', medication.supplier)
+        medication.updated_at = datetime.utcnow()
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': '자동 재주문 설정이 업데이트되었습니다.'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_safework_bp.route('/medications/bulk-update-expiry', methods=['POST'])
+@login_required
+def bulk_update_medication_expiry():
+    """의약품 유효기간 일괄 업데이트"""
+    try:
+        data = request.get_json()
+        updates = data.get('updates', [])
+        
+        updated_count = 0
+        for update in updates:
+            medication = SafeworkMedication.query.get(update['id'])
+            if medication:
+                if update.get('expiry_date'):
+                    medication.expiry_date = datetime.strptime(
+                        update['expiry_date'], '%Y-%m-%d'
+                    ).date()
+                    medication.updated_at = datetime.utcnow()
+                    updated_count += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'{updated_count}개 의약품의 유효기간이 업데이트되었습니다.'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_safework_bp.route('/medications/inventory-valuation', methods=['GET'])
+@login_required
+def get_inventory_valuation():
+    """의약품 재고 자산 평가"""
+    try:
+        valuation = db.session.execute(text("""
+            SELECT 
+                m.category,
+                COUNT(m.id) as item_count,
+                SUM(m.current_stock) as total_stock,
+                SUM(m.current_stock * COALESCE(m.price_per_unit, 0)) as total_value,
+                AVG(m.price_per_unit) as avg_price_per_unit,
+                SUM(CASE WHEN m.current_stock <= m.minimum_stock THEN 1 ELSE 0 END) as low_stock_items,
+                SUM(CASE WHEN m.expiry_date < CURDATE() THEN m.current_stock * COALESCE(m.price_per_unit, 0) ELSE 0 END) as expired_value
+            FROM safework_medications m
+            WHERE m.is_active = 1
+            GROUP BY m.category
+            WITH ROLLUP
+        """)).fetchall()
+        
+        # 만료 예정 의약품 가치
+        expiring_value = db.session.execute(text("""
+            SELECT 
+                SUM(current_stock * COALESCE(price_per_unit, 0)) as expiring_value
+            FROM safework_medications 
+            WHERE expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+            AND is_active = 1
+        """)).fetchone()
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'category_breakdown': [dict(row._mapping) for row in valuation],
+                'expiring_within_30_days_value': expiring_value.expiring_value if expiring_value.expiring_value else 0
+            }
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500

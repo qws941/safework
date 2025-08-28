@@ -1,0 +1,537 @@
+{% extends "layout.html" %}
+
+{% block title %}의무실 방문 기록 입력 - SafeWork{% endblock %}
+
+{% block head %}
+<style>
+.medical-visit-form {
+    background: #fff;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+}
+
+.form-section {
+    margin-bottom: 30px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #28a745;
+}
+
+.section-title {
+    color: #2c3e50;
+    font-weight: 600;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+}
+
+.section-title i {
+    margin-right: 8px;
+    color: #28a745;
+}
+
+.form-row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.form-group {
+    flex: 1;
+}
+
+.form-control {
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 12px;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: #28a745;
+    box-shadow: 0 0 0 3px rgba(40,167,69,0.1);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    border: none;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+}
+
+.worker-info {
+    background: #d1ecf1;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 1px solid #bee5eb;
+}
+
+.vital-signs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.medication-search {
+    position: relative;
+}
+
+.medication-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+}
+
+.medication-suggestion {
+    padding: 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+}
+
+.medication-suggestion:hover {
+    background: #f8f9fa;
+}
+
+.follow-up-section {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 15px;
+    display: none;
+}
+
+.loading {
+    display: none;
+    text-align: center;
+    padding: 20px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- 페이지 헤더 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-hospital"></i> 의무실 방문 기록 입력</h2>
+        <a href="{{ url_for('admin.safework_medical_visits') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> 방문 기록 관리
+        </a>
+    </div>
+
+    <!-- 알림 메시지 -->
+    <div id="alert-container"></div>
+
+    <!-- 의무실 방문 기록 폼 -->
+    <div class="medical-visit-form">
+        <form id="medicalVisitForm">
+            <!-- 방문자 정보 -->
+            <div class="form-section">
+                <h4 class="section-title">
+                    <i class="bi bi-person"></i> 방문자 정보
+                </h4>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="worker_select">근로자 선택 *</label>
+                        <select id="worker_select" name="worker_id" class="form-control" required>
+                            <option value="">근로자를 선택하세요</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="visit_date">방문 일시 *</label>
+                        <input type="datetime-local" id="visit_date" name="visit_date" class="form-control" required>
+                    </div>
+                </div>
+                
+                <div id="worker_info" class="worker-info" style="display: none;">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <strong>사번:</strong> <span id="worker_employee_number">-</span>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>부서:</strong> <span id="worker_department">-</span>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>직책:</strong> <span id="worker_position">-</span>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>연락처:</strong> <span id="worker_phone">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 주호소 -->
+            <div class="form-section">
+                <h4 class="section-title">
+                    <i class="bi bi-chat-quote"></i> 주호소 (Chief Complaint)
+                </h4>
+                
+                <div class="form-group">
+                    <label for="chief_complaint">주호소 *</label>
+                    <textarea id="chief_complaint" name="chief_complaint" class="form-control" rows="3" 
+                             placeholder="환자가 호소하는 주요 증상이나 불편함을 기록하세요" required></textarea>
+                </div>
+            </div>
+
+            <!-- 활력징후 -->
+            <div class="form-section">
+                <h4 class="section-title">
+                    <i class="bi bi-heart-pulse"></i> 활력징후 (Vital Signs)
+                </h4>
+                
+                <div class="vital-signs-grid">
+                    <div class="form-group">
+                        <label for="blood_pressure">혈압 (mmHg)</label>
+                        <input type="text" id="blood_pressure" name="blood_pressure" class="form-control" 
+                               placeholder="예: 120/80">
+                    </div>
+                    <div class="form-group">
+                        <label for="heart_rate">맥박 (회/분)</label>
+                        <input type="number" id="heart_rate" name="heart_rate" class="form-control" 
+                               placeholder="맥박수">
+                    </div>
+                    <div class="form-group">
+                        <label for="body_temp">체온 (°C)</label>
+                        <input type="number" id="body_temp" name="body_temp" class="form-control" 
+                               step="0.1" placeholder="체온">
+                    </div>
+                    <div class="form-group">
+                        <label for="resp_rate">호흡수 (회/분)</label>
+                        <input type="number" id="resp_rate" name="resp_rate" class="form-control" 
+                               placeholder="호흡수">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 진단 및 치료 -->
+            <div class="form-section">
+                <h4 class="section-title">
+                    <i class="bi bi-clipboard-data"></i> 진단 및 치료
+                </h4>
+                
+                <div class="form-group">
+                    <label for="diagnosis">진단</label>
+                    <textarea id="diagnosis" name="diagnosis" class="form-control" rows="2" 
+                             placeholder="임상적 진단을 기록하세요"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="treatment">치료 내용</label>
+                    <textarea id="treatment" name="treatment" class="form-control" rows="3" 
+                             placeholder="실시한 치료 내용을 기록하세요"></textarea>
+                </div>
+            </div>
+
+            <!-- 투약 정보 -->
+            <div class="form-section">
+                <h4 class="section-title">
+                    <i class="bi bi-capsule"></i> 투약 정보
+                </h4>
+                
+                <div class="form-group medication-search">
+                    <label for="medication_given">투약한 약품</label>
+                    <input type="text" id="medication_given" name="medication_given" class="form-control" 
+                           placeholder="투약한 약품명과 용량을 입력하세요 (예: 타이레놀 500mg 2T)">
+                    <div id="medication_suggestions" class="medication-suggestions"></div>
+                </div>
+            </div>
+
+            <!-- 후속조치 -->
+            <div class="form-section">
+                <h4 class="section-title">
+                    <i class="bi bi-calendar-plus"></i> 후속조치
+                </h4>
+                
+                <div class="form-group">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="follow_up_needed" name="follow_up_needed">
+                        <label class="form-check-label" for="follow_up_needed">
+                            <strong>추적관찰 필요</strong>
+                        </label>
+                    </div>
+                </div>
+                
+                <div id="follow_up_section" class="follow-up-section">
+                    <div class="form-group">
+                        <label for="follow_up_date">추적관찰 예정일</label>
+                        <input type="date" id="follow_up_date" name="follow_up_date" class="form-control">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 담당자 및 참고사항 -->
+            <div class="form-section">
+                <h4 class="section-title">
+                    <i class="bi bi-person-badge"></i> 담당자 및 참고사항
+                </h4>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="nurse_name">담당 간호사</label>
+                        <input type="text" id="nurse_name" name="nurse_name" class="form-control" 
+                               placeholder="담당 간호사명" value="{{ current_user.username if current_user.is_authenticated else '' }}">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="notes">특이사항 및 기타 참고사항</label>
+                    <textarea id="notes" name="notes" class="form-control" rows="3" 
+                             placeholder="기타 특이사항이나 참고사항을 기록하세요"></textarea>
+                </div>
+            </div>
+
+            <!-- 제출 버튼 -->
+            <div class="text-center">
+                <button type="button" id="resetBtn" class="btn btn-secondary me-3">
+                    <i class="bi bi-arrow-clockwise"></i> 초기화
+                </button>
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-check-circle"></i> 방문 기록 저장
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- 로딩 표시 -->
+    <div id="loading" class="loading">
+        <div class="spinner-border text-success" role="status">
+            <span class="visually-hidden">저장 중...</span>
+        </div>
+        <p class="mt-3">의무실 방문 기록을 저장하고 있습니다...</p>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('medicalVisitForm');
+    const workerSelect = document.getElementById('worker_select');
+    const workerInfo = document.getElementById('worker_info');
+    const followUpCheckbox = document.getElementById('follow_up_needed');
+    const followUpSection = document.getElementById('follow_up_section');
+    const medicationInput = document.getElementById('medication_given');
+    const medicationSuggestions = document.getElementById('medication_suggestions');
+    const loading = document.getElementById('loading');
+    const alertContainer = document.getElementById('alert-container');
+
+    // 현재 시간을 기본값으로 설정
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    document.getElementById('visit_date').value = now.toISOString().slice(0, 16);
+
+    // 근로자 목록 로드
+    loadWorkers();
+    
+    // 의약품 목록 로드
+    loadMedications();
+
+    // 근로자 선택 시 정보 표시
+    workerSelect.addEventListener('change', function() {
+        if (this.value) {
+            showWorkerInfo(this.value);
+        } else {
+            workerInfo.style.display = 'none';
+        }
+    });
+
+    // 추적관찰 체크박스
+    followUpCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            followUpSection.style.display = 'block';
+            // 1주일 후 날짜를 기본값으로 설정
+            const nextWeek = new Date();
+            nextWeek.setDate(nextWeek.getDate() + 7);
+            document.getElementById('follow_up_date').value = nextWeek.toISOString().slice(0, 10);
+        } else {
+            followUpSection.style.display = 'none';
+        }
+    });
+
+    // 의약품 자동완성
+    let medications = [];
+    medicationInput.addEventListener('input', function() {
+        const value = this.value.toLowerCase();
+        if (value.length > 1) {
+            const matches = medications.filter(med => 
+                med.name.toLowerCase().includes(value)
+            );
+            showMedicationSuggestions(matches);
+        } else {
+            medicationSuggestions.style.display = 'none';
+        }
+    });
+
+    // 폼 제출 처리
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        submitMedicalVisit();
+    });
+
+    // 초기화 버튼
+    document.getElementById('resetBtn').addEventListener('click', function() {
+        if (confirm('입력한 내용이 모두 초기화됩니다. 계속하시겠습니까?')) {
+            form.reset();
+            workerInfo.style.display = 'none';
+            followUpSection.style.display = 'none';
+            // 현재 시간 다시 설정
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('visit_date').value = now.toISOString().slice(0, 16);
+        }
+    });
+
+    // 근로자 목록 로드
+    function loadWorkers() {
+        fetch('/api/safework/workers')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    data.data.forEach(worker => {
+                        const option = document.createElement('option');
+                        option.value = worker.id;
+                        option.textContent = `${worker.employee_number} - ${worker.name} (${worker.department})`;
+                        option.dataset.worker = JSON.stringify(worker);
+                        workerSelect.appendChild(option);
+                    });
+                }
+            })
+            .catch(error => {
+                showAlert('근로자 목록을 불러올 수 없습니다.', 'danger');
+                console.error('Error:', error);
+            });
+    }
+
+    // 의약품 목록 로드
+    function loadMedications() {
+        fetch('/api/safework/medications')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    medications = data.data;
+                }
+            })
+            .catch(error => {
+                console.error('Error loading medications:', error);
+            });
+    }
+
+    // 근로자 정보 표시
+    function showWorkerInfo(workerId) {
+        const selectedOption = workerSelect.querySelector(`option[value="${workerId}"]`);
+        if (selectedOption && selectedOption.dataset.worker) {
+            const worker = JSON.parse(selectedOption.dataset.worker);
+            document.getElementById('worker_employee_number').textContent = worker.employee_number;
+            document.getElementById('worker_department').textContent = worker.department || '-';
+            document.getElementById('worker_position').textContent = worker.position || '-';
+            document.getElementById('worker_phone').textContent = worker.phone || '-';
+            workerInfo.style.display = 'block';
+        }
+    }
+
+    // 의약품 자동완성 표시
+    function showMedicationSuggestions(matches) {
+        medicationSuggestions.innerHTML = '';
+        if (matches.length > 0) {
+            matches.slice(0, 5).forEach(med => {
+                const div = document.createElement('div');
+                div.className = 'medication-suggestion';
+                div.textContent = `${med.name} (재고: ${med.current_stock}${med.unit})`;
+                div.addEventListener('click', function() {
+                    medicationInput.value = med.name;
+                    medicationSuggestions.style.display = 'none';
+                });
+                medicationSuggestions.appendChild(div);
+            });
+            medicationSuggestions.style.display = 'block';
+        } else {
+            medicationSuggestions.style.display = 'none';
+        }
+    }
+
+    // 의무실 방문 기록 제출
+    function submitMedicalVisit() {
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+
+        // 체크박스 처리
+        data.follow_up_needed = followUpCheckbox.checked;
+
+        loading.style.display = 'block';
+        form.style.display = 'none';
+
+        fetch('/api/safework/medical-visits', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            loading.style.display = 'none';
+            form.style.display = 'block';
+
+            if (result.success) {
+                showAlert('의무실 방문 기록이 성공적으로 저장되었습니다.', 'success');
+                form.reset();
+                workerInfo.style.display = 'none';
+                followUpSection.style.display = 'none';
+            } else {
+                showAlert('오류가 발생했습니다: ' + result.error, 'danger');
+            }
+        })
+        .catch(error => {
+            loading.style.display = 'none';
+            form.style.display = 'block';
+            showAlert('서버 오류가 발생했습니다. 다시 시도해주세요.', 'danger');
+            console.error('Error:', error);
+        });
+    }
+
+    // 알림 메시지 표시
+    function showAlert(message, type) {
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type} alert-dismissible fade show`;
+        alert.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        alertContainer.appendChild(alert);
+
+        // 5초 후 자동 제거
+        setTimeout(() => {
+            if (alert.parentNode) {
+                alert.remove();
+            }
+        }, 5000);
+    }
+
+    // 외부 클릭 시 자동완성 숨기기
+    document.addEventListener('click', function(e) {
+        if (!medicationInput.contains(e.target) && !medicationSuggestions.contains(e.target)) {
+            medicationSuggestions.style.display = 'none';
+        }
+    });
+});
+</script>
+{% endblock %}

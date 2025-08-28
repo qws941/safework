@@ -4,235 +4,177 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-SafeWork is a Korean workplace musculoskeletal symptom survey system built with Flask. It's a containerized web application that provides online forms, document management, and administrative dashboards for workplace health assessments.
-
-### Core Technology Stack
-- **Backend**: Python Flask 3.0+ with SQLAlchemy ORM
-- **Database**: MySQL 8.0 with custom migration system
-- **Cache**: Redis 7.0
-- **Container**: Docker with multi-service architecture
-- **Registry**: Private registry at registry.jclee.me
-- **CI/CD**: GitHub Actions with automated deployment pipelines
+SafeWork is a Korean workplace health and safety management system built with Flask 3.0+, providing musculoskeletal symptom surveys (001) and new employee health checkups (002) along with comprehensive administrative dashboards.
 
 ## Development Commands
 
-### Local Development
+### Essential Commands
 ```bash
-# Start development environment with Docker Compose
-make up                     # Full stack (MySQL + Redis + App)
-make dev                    # Development mode (Python only)
-make status                 # Check service status
+# Local Development
+make up                     # Start all containers (MySQL, Redis, App)
+make down                   # Stop all containers
+make status                 # Check service health
 make logs                   # View application logs
 
-# Database operations
-make migrate-status         # Check migration status
-make migrate-run           # Run pending migrations
-make migrate-create desc="description"  # Create new migration
-make migrate-rollback      # Rollback last migration
-make migrate-backup        # Backup database
-```
+# Testing
+make test-local            # Run pytest locally
+make test-docker          # Run tests in Docker
+python3 -m pytest tests/ -v --tb=short  # Direct pytest
 
-### Testing and Quality
-```bash
-make test-local            # Run local tests with pytest
-make test-docker          # Run tests in Docker environment
-```
+# Code Quality
+python3 -m black --line-length 100 app/  # Format code
+python3 -m flake8 --max-line-length=100 --ignore=E501,W503 app/  # Lint
 
-### Build and Deployment
-```bash
-# GitOps deployment (recommended)
-make deploy               # Trigger GitHub Actions deployment
-make deploy-dev          # Deploy to development environment
-make deploy-staging      # Deploy to staging environment  
-make deploy-prod         # Deploy to production environment
+# Database
+make migrate-status        # Check migration status
+make migrate-run          # Apply pending migrations
+make migrate-rollback     # Rollback last migration
 
-# Local deployment
-make local               # Build and deploy locally
+# Deployment
+make deploy               # Trigger GitHub Actions
 make release v=1.2.0     # Create release tag
-```
-
-### Branch Management
-```bash
-make branch-feature name=feature-name    # Create feature branch
-make branch-hotfix name=hotfix-name      # Create hotfix branch
-make branch-release v=1.2.0              # Create release branch
-make pr-create                           # Create GitHub PR
+git push origin main      # Production deployment (requires approval)
+git push origin develop   # Development auto-deployment
 ```
 
 ## High-Level Architecture
 
-### Application Structure
-The Flask application follows a modular blueprint-based architecture:
+### Three-Tier Container Architecture
+- **safework-app**: Flask application (port 4545) with auto-restart and health checks
+- **safework-mysql**: MySQL 8.0 (port 3307) with custom schema in `mysql/init.sql`
+- **safework-redis**: Redis 7.0 (port 6380) for session caching
 
+### Application Factory Pattern
+The app uses Flask's application factory pattern in `app.py:create_app()` which:
+1. Initializes database connection with MySQL-specific settings
+2. Registers blueprints for modular routing
+3. Sets up custom migration system
+4. Creates anonymous user (id=1) for public submissions
+5. Handles environment-specific configuration
+
+### Blueprint-Based Routing Structure
+```python
+# Core blueprints registered in app.py
+main_bp → routes/main.py       # Landing pages
+auth_bp → routes/auth.py       # Login/register  
+survey_bp → routes/survey.py   # 001/002 forms
+admin_bp → routes/admin.py     # SafeWork dashboards
+api_safework_v2_bp → routes/api_safework_v2.py  # RESTful API
+document_bp → routes/document.py  # Document management
+health_bp → routes/health.py   # Health checks
 ```
-app/
-├── app.py                 # Application factory with create_app()
-├── config.py             # Environment-based configuration
-├── models.py             # Core SQLAlchemy models (User, Survey, etc.)
-├── models_document.py    # Document management models
-├── routes/               # Blueprint modules
-│   ├── main.py          # Main routes and homepage
-│   ├── auth.py          # Authentication (login/register)
-│   ├── survey.py        # Survey form handling
-│   ├── admin.py         # Admin dashboard and management
-│   ├── document.py      # Document management (user-facing)
-│   ├── document_admin.py # Document management (admin)
-│   ├── migration.py     # Database migration web interface
-│   └── health.py        # Health check endpoint
-├── migrations/          # Custom database migration system
-└── templates/           # Jinja2 HTML templates
+
+### Database Models Architecture
+```python
+# Core models in models.py
+User         # Authentication with is_admin flag
+Survey       # Unified table for 001/002 forms (form_type field)
+SurveyStatistics  # Aggregated stats
+AuditLog     # Activity tracking
+
+# SafeWork v2 models in models_safework_v2.py  
+SafeworkWorker      # Employee records
+SafeworkHealthCheck # Health examinations
+SafeworkMedicalVisit # Clinic visits
+SafeworkMedication  # Medicine inventory
+
+# Document models in models_document.py
+Document, DocumentCategory, DocumentVersion
 ```
 
-### Key Architectural Patterns
+### Survey System Implementation
+- **001 Form**: 6 body parts with conditional logic, JSON data storage
+- **002 Form**: 29 comprehensive health fields
+- **Anonymous Support**: Uses user_id=1 for public submissions
+- **Admin Dashboard**: `/admin/safework` with Excel export capabilities
 
-1. **Application Factory Pattern**: `create_app()` function in `app.py` creates configured Flask instances
-2. **Blueprint-based Routing**: Modular route organization by feature area
-3. **Custom Migration System**: Web-managed database migrations with CLI support
-4. **Multi-container Architecture**: Separate containers for app, database, and cache
-5. **Environment-based Configuration**: Different configs for development/staging/production
+## CI/CD Pipeline
 
-### Database Schema
-- **Core Tables**: users, surveys, survey_statistics, audit_logs
-- **Document Management**: documents, document_categories, document_versions, document_access_logs
-- **Migration Tracking**: schema_migrations table for version control
+### GitHub Actions Workflows
+```yaml
+# .github/workflows/main-deploy.yml
+- Quality checks: Black formatting, Flake8 linting
+- Docker builds: App, MySQL, Redis images
+- Registry push: registry.jclee.me/safework/*
+- Environment deployment: develop→auto, main→manual approval
+```
 
-### Container Architecture
-Three main services orchestrated with Docker Compose:
-- **safework-app**: Flask application (port 4545)
-- **safework-mysql**: MySQL 8.0 database (port 3307 external)
-- **safework-redis**: Redis cache (port 6380 external)
+### Deployment Strategy
+- **Development**: Push to `develop` branch → Auto-deploy
+- **Production**: Push to `main` branch → Manual approval required
+- **Images**: Built with timestamps (YYYYMMDD.HHMM format)
 
-## Development Workflow
+## Critical Configuration
 
-### Branch Strategy
-- `main`: Production releases (auto-deploys to production)
-- `staging`: Pre-production testing (auto-deploys to staging)
-- `develop`: Development integration (auto-deploys to dev environment)
-- `feature/*`: Feature development branches
-- `hotfix/*`: Emergency production fixes
-
-### CI/CD Pipeline
-GitHub Actions workflows handle:
-- **Security scanning**: Trivy, Bandit, Safety vulnerability scans
-- **Code quality**: Black, Flake8, Pylint, MyPy checks
-- **Testing**: Automated pytest execution with coverage
-- **Building**: Multi-platform Docker image builds
-- **Deployment**: Automated registry push and environment deployment
-
-### Migration Management
-Custom migration system with both CLI and web interface:
-- Migrations stored in `app/migrations/` as Python files
-- Web interface at `/admin/migrations` for visual management
-- MySQL 8.0 compatibility with proper transaction handling
-- Automatic rollback capability on failures
-
-## Configuration and Environment
-
-### Key Environment Variables
+### Environment Variables
 ```bash
-# Flask Configuration
-FLASK_CONFIG=production          # development/staging/production
-SECRET_KEY=<secret-key>
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=safework2024
-
-# Database
+# Required for production
+FLASK_CONFIG=production
+SECRET_KEY=<secure-key>
 MYSQL_HOST=safework-mysql
-MYSQL_DATABASE=safework_db
-MYSQL_USER=safework
 MYSQL_PASSWORD=safework2024
-
-# Redis Cache
 REDIS_HOST=safework-redis
-REDIS_PORT=6379
-
-# Container Registry
-REGISTRY_URL=registry.jclee.me
-REGISTRY_USER=admin
-REGISTRY_PASSWORD=bingogo1
+REGISTRY_PASSWORD=<for-github-secrets>
 ```
 
 ### Docker Registry
-Private registry at `registry.jclee.me` with three custom images:
-- `registry.jclee.me/safework/app:latest`
-- `registry.jclee.me/safework/mysql:latest`  
-- `registry.jclee.me/safework/redis:latest`
+All images pushed to `registry.jclee.me`:
+- safework/app:latest (589MB)
+- safework/mysql:latest (781MB)
+- safework/redis:latest (41.4MB)
 
-## Key Features and Routes
+## Database Migration System
 
-### Public Routes
-- `/`: Main landing page
-- `/survey/new`: Musculoskeletal symptom survey form
-- `/documents/`: Document browsing and download
-- `/auth/login` and `/auth/register`: User authentication
+Custom MySQL-compatible migration system in `migration_manager.py`:
+```python
+# Migration pattern
+def upgrade():
+    with db.engine.begin() as conn:
+        conn.execute(text("CREATE TABLE IF NOT EXISTS..."))
+        
+# MySQL-specific syntax used
+- AUTO_INCREMENT (not AUTOINCREMENT)
+- INSERT IGNORE (not OR IGNORE)
+- INFORMATION_SCHEMA queries for index checks
+```
 
-### Admin Routes (login required)
-- `/admin/dashboard`: Statistics and system overview
-- `/admin/surveys`: Survey data management and Excel export
-- `/admin/documents/`: Document management and upload
-- `/admin/migrations`: Database migration interface
+## Testing Considerations
 
-### System Routes
-- `/health`: Health check endpoint for monitoring
-- API endpoints for AJAX operations
+Tests require environment setup:
+```python
+# tests/conftest.py creates SQLite in-memory DB
+# Production uses MySQL - schema differences may cause issues
+# Run tests in Docker for accurate results:
+docker exec safework-app python3 -m pytest tests/
+```
 
-## Testing Strategy
+## Key API Endpoints
 
-### Test Framework
-- **pytest**: Primary testing framework with Flask-specific extensions
-- **Coverage**: Target 80%+ code coverage
-- **Docker Testing**: Full integration tests with docker-compose.test.yml
+### Public Endpoints
+- `/health` - Health check returning JSON status
+- `/survey/001_musculoskeletal_symptom_survey` - 001 form
+- `/survey/002_new_employee_health_checkup_form` - 002 form
 
-### Quality Gates
-- Code formatting with Black
-- Linting with Flake8 and Pylint
-- Type checking with MyPy (when applicable)
-- Security scanning in CI/CD pipeline
+### Admin Endpoints (login required)
+- `/admin/safework` - Main dashboard
+- `/admin/safework/workers` - Employee management
+- `/admin/safework/health-checks` - Health examinations
+- `/admin/safework/medications` - Medicine inventory
+- `/api/safework/*` - RESTful API with JWT auth
 
-## Common Development Tasks
+## Common Issues and Solutions
 
-### Adding New Features
-1. Create feature branch: `make branch-feature name=feature-name`
-2. Implement changes in appropriate blueprint module
-3. Add database migrations if needed: `make migrate-create desc="description"`
-4. Run tests: `make test-local`
-5. Create PR: `make pr-create`
+### MySQL Connection Issues
+- Container name must be `safework-mysql` 
+- Check network: `docker network ls | grep safework-net`
+- Verify credentials in docker-compose.yml
 
-### Database Changes
-1. Create migration: `make migrate-create desc="Add new table"`
-2. Edit generated migration file in `app/migrations/`
-3. Test migration: `make migrate-run`
-4. Verify with web interface: `http://localhost:4545/admin/migrations`
+### Migration Failures
+- Check MySQL syntax (not SQLite)
+- Use web interface at `/admin/migrations`
+- Verify table exists before ALTER/DROP
 
-### Deployment Process
-1. Development: Push to `develop` branch (auto-deploys)
-2. Staging: `make deploy-staging` (auto-deploys for testing)
-3. Production: `make deploy-prod` (requires approval in GitHub Actions)
-
-## Security and Monitoring
-
-### Security Features
-- JWT-based authentication
-- Role-based access control (admin vs. regular users)
-- File upload validation and sanitization
-- SQL injection protection via SQLAlchemy ORM
-- Automated vulnerability scanning in CI/CD
-
-### Monitoring
-- Health check endpoint at `/health`
-- Application performance monitoring via logs
-- Database connection and Redis cache health checks
-- Container health checks in Docker Compose
-
-## Troubleshooting
-
-### Common Issues
-1. **Database Connection**: Check MySQL container status and credentials
-2. **Migration Failures**: Use web interface or CLI rollback functionality
-3. **Container Issues**: Use `make status` and `make logs` for debugging
-4. **Build Failures**: Check GitHub Actions logs for CI/CD pipeline issues
-
-### Log Locations
-- Application logs: `docker logs safework-app`
-- Database logs: `docker logs safework-mysql`
-- All services: `make logs`
+### Test Failures
+- Tests use SQLite in-memory, production uses MySQL
+- Run in container: `docker exec safework-app pytest`
+- Check Flask config: `FLASK_CONFIG=testing`

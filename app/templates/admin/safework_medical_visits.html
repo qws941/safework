@@ -1,0 +1,463 @@
+{% extends "base.html" %}
+
+{% block title %}의무실 방문 관리 - SafeWork{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-3">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">
+            <i class="bi bi-hospital"></i> 의무실 방문 관리
+        </h2>
+        <div>
+            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#newVisitModal">
+                <i class="bi bi-plus-circle"></i> 방문 기록
+            </button>
+            <button class="btn btn-primary" onclick="printReport()">
+                <i class="bi bi-printer"></i> 일일 보고서
+            </button>
+        </div>
+    </div>
+
+    <!-- 통계 카드 -->
+    <div class="row mb-3">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6>오늘 방문</h6>
+                    <h3 class="text-primary">{{ today_visits }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6>이번주 방문</h6>
+                    <h3 class="text-info">{{ week_visits }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6>이번달 방문</h6>
+                    <h3 class="text-warning">{{ month_visits }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6>후속조치 필요</h6>
+                    <h3 class="text-danger">{{ followup_needed }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 검색 필터 -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <form class="row g-3">
+                <div class="col-md-3">
+                    <input type="date" class="form-control" id="dateFrom" placeholder="시작일">
+                </div>
+                <div class="col-md-3">
+                    <input type="date" class="form-control" id="dateTo" placeholder="종료일">
+                </div>
+                <div class="col-md-3">
+                    <input type="text" class="form-control" placeholder="이름/사번 검색">
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search"></i> 검색
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 방문 기록 테이블 -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>방문일시</th>
+                            <th>사번</th>
+                            <th>이름</th>
+                            <th>부서</th>
+                            <th>주증상</th>
+                            <th>활력징후</th>
+                            <th>진단</th>
+                            <th>처치</th>
+                            <th>투약</th>
+                            <th>후속조치</th>
+                            <th>담당자</th>
+                            <th>상세</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for visit in medical_visits %}
+                        <tr>
+                            <td>{{ visit.visit_date }}</td>
+                            <td>{{ visit.employee_number }}</td>
+                            <td>{{ visit.worker_name }}</td>
+                            <td>{{ visit.department }}</td>
+                            <td>{{ visit.chief_complaint }}</td>
+                            <td>
+                                {% if visit.vital_signs %}
+                                <small>
+                                    BP: {{ visit.vital_signs.bp }}<br>
+                                    HR: {{ visit.vital_signs.hr }}<br>
+                                    BT: {{ visit.vital_signs.bt }}°C
+                                </small>
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>{{ visit.diagnosis|truncate(30) }}</td>
+                            <td>{{ visit.treatment|truncate(30) }}</td>
+                            <td>{{ visit.medication_given|default('-') }}</td>
+                            <td>
+                                {% if visit.follow_up_needed %}
+                                <span class="badge bg-warning">{{ visit.follow_up_date }}</span>
+                                {% else %}
+                                <span class="badge bg-success">불필요</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ visit.nurse_name }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-info" onclick="viewDetail({{ visit.id }})">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="12" class="text-center text-muted py-4">
+                                방문 기록이 없습니다.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 주요 증상 통계 차트 -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">주요 증상 분포</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="symptomChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">부서별 방문 현황</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="deptVisitChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 방문 기록 모달 -->
+<div class="modal fade" id="newVisitModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">의무실 방문 기록</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="visitForm">
+                <div class="modal-body">
+                    <!-- 환자 정보 -->
+                    <h6 class="border-bottom pb-2 mb-3">환자 정보</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label">근로자 선택 <span class="text-danger">*</span></label>
+                            <select class="form-select" name="worker_id" required onchange="loadWorkerInfo(this.value)">
+                                <option value="">선택하세요</option>
+                                {% for worker in workers %}
+                                <option value="{{ worker.id }}">{{ worker.name }} ({{ worker.employee_number }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">방문일시 <span class="text-danger">*</span></label>
+                            <input type="datetime-local" class="form-control" name="visit_date" required>
+                        </div>
+                    </div>
+
+                    <!-- 주증상 -->
+                    <h6 class="border-bottom pb-2 mb-3">주증상 및 현병력</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-12">
+                            <label class="form-label">주증상 <span class="text-danger">*</span></label>
+                            <textarea class="form-control" name="chief_complaint" rows="2" required></textarea>
+                        </div>
+                    </div>
+
+                    <!-- 활력징후 -->
+                    <h6 class="border-bottom pb-2 mb-3">활력징후</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-3">
+                            <label class="form-label">혈압 (mmHg)</label>
+                            <input type="text" class="form-control" name="blood_pressure" placeholder="120/80">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">맥박 (회/분)</label>
+                            <input type="number" class="form-control" name="heart_rate" placeholder="72">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">체온 (°C)</label>
+                            <input type="number" class="form-control" name="body_temp" step="0.1" placeholder="36.5">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">호흡수 (회/분)</label>
+                            <input type="number" class="form-control" name="resp_rate" placeholder="16">
+                        </div>
+                    </div>
+
+                    <!-- 진단 및 처치 -->
+                    <h6 class="border-bottom pb-2 mb-3">진단 및 처치</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-12">
+                            <label class="form-label">진단</label>
+                            <textarea class="form-control" name="diagnosis" rows="2"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">처치내용</label>
+                            <textarea class="form-control" name="treatment" rows="2"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">투약내용</label>
+                            <input type="text" class="form-control" name="medication_given" placeholder="약품명 및 용량">
+                        </div>
+                    </div>
+
+                    <!-- 후속조치 -->
+                    <h6 class="border-bottom pb-2 mb-3">후속조치</h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="followUpCheck" name="follow_up_needed">
+                                <label class="form-check-label" for="followUpCheck">
+                                    후속조치 필요
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6" id="followUpDateDiv" style="display:none;">
+                            <label class="form-label">후속조치 예정일</label>
+                            <input type="date" class="form-control" name="follow_up_date">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="submit" class="btn btn-primary">저장</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// 차트 초기화
+document.addEventListener('DOMContentLoaded', function() {
+    // 증상 분포 차트
+    const symptomCtx = document.getElementById('symptomChart');
+    if (symptomCtx) {
+        new Chart(symptomCtx.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['두통', '복통', '근육통', '현기증', '기타'],
+                datasets: [{
+                    data: [25, 20, 18, 12, 25],
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.8)',
+                        'rgba(54, 162, 235, 0.8)',
+                        'rgba(255, 206, 86, 0.8)',
+                        'rgba(75, 192, 192, 0.8)',
+                        'rgba(153, 102, 255, 0.8)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
+
+    // 부서별 방문 차트
+    const deptCtx = document.getElementById('deptVisitChart');
+    if (deptCtx) {
+        new Chart(deptCtx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: ['생산부', '품질관리부', '연구개발부', '경영지원부'],
+                datasets: [{
+                    label: '방문 건수',
+                    data: [15, 12, 8, 7],
+                    backgroundColor: 'rgba(54, 162, 235, 0.8)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+});
+
+// 후속조치 체크박스
+document.getElementById('followUpCheck').addEventListener('change', function() {
+    document.getElementById('followUpDateDiv').style.display = this.checked ? 'block' : 'none';
+});
+
+// 근로자 정보 로드
+function loadWorkerInfo(workerId) {
+    // AJAX로 근로자 정보 로드
+    console.log('Loading worker info:', workerId);
+}
+
+// 상세보기
+function viewDetail(id) {
+    window.location.href = `/admin/safework/medical-visits/${id}`;
+}
+
+// 보고서 출력
+function printReport() {
+    window.print();
+}
+
+// 의무실 방문 기록 제출
+document.getElementById('visitForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const data = {};
+    formData.forEach((value, key) => {
+        if (key === 'follow_up_needed') {
+            data[key] = document.getElementById('followUpCheck').checked;
+        } else if (value) {
+            data[key] = value;
+        }
+    });
+    
+    try {
+        const response = await fetch('/api/safework/medical-visits', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('의무실 방문 기록이 저장되었습니다.');
+            bootstrap.Modal.getInstance(document.getElementById('newVisitModal')).hide();
+            location.reload();
+        } else {
+            alert('오류: ' + (result.error || '저장 실패'));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('서버 연결 오류가 발생했습니다.');
+    }
+});
+
+// 의무실 방문 목록 불러오기
+async function loadMedicalVisits() {
+    try {
+        const response = await fetch('/api/safework/medical-visits');
+        const data = await response.json();
+        
+        if (data.success) {
+            updateVisitsTable(data.data);
+        }
+    } catch (error) {
+        console.error('Error loading visits:', error);
+    }
+}
+
+// 테이블 업데이트
+function updateVisitsTable(visits) {
+    const tbody = document.querySelector('table tbody');
+    if (!tbody) return;
+    
+    if (visits.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="12" class="text-center text-muted py-4">방문 기록이 없습니다.</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = visits.map(visit => `
+        <tr>
+            <td>${visit.visit_date}</td>
+            <td>${visit.employee_number}</td>
+            <td>${visit.worker_name}</td>
+            <td>${visit.department || '-'}</td>
+            <td>${visit.chief_complaint || '-'}</td>
+            <td>-</td>
+            <td>${visit.diagnosis || '-'}</td>
+            <td>${visit.treatment || '-'}</td>
+            <td>-</td>
+            <td>
+                ${visit.follow_up_needed ? 
+                    `<span class="badge bg-warning">${visit.follow_up_date || '필요'}</span>` :
+                    '<span class="badge bg-success">불필요</span>'}
+            </td>
+            <td>-</td>
+            <td>
+                <button class="btn btn-sm btn-outline-info" onclick="viewDetail(${visit.id})">
+                    <i class="bi bi-eye"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// 대시보드 통계 불러오기
+async function loadDashboardStats() {
+    try {
+        const response = await fetch('/api/safework/dashboard/stats');
+        const data = await response.json();
+        
+        if (data.success) {
+            // 통계 카드 업데이트
+            document.querySelector('.col-md-3:nth-child(1) h3').textContent = data.stats.today_visits;
+            document.querySelector('.col-md-3:nth-child(4) h3').textContent = data.stats.followup_needed;
+        }
+    } catch (error) {
+        console.error('Error loading stats:', error);
+    }
+}
+
+// 페이지 로드 시 데이터 불러오기
+document.addEventListener('DOMContentLoaded', function() {
+    loadMedicalVisits();
+    loadDashboardStats();
+});
+</script>
+{% endblock %}

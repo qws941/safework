@@ -327,8 +327,362 @@ SELECT
 FROM surveys s 
 GROUP BY s.form_type, s.department, DATE(s.submission_date);
 
+-- ========================================
+-- Phase 1: 산업안전보건 핵심 테이블
+-- ========================================
+
+-- 부서 정보 테이블 (확장)
+CREATE TABLE IF NOT EXISTS departments_extended (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(20) UNIQUE NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    parent_id INT,
+    manager_id INT,
+    risk_level ENUM('LOW', 'MEDIUM', 'HIGH', 'VERY_HIGH') DEFAULT 'LOW',
+    location VARCHAR(200),
+    employee_count INT DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_parent (parent_id),
+    INDEX idx_risk (risk_level),
+    INDEX idx_manager (manager_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 근로자 상세 정보 테이블
+CREATE TABLE IF NOT EXISTS workers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    employee_number VARCHAR(20) UNIQUE NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    department_id INT,
+    position VARCHAR(100),
+    hire_date DATE,
+    birth_date DATE,
+    gender ENUM('M', 'F'),
+    phone VARCHAR(20),
+    email VARCHAR(100),
+    address TEXT,
+    emergency_contact VARCHAR(100),
+    emergency_phone VARCHAR(20),
+    blood_type VARCHAR(5),
+    is_special_management BOOLEAN DEFAULT FALSE,
+    special_management_reason TEXT,
+    status ENUM('ACTIVE', 'LEAVE', 'RETIRED') DEFAULT 'ACTIVE',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_department (department_id),
+    INDEX idx_special (is_special_management),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 건강검진 계획
+CREATE TABLE IF NOT EXISTS health_check_plans (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    year INT NOT NULL,
+    type ENUM('GENERAL', 'SPECIAL', 'PLACEMENT', 'RETURN') NOT NULL,
+    planned_date DATE,
+    target_count INT DEFAULT 0,
+    completed_count INT DEFAULT 0,
+    status ENUM('PLANNED', 'IN_PROGRESS', 'COMPLETED') DEFAULT 'PLANNED',
+    description TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_year_type (year, type),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 건강검진 대상자
+CREATE TABLE IF NOT EXISTS health_check_targets (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    plan_id INT NOT NULL,
+    worker_id INT NOT NULL,
+    scheduled_date DATE,
+    actual_date DATE,
+    hospital_name VARCHAR(200),
+    status ENUM('SCHEDULED', 'NOTIFIED', 'COMPLETED', 'MISSED', 'EXEMPTED') DEFAULT 'SCHEDULED',
+    notification_sent_at DATETIME,
+    remarks TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (plan_id) REFERENCES health_check_plans(id) ON DELETE CASCADE,
+    FOREIGN KEY (worker_id) REFERENCES workers(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_plan_worker (plan_id, worker_id),
+    INDEX idx_status (status),
+    INDEX idx_scheduled_date (scheduled_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 건강검진 결과
+CREATE TABLE IF NOT EXISTS health_check_results (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    target_id INT NOT NULL,
+    worker_id INT NOT NULL,
+    check_date DATE NOT NULL,
+    height DECIMAL(5,2),
+    weight DECIMAL(5,2),
+    bmi DECIMAL(4,2),
+    waist DECIMAL(5,2),
+    blood_pressure_sys INT,
+    blood_pressure_dia INT,
+    pulse_rate INT,
+    vision_left DECIMAL(3,2),
+    vision_right DECIMAL(3,2),
+    hearing_left ENUM('NORMAL', 'ABNORMAL'),
+    hearing_right ENUM('NORMAL', 'ABNORMAL'),
+    chest_xray VARCHAR(100),
+    ecg VARCHAR(100),
+    blood_test JSON,
+    urine_test JSON,
+    special_tests JSON,
+    overall_opinion TEXT,
+    grade ENUM('A', 'B', 'C', 'D1', 'D2', 'R') NOT NULL,
+    follow_up_required BOOLEAN DEFAULT FALSE,
+    follow_up_items TEXT,
+    work_restriction VARCHAR(200),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (target_id) REFERENCES health_check_targets(id) ON DELETE CASCADE,
+    FOREIGN KEY (worker_id) REFERENCES workers(id) ON DELETE CASCADE,
+    INDEX idx_grade (grade),
+    INDEX idx_follow_up (follow_up_required),
+    INDEX idx_check_date (check_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 의무실 방문 기록
+CREATE TABLE IF NOT EXISTS medical_visits (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    worker_id INT NOT NULL,
+    visit_date DATETIME NOT NULL,
+    chief_complaint TEXT,
+    vital_signs JSON,
+    diagnosis TEXT,
+    treatment TEXT,
+    medication_given TEXT,
+    follow_up_needed BOOLEAN DEFAULT FALSE,
+    follow_up_date DATE,
+    nurse_id INT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (worker_id) REFERENCES workers(id) ON DELETE CASCADE,
+    FOREIGN KEY (nurse_id) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_visit_date (visit_date),
+    INDEX idx_worker (worker_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 의약품 관리
+CREATE TABLE IF NOT EXISTS medications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    category VARCHAR(100),
+    unit VARCHAR(50),
+    current_stock INT DEFAULT 0,
+    minimum_stock INT DEFAULT 0,
+    expiry_date DATE,
+    supplier VARCHAR(200),
+    last_purchase_date DATE,
+    price_per_unit DECIMAL(10,2),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_expiry (expiry_date),
+    INDEX idx_stock (current_stock),
+    INDEX idx_category (category)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 작업환경측정 계획
+CREATE TABLE IF NOT EXISTS environment_measurement_plans (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    year INT NOT NULL,
+    semester INT NOT NULL,
+    measurement_agency VARCHAR(200),
+    planned_date DATE,
+    status ENUM('PLANNED', 'IN_PROGRESS', 'COMPLETED') DEFAULT 'PLANNED',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_year_sem (year, semester)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 작업환경측정 결과
+CREATE TABLE IF NOT EXISTS environment_measurements (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    plan_id INT,
+    department_id INT,
+    measurement_date DATE,
+    factor_type ENUM('DUST', 'NOISE', 'CHEMICAL', 'ILLUMINATION', 'TEMPERATURE'),
+    factor_name VARCHAR(200),
+    measurement_value DECIMAL(10,4),
+    unit VARCHAR(50),
+    exposure_limit DECIMAL(10,4),
+    result ENUM('SUITABLE', 'EXCEEDED', 'ACTION_REQUIRED'),
+    improvement_measures TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (plan_id) REFERENCES environment_measurement_plans(id),
+    INDEX idx_result (result),
+    INDEX idx_factor (factor_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 초기 데이터 삽입
+INSERT IGNORE INTO departments_extended (code, name, risk_level) VALUES 
+('HQ', '본사', 'LOW'),
+('PROD', '생산부', 'HIGH'),
+('QC', '품질관리부', 'MEDIUM'),
+('RND', '연구개발부', 'MEDIUM'),
+('ADMIN', '경영지원부', 'LOW');
+
 -- 외래키 제약조건 체크
 SET foreign_key_checks = 1;
 
+-- ========================================
+-- Phase 2: SafeWork v2.0 전용 테이블
+-- ========================================
+
+-- SafeWork 근로자 정보 (v2.0 모델과 호환)
+CREATE TABLE IF NOT EXISTS safework_workers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    employee_number VARCHAR(50) UNIQUE NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    department VARCHAR(100),
+    position VARCHAR(100),
+    birth_date DATE,
+    gender VARCHAR(10),
+    phone VARCHAR(50),
+    email VARCHAR(100),
+    emergency_contact VARCHAR(50),
+    emergency_relationship VARCHAR(50),
+    address TEXT,
+    hire_date DATE,
+    blood_type VARCHAR(10),
+    medical_conditions TEXT,
+    allergies TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_employee_number (employee_number),
+    INDEX idx_department (department),
+    INDEX idx_is_active (is_active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- SafeWork 건강검진 기록 (v2.0 모델과 호환)
+CREATE TABLE IF NOT EXISTS safework_health_checks (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    worker_id INT NOT NULL,
+    check_type VARCHAR(50),
+    check_date DATE NOT NULL,
+    hospital VARCHAR(200),
+    result VARCHAR(50),
+    blood_pressure VARCHAR(20),
+    blood_sugar VARCHAR(20),
+    cholesterol VARCHAR(20),
+    bmi FLOAT,
+    vision_left VARCHAR(10),
+    vision_right VARCHAR(10),
+    hearing_left VARCHAR(10),
+    hearing_right VARCHAR(10),
+    chest_xray VARCHAR(100),
+    findings TEXT,
+    recommendations TEXT,
+    next_check_date DATE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (worker_id) REFERENCES safework_workers(id) ON DELETE CASCADE,
+    INDEX idx_worker_id (worker_id),
+    INDEX idx_check_date (check_date),
+    INDEX idx_check_type (check_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- SafeWork 의무실 방문 기록 (v2.0 모델과 호환)
+CREATE TABLE IF NOT EXISTS safework_medical_visits (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    worker_id INT NOT NULL,
+    visit_date DATETIME NOT NULL,
+    chief_complaint TEXT,
+    blood_pressure VARCHAR(20),
+    heart_rate INT,
+    body_temp FLOAT,
+    resp_rate INT,
+    diagnosis TEXT,
+    treatment TEXT,
+    medication_given TEXT,
+    follow_up_needed BOOLEAN DEFAULT FALSE,
+    follow_up_date DATE,
+    nurse_name VARCHAR(100),
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (worker_id) REFERENCES safework_workers(id) ON DELETE CASCADE,
+    INDEX idx_worker_id (worker_id),
+    INDEX idx_visit_date (visit_date),
+    INDEX idx_follow_up (follow_up_needed)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- SafeWork 의약품 재고 관리 (v2.0 모델과 호환)
+CREATE TABLE IF NOT EXISTS safework_medications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    category VARCHAR(100),
+    unit VARCHAR(50),
+    current_stock INT DEFAULT 0,
+    minimum_stock INT DEFAULT 0,
+    expiry_date DATE,
+    supplier VARCHAR(200),
+    price_per_unit FLOAT,
+    last_purchase_date DATE,
+    location VARCHAR(200),
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_name (name),
+    INDEX idx_category (category),
+    INDEX idx_expiry_date (expiry_date),
+    INDEX idx_current_stock (current_stock)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- SafeWork 의약품 사용 기록 (v2.0 모델과 호환)
+CREATE TABLE IF NOT EXISTS safework_medication_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    medication_id INT NOT NULL,
+    worker_id INT,
+    action_type VARCHAR(50),
+    quantity INT NOT NULL,
+    reason TEXT,
+    performed_by VARCHAR(100),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (medication_id) REFERENCES safework_medications(id) ON DELETE CASCADE,
+    FOREIGN KEY (worker_id) REFERENCES safework_workers(id) ON DELETE SET NULL,
+    INDEX idx_medication_id (medication_id),
+    INDEX idx_worker_id (worker_id),
+    INDEX idx_action_type (action_type),
+    INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- SafeWork 건강검진 계획 (v2.0 모델과 호환)
+CREATE TABLE IF NOT EXISTS safework_health_plans (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    year INT NOT NULL,
+    plan_type VARCHAR(50),
+    department VARCHAR(100),
+    target_month INT,
+    target_count INT,
+    completed_count INT DEFAULT 0,
+    hospital VARCHAR(200),
+    budget FLOAT,
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_year (year),
+    INDEX idx_plan_type (plan_type),
+    INDEX idx_department (department)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 테스트용 SafeWork 데이터 삽입
+INSERT IGNORE INTO safework_workers (employee_number, name, department, position, hire_date, gender, blood_type, phone, email) VALUES 
+('SW001', '김안전', '생산1팀', '팀장', '2020-01-15', 'M', 'A+', '010-1234-5678', 'safety.kim@company.com'),
+('SW002', '이보건', '생산2팀', '대리', '2021-03-20', 'F', 'B+', '010-2345-6789', 'health.lee@company.com'),
+('SW003', '박건강', '품질관리팀', '사원', '2022-06-10', 'M', 'O+', '010-3456-7890', 'healthy.park@company.com'),
+('SW004', '최예방', '물류팀', '주임', '2023-02-01', 'F', 'AB+', '010-4567-8901', 'prevent.choi@company.com'),
+('SW005', '정관리', '사무직', '과장', '2019-11-05', 'M', 'A-', '010-5678-9012', 'manage.jung@company.com');
+
+INSERT IGNORE INTO safework_medications (name, category, unit, current_stock, minimum_stock, supplier, location) VALUES 
+('타이레놀정', '해열진통제', '정', 100, 20, '한국제약', '의무실 캐비넷 A'),
+('후시딘연고', '항생제', '튜브', 15, 5, '동아제약', '의무실 냉장고'),
+('게보린정', '해열진통제', '정', 80, 15, '삼진제약', '의무실 캐비넷 A'),
+('포비돈', '소독제', 'ml', 500, 100, '일동제약', '의무실 선반'),
+('밴드', '의료용품', '개', 200, 50, '3M', '의무실 서랍');
+
 -- 초기화 완료 로그
-SELECT 'SafeWork Database Schema Initialized Successfully' as status;
+SELECT 'SafeWork Database Schema v2.0 Initialized Successfully' as status;

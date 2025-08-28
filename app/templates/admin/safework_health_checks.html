@@ -1,0 +1,468 @@
+{% extends "base.html" %}
+
+{% block title %}건강검진 관리 - SafeWork{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-3">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">
+            <i class="bi bi-clipboard-pulse"></i> 건강검진 관리
+        </h2>
+        <div>
+            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addCheckPlanModal">
+                <i class="bi bi-calendar-plus"></i> 검진 계획 등록
+            </button>
+            <button class="btn btn-primary" onclick="printSchedule()">
+                <i class="bi bi-printer"></i> 일정표 출력
+            </button>
+        </div>
+    </div>
+
+    <!-- 연도/검진유형 선택 -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-2">
+                    <select class="form-select" id="yearSelect">
+                        <option value="2024" selected>2024년</option>
+                        <option value="2023">2023년</option>
+                        <option value="2022">2022년</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="typeSelect">
+                        <option value="">전체 유형</option>
+                        <option value="GENERAL">일반건강검진</option>
+                        <option value="SPECIAL">특수건강검진</option>
+                        <option value="PLACEMENT">배치전건강검진</option>
+                        <option value="RETURN">복직후건강검진</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="statusSelect">
+                        <option value="">전체 상태</option>
+                        <option value="PLANNED">계획</option>
+                        <option value="IN_PROGRESS">진행중</option>
+                        <option value="COMPLETED">완료</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <button class="btn btn-primary" onclick="filterData()">
+                        <i class="bi bi-funnel"></i> 필터 적용
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 검진 현황 요약 -->
+    <div class="row mb-3">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">전체 대상자</h5>
+                    <h3 class="text-primary">{{ total_targets }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">검진 완료</h5>
+                    <h3 class="text-success">{{ completed_count }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">검진 예정</h5>
+                    <h3 class="text-warning">{{ scheduled_count }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">완료율</h5>
+                    <h3 class="text-info">{{ completion_rate }}%</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 탭 메뉴 -->
+    <ul class="nav nav-tabs mb-3" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" data-bs-toggle="tab" href="#plans">검진 계획</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#targets">대상자 관리</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#results">검진 결과</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#statistics">통계 분석</a>
+        </li>
+    </ul>
+
+    <!-- 탭 내용 -->
+    <div class="tab-content">
+        <!-- 검진 계획 탭 -->
+        <div class="tab-pane fade show active" id="plans">
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>연도</th>
+                                    <th>검진유형</th>
+                                    <th>예정일</th>
+                                    <th>대상인원</th>
+                                    <th>완료인원</th>
+                                    <th>진행률</th>
+                                    <th>상태</th>
+                                    <th>관리</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for plan in health_plans %}
+                                <tr>
+                                    <td>{{ plan.year }}년</td>
+                                    <td>
+                                        {% if plan.type == 'GENERAL' %}
+                                        <span class="badge bg-primary">일반</span>
+                                        {% elif plan.type == 'SPECIAL' %}
+                                        <span class="badge bg-warning">특수</span>
+                                        {% elif plan.type == 'PLACEMENT' %}
+                                        <span class="badge bg-info">배치전</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">복직후</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ plan.planned_date }}</td>
+                                    <td>{{ plan.target_count }}명</td>
+                                    <td>{{ plan.completed_count }}명</td>
+                                    <td>
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar" style="width: {{ plan.completion_rate }}%">
+                                                {{ plan.completion_rate }}%
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if plan.status == 'PLANNED' %}
+                                        <span class="badge bg-secondary">계획</span>
+                                        {% elif plan.status == 'IN_PROGRESS' %}
+                                        <span class="badge bg-warning">진행중</span>
+                                        {% else %}
+                                        <span class="badge bg-success">완료</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="editPlan({{ plan.id }})">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-info" onclick="viewTargets({{ plan.id }})">
+                                            <i class="bi bi-people"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted">등록된 검진 계획이 없습니다.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 대상자 관리 탭 -->
+        <div class="tab-pane fade" id="targets">
+            <div class="card">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <button class="btn btn-success btn-sm" onclick="addTargets()">
+                            <i class="bi bi-person-plus"></i> 대상자 추가
+                        </button>
+                        <button class="btn btn-warning btn-sm" onclick="sendNotifications()">
+                            <i class="bi bi-envelope"></i> 안내문 발송
+                        </button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th><input type="checkbox" id="selectAllTargets"></th>
+                                    <th>사번</th>
+                                    <th>이름</th>
+                                    <th>부서</th>
+                                    <th>검진유형</th>
+                                    <th>예약일</th>
+                                    <th>병원</th>
+                                    <th>상태</th>
+                                    <th>관리</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for target in health_targets %}
+                                <tr>
+                                    <td><input type="checkbox" class="target-check" value="{{ target.id }}"></td>
+                                    <td>{{ target.employee_number }}</td>
+                                    <td>{{ target.name }}</td>
+                                    <td>{{ target.department }}</td>
+                                    <td>{{ target.check_type }}</td>
+                                    <td>{{ target.scheduled_date }}</td>
+                                    <td>{{ target.hospital_name }}</td>
+                                    <td>
+                                        {% if target.status == 'COMPLETED' %}
+                                        <span class="badge bg-success">완료</span>
+                                        {% elif target.status == 'SCHEDULED' %}
+                                        <span class="badge bg-warning">예정</span>
+                                        {% elif target.status == 'NOTIFIED' %}
+                                        <span class="badge bg-info">통보</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">미실시</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="editTarget({{ target.id }})">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="9" class="text-center text-muted">대상자가 없습니다.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 검진 결과 탭 -->
+        <div class="tab-pane fade" id="results">
+            <div class="card">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <button class="btn btn-primary btn-sm" onclick="inputResults()">
+                            <i class="bi bi-pencil-square"></i> 결과 입력
+                        </button>
+                        <button class="btn btn-success btn-sm" onclick="generateReport()">
+                            <i class="bi bi-file-earmark-text"></i> 보고서 생성
+                        </button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>검진일</th>
+                                    <th>이름</th>
+                                    <th>부서</th>
+                                    <th>판정</th>
+                                    <th>BMI</th>
+                                    <th>혈압</th>
+                                    <th>후속조치</th>
+                                    <th>상세</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for result in health_results %}
+                                <tr>
+                                    <td>{{ result.check_date }}</td>
+                                    <td>{{ result.name }}</td>
+                                    <td>{{ result.department }}</td>
+                                    <td>
+                                        {% if result.grade == 'A' %}
+                                        <span class="badge bg-success">A</span>
+                                        {% elif result.grade == 'B' %}
+                                        <span class="badge bg-info">B</span>
+                                        {% elif result.grade == 'C' %}
+                                        <span class="badge bg-warning">C</span>
+                                        {% elif result.grade in ['D1', 'D2'] %}
+                                        <span class="badge bg-danger">{{ result.grade }}</span>
+                                        {% else %}
+                                        <span class="badge bg-dark">R</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ result.bmi }}</td>
+                                    <td>{{ result.blood_pressure }}</td>
+                                    <td>
+                                        {% if result.follow_up_required %}
+                                        <span class="text-danger">필요</span>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-info" onclick="viewResult({{ result.id }})">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted">검진 결과가 없습니다.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 통계 분석 탭 -->
+        <div class="tab-pane fade" id="statistics">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">부서별 검진 현황</div>
+                        <div class="card-body">
+                            <canvas id="deptChart" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">판정 분포</div>
+                        <div class="card-body">
+                            <canvas id="gradeChart" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 검진 계획 등록 모달 -->
+<div class="modal fade" id="addCheckPlanModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">건강검진 계획 등록</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addPlanForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">연도</label>
+                        <select class="form-select" name="year" required>
+                            <option value="2024">2024년</option>
+                            <option value="2025">2025년</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">검진 유형</label>
+                        <select class="form-select" name="type" required>
+                            <option value="">선택하세요</option>
+                            <option value="GENERAL">일반건강검진</option>
+                            <option value="SPECIAL">특수건강검진</option>
+                            <option value="PLACEMENT">배치전건강검진</option>
+                            <option value="RETURN">복직후건강검진</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">예정일</label>
+                        <input type="date" class="form-control" name="planned_date" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">설명</label>
+                        <textarea class="form-control" name="description" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="submit" class="btn btn-primary">등록</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// 차트 초기화
+document.addEventListener('DOMContentLoaded', function() {
+    // 부서별 검진 현황 차트
+    const deptCtx = document.getElementById('deptChart');
+    if (deptCtx) {
+        new Chart(deptCtx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: ['생산부', '품질관리부', '연구개발부', '경영지원부'],
+                datasets: [{
+                    label: '완료',
+                    data: [45, 38, 42, 35],
+                    backgroundColor: 'rgba(40, 167, 69, 0.8)'
+                }, {
+                    label: '미완료',
+                    data: [5, 7, 3, 5],
+                    backgroundColor: 'rgba(220, 53, 69, 0.8)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
+
+    // 판정 분포 차트
+    const gradeCtx = document.getElementById('gradeChart');
+    if (gradeCtx) {
+        new Chart(gradeCtx.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['A', 'B', 'C', 'D1', 'D2', 'R'],
+                datasets: [{
+                    data: [120, 65, 40, 15, 5, 2],
+                    backgroundColor: [
+                        'rgba(40, 167, 69, 0.8)',
+                        'rgba(23, 162, 184, 0.8)',
+                        'rgba(255, 193, 7, 0.8)',
+                        'rgba(253, 126, 20, 0.8)',
+                        'rgba(220, 53, 69, 0.8)',
+                        'rgba(108, 117, 125, 0.8)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
+});
+
+function filterData() {
+    // 필터 적용 로직
+    alert('필터 적용');
+}
+
+function editPlan(id) {
+    // 계획 수정
+    alert('계획 수정: ' + id);
+}
+
+function viewTargets(id) {
+    // 대상자 보기
+    alert('대상자 보기: ' + id);
+}
+
+function viewResult(id) {
+    // 결과 상세보기
+    window.location.href = `/admin/safework/health-checks/results/${id}`;
+}
+</script>
+{% endblock %}

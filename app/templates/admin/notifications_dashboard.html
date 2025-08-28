@@ -1,0 +1,781 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="fas fa-bell"></i> 실시간 알림 시스템</h2>
+            <p class="text-muted">SafeWork 시스템 알림 관리 및 설정</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <span id="connectionStatus" class="badge bg-secondary">연결 중...</span>
+            <button class="btn btn-primary" onclick="refreshNotifications()">
+                <i class="fas fa-sync-alt"></i> 새로고침
+            </button>
+            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#settingsModal">
+                <i class="fas fa-cog"></i> 설정
+            </button>
+        </div>
+    </div>
+
+    <!-- 알림 통계 카드들 -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-primary">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title text-primary">미확인 알림</h5>
+                            <h3 id="unreadCount">0</h3>
+                            <p class="text-muted">확인 필요</p>
+                        </div>
+                        <i class="fas fa-envelope fa-2x text-primary"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-danger">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title text-danger">긴급 알림</h5>
+                            <h3 id="urgentCount">0</h3>
+                            <p class="text-muted">즉시 처리</p>
+                        </div>
+                        <i class="fas fa-exclamation-circle fa-2x text-danger"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-warning">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title text-warning">오늘 알림</h5>
+                            <h3 id="todayCount">0</h3>
+                            <p class="text-muted">오늘 받은 알림</p>
+                        </div>
+                        <i class="fas fa-calendar-day fa-2x text-warning"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title text-success">시스템 상태</h5>
+                            <h4 id="systemStatus" class="text-success">정상</h4>
+                            <p class="text-muted">알림 시스템</p>
+                        </div>
+                        <i class="fas fa-check-circle fa-2x text-success"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 실시간 알림 스트림과 관리 탭 -->
+    <div class="row">
+        <div class="col-md-8">
+            <!-- 실시간 알림 스트림 -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">실시간 알림 스트림</h5>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary" onclick="markAllAsRead()">
+                            모두 읽음
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="clearAll()">
+                            모두 지우기
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div id="notificationStream" style="height: 500px; overflow-y: auto;">
+                        <div class="text-center p-4 text-muted">
+                            <i class="fas fa-bell-slash fa-2x mb-2"></i>
+                            <p>알림을 기다리는 중...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <!-- 알림 필터 및 설정 -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title">알림 필터</h5>
+                </div>
+                <div class="card-body">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="filterMedication" checked>
+                        <label class="form-check-label" for="filterMedication">
+                            의약품 알림
+                        </label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="filterVisit" checked>
+                        <label class="form-check-label" for="filterVisit">
+                            방문 알림
+                        </label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="filterHealthCheck" checked>
+                        <label class="form-check-label" for="filterHealthCheck">
+                            건강검진 알림
+                        </label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="filterSystem" checked>
+                        <label class="form-check-label" for="filterSystem">
+                            시스템 알림
+                        </label>
+                    </div>
+                    <hr>
+                    <div class="mb-3">
+                        <label class="form-label">우선순위</label>
+                        <select class="form-select" id="priorityFilter">
+                            <option value="all">모든 우선순위</option>
+                            <option value="high">높음</option>
+                            <option value="medium">보통</option>
+                            <option value="low">낮음</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 알림 통계 -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">알림 통계</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="notificationChart" style="max-height: 200px;"></canvas>
+                    <div class="mt-3">
+                        <small class="text-muted">최근 7일간 알림 현황</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 알림 히스토리 테이블 -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">알림 히스토리</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="notificationHistoryTable">
+                            <thead>
+                                <tr>
+                                    <th>시간</th>
+                                    <th>유형</th>
+                                    <th>제목</th>
+                                    <th>메시지</th>
+                                    <th>우선순위</th>
+                                    <th>상태</th>
+                                    <th>액션</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <nav>
+                        <ul class="pagination justify-content-center" id="notificationPagination"></ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 알림 설정 모달 -->
+<div class="modal fade" id="settingsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">알림 설정</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="settingsForm">
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="emailEnabled">
+                            <label class="form-check-label" for="emailEnabled">
+                                이메일 알림
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="browserEnabled">
+                            <label class="form-check-label" for="browserEnabled">
+                                브라우저 알림
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="medicationAlerts">
+                            <label class="form-check-label" for="medicationAlerts">
+                                의약품 재고 알림
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="visitReminders">
+                            <label class="form-check-label" for="visitReminders">
+                                방문 일정 알림
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="healthCheckReminders">
+                            <label class="form-check-label" for="healthCheckReminders">
+                                건강검진 일정 알림
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">알림 임계값 (일)</label>
+                        <input type="number" class="form-control" id="alertThresholdDays" min="1" max="30" value="7">
+                        <div class="form-text">유효기간, 일정 등에 대한 사전 알림 일수</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <button type="button" class="btn btn-primary" onclick="saveSettings()">저장</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.notification-item {
+    border-left: 4px solid;
+    background: white;
+    margin-bottom: 10px;
+    padding: 15px;
+    border-radius: 0 5px 5px 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.notification-item.unread {
+    background-color: #f8f9fa;
+}
+
+.notification-item.high {
+    border-left-color: #dc3545;
+}
+
+.notification-item.medium {
+    border-left-color: #ffc107;
+}
+
+.notification-item.low {
+    border-left-color: #28a745;
+}
+
+.notification-timestamp {
+    font-size: 0.8em;
+    color: #6c757d;
+}
+
+.notification-title {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.notification-message {
+    color: #495057;
+    margin-bottom: 10px;
+}
+
+.notification-actions {
+    text-align: right;
+}
+
+.badge-notification {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    min-width: 20px;
+    height: 20px;
+    border-radius: 50%;
+}
+
+#notificationStream {
+    background: #f8f9fa;
+}
+
+#notificationStream:empty::before {
+    content: "새로운 알림이 여기에 표시됩니다.";
+    display: block;
+    text-align: center;
+    padding: 50px;
+    color: #6c757d;
+    font-style: italic;
+}
+
+.priority-high {
+    color: #dc3545;
+}
+
+.priority-medium {
+    color: #ffc107;
+}
+
+.priority-low {
+    color: #28a745;
+}
+
+.connection-status {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1050;
+}
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.4/socket.io.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Socket.IO 연결
+const socket = io();
+let notificationChart = null;
+let currentPage = 1;
+let notifications = [];
+
+// 페이지 로드 시 초기화
+document.addEventListener('DOMContentLoaded', function() {
+    initializeSocketIO();
+    loadNotificationSettings();
+    loadNotificationHistory();
+    setupNotificationChart();
+    
+    // 브라우저 알림 권한 요청
+    if ("Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission();
+    }
+});
+
+// Socket.IO 이벤트 핸들러
+function initializeSocketIO() {
+    socket.on('connect', function() {
+        document.getElementById('connectionStatus').className = 'badge bg-success';
+        document.getElementById('connectionStatus').textContent = '연결됨';
+        document.getElementById('systemStatus').textContent = '정상';
+        document.getElementById('systemStatus').className = 'text-success';
+    });
+
+    socket.on('disconnect', function() {
+        document.getElementById('connectionStatus').className = 'badge bg-danger';
+        document.getElementById('connectionStatus').textContent = '연결 끊어짐';
+        document.getElementById('systemStatus').textContent = '오프라인';
+        document.getElementById('systemStatus').className = 'text-danger';
+    });
+
+    socket.on('new_notification', function(notification) {
+        addNotificationToStream(notification);
+        updateNotificationCounts();
+        
+        // 브라우저 알림 표시
+        if (Notification.permission === "granted") {
+            new Notification(notification.title, {
+                body: notification.message,
+                icon: '/static/images/safework-icon.png'
+            });
+        }
+        
+        // 알림음 재생 (선택사항)
+        playNotificationSound(notification.priority);
+    });
+
+    socket.on('unread_notifications', function(notifications) {
+        notifications.forEach(notification => {
+            addNotificationToStream(notification, false);
+        });
+        updateNotificationCounts();
+    });
+
+    socket.on('notification_marked_read', function(data) {
+        markNotificationAsRead(data.notification_id);
+    });
+
+    socket.on('status', function(data) {
+        console.log('Status:', data.msg);
+    });
+}
+
+// 알림 스트림에 추가
+function addNotificationToStream(notification, animate = true) {
+    const stream = document.getElementById('notificationStream');
+    
+    // 빈 상태 메시지 제거
+    if (stream.children.length === 1 && stream.children[0].classList.contains('text-center')) {
+        stream.innerHTML = '';
+    }
+    
+    const notificationElement = createNotificationElement(notification);
+    
+    if (animate) {
+        notificationElement.style.opacity = '0';
+        notificationElement.style.transform = 'translateX(-20px)';
+        stream.insertBefore(notificationElement, stream.firstChild);
+        
+        setTimeout(() => {
+            notificationElement.style.transition = 'all 0.3s ease';
+            notificationElement.style.opacity = '1';
+            notificationElement.style.transform = 'translateX(0)';
+        }, 10);
+    } else {
+        stream.insertBefore(notificationElement, stream.firstChild);
+    }
+    
+    // 최대 50개까지만 유지
+    while (stream.children.length > 50) {
+        stream.removeChild(stream.lastChild);
+    }
+    
+    notifications.unshift(notification);
+}
+
+// 알림 요소 생성
+function createNotificationElement(notification) {
+    const div = document.createElement('div');
+    div.className = `notification-item ${notification.priority} ${notification.is_read === false ? 'unread' : ''}`;
+    div.id = `notification-${notification.id}`;
+    
+    const priorityIcon = {
+        'high': 'fas fa-exclamation-circle text-danger',
+        'medium': 'fas fa-exclamation-triangle text-warning', 
+        'low': 'fas fa-info-circle text-success'
+    };
+    
+    const typeIcon = {
+        'medication_low_stock': 'fas fa-pills',
+        'medication_expiring': 'fas fa-calendar-times',
+        'health_check_reminder': 'fas fa-heartbeat',
+        'visit_reminder': 'fas fa-calendar-check',
+        'system': 'fas fa-cog'
+    };
+    
+    div.innerHTML = `
+        <div class="d-flex justify-content-between align-items-start">
+            <div class="flex-grow-1">
+                <div class="notification-title">
+                    <i class="${typeIcon[notification.type] || 'fas fa-bell'}"></i>
+                    ${notification.title}
+                    <i class="${priorityIcon[notification.priority]} ms-2"></i>
+                </div>
+                <div class="notification-message">${notification.message}</div>
+                <div class="notification-timestamp">
+                    <i class="fas fa-clock"></i> ${formatTimestamp(notification.created_at || new Date().toISOString())}
+                </div>
+            </div>
+            <div class="notification-actions">
+                ${notification.is_read === false ? `
+                    <button class="btn btn-sm btn-outline-primary" onclick="markAsRead(${notification.id})">
+                        <i class="fas fa-check"></i>
+                    </button>
+                ` : ''}
+                <button class="btn btn-sm btn-outline-danger" onclick="removeNotification(${notification.id})">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    
+    return div;
+}
+
+// 타임스탬프 포맷팅
+function formatTimestamp(timestamp) {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = now - date;
+    const minutes = Math.floor(diff / 60000);
+    
+    if (minutes < 1) return '방금 전';
+    if (minutes < 60) return `${minutes}분 전`;
+    if (minutes < 1440) return `${Math.floor(minutes / 60)}시간 전`;
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+}
+
+// 알림 읽음 처리
+function markAsRead(notificationId) {
+    fetch(`/notifications/api/notifications/${notificationId}/read`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            markNotificationAsRead(notificationId);
+        }
+    });
+}
+
+// UI에서 알림을 읽음으로 표시
+function markNotificationAsRead(notificationId) {
+    const element = document.getElementById(`notification-${notificationId}`);
+    if (element) {
+        element.classList.remove('unread');
+        const button = element.querySelector('.btn-outline-primary');
+        if (button) button.remove();
+    }
+    updateNotificationCounts();
+}
+
+// 알림 제거
+function removeNotification(notificationId) {
+    const element = document.getElementById(`notification-${notificationId}`);
+    if (element) {
+        element.style.transition = 'all 0.3s ease';
+        element.style.opacity = '0';
+        element.style.transform = 'translateX(20px)';
+        setTimeout(() => element.remove(), 300);
+    }
+}
+
+// 모든 알림을 읽음으로 처리
+function markAllAsRead() {
+    fetch('/notifications/api/notifications/mark-all-read', {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.querySelectorAll('.notification-item.unread').forEach(element => {
+                element.classList.remove('unread');
+                const button = element.querySelector('.btn-outline-primary');
+                if (button) button.remove();
+            });
+            updateNotificationCounts();
+        }
+    });
+}
+
+// 모든 알림 지우기
+function clearAll() {
+    if (confirm('모든 알림을 지우시겠습니까?')) {
+        document.getElementById('notificationStream').innerHTML = `
+            <div class="text-center p-4 text-muted">
+                <i class="fas fa-bell-slash fa-2x mb-2"></i>
+                <p>알림을 기다리는 중...</p>
+            </div>
+        `;
+        notifications = [];
+        updateNotificationCounts();
+    }
+}
+
+// 알림 카운트 업데이트
+function updateNotificationCounts() {
+    const unreadCount = notifications.filter(n => n.is_read === false).length;
+    const urgentCount = notifications.filter(n => n.priority === 'high' && n.is_read === false).length;
+    const todayCount = notifications.filter(n => {
+        const date = new Date(n.created_at || new Date());
+        return date.toDateString() === new Date().toDateString();
+    }).length;
+    
+    document.getElementById('unreadCount').textContent = unreadCount;
+    document.getElementById('urgentCount').textContent = urgentCount;
+    document.getElementById('todayCount').textContent = todayCount;
+}
+
+// 알림음 재생
+function playNotificationSound(priority) {
+    const audio = new Audio();
+    switch(priority) {
+        case 'high':
+            audio.src = '/static/sounds/urgent-notification.mp3';
+            break;
+        case 'medium':
+            audio.src = '/static/sounds/medium-notification.mp3';
+            break;
+        case 'low':
+        default:
+            audio.src = '/static/sounds/soft-notification.mp3';
+            break;
+    }
+    audio.play().catch(e => console.log('Could not play notification sound'));
+}
+
+// 알림 설정 로드
+function loadNotificationSettings() {
+    fetch('/notifications/api/notifications/settings')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const settings = data.settings;
+                document.getElementById('emailEnabled').checked = settings.email_enabled;
+                document.getElementById('browserEnabled').checked = settings.browser_enabled;
+                document.getElementById('medicationAlerts').checked = settings.medication_alerts;
+                document.getElementById('visitReminders').checked = settings.visit_reminders;
+                document.getElementById('healthCheckReminders').checked = settings.health_check_reminders;
+                document.getElementById('alertThresholdDays').value = settings.alert_threshold_days;
+            }
+        });
+}
+
+// 알림 설정 저장
+function saveSettings() {
+    const settings = {
+        email_enabled: document.getElementById('emailEnabled').checked,
+        browser_enabled: document.getElementById('browserEnabled').checked,
+        medication_alerts: document.getElementById('medicationAlerts').checked,
+        visit_reminders: document.getElementById('visitReminders').checked,
+        health_check_reminders: document.getElementById('healthCheckReminders').checked,
+        alert_threshold_days: parseInt(document.getElementById('alertThresholdDays').value)
+    };
+    
+    fetch('/notifications/api/notifications/settings', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(settings)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('설정이 저장되었습니다.');
+            document.querySelector('#settingsModal .btn-close').click();
+        }
+    });
+}
+
+// 알림 히스토리 로드
+function loadNotificationHistory(page = 1) {
+    fetch(`/notifications/api/notifications?page=${page}&per_page=10`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayNotificationHistory(data.notifications);
+                updatePagination(data.pagination);
+            }
+        });
+}
+
+// 알림 히스토리 표시
+function displayNotificationHistory(notifications) {
+    const tbody = document.querySelector('#notificationHistoryTable tbody');
+    tbody.innerHTML = notifications.map(notification => `
+        <tr class="${notification.is_read ? '' : 'table-warning'}">
+            <td>${formatTimestamp(notification.created_at)}</td>
+            <td>
+                <span class="badge bg-secondary">${getNotificationTypeLabel(notification.type)}</span>
+            </td>
+            <td>${notification.title}</td>
+            <td>${notification.message}</td>
+            <td>
+                <span class="priority-${notification.priority}">
+                    ${getPriorityLabel(notification.priority)}
+                </span>
+            </td>
+            <td>
+                <span class="badge ${notification.is_read ? 'bg-success' : 'bg-warning'}">
+                    ${notification.is_read ? '읽음' : '미읽음'}
+                </span>
+            </td>
+            <td>
+                ${!notification.is_read ? `
+                    <button class="btn btn-sm btn-outline-primary" onclick="markAsRead(${notification.id})">
+                        읽음
+                    </button>
+                ` : ''}
+            </td>
+        </tr>
+    `).join('');
+}
+
+// 알림 유형 레이블
+function getNotificationTypeLabel(type) {
+    const labels = {
+        'medication_low_stock': '재고부족',
+        'medication_expiring': '유효기간',
+        'health_check_reminder': '건강검진',
+        'visit_reminder': '방문일정',
+        'system': '시스템'
+    };
+    return labels[type] || type;
+}
+
+// 우선순위 레이블
+function getPriorityLabel(priority) {
+    const labels = {
+        'high': '높음',
+        'medium': '보통', 
+        'low': '낮음'
+    };
+    return labels[priority] || priority;
+}
+
+// 페이지네이션 업데이트
+function updatePagination(pagination) {
+    const paginationElement = document.getElementById('notificationPagination');
+    let html = '';
+    
+    if (pagination.has_prev) {
+        html += `<li class="page-item"><a class="page-link" href="#" onclick="loadNotificationHistory(${pagination.page - 1})">&laquo;</a></li>`;
+    }
+    
+    for (let i = 1; i <= pagination.pages; i++) {
+        html += `<li class="page-item ${i === pagination.page ? 'active' : ''}">
+            <a class="page-link" href="#" onclick="loadNotificationHistory(${i})">${i}</a>
+        </li>`;
+    }
+    
+    if (pagination.has_next) {
+        html += `<li class="page-item"><a class="page-link" href="#" onclick="loadNotificationHistory(${pagination.page + 1})">&raquo;</a></li>`;
+    }
+    
+    paginationElement.innerHTML = html;
+}
+
+// 알림 차트 설정
+function setupNotificationChart() {
+    const ctx = document.getElementById('notificationChart').getContext('2d');
+    notificationChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['6일전', '5일전', '4일전', '3일전', '2일전', '어제', '오늘'],
+            datasets: [{
+                label: '알림 수',
+                data: [12, 15, 8, 20, 25, 18, 22],
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+// 새로고침
+function refreshNotifications() {
+    location.reload();
+}
+</script>
+{% endblock %}

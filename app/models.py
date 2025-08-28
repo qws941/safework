@@ -5,9 +5,11 @@ from datetime import datetime, timezone, timedelta
 # KST timezone
 KST = timezone(timedelta(hours=9))
 
+
 def kst_now():
     """현재 KST 시간 반환"""
     return datetime.now(KST)
+
 
 from flask_login import UserMixin
 from flask_sqlalchemy import SQLAlchemy
@@ -36,9 +38,7 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=kst_now)
-    updated_at = db.Column(
-        db.DateTime, default=kst_now, onupdate=kst_now
-    )
+    updated_at = db.Column(db.DateTime, default=kst_now, onupdate=kst_now)
 
     # Relationships
     surveys = db.relationship(
@@ -65,7 +65,7 @@ class Survey(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    
+
     # 양식 구분 필드 추가
     form_type = db.Column(db.String(50))  # 001_musculoskeletal, 002_new_employee 등
     employee_number = db.Column(db.String(50))  # 사번
@@ -106,9 +106,7 @@ class Survey(db.Model):
     hobby_none = db.Column(db.Boolean, default=False)  # 해당사항 없음
 
     # 2. 가사노동시간
-    housework_hours = db.Column(
-        db.String(50)
-    )  # 거의안함/1시간미만/1-2시간/2-3시간/3시간이상
+    housework_hours = db.Column(db.String(50))  # 거의안함/1시간미만/1-2시간/2-3시간/3시간이상
 
     # 3. 진단받은 질병
     disease_rheumatoid = db.Column(db.Boolean, default=False)  # 류머티스 관절염
@@ -128,9 +126,7 @@ class Survey(db.Model):
     accident_leg = db.Column(db.Boolean, default=False)
 
     # 5. 육체적 부담 정도
-    physical_burden = db.Column(
-        db.String(30)
-    )  # 전혀힘들지않음/견딜만함/약간힘듦/매우힘듦
+    physical_burden = db.Column(db.String(30))  # 전혀힘들지않음/견딜만함/약간힘듦/매우힘듦
 
     # II. 근골격계 증상 (지난 1년 동안)
     # 통증 경험 여부
@@ -168,9 +164,7 @@ class Survey(db.Model):
     reviewed_at = db.Column(db.DateTime)
 
     created_at = db.Column(db.DateTime, default=kst_now)
-    updated_at = db.Column(
-        db.DateTime, default=kst_now, onupdate=kst_now
-    )
+    updated_at = db.Column(db.DateTime, default=kst_now, onupdate=kst_now)
 
     def __repr__(self):
         return f"<Survey {self.name} - {self.submission_date}>"
@@ -205,7 +199,7 @@ class SurveyStatistics(db.Model):
 
     # 치료 필요 인원
     medical_treatment_count = db.Column(db.Integer, default=0)
-    
+
     # Form 002 - 신규 입사자 건강검진 양식 추가 필드
     height_cm = db.Column(db.Float)  # 신장
     weight_kg = db.Column(db.Float)  # 체중
@@ -215,9 +209,7 @@ class SurveyStatistics(db.Model):
     allergy_history = db.Column(db.Text)  # 알레르기 이력
 
     created_at = db.Column(db.DateTime, default=kst_now)
-    updated_at = db.Column(
-        db.DateTime, default=kst_now, onupdate=kst_now
-    )
+    updated_at = db.Column(db.DateTime, default=kst_now, onupdate=kst_now)
 
     def __repr__(self):
         return f"<SurveyStatistics {self.stat_date}>"

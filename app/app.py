@@ -5,8 +5,7 @@ from datetime import datetime, timezone, timedelta
 
 import redis
 from flask import Flask, flash, redirect, render_template, request, url_for
-from flask_login import (LoginManager, current_user, login_required,
-                         login_user, logout_user)
+from flask_login import LoginManager, current_user, login_required, login_user, logout_user
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
 
@@ -18,7 +17,7 @@ from models import AuditLog, Survey, SurveyStatistics, User, db
 def create_app(config_name=None):
     """Application factory"""
     app = Flask(__name__)
-    
+
     # 시스템 시작 시간 저장
     app.start_time = time_module.time()
 
@@ -29,7 +28,7 @@ def create_app(config_name=None):
     # Initialize extensions
     db.init_app(app)
     migrate = Migrate(app, db)
-    
+
     # Initialize CSRF Protection
     csrf = CSRFProtect(app)
 
@@ -75,6 +74,15 @@ def create_app(config_name=None):
     app.register_blueprint(health_bp)
     app.register_blueprint(document_bp, url_prefix="/documents")
     app.register_blueprint(document_admin_bp, url_prefix="/admin/documents")
+
+    # SafeWork API routes (v2.0)
+    try:
+        from routes.api_safework_v2 import api_safework_bp
+
+        app.register_blueprint(api_safework_bp, url_prefix="/api/safework")
+        app.logger.info("SafeWork API v2.0 loaded successfully")
+    except ImportError as e:
+        app.logger.warning(f"SafeWork API v2.0 not loaded: {e}")
 
     # Database connection check (tables are created by MySQL image init.sql)
     with app.app_context():
@@ -132,11 +140,9 @@ def create_app(config_name=None):
         # Git 커밋 해시를 버전으로 사용 (단일 소스)
         try:
             import subprocess
+
             result = subprocess.run(
-                ["git", "rev-parse", "--short", "HEAD"],
-                capture_output=True,
-                text=True,
-                timeout=2
+                ["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True, timeout=2
             )
             if result.returncode == 0:
                 app_version = result.stdout.strip()
@@ -150,7 +156,7 @@ def create_app(config_name=None):
         uptime_days = int(uptime_seconds // 86400)
         uptime_hours = int((uptime_seconds % 86400) // 3600)
         uptime_minutes = int((uptime_seconds % 3600) // 60)
-        
+
         if uptime_days > 0:
             uptime_str = f"{uptime_days}일 {uptime_hours}시간 {uptime_minutes}분"
         elif uptime_hours > 0:
@@ -159,11 +165,13 @@ def create_app(config_name=None):
             uptime_str = f"{uptime_minutes}분"
 
         return {
-            "app_name": app.config["APP_NAME"], 
+            "app_name": app.config["APP_NAME"],
             "app_version": app_version,
             "system_uptime": uptime_str,
-            "start_time": datetime.fromtimestamp(app.start_time, tz=timezone(timedelta(hours=9))).strftime("%Y-%m-%d %H:%M:%S KST"),
-            "csrf_token": lambda: ""  # Add empty csrf_token function
+            "start_time": datetime.fromtimestamp(
+                app.start_time, tz=timezone(timedelta(hours=9))
+            ).strftime("%Y-%m-%d %H:%M:%S KST"),
+            "csrf_token": lambda: "",  # Add empty csrf_token function
         }
 
     # Audit logging
