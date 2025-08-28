@@ -102,186 +102,109 @@
                             </div>
                             <div class="col-md-4">
                                 <div class="form-group">
-                                    <label for="break_time_minutes">휴식시간 (분)</label>
-                                    <input type="number" class="form-control" name="break_time_minutes" id="break_time_minutes" min="0">
+                                    <label for="work_days_per_week">주 근무일수</label>
+                                    <input type="number" class="form-control" name="work_days_per_week" id="work_days_per_week" min="1" max="7">
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="form-group">
-                                    <label for="overtime_hours_per_week">주당 초과근무 (시간)</label>
-                                    <input type="number" class="form-control" name="overtime_hours_per_week" id="overtime_hours_per_week" min="0">
+                                    <label for="overtime_hours">초과근무 시간 (주당)</label>
+                                    <input type="number" class="form-control" name="overtime_hours" id="overtime_hours" min="0">
                                 </div>
                             </div>
                         </div>
-
+                        
                         <div class="form-group">
-                            <label>작업 자세</label>
-                            <div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="work_posture" value="standing" id="posture_standing">
-                                    <label class="form-check-label" for="posture_standing">주로 서서 작업</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="work_posture" value="sitting" id="posture_sitting">
-                                    <label class="form-check-label" for="posture_sitting">주로 앉아서 작업</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="work_posture" value="squatting" id="posture_squatting">
-                                    <label class="form-check-label" for="posture_squatting">쪼그려 앉아서 작업</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="work_posture" value="kneeling" id="posture_kneeling">
-                                    <label class="form-check-label" for="posture_kneeling">무릎을 굽히고 작업</label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label>반복적인 동작</label>
-                            <div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="repetitive_motion" value="neck" id="motion_neck">
-                                    <label class="form-check-label" for="motion_neck">목</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="repetitive_motion" value="shoulder" id="motion_shoulder">
-                                    <label class="form-check-label" for="motion_shoulder">어깨</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="repetitive_motion" value="arm" id="motion_arm">
-                                    <label class="form-check-label" for="motion_arm">팔/팔꿈치</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="repetitive_motion" value="hand" id="motion_hand">
-                                    <label class="form-check-label" for="motion_hand">손/손목/손가락</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="repetitive_motion" value="back" id="motion_back">
-                                    <label class="form-check-label" for="motion_back">허리</label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label>무거운 물건 들기</label>
-                            <div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="heavy_lifting" id="lifting_yes" value="true">
-                                    <label class="form-check-label" for="lifting_yes">예</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="heavy_lifting" id="lifting_no" value="false">
-                                    <label class="form-check-label" for="lifting_no">아니오</label>
-                                </div>
-                                <input type="number" class="form-control mt-2" name="lifting_weight_kg" placeholder="들기 무게 (kg)" min="0">
-                            </div>
+                            <label for="work_description">주요 작업 내용</label>
+                            <textarea class="form-control" name="work_description" id="work_description" rows="3"></textarea>
                         </div>
                     </div>
                 </div>
 
-                <!-- 증상 섹션들 -->
-                <!-- 목 증상 -->
+                <!-- 증상 정보 섹션 -->
                 <div class="card mb-4">
-                    <div class="card-header bg-warning">
-                        <h5 class="mb-0">III. 증상 조사 - 목</h5>
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">III. 근골격계 증상</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-3"><strong>최근 1년간 다음 부위에 아픔, 쑤시는 느낌, 저린느낌 등이 있었습니까?</strong></p>
+                        
+                        {% set body_parts = ['목', '어깨', '팔/팔꿈치', '손목/손가락', '허리', '다리/무릎', '발목/발가락'] %}
+                        
+                        {% for part in body_parts %}
+                        <div class="mb-3">
+                            <h6 class="text-primary">{{ part }} 부위</h6>
+                            <div class="form-group">
+                                <label>증상 유무:</label>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="{{ part }}_symptom" value="yes" id="{{ part }}_yes">
+                                    <label class="form-check-label" for="{{ part }}_yes">있음</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="{{ part }}_symptom" value="no" id="{{ part }}_no">
+                                    <label class="form-check-label" for="{{ part }}_no">없음</label>
+                                </div>
+                            </div>
+                            
+                            <div id="{{ part }}_details" style="display: none;">
+                                <div class="row mt-2">
+                                    <div class="col-md-6">
+                                        <label for="{{ part }}_pain_level">통증 정도 (0-10)</label>
+                                        <div class="pain-scale">
+                                            {% for i in range(11) %}
+                                            <input type="radio" name="{{ part }}_pain_level" value="{{ i }}" id="{{ part }}_pain_{{ i }}">
+                                            <label for="{{ part }}_pain_{{ i }}">{{ i }}</label>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="{{ part }}_frequency">발생 빈도</label>
+                                        <select class="form-select" name="{{ part }}_frequency">
+                                            <option value="">선택하세요</option>
+                                            <option value="매일">매일</option>
+                                            <option value="주 3-4회">주 3-4회</option>
+                                            <option value="주 1-2회">주 1-2회</option>
+                                            <option value="월 1-2회">월 1-2회</option>
+                                            <option value="드물게">드물게</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- 기타 정보 섹션 -->
+                <div class="card mb-4">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">IV. 기타 정보</h5>
                     </div>
                     <div class="card-body">
                         <div class="form-group">
-                            <label>목 부위 통증 정도 (0-10)</label>
-                            <input type="range" class="form-control-range" name="neck_pain" id="neck_pain" min="0" max="10" value="0">
-                            <span id="neck_pain_value">0</span>
+                            <label for="past_injury">과거 근골격계 질환 또는 상해 경험</label>
+                            <textarea class="form-control" name="past_injury" id="past_injury" rows="2"></textarea>
                         </div>
                         
                         <div class="form-group">
-                            <label>증상</label>
-                            <div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="checkbox" name="neck_symptoms" value="pain" id="neck_symptom_pain">
-                                    <label class="form-check-label" for="neck_symptom_pain">통증</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="checkbox" name="neck_symptoms" value="stiffness" id="neck_symptom_stiff">
-                                    <label class="form-check-label" for="neck_symptom_stiff">뻣뻣함</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="checkbox" name="neck_symptoms" value="burning" id="neck_symptom_burn">
-                                    <label class="form-check-label" for="neck_symptom_burn">화끈거림</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="checkbox" name="neck_symptoms" value="numbness" id="neck_symptom_numb">
-                                    <label class="form-check-label" for="neck_symptom_numb">저림</label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-3">
-                                <div class="form-group">
-                                    <label for="neck_frequency">빈도</label>
-                                    <select class="form-control" name="neck_frequency" id="neck_frequency">
-                                        <option value="">선택</option>
-                                        <option value="always">항상</option>
-                                        <option value="often">자주</option>
-                                        <option value="sometimes">가끔</option>
-                                        <option value="rarely">드물게</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-group">
-                                    <label for="neck_duration">지속기간</label>
-                                    <select class="form-control" name="neck_duration" id="neck_duration">
-                                        <option value="">선택</option>
-                                        <option value="less_1hour">1시간 미만</option>
-                                        <option value="1_24hours">1-24시간</option>
-                                        <option value="1_7days">1-7일</option>
-                                        <option value="over_7days">7일 이상</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-group">
-                                    <label for="neck_severity">강도</label>
-                                    <select class="form-control" name="neck_severity" id="neck_severity">
-                                        <option value="">선택</option>
-                                        <option value="mild">약함</option>
-                                        <option value="moderate">중간</option>
-                                        <option value="severe">심함</option>
-                                        <option value="very_severe">매우 심함</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-group">
-                                    <label for="neck_work_impact">업무 영향</label>
-                                    <select class="form-control" name="neck_work_impact" id="neck_work_impact">
-                                        <option value="">선택</option>
-                                        <option value="none">영향 없음</option>
-                                        <option value="mild">약간 영향</option>
-                                        <option value="moderate">중간 영향</option>
-                                        <option value="severe">심각한 영향</option>
-                                    </select>
-                                </div>
-                            </div>
+                            <label for="exercise_habits">운동 습관</label>
+                            <textarea class="form-control" name="exercise_habits" id="exercise_habits" rows="2"></textarea>
                         </div>
                         
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="neck_last_year" value="true" id="neck_last_year">
-                            <label class="form-check-label" for="neck_last_year">지난 1년간 증상 경험</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="neck_last_week" value="true" id="neck_last_week">
-                            <label class="form-check-label" for="neck_last_week">지난 1주일간 증상 경험</label>
+                        <div class="form-group">
+                            <label for="improvement_suggestions">개선사항 건의</label>
+                            <textarea class="form-control" name="improvement_suggestions" id="improvement_suggestions" rows="3"></textarea>
                         </div>
                     </div>
                 </div>
 
-                <!-- 추가 부위들 (어깨, 팔/팔꿈치, 손/손목/손가락, 등/허리, 다리/발)은 동일한 패턴으로 구성 -->
-                
-                <!-- 제출 버튼 -->
-                <div class="text-center mb-5">
-                    <button type="submit" class="btn btn-primary btn-lg">조사표 제출</button>
-                    <button type="reset" class="btn btn-secondary btn-lg">다시 작성</button>
+                <div class="text-center mb-4">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="bi bi-check-circle"></i> 제출하기
+                    </button>
+                    <a href="{{ url_for('main.index') }}" class="btn btn-secondary btn-lg ms-2">
+                        <i class="bi bi-arrow-left"></i> 취소
+                    </a>
                 </div>
             </form>
         </div>
@@ -289,9 +212,29 @@
 </div>
 
 <script>
-// 통증 정도 슬라이더 값 표시
-document.getElementById('neck_pain').addEventListener('input', function() {
-    document.getElementById('neck_pain_value').textContent = this.value;
+document.addEventListener('DOMContentLoaded', function() {
+    // 증상 유무에 따라 상세 정보 표시/숨김
+    const bodyParts = ['목', '어깨', '팔/팔꿈치', '손목/손가락', '허리', '다리/무릎', '발목/발가락'];
+    
+    bodyParts.forEach(function(part) {
+        const yesRadio = document.getElementById(part + '_yes');
+        const noRadio = document.getElementById(part + '_no');
+        const detailsDiv = document.getElementById(part + '_details');
+        
+        if (yesRadio && noRadio && detailsDiv) {
+            yesRadio.addEventListener('change', function() {
+                if (this.checked) {
+                    detailsDiv.style.display = 'block';
+                }
+            });
+            
+            noRadio.addEventListener('change', function() {
+                if (this.checked) {
+                    detailsDiv.style.display = 'none';
+                }
+            });
+        }
+    });
 });
 </script>
 {% endblock %}

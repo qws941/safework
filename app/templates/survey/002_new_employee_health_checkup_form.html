@@ -12,7 +12,7 @@
                 
                 <!-- 기본 정보 섹션 -->
                 <div class="card mb-4">
-                    <div class="card-header bg-primary text-white">
+                    <div class="card-header bg-info text-white">
                         <h5 class="mb-0">I. 기본 정보</h5>
                     </div>
                     <div class="card-body">
@@ -40,14 +40,14 @@
                         <div class="row">
                             <div class="col-md-3">
                                 <div class="form-group">
-                                    <label>성별</label>
+                                    <label>성별 <span class="text-danger">*</span></label>
                                     <div>
                                         <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="gender" id="gender_male" value="남">
+                                            <input class="form-check-input" type="radio" name="gender" id="gender_male" value="남" required>
                                             <label class="form-check-label" for="gender_male">남</label>
                                         </div>
                                         <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="gender" id="gender_female" value="여">
+                                            <input class="form-check-input" type="radio" name="gender" id="gender_female" value="여" required>
                                             <label class="form-check-label" for="gender_female">여</label>
                                         </div>
                                     </div>
@@ -55,7 +55,7 @@
                             </div>
                             <div class="col-md-3">
                                 <div class="form-group">
-                                    <label for="department">부서</label>
+                                    <label for="department">배정부서</label>
                                     <input type="text" class="form-control" name="department" id="department">
                                 </div>
                             </div>
@@ -77,7 +77,7 @@
 
                 <!-- 신체 정보 섹션 -->
                 <div class="card mb-4">
-                    <div class="card-header bg-info text-white">
+                    <div class="card-header bg-success text-white">
                         <h5 class="mb-0">II. 신체 정보</h5>
                     </div>
                     <div class="card-body">
@@ -97,168 +97,244 @@
                             <div class="col-md-3">
                                 <div class="form-group">
                                     <label for="blood_type">혈액형</label>
-                                    <select class="form-control" name="blood_type" id="blood_type">
-                                        <option value="">선택</option>
-                                        <option value="A">A형</option>
-                                        <option value="B">B형</option>
-                                        <option value="O">O형</option>
-                                        <option value="AB">AB형</option>
+                                    <select class="form-select" name="blood_type" id="blood_type">
+                                        <option value="">선택하세요</option>
+                                        <option value="A">A</option>
+                                        <option value="B">B</option>
+                                        <option value="O">O</option>
+                                        <option value="AB">AB</option>
+                                        <option value="unknown">모름</option>
                                     </select>
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="form-group">
-                                    <label for="bmi">BMI</label>
-                                    <input type="text" class="form-control" id="bmi" readonly>
+                                    <label for="vision_left">시력 (좌)</label>
+                                    <input type="number" class="form-control" name="vision_left" id="vision_left" min="0" max="2.0" step="0.1">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="vision_right">시력 (우)</label>
+                                    <input type="number" class="form-control" name="vision_right" id="vision_right" min="0" max="2.0" step="0.1">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="hearing_left">청력 (좌)</label>
+                                    <select class="form-select" name="hearing_left">
+                                        <option value="">선택하세요</option>
+                                        <option value="정상">정상</option>
+                                        <option value="경도난청">경도난청</option>
+                                        <option value="중등도난청">중등도난청</option>
+                                        <option value="고도난청">고도난청</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="hearing_right">청력 (우)</label>
+                                    <select class="form-select" name="hearing_right">
+                                        <option value="">선택하세요</option>
+                                        <option value="정상">정상</option>
+                                        <option value="경도난청">경도난청</option>
+                                        <option value="중등도난청">중등도난청</option>
+                                        <option value="고도난청">고도난청</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="blood_pressure">혈압 (수축기/이완기)</label>
+                                    <input type="text" class="form-control" name="blood_pressure" id="blood_pressure" placeholder="예: 120/80">
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- 건강 이력 섹션 -->
+                <!-- 기존 질환 이력 섹션 -->
                 <div class="card mb-4">
-                    <div class="card-header bg-warning">
-                        <h5 class="mb-0">III. 건강 이력</h5>
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">III. 기존 질환 및 의료 이력</h5>
                     </div>
                     <div class="card-body">
-                        <div class="form-group">
-                            <label>기존 질환 (해당 사항 모두 체크)</label>
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="existing_conditions" value="hypertension" id="condition_hypertension">
-                                        <label class="form-check-label" for="condition_hypertension">고혈압</label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="existing_conditions" value="diabetes" id="condition_diabetes">
-                                        <label class="form-check-label" for="condition_diabetes">당뇨병</label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="existing_conditions" value="heart_disease" id="condition_heart">
-                                        <label class="form-check-label" for="condition_heart">심장질환</label>
-                                    </div>
+                        <div class="form-group mb-3">
+                            <label for="existing_conditions">기존 질환 (있는 경우 상세히 기입)</label>
+                            <textarea class="form-control" name="existing_conditions" id="existing_conditions" rows="3" placeholder="고혈압, 당뇨병, 심장질환, 간질환, 신장질환, 근골격계질환 등"></textarea>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="medication_history">복용 중인 약물</label>
+                            <textarea class="form-control" name="medication_history" id="medication_history" rows="2" placeholder="현재 복용 중인 처방약이나 건강보조식품"></textarea>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="allergy_history">알레르기 이력</label>
+                            <textarea class="form-control" name="allergy_history" id="allergy_history" rows="2" placeholder="음식, 약물, 환경 알레르기 등"></textarea>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="surgery_history">수술 이력</label>
+                            <textarea class="form-control" name="surgery_history" id="surgery_history" rows="2" placeholder="과거 받은 수술이나 시술"></textarea>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label>가족력</label>
+                            <div class="form-check-group">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="family_history" value="고혈압" id="family_hypertension">
+                                    <label class="form-check-label" for="family_hypertension">고혈압</label>
                                 </div>
-                                <div class="col-md-4">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="existing_conditions" value="liver_disease" id="condition_liver">
-                                        <label class="form-check-label" for="condition_liver">간질환</label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="existing_conditions" value="kidney_disease" id="condition_kidney">
-                                        <label class="form-check-label" for="condition_kidney">신장질환</label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="existing_conditions" value="respiratory" id="condition_respiratory">
-                                        <label class="form-check-label" for="condition_respiratory">호흡기질환</label>
-                                    </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="family_history" value="당뇨병" id="family_diabetes">
+                                    <label class="form-check-label" for="family_diabetes">당뇨병</label>
                                 </div>
-                                <div class="col-md-4">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="existing_conditions" value="musculoskeletal" id="condition_musculo">
-                                        <label class="form-check-label" for="condition_musculo">근골격계질환</label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="existing_conditions" value="mental" id="condition_mental">
-                                        <label class="form-check-label" for="condition_mental">정신과질환</label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="existing_conditions" value="none" id="condition_none">
-                                        <label class="form-check-label" for="condition_none">해당없음</label>
-                                    </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="family_history" value="심장질환" id="family_heart">
+                                    <label class="form-check-label" for="family_heart">심장질환</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="family_history" value="암" id="family_cancer">
+                                    <label class="form-check-label" for="family_cancer">암</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="family_history" value="기타" id="family_other">
+                                    <label class="form-check-label" for="family_other">기타</label>
                                 </div>
                             </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="medication_history">복용 중인 약물</label>
-                            <textarea class="form-control" name="medication_history" id="medication_history" rows="3" placeholder="현재 복용 중인 약물을 모두 기재해주세요"></textarea>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="allergy_history">알레르기 이력</label>
-                            <textarea class="form-control" name="allergy_history" id="allergy_history" rows="3" placeholder="약물, 음식, 기타 알레르기가 있으시면 기재해주세요"></textarea>
-                        </div>
-
-                        <div class="form-group">
-                            <label>과거 수술/입원 경력</label>
-                            <textarea class="form-control" name="surgery_history" rows="3" placeholder="과거 수술이나 입원 경력이 있으시면 기재해주세요"></textarea>
                         </div>
                     </div>
                 </div>
 
                 <!-- 생활 습관 섹션 -->
                 <div class="card mb-4">
-                    <div class="card-header bg-success text-white">
+                    <div class="card-header bg-primary text-white">
                         <h5 class="mb-0">IV. 생활 습관</h5>
                     </div>
                     <div class="card-body">
                         <div class="row">
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label>흡연</label>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label>흡연 상태</label>
                                     <div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="radio" name="smoking" value="none" id="smoking_none">
-                                            <label class="form-check-label" for="smoking_none">비흡연</label>
+                                            <input class="form-check-input" type="radio" name="smoking_status" value="비흡연" id="smoking_never">
+                                            <label class="form-check-label" for="smoking_never">비흡연</label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="radio" name="smoking" value="current" id="smoking_current">
-                                            <label class="form-check-label" for="smoking_current">현재 흡연</label>
+                                            <input class="form-check-input" type="radio" name="smoking_status" value="금연" id="smoking_quit">
+                                            <label class="form-check-label" for="smoking_quit">금연</label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="radio" name="smoking" value="past" id="smoking_past">
-                                            <label class="form-check-label" for="smoking_past">과거 흡연</label>
+                                            <input class="form-check-input" type="radio" name="smoking_status" value="흡연" id="smoking_current">
+                                            <label class="form-check-label" for="smoking_current">흡연</label>
                                         </div>
                                     </div>
                                 </div>
+                                
+                                <div class="form-group mb-3" id="smoking_details" style="display: none;">
+                                    <label for="smoking_amount">일일 흡연량 (개비)</label>
+                                    <input type="number" class="form-control" name="smoking_amount" id="smoking_amount" min="0">
+                                </div>
                             </div>
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label>음주</label>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label>음주 상태</label>
                                     <div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="radio" name="drinking" value="none" id="drinking_none">
-                                            <label class="form-check-label" for="drinking_none">안함</label>
+                                            <input class="form-check-input" type="radio" name="drinking_status" value="금주" id="drinking_never">
+                                            <label class="form-check-label" for="drinking_never">금주</label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="radio" name="drinking" value="occasional" id="drinking_occasional">
-                                            <label class="form-check-label" for="drinking_occasional">가끔</label>
+                                            <input class="form-check-input" type="radio" name="drinking_status" value="가끔" id="drinking_sometimes">
+                                            <label class="form-check-label" for="drinking_sometimes">가끔</label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="radio" name="drinking" value="regular" id="drinking_regular">
-                                            <label class="form-check-label" for="drinking_regular">자주</label>
+                                            <input class="form-check-input" type="radio" name="drinking_status" value="정기적" id="drinking_regular">
+                                            <label class="form-check-label" for="drinking_regular">정기적</label>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label>운동</label>
-                                    <div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="radio" name="exercise" value="none" id="exercise_none">
-                                            <label class="form-check-label" for="exercise_none">안함</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="radio" name="exercise" value="1-2times" id="exercise_12">
-                                            <label class="form-check-label" for="exercise_12">주 1-2회</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="radio" name="exercise" value="3plus" id="exercise_3plus">
-                                            <label class="form-check-label" for="exercise_3plus">주 3회 이상</label>
-                                        </div>
-                                    </div>
+                                
+                                <div class="form-group mb-3" id="drinking_details" style="display: none;">
+                                    <label for="drinking_amount">주당 음주량 (잔)</label>
+                                    <input type="number" class="form-control" name="drinking_amount" id="drinking_amount" min="0">
                                 </div>
                             </div>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="exercise_habits">운동 습관</label>
+                            <textarea class="form-control" name="exercise_habits" id="exercise_habits" rows="2" placeholder="종류, 빈도, 강도 등"></textarea>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="sleep_hours">평균 수면 시간 (시간)</label>
+                            <input type="number" class="form-control" name="sleep_hours" id="sleep_hours" min="1" max="24" step="0.5">
                         </div>
                     </div>
                 </div>
 
-                <!-- 제출 버튼 -->
-                <div class="text-center mb-5">
-                    <button type="submit" class="btn btn-primary btn-lg">건강검진 양식 제출</button>
-                    <button type="reset" class="btn btn-secondary btn-lg">다시 작성</button>
+                <!-- 업무 관련 건강 체크 섹션 -->
+                <div class="card mb-4">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="mb-0">V. 업무 적합성 평가</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group mb-3">
+                            <label>업무 수행에 영향을 줄 수 있는 신체적 제약사항</label>
+                            <div class="form-check-group">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="physical_limitations" value="중량물 취급 제한" id="limit_heavy">
+                                    <label class="form-check-label" for="limit_heavy">중량물 취급 제한</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="physical_limitations" value="장시간 서서 작업 제한" id="limit_standing">
+                                    <label class="form-check-label" for="limit_standing">장시간 서서 작업 제한</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="physical_limitations" value="고소 작업 제한" id="limit_height">
+                                    <label class="form-check-label" for="limit_height">고소 작업 제한</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="physical_limitations" value="화학물질 노출 제한" id="limit_chemical">
+                                    <label class="form-check-label" for="limit_chemical">화학물질 노출 제한</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="physical_limitations" value="소음 환경 제한" id="limit_noise">
+                                    <label class="form-check-label" for="limit_noise">소음 환경 제한</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="physical_limitations" value="없음" id="limit_none">
+                                    <label class="form-check-label" for="limit_none">없음</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="special_considerations">특별히 주의해야 할 사항</label>
+                            <textarea class="form-control" name="special_considerations" id="special_considerations" rows="3"></textarea>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="emergency_contact">응급 연락처</label>
+                            <input type="text" class="form-control" name="emergency_contact" id="emergency_contact" placeholder="이름: 홍길동, 관계: 배우자, 연락처: 010-1234-5678">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center mb-4">
+                    <button type="submit" class="btn btn-info btn-lg">
+                        <i class="bi bi-check-circle"></i> 제출하기
+                    </button>
+                    <a href="{{ url_for('main.index') }}" class="btn btn-secondary btn-lg ms-2">
+                        <i class="bi bi-arrow-left"></i> 취소
+                    </a>
                 </div>
             </form>
         </div>
@@ -266,29 +342,34 @@
 </div>
 
 <script>
-// BMI 자동 계산
-function calculateBMI() {
-    var height = document.getElementById('height_cm').value;
-    var weight = document.getElementById('weight_kg').value;
+document.addEventListener('DOMContentLoaded', function() {
+    // 흡연 상태에 따라 상세 정보 표시/숨김
+    const smokingRadios = document.querySelectorAll('input[name="smoking_status"]');
+    const smokingDetails = document.getElementById('smoking_details');
     
-    if (height && weight) {
-        var heightM = height / 100;
-        var bmi = (weight / (heightM * heightM)).toFixed(1);
-        document.getElementById('bmi').value = bmi;
-    }
-}
-
-document.getElementById('height_cm').addEventListener('input', calculateBMI);
-document.getElementById('weight_kg').addEventListener('input', calculateBMI);
-
-// 해당없음 체크시 다른 체크박스 해제
-document.getElementById('condition_none').addEventListener('change', function() {
-    if (this.checked) {
-        var checkboxes = document.querySelectorAll('input[name="existing_conditions"]:not(#condition_none)');
-        checkboxes.forEach(function(checkbox) {
-            checkbox.checked = false;
+    smokingRadios.forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            if (this.value === '흡연') {
+                smokingDetails.style.display = 'block';
+            } else {
+                smokingDetails.style.display = 'none';
+            }
         });
-    }
+    });
+    
+    // 음주 상태에 따라 상세 정보 표시/숨김
+    const drinkingRadios = document.querySelectorAll('input[name="drinking_status"]');
+    const drinkingDetails = document.getElementById('drinking_details');
+    
+    drinkingRadios.forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            if (this.value === '정기적') {
+                drinkingDetails.style.display = 'block';
+            } else {
+                drinkingDetails.style.display = 'none';
+            }
+        });
+    });
 });
 </script>
 {% endblock %}
