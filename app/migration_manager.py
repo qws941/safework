@@ -175,19 +175,34 @@ class MigrationManager:
 
         execution_time = time.time() - start_time
 
-        # 마이그레이션 기록 저장
-        migration_record = Migration(
-            version=version,
-            description=description,
-            filename=filename,
-            checksum=checksum,
-            execution_time=execution_time,
-            success=success,
-            error_message=error_message,
-        )
-
+        # 마이그레이션 기록 저장 (중복 방지)
         try:
-            db.session.add(migration_record)
+            # 기존 레코드 확인
+            existing_record = Migration.query.filter_by(version=version).first()
+            if existing_record:
+                # 기존 레코드 업데이트
+                existing_record.description = description
+                existing_record.filename = filename
+                existing_record.checksum = checksum
+                existing_record.execution_time = execution_time
+                existing_record.success = success
+                existing_record.error_message = error_message
+                existing_record.executed_at = datetime.utcnow()
+                current_app.logger.info(f"Updated existing migration record: {version}")
+            else:
+                # 새 레코드 생성
+                migration_record = Migration(
+                    version=version,
+                    description=description,
+                    filename=filename,
+                    checksum=checksum,
+                    execution_time=execution_time,
+                    success=success,
+                    error_message=error_message,
+                )
+                db.session.add(migration_record)
+                current_app.logger.info(f"Created new migration record: {version}")
+            
             db.session.commit()
         except Exception as e:
             current_app.logger.error(f"Failed to record migration: {e}")
