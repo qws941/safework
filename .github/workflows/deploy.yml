@@ -288,6 +288,22 @@ jobs:
         path: deployment-info.json
         retention-days: 90
     
+    - name: Commit updated VERSION file
+      if: success()
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+        # VERSION 파일이 변경되었는지 확인
+        if git diff --quiet app/VERSION; then
+          echo "📝 VERSION file unchanged, skipping commit"
+        else
+          echo "📝 Committing updated VERSION file: v${{ steps.version.outputs.VERSION }}"
+          git add app/VERSION
+          git commit -m "🤖 Auto-update VERSION to v${{ steps.version.outputs.VERSION }} [skip ci]"
+          git push
+        fi
+    
     - name: Success notification
       if: success()
       run: |
