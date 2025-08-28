@@ -122,13 +122,42 @@ def create_app(config_name=None):
     # Context processors
     @app.context_processor
     def inject_config():
-        # VERSION 파일에서 직접 읽어오기
-        try:
-            version_file = os.path.join(os.path.dirname(__file__), "VERSION")
-            with open(version_file, "r") as f:
-                app_version = f.read().strip()
-        except:
-            app_version = "1.1.2"
+        # 다양한 소스에서 버전 정보 가져오기 (우선순위 순)
+        app_version = None
+        
+        # 1. 환경변수에서 버전 확인 (Docker/K8s에서 설정)
+        if os.environ.get("APP_VERSION"):
+            app_version = os.environ.get("APP_VERSION")
+        
+        # 2. Git 태그에서 버전 확인
+        if not app_version:
+            try:
+                import subprocess
+                result = subprocess.run(
+                    ["git", "describe", "--tags", "--always"],
+                    capture_output=True,
+                    text=True,
+                    timeout=2
+                )
+                if result.returncode == 0:
+                    app_version = result.stdout.strip()
+                    if app_version.startswith("v"):
+                        app_version = app_version[1:]  # v 제거
+            except:
+                pass
+        
+        # 3. VERSION 파일에서 읽기
+        if not app_version:
+            try:
+                version_file = os.path.join(os.path.dirname(__file__), "VERSION")
+                with open(version_file, "r") as f:
+                    app_version = f.read().strip()
+            except:
+                pass
+        
+        # 4. 빌드 시간 기반 버전 (최후 수단)
+        if not app_version:
+            app_version = datetime.now().strftime("%Y%m%d.%H%M")
 
         # 시스템 업타임 계산
         uptime_seconds = time_module.time() - app.start_time

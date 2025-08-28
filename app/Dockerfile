@@ -1,12 +1,16 @@
 # SafeWork App Container
 FROM python:3.11-slim
 
+# 버전 정보를 빌드 시점에 전달
+ARG APP_VERSION=latest
+
 # 환경 변수 설정 (운영에 필요한 모든 설정)
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     FLASK_APP=app.py \
     FLASK_CONFIG=production \
     SECRET_KEY=safework-production-secret-key-2024 \
+    APP_VERSION=${APP_VERSION} \
     MYSQL_HOST=safework-mysql \
     MYSQL_PORT=3306 \
     MYSQL_USER=safework \

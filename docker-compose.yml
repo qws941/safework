@@ -57,6 +57,7 @@ services:
       MYSQL_USER: safework
       MYSQL_PASSWORD: safework2024
       MYSQL_DATABASE: safework_db
+      APP_VERSION: ${APP_VERSION:-latest}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ""
