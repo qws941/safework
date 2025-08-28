@@ -13,36 +13,132 @@ def new():
     form = SurveyForm()
     
     if form.validate_on_submit():
+        # 기본적으로 익명 사용자 ID 1을 사용
+        user_id = 1  # 익명 사용자
+        if current_user.is_authenticated:
+            user_id = current_user.id
+            
         survey = Survey(
-            user_id=current_user.id if current_user.is_authenticated else None,
-            employee_number=form.employee_number.data,
-            name=form.name.data,
-            department=form.department.data,
-            position=form.position.data,
-            age=form.age.data,
-            gender=form.gender.data,
-            work_years=form.work_years.data,
-            work_type=form.work_type.data,
-            work_hours_per_day=form.work_hours_per_day.data,
-            break_time_minutes=form.break_time_minutes.data,
+            user_id=user_id,
+            employee_number=request.form.get('employee_number'),
+            name=request.form.get('name'),
+            department=request.form.get('department'),
+            position=request.form.get('position'),
+            age=request.form.get('age', type=int),
+            gender=request.form.get('gender'),
+            work_years=request.form.get('work_years', type=float),
+            work_months=request.form.get('work_months', type=int),
             
-            # 통증 정보
-            neck_pain=form.neck_pain.data,
-            shoulder_pain=form.shoulder_pain.data,
-            arm_pain=form.arm_pain.data,
-            hand_pain=form.hand_pain.data,
-            back_pain=form.back_pain.data,
-            waist_pain=form.waist_pain.data,
-            leg_pain=form.leg_pain.data,
+            # 작업 정보
+            work_type=request.form.get('work_type'),
+            work_hours_per_day=request.form.get('work_hours_per_day', type=float),
+            break_time_minutes=request.form.get('break_time_minutes', type=int),
+            overtime_hours_per_week=request.form.get('overtime_hours_per_week', type=float),
             
-            # 증상 정보
-            symptom_start_date=form.symptom_start_date.data,
-            symptom_duration_months=form.symptom_duration_months.data,
-            medical_treatment=form.medical_treatment.data,
-            treatment_details=form.treatment_details.data,
-            work_related=form.work_related.data,
-            work_related_details=form.work_related_details.data,
-            additional_notes=form.additional_notes.data,
+            # 작업 형태
+            work_posture=json.dumps(request.form.getlist('work_posture')),
+            repetitive_motion=json.dumps(request.form.getlist('repetitive_motion')),
+            heavy_lifting=request.form.get('heavy_lifting') == 'true',
+            lifting_weight_kg=request.form.get('lifting_weight_kg', type=float),
+            
+            # 목 증상
+            neck_pain=request.form.get('neck_pain', 0, type=int),
+            neck_symptoms=json.dumps(request.form.getlist('neck_symptoms')),
+            neck_frequency=request.form.get('neck_frequency'),
+            neck_duration=request.form.get('neck_duration'),
+            neck_severity=request.form.get('neck_severity'),
+            neck_work_impact=request.form.get('neck_work_impact'),
+            neck_last_year=request.form.get('neck_last_year') == 'true',
+            neck_last_week=request.form.get('neck_last_week') == 'true',
+            
+            # 어깨 증상
+            shoulder_pain=request.form.get('shoulder_pain', 0, type=int),
+            shoulder_left=request.form.get('shoulder_left') == 'true',
+            shoulder_right=request.form.get('shoulder_right') == 'true',
+            shoulder_both=request.form.get('shoulder_both') == 'true',
+            shoulder_symptoms=json.dumps(request.form.getlist('shoulder_symptoms')),
+            shoulder_frequency=request.form.get('shoulder_frequency'),
+            shoulder_duration=request.form.get('shoulder_duration'),
+            shoulder_severity=request.form.get('shoulder_severity'),
+            shoulder_work_impact=request.form.get('shoulder_work_impact'),
+            shoulder_last_year=request.form.get('shoulder_last_year') == 'true',
+            shoulder_last_week=request.form.get('shoulder_last_week') == 'true',
+            
+            # 팔/팔꿈치 증상
+            arm_pain=request.form.get('arm_pain', 0, type=int),
+            arm_left=request.form.get('arm_left') == 'true',
+            arm_right=request.form.get('arm_right') == 'true',
+            arm_both=request.form.get('arm_both') == 'true',
+            arm_symptoms=json.dumps(request.form.getlist('arm_symptoms')),
+            arm_frequency=request.form.get('arm_frequency'),
+            arm_duration=request.form.get('arm_duration'),
+            arm_severity=request.form.get('arm_severity'),
+            arm_work_impact=request.form.get('arm_work_impact'),
+            arm_last_year=request.form.get('arm_last_year') == 'true',
+            arm_last_week=request.form.get('arm_last_week') == 'true',
+            
+            # 손/손목/손가락 증상
+            hand_pain=request.form.get('hand_pain', 0, type=int),
+            hand_left=request.form.get('hand_left') == 'true',
+            hand_right=request.form.get('hand_right') == 'true',
+            hand_both=request.form.get('hand_both') == 'true',
+            hand_symptoms=json.dumps(request.form.getlist('hand_symptoms')),
+            hand_frequency=request.form.get('hand_frequency'),
+            hand_duration=request.form.get('hand_duration'),
+            hand_severity=request.form.get('hand_severity'),
+            hand_work_impact=request.form.get('hand_work_impact'),
+            hand_last_year=request.form.get('hand_last_year') == 'true',
+            hand_last_week=request.form.get('hand_last_week') == 'true',
+            
+            # 등 증상
+            back_pain=request.form.get('back_pain', 0, type=int),
+            back_symptoms=json.dumps(request.form.getlist('back_symptoms')),
+            back_frequency=request.form.get('back_frequency'),
+            back_duration=request.form.get('back_duration'),
+            back_severity=request.form.get('back_severity'),
+            back_work_impact=request.form.get('back_work_impact'),
+            back_last_year=request.form.get('back_last_year') == 'true',
+            back_last_week=request.form.get('back_last_week') == 'true',
+            
+            # 허리 증상
+            waist_pain=request.form.get('waist_pain', 0, type=int),
+            waist_symptoms=json.dumps(request.form.getlist('waist_symptoms')),
+            waist_frequency=request.form.get('waist_frequency'),
+            waist_duration=request.form.get('waist_duration'),
+            waist_severity=request.form.get('waist_severity'),
+            waist_work_impact=request.form.get('waist_work_impact'),
+            waist_last_year=request.form.get('waist_last_year') == 'true',
+            waist_last_week=request.form.get('waist_last_week') == 'true',
+            
+            # 다리/무릎/발 증상
+            leg_pain=request.form.get('leg_pain', 0, type=int),
+            leg_left=request.form.get('leg_left') == 'true',
+            leg_right=request.form.get('leg_right') == 'true',
+            leg_both=request.form.get('leg_both') == 'true',
+            leg_symptoms=json.dumps(request.form.getlist('leg_symptoms')),
+            leg_frequency=request.form.get('leg_frequency'),
+            leg_duration=request.form.get('leg_duration'),
+            leg_severity=request.form.get('leg_severity'),
+            leg_work_impact=request.form.get('leg_work_impact'),
+            leg_last_year=request.form.get('leg_last_year') == 'true',
+            leg_last_week=request.form.get('leg_last_week') == 'true',
+            
+            # 증상 발생 정보
+            symptom_cause=request.form.get('symptom_cause'),
+            
+            # 치료 이력
+            medical_treatment=request.form.get('medical_treatment') == 'true',
+            treatment_details=request.form.get('treatment_details'),
+            treatment_duration_days=request.form.get('treatment_duration_days', type=int),
+            current_treatment=request.form.get('current_treatment') == 'true',
+            
+            # 작업 관련성
+            work_related=request.form.get('work_related') == 'true',
+            work_related_details=request.form.get('work_related_details'),
+            accident_related=request.form.get('accident_related') == 'true',
+            
+            # 기타
+            additional_notes=request.form.get('additional_notes'),
             
             ip_address=request.remote_addr,
             status='submitted'

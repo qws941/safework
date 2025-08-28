@@ -39,8 +39,23 @@ class Config:
     
     # Application
     APP_NAME = 'SafeWork 근골격계 증상조사'
-    APP_VERSION = '1.0.0'
     ITEMS_PER_PAGE = 20
+    
+    # Dynamic version loading
+    @classmethod
+    def get_version(cls):
+        """Load version from VERSION file"""
+        version_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'VERSION')
+        try:
+            with open(version_file, 'r') as f:
+                return f.read().strip()
+        except:
+            return '1.0.0'
+    
+    @property
+    def APP_VERSION(self):
+        """Dynamic version property"""
+        return self.get_version()
     
     # Admin
     ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME', 'admin')

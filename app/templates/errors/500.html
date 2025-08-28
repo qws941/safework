@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}서버 오류 - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="text-center">
+    <h1 class="display-1">500</h1>
+    <p class="fs-3"><span class="text-danger">죄송합니다!</span> 서버 오류가 발생했습니다.</p>
+    <p class="lead">
+        일시적인 오류입니다. 잠시 후 다시 시도해주세요.
+    </p>
+    <a href="{{ url_for('main.index') }}" class="btn btn-primary">홈으로 돌아가기</a>
+</div>
+{% endblock %}

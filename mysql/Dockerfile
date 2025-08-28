@@ -23,9 +23,7 @@ innodb_buffer_pool_size=512M
 innodb_log_file_size=128M
 innodb_flush_log_at_trx_commit=2
 innodb_flush_method=O_DIRECT
-query_cache_type=1
-query_cache_size=32M
-query_cache_limit=2M
+# Query cache removed in MySQL 8.0
 slow_query_log=1
 slow_query_log_file=/var/log/mysql/slow.log
 long_query_time=2
@@ -41,15 +39,6 @@ EOF
 COPY <<EOF /docker-entrypoint-initdb.d/init.sql
 -- SafeWork 데이터베이스 초기 설정
 USE safework_db;
-
--- 테이블 생성은 Flask-Migrate가 처리
--- 여기서는 추가 인덱스나 초기 데이터만 설정
-
--- 인덱스 생성 (성능 최적화)
-CREATE INDEX idx_survey_department ON surveys(department);
-CREATE INDEX idx_survey_submission_date ON surveys(submission_date);
-CREATE INDEX idx_survey_status ON surveys(status);
-CREATE INDEX idx_survey_user_id ON surveys(user_id);
 
 -- 초기 부서 데이터 (선택사항)
 CREATE TABLE IF NOT EXISTS departments (

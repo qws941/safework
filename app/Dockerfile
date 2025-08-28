@@ -51,7 +51,7 @@ EXPOSE 4545
 
 # 헬스체크
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:4545/health')" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:4545/health')" || exit 1
 
 # 애플리케이션 실행
-CMD ["gunicorn", "--bind", "0.0.0.0:4545", "--workers", "4", "--threads", "2", "--timeout", "120", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:4545", "--workers", "1", "--timeout", "120", "app:app"]

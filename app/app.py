@@ -44,16 +44,39 @@ def create_app(config_name=None):
     from routes.auth import auth_bp
     from routes.survey import survey_bp
     from routes.admin import admin_bp
+    from routes.health import health_bp
     
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(survey_bp, url_prefix='/survey')
     app.register_blueprint(admin_bp, url_prefix='/admin')
+    app.register_blueprint(health_bp)
     
-    # Create database tables
+    # Create database tables with retry logic
     with app.app_context():
-        db.create_all()
+        import time
+        for i in range(30):  # Try for 30 seconds
+            try:
+                db.create_all()
+                break
+            except Exception as e:
+                if i == 29:  # Last attempt
+                    raise
+                time.sleep(1)
         
+        # Create default anonymous user if not exists
+        anon = User.query.filter_by(id=1).first()
+        if not anon:
+            anon = User(
+                id=1,
+                username='anonymous',
+                email='anonymous@safework.com',
+                is_admin=False
+            )
+            anon.set_password('anonymous_password_2024')
+            db.session.add(anon)
+            db.session.commit()
+            
         # Create default admin user if not exists
         admin = User.query.filter_by(username='admin').first()
         if not admin:
