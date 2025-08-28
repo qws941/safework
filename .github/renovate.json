@@ -1,0 +1,92 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:base",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    ":timezone(Asia/Seoul)"
+  ],
+  "labels": ["dependencies", "renovate"],
+  "assignees": ["qws941"],
+  "reviewers": ["qws941"],
+  "packageRules": [
+    {
+      "description": "Python 패키지 자동 병합",
+      "matchManagers": ["pip_requirements", "pip_setup"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "automergeType": "pr"
+    },
+    {
+      "description": "Docker 이미지 업데이트",
+      "matchManagers": ["dockerfile"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": false
+    },
+    {
+      "description": "보안 업데이트 우선 처리",
+      "matchUpdateTypes": ["security"],
+      "prPriority": 10,
+      "labels": ["security", "priority-high"]
+    },
+    {
+      "description": "메이저 업데이트 수동 검토",
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "labels": ["breaking-change", "needs-review"]
+    },
+    {
+      "description": "Flask 관련 패키지 그룹화",
+      "matchPackagePatterns": ["^flask", "werkzeug", "jinja2"],
+      "groupName": "Flask ecosystem",
+      "groupSlug": "flask"
+    },
+    {
+      "description": "테스트 도구 그룹화",
+      "matchPackagePatterns": ["pytest", "coverage", "mock"],
+      "groupName": "Testing tools",
+      "groupSlug": "testing"
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "labels": ["security", "vulnerability"],
+    "assignees": ["qws941"],
+    "reviewers": ["qws941"]
+  },
+  "prConcurrentLimit": 5,
+  "prCreation": "not-pending",
+  "prHourlyLimit": 2,
+  "schedule": ["after 10pm and before 5am on weekdays", "every weekend"],
+  "commitMessagePrefix": "⬆️",
+  "commitMessageTopic": "{{depName}}",
+  "commitMessageExtra": "from {{currentValue}} to {{newValue}}",
+  "python": {
+    "enabled": true
+  },
+  "docker": {
+    "enabled": true
+  },
+  "github-actions": {
+    "enabled": true
+  },
+  "regexManagers": [
+    {
+      "description": "Update Python version in GitHub Actions",
+      "fileMatch": ["^\\.github/workflows/.*\\.yml$"],
+      "matchStrings": ["python-version: ['\"]?(?<currentValue>.*?)['\"]?\\s"],
+      "depNameTemplate": "python",
+      "datasourceTemplate": "docker"
+    }
+  ],
+  "ignoreDeps": [],
+  "ignorePaths": [
+    "**/node_modules/**",
+    "**/test/**",
+    "**/tests/**",
+    "**/__pycache__/**"
+  ],
+  "postUpdateOptions": ["gomodTidy", "npmDedupe"],
+  "rebaseWhen": "behind-base-branch",
+  "semanticCommitScope": "deps",
+  "semanticCommitType": "chore"
+}

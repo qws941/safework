@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 문서
+    url: https://github.com/qws941/safework/wiki
+    about: 사용 방법과 가이드를 확인하세요
+  - name: 💬 토론
+    url: https://github.com/qws941/safework/discussions
+    about: 아이디어를 공유하고 토론하세요
+  - name: 🔒 보안 이슈
+    url: mailto:security@safework.local
+    about: 보안 관련 이슈는 비공개로 보고해주세요
