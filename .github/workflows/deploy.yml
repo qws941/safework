@@ -167,6 +167,7 @@ jobs:
     
     - name: Create Release
       if: steps.version.outputs.ENVIRONMENT == 'production' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+      continue-on-error: true
       uses: softprops/action-gh-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -215,6 +216,7 @@ jobs:
     
     - name: Create Pre-release (Staging/Development)
       if: steps.version.outputs.ENVIRONMENT != 'production' && (github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/develop')
+      continue-on-error: true
       uses: softprops/action-gh-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
