@@ -8,6 +8,7 @@ from flask import Flask, flash, redirect, render_template, request, url_for
 from flask_login import (LoginManager, current_user, login_required,
                          login_user, logout_user)
 from flask_migrate import Migrate
+from flask_wtf.csrf import CSRFProtect
 
 from config import config
 from migration_manager import MigrationManager
@@ -28,6 +29,9 @@ def create_app(config_name=None):
     # Initialize extensions
     db.init_app(app)
     migrate = Migrate(app, db)
+    
+    # Initialize CSRF Protection
+    csrf = CSRFProtect(app)
 
     # Initialize migration manager
     migration_manager = MigrationManager(app)
