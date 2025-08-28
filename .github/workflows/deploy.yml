@@ -37,7 +37,7 @@ env:
   REGISTRY: ${{ secrets.REGISTRY_URL || 'registry.jclee.me' }}
   PROJECT: safework
   REGISTRY_USER: ${{ secrets.REGISTRY_USER || 'admin' }}
-  REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+  REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD || 'bingogo1' }}
 
 jobs:
   build-and-push:
