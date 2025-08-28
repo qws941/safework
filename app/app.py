@@ -160,7 +160,8 @@ def create_app(config_name=None):
             "app_name": app.config["APP_NAME"], 
             "app_version": app_version,
             "system_uptime": uptime_str,
-            "start_time": datetime.fromtimestamp(app.start_time, tz=timezone(timedelta(hours=9))).strftime("%Y-%m-%d %H:%M:%S KST")
+            "start_time": datetime.fromtimestamp(app.start_time, tz=timezone(timedelta(hours=9))).strftime("%Y-%m-%d %H:%M:%S KST"),
+            "csrf_token": lambda: ""  # Add empty csrf_token function
         }
 
     # Audit logging
