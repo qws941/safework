@@ -6,7 +6,18 @@ Version: 002
 This migration creates the default admin user for SafeWork system.
 """
 
-from models import User, db
+import sys
+import os
+
+# Add the app directory to Python path
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+sys.path.insert(0, '/app')  # Docker container path
+
+try:
+    from models import User, db
+except ImportError:
+    # Fallback for different execution contexts
+    from app.models import User, db
 
 
 def upgrade():

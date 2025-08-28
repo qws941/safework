@@ -65,7 +65,8 @@ COPY . /app/
 # 디렉토리 생성 및 권한 설정
 RUN mkdir -p /app/uploads /app/forms /app/logs \
     && chmod -R 755 /app \
-    && chmod +x /app/migrate.py
+    && chmod +x /app/migrate.py \
+    && chmod +x /app/start.sh
 
 # 비루트 사용자 생성 및 전환 (보안)
 RUN groupadd -r safework && \
@@ -80,27 +81,6 @@ EXPOSE 4545
 # 헬스체크 (개선된 버전)
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:4545/health')" || exit 1
-
-# 시작 스크립트 생성 (최적화된 버전)
-USER root
-RUN cat > /app/start.sh <<'EOF' && \
-echo '#!/bin/bash' && \
-echo 'set -e' && \
-echo '' && \
-echo 'echo "🗂️ SafeWork v1.3.1 - Starting database migrations..."' && \
-echo 'python migrate.py migrate || {' && \
-echo '    echo "⚠️ Migration warning (may be first run or already migrated)"' && \
-echo '    echo "📊 Checking database connection..."' && \
-echo '    python -c "from models import db; db.engine.execute(\"SELECT 1\")" || exit 1' && \
-echo '}' && \
-echo '' && \
-echo 'echo "🚀 Starting SafeWork application on port $APP_PORT..."' && \
-echo 'exec gunicorn --bind 0.0.0.0:$APP_PORT --workers 2 --worker-class sync --timeout 120 --keep-alive 2 --max-requests 1000 --max-requests-jitter 50 --log-level info app:app'
-EOF
-RUN chmod +x /app/start.sh && \
-    chown safework:safework /app/start.sh
-
-USER safework
 
 # 마이그레이션을 포함한 애플리케이션 실행
 CMD ["/app/start.sh"]

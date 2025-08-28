@@ -41,23 +41,39 @@ class MigrationManager:
     def _ensure_migration_table(self):
         """마이그레이션 추적 테이블이 존재하는지 확인하고 생성"""
         try:
-            # migrations 테이블이 있는지 확인 (MySQL compatible)
+            # MySQL에서 migrations 테이블이 있는지 확인
             with db.engine.connect() as conn:
                 result = conn.execute(
-                    db.text("SHOW TABLES LIKE 'migrations'")
-                ).fetchone()
+                    db.text("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'migrations'")
+                ).scalar()
 
-                if not result:
+                if result == 0:
                     # 마이그레이션 테이블 생성
                     Migration.__table__.create(db.engine)
                     current_app.logger.info("Created migrations tracking table")
         except Exception as e:
             current_app.logger.error(f"Error ensuring migration table: {e}")
-            # PostgreSQL/MySQL의 경우
+            # 테이블 생성 재시도
             try:
-                db.create_all()
+                # 직접 SQL로 테이블 생성 (MySQL 호환)
+                with db.engine.connect() as conn:
+                    conn.execute(db.text("""
+                        CREATE TABLE IF NOT EXISTS migrations (
+                            id INT AUTO_INCREMENT PRIMARY KEY,
+                            version VARCHAR(50) UNIQUE NOT NULL,
+                            description VARCHAR(200) NOT NULL,
+                            filename VARCHAR(100) NOT NULL,
+                            checksum VARCHAR(64) NOT NULL,
+                            executed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            execution_time FLOAT,
+                            success BOOLEAN DEFAULT TRUE,
+                            error_message TEXT
+                        )
+                    """))
+                    conn.commit()
+                current_app.logger.info("Created migrations table with direct SQL")
             except Exception as e2:
-                current_app.logger.error(f"Error creating all tables: {e2}")
+                current_app.logger.error(f"Error creating migrations table: {e2}")
 
     def _get_file_checksum(self, filepath: str) -> str:
         """파일의 SHA-256 체크섬 계산"""

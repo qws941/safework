@@ -6,7 +6,18 @@ Version: 003
 This migration adds additional indexes and constraints for better performance.
 """
 
-from models import db
+import sys
+import os
+
+# Add the app directory to Python path
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+sys.path.insert(0, '/app')  # Docker container path
+
+try:
+    from models import db
+except ImportError:
+    # Fallback for different execution contexts
+    from app.models import db
 from sqlalchemy import text
 
 
