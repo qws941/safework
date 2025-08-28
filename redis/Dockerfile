@@ -1,77 +1,41 @@
-# SafeWork Redis Container
+# SafeWork Redis Container - Optimized v1.3.1
 FROM redis:7-alpine
+
+# 빌드 인자
+ARG BUILD_DATE
+ARG VCS_REF
+ARG VERSION=v1.3.1
+
+# 메타데이터 라벨
+LABEL maintainer="SafeWork Team" \
+      org.label-schema.build-date=$BUILD_DATE \
+      org.label-schema.vcs-ref=$VCS_REF \
+      org.label-schema.version=$VERSION \
+      org.label-schema.name="safework-redis" \
+      org.label-schema.description="SafeWork Redis Cache with performance optimizations" \
+      com.centurylinklabs.watchtower.enable="true"
 
 # 환경 변수
 ENV REDIS_REPLICATION_MODE=master \
     REDIS_PASSWORD= \
     TZ=Asia/Seoul
 
-# Watchtower 라벨
-LABEL com.centurylinklabs.watchtower.enable="true"
+# timezone 설정 (Alpine)
+RUN apk add --no-cache tzdata && \
+    cp /usr/share/zoneinfo/Asia/Seoul /etc/localtime && \
+    echo "Asia/Seoul" > /etc/timezone && \
+    apk del tzdata
 
-# Redis 설정 파일
-COPY <<EOF /usr/local/etc/redis/redis.conf
-# Redis Configuration for SafeWork
+# Redis 설정 파일 복사
+COPY redis.conf /usr/local/etc/redis/redis.conf
 
-# 네트워크
-bind 0.0.0.0
-protected-mode no
-port 6379
-tcp-backlog 511
-timeout 0
-tcp-keepalive 300
+# 데이터 디렉토리 생성 및 권한 설정
+RUN mkdir -p /data && \
+    chown redis:redis /data && \
+    chown -R redis:redis /usr/local/etc/redis
 
-# 일반 설정
-daemonize no
-supervised no
-pidfile /var/run/redis_6379.pid
-loglevel notice
-logfile ""
-databases 16
-
-# 스냅샷 설정
-save 900 1
-save 300 10
-save 60 10000
-stop-writes-on-bgsave-error yes
-rdbcompression yes
-rdbchecksum yes
-dbfilename safework.rdb
-dir /data
-
-# 복제 설정
-replica-serve-stale-data yes
-replica-read-only yes
-repl-diskless-sync no
-repl-diskless-sync-delay 5
-repl-disable-tcp-nodelay no
-replica-priority 100
-
-# 메모리 관리
-maxmemory 512mb
-maxmemory-policy allkeys-lru
-maxmemory-samples 5
-
-# AOF 설정
-appendonly yes
-appendfilename "safework.aof"
-appendfsync everysec
-no-appendfsync-on-rewrite no
-auto-aof-rewrite-percentage 100
-auto-aof-rewrite-min-size 64mb
-aof-load-truncated yes
-aof-use-rdb-preamble yes
-
-# 슬로우 로그
-slowlog-log-slower-than 10000
-slowlog-max-len 128
-
-# 클라이언트 설정
-maxclients 10000
-EOF
-
-# 데이터 디렉토리 생성
-RUN mkdir -p /data && chown redis:redis /data
+# 사용자 전환
+USER redis
 
 # 포트 노출
 EXPOSE 6379

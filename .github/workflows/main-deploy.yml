@@ -232,10 +232,10 @@ jobs:
         fi
 
   # ========================================
-  # 4. SafeWork 애플리케이션 빌드
+  # 4. SafeWork 애플리케이션 빌드 (커스텀 이미지)
   # ========================================
   build-app:
-    name: "🏥 SafeWork App 빌드"
+    name: "🏥 SafeWork App 빌드 (Custom)"
     needs: [prepare, security, test]
     if: needs.prepare.outputs.build_app == 'true'
     runs-on: ubuntu-latest
@@ -247,14 +247,14 @@ jobs:
       run: |
         echo "${{ env.REGISTRY_PASSWORD }}" | docker login ${{ env.REGISTRY }} -u ${{ env.REGISTRY_USER }} --password-stdin
     
-    - name: "🏗️ SafeWork 이미지 빌드 & 푸시"
+    - name: "🏗️ SafeWork 커스텀 앱 이미지 빌드 & 푸시"
       run: |
         VERSION="${{ needs.prepare.outputs.version }}"
         BUILD_DATE="${{ needs.prepare.outputs.build_date }}"
         GIT_COUNT="${{ needs.prepare.outputs.git_count }}"
         GIT_HASH="${{ needs.prepare.outputs.git_hash }}"
         
-        echo "🏥 SafeWork 애플리케이션 빌드..."
+        echo "🏥 SafeWork 커스텀 애플리케이션 빌드..."
         echo "📦 버전: v$VERSION"
         echo "📅 빌드 시간: $BUILD_DATE"
         
@@ -263,38 +263,39 @@ jobs:
         echo "$BUILD_DATE" > app/BUILD_DATE
         echo "$GIT_HASH" > app/GIT_HASH
         
-        # Docker 이미지 빌드
+        # Docker 커스텀 앱 이미지 빌드
         docker build \
-          -t ${{ env.REGISTRY }}/${{ env.BASE_NAME }}:latest \
-          -t ${{ env.REGISTRY }}/${{ env.BASE_NAME }}:v$VERSION \
-          -t ${{ env.REGISTRY }}/${{ env.BASE_NAME }}:$BUILD_DATE \
+          -t ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/app:latest \
+          -t ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/app:v$VERSION \
+          -t ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/app:$BUILD_DATE \
           --build-arg VERSION=$VERSION \
           --build-arg BUILD_DATE=$BUILD_DATE \
+          --build-arg VCS_REF=${{ github.sha }} \
           --build-arg BUILD_NUMBER=${{ github.run_number }} \
           --build-arg COMMIT_SHA=${{ github.sha }} \
           --build-arg COMMIT_COUNT=$GIT_COUNT \
           --build-arg GIT_HASH=$GIT_HASH \
-          --label "org.opencontainers.image.title=SafeWork" \
-          --label "org.opencontainers.image.description=근골격계 증상조사 시스템" \
+          --label "org.opencontainers.image.title=SafeWork-App" \
+          --label "org.opencontainers.image.description=SafeWork Flask Application with MySQL migrations" \
           --label "org.opencontainers.image.version=$VERSION" \
           --label "org.opencontainers.image.revision=${{ github.sha }}" \
           --label "org.opencontainers.image.created=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
           --label "org.opencontainers.image.source=${{ github.repositoryUrl }}" \
-          -f Dockerfile \
-          .
+          -f app/Dockerfile \
+          ./app
         
-        echo "📤 레지스트리 푸시..."
-        docker push ${{ env.REGISTRY }}/${{ env.BASE_NAME }}:latest
-        docker push ${{ env.REGISTRY }}/${{ env.BASE_NAME }}:v$VERSION
-        docker push ${{ env.REGISTRY }}/${{ env.BASE_NAME }}:$BUILD_DATE
+        echo "📤 앱 이미지 레지스트리 푸시..."
+        docker push ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/app:latest
+        docker push ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/app:v$VERSION
+        docker push ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/app:$BUILD_DATE
         
-        echo "✅ SafeWork 빌드 완료: v$VERSION"
+        echo "✅ SafeWork 앱 빌드 완료: v$VERSION"
 
   # ========================================
-  # 5. MySQL 이미지 빌드 (필요시)
+  # 5. MySQL 커스텀 이미지 빌드 (필요시)
   # ========================================
   build-mysql:
-    name: "🐬 MySQL 이미지 빌드"
+    name: "🐬 MySQL 커스텀 빌드"
     needs: prepare
     if: needs.prepare.outputs.build_mysql == 'true'
     runs-on: ubuntu-latest
@@ -306,27 +307,44 @@ jobs:
       run: |
         echo "${{ env.REGISTRY_PASSWORD }}" | docker login ${{ env.REGISTRY }} -u ${{ env.REGISTRY_USER }} --password-stdin
     
-    - name: "🏗️ MySQL 이미지 태그 & 푸시"
+    - name: "🏗️ MySQL 커스텀 이미지 빌드 & 푸시"
       run: |
         VERSION="${{ needs.prepare.outputs.version }}"
+        BUILD_DATE="${{ needs.prepare.outputs.build_date }}"
         
-        echo "🐬 MySQL 이미지 준비..."
+        echo "🐬 MySQL 커스텀 이미지 빌드..."
+        echo "📦 버전: v$VERSION"
+        echo "📅 빌드 시간: $BUILD_DATE"
         
-        # 기본 MySQL 이미지를 사용하되 우리 레지스트리에 태그
-        docker pull mysql:8.0
-        docker tag mysql:8.0 ${{ env.REGISTRY }}/${{ env.BASE_NAME }}-mysql:latest
-        docker tag mysql:8.0 ${{ env.REGISTRY }}/${{ env.BASE_NAME }}-mysql:v$VERSION
+        # MySQL 커스텀 이미지 빌드
+        docker build \
+          -t ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/mysql:latest \
+          -t ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/mysql:v$VERSION \
+          -t ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/mysql:$BUILD_DATE \
+          --build-arg VERSION=$VERSION \
+          --build-arg BUILD_DATE=$BUILD_DATE \
+          --build-arg VCS_REF=${{ github.sha }} \
+          --label "org.opencontainers.image.title=SafeWork-MySQL" \
+          --label "org.opencontainers.image.description=SafeWork MySQL Database with Korean timezone and performance optimizations" \
+          --label "org.opencontainers.image.version=$VERSION" \
+          --label "org.opencontainers.image.revision=${{ github.sha }}" \
+          --label "org.opencontainers.image.created=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+          --label "org.opencontainers.image.source=${{ github.repositoryUrl }}" \
+          -f mysql/Dockerfile \
+          ./mysql
         
-        docker push ${{ env.REGISTRY }}/${{ env.BASE_NAME }}-mysql:latest
-        docker push ${{ env.REGISTRY }}/${{ env.BASE_NAME }}-mysql:v$VERSION
+        echo "📤 MySQL 이미지 레지스트리 푸시..."
+        docker push ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/mysql:latest
+        docker push ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/mysql:v$VERSION
+        docker push ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/mysql:$BUILD_DATE
         
-        echo "✅ MySQL 이미지 준비 완료"
+        echo "✅ MySQL 커스텀 이미지 빌드 완료: v$VERSION"
 
   # ========================================
-  # 6. Redis 이미지 빌드 (필요시)
+  # 6. Redis 커스텀 이미지 빌드 (필요시)
   # ========================================
   build-redis:
-    name: "⚡ Redis 이미지 빌드"
+    name: "⚡ Redis 커스텀 빌드"
     needs: prepare
     if: needs.prepare.outputs.build_redis == 'true'
     runs-on: ubuntu-latest
@@ -338,21 +356,38 @@ jobs:
       run: |
         echo "${{ env.REGISTRY_PASSWORD }}" | docker login ${{ env.REGISTRY }} -u ${{ env.REGISTRY_USER }} --password-stdin
     
-    - name: "🏗️ Redis 이미지 태그 & 푸시"
+    - name: "🏗️ Redis 커스텀 이미지 빌드 & 푸시"
       run: |
         VERSION="${{ needs.prepare.outputs.version }}"
+        BUILD_DATE="${{ needs.prepare.outputs.build_date }}"
         
-        echo "⚡ Redis 이미지 준비..."
+        echo "⚡ Redis 커스텀 이미지 빌드..."
+        echo "📦 버전: v$VERSION"
+        echo "📅 빌드 시간: $BUILD_DATE"
         
-        # 기본 Redis 이미지를 사용하되 우리 레지스트리에 태그
-        docker pull redis:7-alpine
-        docker tag redis:7-alpine ${{ env.REGISTRY }}/${{ env.BASE_NAME }}-redis:latest
-        docker tag redis:7-alpine ${{ env.REGISTRY }}/${{ env.BASE_NAME }}-redis:v$VERSION
+        # Redis 커스텀 이미지 빌드
+        docker build \
+          -t ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/redis:latest \
+          -t ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/redis:v$VERSION \
+          -t ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/redis:$BUILD_DATE \
+          --build-arg VERSION=$VERSION \
+          --build-arg BUILD_DATE=$BUILD_DATE \
+          --build-arg VCS_REF=${{ github.sha }} \
+          --label "org.opencontainers.image.title=SafeWork-Redis" \
+          --label "org.opencontainers.image.description=SafeWork Redis Cache with performance optimizations" \
+          --label "org.opencontainers.image.version=$VERSION" \
+          --label "org.opencontainers.image.revision=${{ github.sha }}" \
+          --label "org.opencontainers.image.created=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+          --label "org.opencontainers.image.source=${{ github.repositoryUrl }}" \
+          -f redis/Dockerfile \
+          ./redis
         
-        docker push ${{ env.REGISTRY }}/${{ env.BASE_NAME }}-redis:latest
-        docker push ${{ env.REGISTRY }}/${{ env.BASE_NAME }}-redis:v$VERSION
+        echo "📤 Redis 이미지 레지스트리 푸시..."
+        docker push ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/redis:latest
+        docker push ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/redis:v$VERSION
+        docker push ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/redis:$BUILD_DATE
         
-        echo "✅ Redis 이미지 준비 완료"
+        echo "✅ Redis 커스텀 이미지 빌드 완료: v$VERSION"
 
   # ========================================
   # 7. 프로덕션 배포

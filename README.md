@@ -1,9 +1,10 @@
 # SafeWork - 근골격계 증상조사표 시스템
 
-PDF 001 근골격계 증상조사표를 정확하게 구현한 온라인 증상조사 시스템 (v1.3.0)
+PDF 001 근골격계 증상조사표를 정확하게 구현한 온라인 증상조사 시스템 (v1.3.1)
 
-## 🎯 최신 업데이트 (v1.3.0) - 문서 관리 시스템 추가
+## 🎯 최신 업데이트 (v1.3.1) - MySQL 마이그레이션 완전 호환
 
+- ✅ **MySQL 8.0 완전 호환**: 모든 마이그레이션 MySQL 구문 최적화
 - ✅ **문서 관리 시스템**: 문서 업로드/다운로드, 버전 관리, 카테고리 분류
 - ✅ **고급 CI/CD 파이프라인**: 보안 스캔, 품질 검사, 다단계 배포 자동화
 - ✅ **데이터베이스 마이그레이션 시스템**: 웹 관리 인터페이스와 CLI 도구
@@ -235,10 +236,10 @@ safework/
 │   │   ├── document_admin/  # 문서 관리자 템플릿
 │   │   └── survey/          # 증상조사 템플릿
 │   ├── migrations/           # 데이터베이스 마이그레이션
-│   │   ├── 001_initial_schema.py
-│   │   ├── 002_create_admin_user.py
-│   │   ├── 003_optimize_performance.py
-│   │   └── 004_add_document_management.py
+│   │   ├── 001_initial_schema.py      # MySQL 호환 완료
+│   │   ├── 002_create_admin_user.py   # ORM 기반 (호환)
+│   │   ├── 003_optimize_performance.py # MySQL 호환 완료
+│   │   └── 004_add_document_management.py # MySQL 호환 완료
 │   ├── forms.py             # 증상조사 폼
 │   ├── forms_document.py    # 문서 관리 폼
 │   ├── migration_manager.py  # 마이그레이션 관리자
@@ -359,7 +360,7 @@ safework/
 
 ## 🔄 데이터베이스 마이그레이션
 
-SafeWork는 강력한 마이그레이션 시스템을 제공합니다:
+SafeWork는 MySQL 8.0 완전 호환 마이그레이션 시스템을 제공합니다:
 
 ### CLI 사용
 ```bash
@@ -382,11 +383,18 @@ python app/migrate.py rollback --version 002
 - 웹에서 마이그레이션 실행/롤백
 - 실시간 진행 상황 모니터링
 
-### 현재 마이그레이션
-1. `001_initial_schema.py`: 초기 데이터베이스 스키마
-2. `002_create_admin_user.py`: 관리자 계정 생성
-3. `003_optimize_performance.py`: 성능 최적화
-4. `004_add_document_management.py`: 문서 관리 시스템 테이블
+### 현재 마이그레이션 (MySQL 호환 완료)
+1. `001_initial_schema.py`: 초기 데이터베이스 스키마 ✅
+2. `002_create_admin_user.py`: 관리자 계정 생성 ✅
+3. `003_optimize_performance.py`: 성능 최적화 ✅
+4. `004_add_document_management.py`: 문서 관리 시스템 테이블 ✅
+
+**MySQL 호환성 개선사항:**
+- `CREATE INDEX IF NOT EXISTS` → INFORMATION_SCHEMA 조회 후 생성
+- `AUTOINCREMENT` → `AUTO_INCREMENT`
+- `OR IGNORE` → `INSERT IGNORE`
+- `db.engine.execute()` → `conn.execute(text())`
+- 트랜잭션 관리 및 롤백 지원
 
 자세한 내용은 [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md)를 참조하세요.
 
@@ -447,9 +455,22 @@ make logs
 
 # 재시작
 make restart
+
+# 최신 이미지로 업데이트
+docker pull registry.jclee.me/safework/app:latest
+docker-compose up -d
 ```
 
 ## 📈 버전 히스토리
+
+### v1.3.1 (2025-08-28) 🔧
+- **MySQL 완전 호환**: 모든 마이그레이션 파일 MySQL 8.0 호환
+  - INFORMATION_SCHEMA 기반 인덱스 존재 확인
+  - MySQL 구문 최적화 (AUTO_INCREMENT, INSERT IGNORE)
+  - 트랜잭션 관리 및 에러 핸들링 개선
+  - 헬퍼 함수로 코드 재사용성 향상
+- **CI/CD 개선**: GitHub Actions 파이프라인 안정성 향상
+- **테스트**: 모든 마이그레이션 테스트 통과
 
 ### v1.3.0 (2025-08-28) 🎉
 - **문서 관리 시스템**: 완전한 문서 관리 기능 구현

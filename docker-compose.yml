@@ -1,32 +1,48 @@
 version: '3.8'
 
 services:
-  # MySQL 데이터베이스
+  # MySQL 데이터베이스 (커스텀 이미지 v1.3.1)
   mysql:
     image: registry.jclee.me/safework/mysql:latest
     container_name: safework-mysql
     restart: unless-stopped
+    build:
+      context: ./mysql
+      dockerfile: Dockerfile
     environment:
-      MYSQL_ROOT_PASSWORD: root_password_2024
+      MYSQL_ROOT_PASSWORD: safework2024root
       MYSQL_DATABASE: safework_db
       MYSQL_USER: safework
       MYSQL_PASSWORD: safework2024
+      MYSQL_CHARACTER_SET_SERVER: utf8mb4
+      MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
+      TZ: Asia/Seoul
     volumes:
       - mysql_data:/var/lib/mysql
+      - mysql_logs:/var/log/mysql
     ports:
       - "3307:3306"
     networks:
       - safework-net
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_password_2024"]
-      timeout: 20s
-      retries: 10
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-psafework2024root"]
+      interval: 30s
+      timeout: 3s
+      start-period: 30s
+      retries: 3
 
-  # Redis 캐시
+  # Redis 캐시 (커스텀 이미지 v1.3.1)
   redis:
     image: registry.jclee.me/safework/redis:latest
     container_name: safework-redis
     restart: unless-stopped
+    build:
+      context: ./redis
+      dockerfile: Dockerfile
+    environment:
+      REDIS_REPLICATION_MODE: master
+      REDIS_PASSWORD: ""
+      TZ: Asia/Seoul
     volumes:
       - redis_data:/data
     ports:
@@ -35,29 +51,36 @@ services:
       - safework-net
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      timeout: 5s
-      retries: 5
+      interval: 30s
+      timeout: 3s
+      start-period: 5s
+      retries: 3
 
-  # SafeWork 애플리케이션
+  # SafeWork 애플리케이션 (커스텀 이미지 v1.3.1)
   app:
     image: registry.jclee.me/safework/app:latest
     container_name: safework-app
     restart: unless-stopped
+    build:
+      context: ./app
+      dockerfile: Dockerfile
     depends_on:
       mysql:
         condition: service_healthy
       redis:
         condition: service_healthy
     environment:
+      PYTHONUNBUFFERED: 1
+      PYTHONDONTWRITEBYTECODE: 1
       FLASK_APP: app.py
       FLASK_CONFIG: production
       SECRET_KEY: safework-production-secret-key-2024
-      MYSQL_HOST: mysql
+      MYSQL_HOST: safework-mysql
       MYSQL_PORT: 3306
       MYSQL_USER: safework
       MYSQL_PASSWORD: safework2024
       MYSQL_DATABASE: safework_db
-      REDIS_HOST: redis
+      REDIS_HOST: safework-redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ""
       REDIS_DB: 0
@@ -65,8 +88,10 @@ services:
       ADMIN_PASSWORD: safework2024
       UPLOAD_FOLDER: /app/uploads
       APP_PORT: 4545
+      TZ: Asia/Seoul
     volumes:
       - app_uploads:/app/uploads
+      - ./forms:/app/forms:ro
     ports:
       - "4545:4545"
     networks:
@@ -74,7 +99,8 @@ services:
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:4545/health')"]
       interval: 30s
-      timeout: 10s
+      timeout: 3s
+      start-period: 5s
       retries: 3
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
@@ -92,6 +118,8 @@ services:
 
 volumes:
   mysql_data:
+    driver: local
+  mysql_logs:
     driver: local
   redis_data:
     driver: local
