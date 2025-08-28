@@ -24,18 +24,20 @@ ENV MYSQL_ROOT_PASSWORD=safework2024root \
     MYSQL_COLLATION_SERVER=utf8mb4_unicode_ci \
     TZ=Asia/Seoul
 
-# MySQL 설정 파일 생성
+# MySQL 설정 파일 생성 (경고 해결 포함)
 RUN echo "[mysqld]" > /etc/mysql/conf.d/safework.cnf && \
     echo "character-set-server=utf8mb4" >> /etc/mysql/conf.d/safework.cnf && \
     echo "collation-server=utf8mb4_unicode_ci" >> /etc/mysql/conf.d/safework.cnf && \
     echo "max_connections=200" >> /etc/mysql/conf.d/safework.cnf && \
     echo "innodb_buffer_pool_size=512M" >> /etc/mysql/conf.d/safework.cnf && \
-    echo "innodb_log_file_size=128M" >> /etc/mysql/conf.d/safework.cnf && \
+    echo "innodb_redo_log_capacity=268435456" >> /etc/mysql/conf.d/safework.cnf && \
     echo "innodb_flush_log_at_trx_commit=2" >> /etc/mysql/conf.d/safework.cnf && \
     echo "innodb_flush_method=O_DIRECT" >> /etc/mysql/conf.d/safework.cnf && \
     echo "slow_query_log=1" >> /etc/mysql/conf.d/safework.cnf && \
     echo "slow_query_log_file=/var/log/mysql/slow.log" >> /etc/mysql/conf.d/safework.cnf && \
     echo "long_query_time=2" >> /etc/mysql/conf.d/safework.cnf && \
+    echo "host_cache_size=0" >> /etc/mysql/conf.d/safework.cnf && \
+    echo "pid_file=/var/lib/mysql/mysqld.pid" >> /etc/mysql/conf.d/safework.cnf && \
     echo "" >> /etc/mysql/conf.d/safework.cnf && \
     echo "[client]" >> /etc/mysql/conf.d/safework.cnf && \
     echo "default-character-set=utf8mb4" >> /etc/mysql/conf.d/safework.cnf && \
