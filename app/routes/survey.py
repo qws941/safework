@@ -9,7 +9,7 @@ survey_bp = Blueprint('survey', __name__)
 
 @survey_bp.route('/new', methods=['GET', 'POST'])
 def new():
-    """새 증상조사표 작성"""
+    """새 증상조사표 작성 - 로그인 불필요"""
     form = SurveyForm()
     
     if form.validate_on_submit():

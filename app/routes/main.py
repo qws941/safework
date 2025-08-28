@@ -36,3 +36,8 @@ def download_form():
 def about():
     """서비스 소개"""
     return render_template('about.html')
+
+@main_bp.route('/health')
+def health():
+    """헬스체크 엔드포인트"""
+    return {'status': 'healthy', 'service': 'safework'}, 200

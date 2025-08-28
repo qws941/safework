@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}제출 완료 - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="text-center">
+    <div class="mb-4">
+        <i class="bi bi-check-circle-fill" style="font-size: 5rem; color: var(--success-color);"></i>
+    </div>
+    
+    <h2 class="mb-3">제출이 완료되었습니다</h2>
+    
+    <div class="alert alert-success alert-custom">
+        <h5>제출 번호: #{{ survey.id }}</h5>
+        <p class="mb-0">{{ survey.name }}님의 증상조사표가 성공적으로 제출되었습니다.</p>
+    </div>
+    
+    <div class="section-card mt-4">
+        <h5 class="mb-3">제출 정보</h5>
+        <table class="table">
+            <tbody>
+                <tr>
+                    <th width="30%">성명</th>
+                    <td>{{ survey.name }}</td>
+                </tr>
+                <tr>
+                    <th>부서</th>
+                    <td>{{ survey.department }}</td>
+                </tr>
+                <tr>
+                    <th>제출일시</th>
+                    <td>{{ survey.submission_date.strftime('%Y년 %m월 %d일 %H:%M') }}</td>
+                </tr>
+                <tr>
+                    <th>상태</th>
+                    <td><span class="badge bg-primary">제출됨</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="mt-4">
+        <a href="{{ url_for('main.index') }}" class="btn btn-primary">
+            <i class="bi bi-house"></i> 메인으로 돌아가기
+        </a>
+        <a href="{{ url_for('survey.new') }}" class="btn btn-outline-primary">
+            <i class="bi bi-plus-circle"></i> 새 조사표 작성
+        </a>
+    </div>
+    
+    <div class="alert alert-info alert-custom mt-4">
+        <i class="bi bi-info-circle"></i> 
+        제출하신 내용은 안전하게 보관되며, 근골격계 질환 예방을 위한 목적으로만 사용됩니다.
+    </div>
+</div>
+{% endblock %}

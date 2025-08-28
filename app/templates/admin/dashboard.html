@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}관리자 대시보드 - {{ app_name }}{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">
+    <i class="bi bi-speedometer2"></i> 관리자 대시보드
+</h2>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="section-card text-center">
+            <h3 class="text-primary">{{ total_surveys }}</h3>
+            <p>전체 제출</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="section-card text-center">
+            <h3 class="text-success">{{ today_surveys }}</h3>
+            <p>오늘 제출</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="section-card text-center">
+            <h3 class="text-danger">{{ high_risk }}</h3>
+            <p>고위험군</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="section-card text-center">
+            <a href="{{ url_for('admin.export_excel') }}" class="btn btn-success">
+                <i class="bi bi-file-earmark-excel"></i> Excel 다운로드
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="section-card">
+    <h5>최근 제출 목록</h5>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>제출일시</th>
+                <th>이름</th>
+                <th>부서</th>
+                <th>통증수준</th>
+                <th>상태</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for survey in recent_surveys %}
+            <tr>
+                <td>{{ survey.submission_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>{{ survey.name }}</td>
+                <td>{{ survey.department }}</td>
+                <td>
+                    {% set max_pain = [survey.neck_pain, survey.shoulder_pain, survey.arm_pain, 
+                                      survey.hand_pain, survey.back_pain, survey.waist_pain, 
+                                      survey.leg_pain] | max %}
+                    {% if max_pain >= 7 %}
+                        <span class="badge bg-danger">높음</span>
+                    {% elif max_pain >= 4 %}
+                        <span class="badge bg-warning">중간</span>
+                    {% else %}
+                        <span class="badge bg-success">낮음</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="badge bg-primary">{{ survey.status }}</span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <div class="text-center mt-3">
+        <a href="{{ url_for('admin.surveys') }}" class="btn btn-primary">
+            전체 목록 보기
+        </a>
+    </div>
+</div>
+{% endblock %}

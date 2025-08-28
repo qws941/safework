@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}조사표 목록 - {{ app_name }}{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">
+    <i class="bi bi-list-ul"></i> 조사표 목록
+</h2>
+
+<div class="section-card mb-3">
+    <form method="GET" class="row g-3">
+        <div class="col-md-4">
+            <input type="text" name="search" class="form-control" placeholder="이름, 사번, 부서 검색" value="{{ request.args.get('search', '') }}">
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary w-100">검색</button>
+        </div>
+        <div class="col-md-2">
+            <a href="{{ url_for('admin.export_excel') }}?{{ request.query_string.decode() }}" class="btn btn-success w-100">
+                <i class="bi bi-file-excel"></i> Excel
+            </a>
+        </div>
+    </form>
+</div>
+
+<div class="section-card">
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>제출일시</th>
+                <th>이름</th>
+                <th>부서</th>
+                <th>나이</th>
+                <th>최고통증</th>
+                <th>상태</th>
+                <th>작업</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for survey in surveys.items %}
+            <tr>
+                <td>{{ survey.submission_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>{{ survey.name }}</td>
+                <td>{{ survey.department }}</td>
+                <td>{{ survey.age }}</td>
+                <td>
+                    {% set max_pain = [survey.neck_pain, survey.shoulder_pain, survey.arm_pain, 
+                                      survey.hand_pain, survey.back_pain, survey.waist_pain, 
+                                      survey.leg_pain] | max %}
+                    <span class="badge bg-{% if max_pain >= 7 %}danger{% elif max_pain >= 4 %}warning{% else %}success{% endif %}">
+                        {{ max_pain }}/10
+                    </span>
+                </td>
+                <td>
+                    <span class="badge bg-primary">{{ survey.status }}</span>
+                </td>
+                <td>
+                    <a href="{{ url_for('admin.review_survey', id=survey.id) }}" class="btn btn-sm btn-outline-primary">
+                        상세
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <!-- 페이지네이션 -->
+    {% if surveys.has_prev or surveys.has_next %}
+    <nav>
+        <ul class="pagination justify-content-center">
+            <li class="page-item {% if not surveys.has_prev %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('admin.surveys', page=surveys.prev_num) }}">이전</a>
+            </li>
+            <li class="page-item active">
+                <span class="page-link">{{ surveys.page }} / {{ surveys.pages }}</span>
+            </li>
+            <li class="page-item {% if not surveys.has_next %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('admin.surveys', page=surveys.next_num) }}">다음</a>
+            </li>
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}
