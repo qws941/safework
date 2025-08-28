@@ -41,10 +41,10 @@ class MigrationManager:
     def _ensure_migration_table(self):
         """마이그레이션 추적 테이블이 존재하는지 확인하고 생성"""
         try:
-            # migrations 테이블이 있는지 확인 (SQLAlchemy 2.0 compatible)
+            # migrations 테이블이 있는지 확인 (MySQL compatible)
             with db.engine.connect() as conn:
                 result = conn.execute(
-                    db.text("SELECT name FROM sqlite_master WHERE type='table' AND name='migrations'")
+                    db.text("SHOW TABLES LIKE 'migrations'")
                 ).fetchone()
 
                 if not result:

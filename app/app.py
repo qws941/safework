@@ -1,6 +1,6 @@
 import os
 import time as time_module
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 import redis
 from flask import Flask, flash, redirect, render_template, request, url_for
@@ -155,7 +155,7 @@ def create_app(config_name=None):
             "app_name": app.config["APP_NAME"], 
             "app_version": app_version,
             "system_uptime": uptime_str,
-            "start_time": datetime.fromtimestamp(app.start_time).strftime("%Y-%m-%d %H:%M:%S")
+            "start_time": datetime.fromtimestamp(app.start_time, tz=timezone(timedelta(hours=9))).strftime("%Y-%m-%d %H:%M:%S KST")
         }
 
     # Audit logging

@@ -1,6 +1,13 @@
 """Updated models based on exact PDF form fields"""
 
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+
+# KST timezone
+KST = timezone(timedelta(hours=9))
+
+def kst_now():
+    """현재 KST 시간 반환"""
+    return datetime.now(KST)
 
 from flask_login import UserMixin
 from flask_sqlalchemy import SQLAlchemy
@@ -28,9 +35,9 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=kst_now)
     updated_at = db.Column(
-        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+        db.DateTime, default=kst_now, onupdate=kst_now
     )
 
     # Relationships
@@ -154,15 +161,15 @@ class Survey(db.Model):
     # }
 
     # 메타데이터
-    submission_date = db.Column(db.DateTime, default=datetime.utcnow)
+    submission_date = db.Column(db.DateTime, default=kst_now)
     ip_address = db.Column(db.String(45))
     status = db.Column(db.String(20), default="submitted")
     reviewed_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     reviewed_at = db.Column(db.DateTime)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=kst_now)
     updated_at = db.Column(
-        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+        db.DateTime, default=kst_now, onupdate=kst_now
     )
 
     def __repr__(self):
@@ -207,9 +214,9 @@ class SurveyStatistics(db.Model):
     medication_history = db.Column(db.Text)  # 복용 약물
     allergy_history = db.Column(db.Text)  # 알레르기 이력
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=kst_now)
     updated_at = db.Column(
-        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+        db.DateTime, default=kst_now, onupdate=kst_now
     )
 
     def __repr__(self):
@@ -229,7 +236,7 @@ class AuditLog(db.Model):
     details = db.Column(db.JSON)
     ip_address = db.Column(db.String(45))
     user_agent = db.Column(db.String(500))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=kst_now)
 
     def __repr__(self):
         return f"<AuditLog {self.action} by {self.user_id}>"
