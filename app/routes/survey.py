@@ -5,7 +5,7 @@ from flask import (Blueprint, current_app, flash, jsonify, redirect,
                    render_template, request, url_for)
 from flask_login import current_user, login_required
 
-from forms import SurveyForm
+# SurveyForm removed - using direct HTML forms now
 from models import AuditLog, Survey, db
 
 survey_bp = Blueprint("survey", __name__)
@@ -20,9 +20,7 @@ def new():
 @survey_bp.route("/001_musculoskeletal_symptom_survey", methods=["GET", "POST"])
 def musculoskeletal_symptom_survey():
     """근골격계 증상조사표 (001) - 로그인 불필요"""
-    form = SurveyForm()
-
-    if form.validate_on_submit():
+    if request.method == 'POST':
         # 기본적으로 익명 사용자 ID 1을 사용
         user_id = 1  # 익명 사용자
         if current_user.is_authenticated:
@@ -183,9 +181,9 @@ def musculoskeletal_symptom_survey():
 
         # 추가 증상 데이터를 JSON으로 저장
         symptoms_data = {
-            "pain_frequency": form.data.get("pain_frequency"),
-            "pain_timing": form.data.get("pain_timing"),
-            "pain_characteristics": form.data.get("pain_characteristics"),
+            "pain_frequency": request.form.get("pain_frequency"),
+            "pain_timing": request.form.get("pain_timing"),  
+            "pain_characteristics": request.form.get("pain_characteristics"),
         }
         survey.symptoms_data = symptoms_data
 
@@ -216,15 +214,13 @@ def musculoskeletal_symptom_survey():
         flash("증상조사표가 성공적으로 제출되었습니다.", "success")
         return redirect(url_for("survey.complete", id=survey.id))
 
-    return render_template("survey/001_musculoskeletal_symptom_survey.html", form=form)
+    return render_template("survey/001_musculoskeletal_symptom_survey.html")
 
 
 @survey_bp.route("/002_new_employee_health_checkup_form", methods=["GET", "POST"])
 def new_employee_health_checkup_form():
     """신규 입사자 건강검진 양식 (002) - 로그인 불필요"""
-    form = SurveyForm()
-
-    if form.validate_on_submit():
+    if request.method == 'POST':
         # 기본적으로 익명 사용자 ID 1을 사용
         user_id = 1  # 익명 사용자
         if current_user.is_authenticated:
@@ -258,7 +254,7 @@ def new_employee_health_checkup_form():
         flash("신규 입사자 건강검진 양식이 성공적으로 제출되었습니다.", "success")
         return redirect(url_for("survey.complete", id=survey.id))
 
-    return render_template("survey/002_new_employee_health_checkup_form.html", form=form)
+    return render_template("survey/002_new_employee_health_checkup_form.html")
 
 
 @survey_bp.route("/complete/<int:id>")
