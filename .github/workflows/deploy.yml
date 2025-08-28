@@ -2,7 +2,7 @@ name: SafeWork CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop, staging ]
+    branches: [ main, master, develop, staging ]
     paths:
       - 'app/**'
       - 'mysql/**' 
