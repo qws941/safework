@@ -179,6 +179,16 @@
         border-color: #3b82f6;
     }
     
+    .question-row.disabled {
+        opacity: 0.6;
+        pointer-events: none;
+    }
+    
+    .question-row.disabled .question-text {
+        color: #9ca3af;
+    }
+    }
+    
     .required {
         color: #ef4444;
     }
@@ -653,10 +663,18 @@
                         <div class="symptom-title">{{ part }}</div>
                         <div class="symptom-questions">
                             {% for question in questions %}
-                            <div class="question-row">
+                            <div class="question-row" data-question="{{ loop.index }}" data-bodypart="{{ part }}">
                                 <div class="question-text">{{ loop.index }}. {{ question }}</div>
                                 <div class="answer-options">
-                                    {% if loop.index == 4 %}
+                                    {% if loop.index == 2 %}
+                                        <!-- 시작 시기 -->
+                                        <button type="button" class="option-btn" data-value="1주일이내">1주일 이내</button>
+                                        <button type="button" class="option-btn" data-value="1개월이내">1개월 이내</button>
+                                        <button type="button" class="option-btn" data-value="3개월이내">3개월 이내</button>
+                                        <button type="button" class="option-btn" data-value="6개월이내">6개월 이내</button>
+                                        <button type="button" class="option-btn" data-value="1년이내">1년 이내</button>
+                                        <button type="button" class="option-btn" data-value="1년이상">1년 이상</button>
+                                    {% elif loop.index == 4 %}
                                         <!-- 통증 정도: 4단계 -->
                                         <button type="button" class="option-btn" data-value="약한통증">약함</button>
                                         <button type="button" class="option-btn" data-value="중간통증">중간</button>
@@ -711,8 +729,42 @@ document.addEventListener('click', function(e) {
         // 클릭한 버튼에 selected 추가
         e.target.classList.add('selected');
         
+        // 첫 번째 질문에서 "아니오" 선택 시 조건부 처리
+        const questionNum = questionRow.dataset.question;
+        const bodyPart = questionRow.dataset.bodypart;
+        const selectedValue = e.target.dataset.value;
+        
+        if (questionNum === '1' && selectedValue === '아니오') {
+            // 해당 신체 부위의 2-6번 질문들 비활성화
+            const symptomCard = questionRow.closest('.symptom-card');
+            const otherQuestions = symptomCard.querySelectorAll('.question-row[data-question]:not([data-question="1"])');
+            
+            otherQuestions.forEach(row => {
+                row.classList.add('disabled');
+                row.querySelectorAll('.option-btn').forEach(btn => {
+                    btn.classList.remove('selected');
+                    btn.disabled = true;
+                    btn.style.opacity = '0.5';
+                    btn.style.cursor = 'not-allowed';
+                });
+            });
+        } else if (questionNum === '1' && selectedValue === '예') {
+            // 해당 신체 부위의 2-6번 질문들 활성화
+            const symptomCard = questionRow.closest('.symptom-card');
+            const otherQuestions = symptomCard.querySelectorAll('.question-row[data-question]:not([data-question="1"])');
+            
+            otherQuestions.forEach(row => {
+                row.classList.remove('disabled');
+                row.querySelectorAll('.option-btn').forEach(btn => {
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                    btn.style.cursor = 'pointer';
+                });
+            });
+        }
+        
         // 데이터 저장을 위한 히든 필드 생성 (실제 구현 시 필요)
-        console.log('Selected:', e.target.dataset.value);
+        console.log('Selected:', selectedValue, 'for', bodyPart, 'question', questionNum);
     }
 });
 
