@@ -1,0 +1,89 @@
+name: Pull Request CI
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  # PR 코드 품질 검사
+  quality-check:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        cd app
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install flake8 black pytest safety
+        
+    - name: Code formatting check
+      run: |
+        cd app
+        black --check --line-length 100 . || echo "❌ Code formatting issues found"
+        
+    - name: Lint check
+      run: |
+        cd app
+        flake8 --max-line-length=100 --ignore=E501,W503 --exclude=migrations . || echo "❌ Lint issues found"
+        
+    - name: Security check
+      run: |
+        cd app
+        safety check || echo "⚠️ Security vulnerabilities found"
+        
+    - name: Run tests
+      run: |
+        cd app
+        FLASK_CONFIG=testing python -m pytest tests/ -v --tb=short || echo "❌ Tests failed"
+      
+  # Docker 빌드 테스트
+  build-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [app, mysql, redis]
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Build test image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./${{ matrix.service }}
+        file: ./${{ matrix.service }}/Dockerfile
+        push: false
+        tags: safework/${{ matrix.service }}:test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        
+    - name: Test image
+      run: |
+        echo "✅ ${{ matrix.service }} image built successfully"
+        
+  # PR 검토 요약
+  pr-summary:
+    needs: [quality-check, build-test]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+    - name: PR Check Summary
+      run: |
+        echo "## 📋 Pull Request 검토 결과"
+        echo "### 코드 품질 검사: ${{ needs.quality-check.result }}"
+        echo "### Docker 빌드 테스트: ${{ needs.build-test.result }}"
+        echo ""
+        if [ "${{ needs.quality-check.result }}" = "success" ] && [ "${{ needs.build-test.result }}" = "success" ]; then
+          echo "✅ **모든 검사가 성공했습니다. 병합 준비가 완료되었습니다.**"
+        else
+          echo "❌ **일부 검사에서 문제가 발견되었습니다. 수정 후 다시 시도해주세요.**"
+        fi

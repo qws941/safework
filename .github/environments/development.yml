@@ -1,0 +1,33 @@
+# Development Environment Configuration
+name: development
+description: SafeWork 개발환경 자동 배포
+
+# 환경 변수
+environment:
+  FLASK_CONFIG: development
+  SECRET_KEY: safework-dev-secret-key-2024
+  MYSQL_HOST: safework-mysql-dev
+  MYSQL_DATABASE: safework_dev_db
+  REDIS_HOST: safework-redis-dev
+  
+# 배포 전략
+deployment:
+  strategy: rolling
+  max_unavailable: 1
+  max_surge: 1
+  
+# 자동화 설정
+automation:
+  auto_deploy: true
+  branches:
+    - develop
+  health_check:
+    endpoint: /health
+    timeout: 30s
+    retries: 3
+    
+# 알림 설정
+notifications:
+  slack_channel: "#dev-deployments"
+  email_recipients:
+    - dev-team@company.com

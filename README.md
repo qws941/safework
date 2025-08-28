@@ -53,22 +53,48 @@ registry.jclee.me/safework/mysql:latest   # MySQL 데이터베이스 (포트 330
 registry.jclee.me/safework/redis:latest   # Redis 캐시 (포트 6379)
 ```
 
-## 🌐 주요 URL 경로
+## 🌐 주요 서비스 엔드포인트
 
-### 설문조사 페이지 (익명 제출 가능)
+### 🏥 설문조사 시스템 (익명 제출 지원)
+
+#### 사용자 페이지
+| 경로 | 설명 | 접근 방법 |
+|------|------|-----------|
+| `/` | 메인 홈페이지 | 모두 |
+| `/survey/001_musculoskeletal_symptom_survey` | 001 근골격계 증상조사표 작성 | 모두 (익명 가능) |
+| `/survey/002_new_employee_health_checkup_form` | 002 신규입사자 건강검진 양식 | 모두 (익명 가능) |
+| `/survey/complete/<id>` | 제출 완료 페이지 | 자동 리다이렉트 |
+| `/survey/my-surveys` | 내가 제출한 조사표 목록 | 로그인 필요 |
+
+#### 키오스크 모드 (v1.4.1 신규)
+| 직접 URL 접속 | 설명 | 특징 |
+|------|------|------|
+| `https://safework.jclee.me/survey/001_musculoskeletal_symptom_survey` | 001 양식 키오스크 | 네비게이션 숨김, 5초 후 자동 복귀 |
+| `https://safework.jclee.me/survey/002_new_employee_health_checkup_form` | 002 양식 키오스크 | 네비게이션 숨김, 5초 후 자동 복귀 |
+| URL + `?kiosk=1` | 강제 키오스크 모드 | 파라미터로 키오스크 모드 활성화 |
+
+#### 관리자 대시보드
+| 경로 | 설명 | 기능 |
+|------|------|------|
+| `/survey/admin` | 통합 관리자 대시보드 | 모든 제출 데이터 조회, 통계, 검색 |
+| `/survey/admin/001_musculoskeletal` | 001 양식 전용 관리 | 근골격계 데이터만 필터링 |
+| `/survey/admin/002_new_employee` | 002 양식 전용 관리 | 신규입사자 데이터만 필터링 |
+| `/survey/admin/survey/<id>` | 개별 제출 상세보기 | 특정 제출 데이터 상세 조회 |
+| `/survey/admin/export/001` | 001 양식 Excel 내보내기 | 근골격계 데이터 Excel 다운로드 |
+| `/survey/admin/export/002` | 002 양식 Excel 내보내기 | 신규입사자 데이터 Excel 다운로드 |
+
+### 👤 인증 시스템
 
 | 경로 | 설명 | 접근 권한 |
 |------|------|-----------|
-| `/` | 메인 페이지 | 모두 |
-| `/survey/001_musculoskeletal_symptom_survey` | 근골격계 증상조사표 | 모두 (익명 가능) |
-| `/survey/002_new_employee_health_checkup_form` | 신규입사자 건강검진 | 모두 (익명 가능) |
-| `/survey/new` | 001 조사표로 리다이렉트 | 모두 |
-| `/auth/login` | 로그인 | 모두 |
-| `/auth/register` | 회원가입 | 모두 |
+| `/auth/login` | 로그인 페이지 | 모두 |
+| `/auth/register` | 회원가입 페이지 | 모두 |
 | `/auth/logout` | 로그아웃 | 로그인 필요 |
+| `/auth/profile` | 내 프로필 | 로그인 필요 |
 
-### 문서 관리 페이지
+### 📁 문서 관리 시스템
 
+#### 일반 사용자
 | 경로 | 설명 | 접근 권한 |
 |------|------|-----------|
 | `/documents/` | 문서 목록 | 모두 |
@@ -77,26 +103,36 @@ registry.jclee.me/safework/redis:latest   # Redis 캐시 (포트 6379)
 | `/documents/templates` | 템플릿 양식 목록 | 모두 |
 | `/documents/search` | 문서 검색 | 모두 |
 
-### 관리자 페이지
+#### 문서 관리자
+| 경로 | 설명 | 기능 |
+|------|------|------|
+| `/admin/documents/` | 문서 관리 메인 | 문서 목록 관리 |
+| `/admin/documents/upload` | 문서 업로드 | 새 문서 추가 |
+| `/admin/documents/edit/<id>` | 문서 편집 | 기존 문서 수정 |
+| `/admin/documents/delete/<id>` | 문서 삭제 | 문서 삭제 |
+| `/admin/documents/categories` | 카테고리 관리 | 문서 분류 설정 |
+
+### 🛡️ 관리자 전용 페이지
 
 | 경로 | 설명 | 기능 |
 |------|------|------|
-| `/admin/dashboard` | 관리자 대시보드 | 통계, 현황 모니터링 |
-| `/admin/surveys` | 증상조사 관리 | 제출 데이터 조회, Excel 다운로드 |
-| `/admin/users` | 사용자 관리 | 사용자 목록, 권한 관리 |
-| `/admin/documents/` | 문서 관리 | 문서 목록, 업로드, 수정, 삭제 |
-| `/admin/documents/upload` | 문서 업로드 | 새 문서 추가 |
-| `/admin/documents/categories` | 카테고리 관리 | 문서 카테고리 설정 |
-| `/admin/migrations` | 마이그레이션 관리 | DB 스키마 버전 관리 |
+| `/admin/dashboard` | 관리자 대시보드 | 전체 시스템 현황 |
+| `/admin/surveys` | 증상조사 통합 관리 | 제출 데이터 전체 관리 |
+| `/admin/users` | 사용자 관리 | 사용자 목록, 권한 설정 |
+| `/admin/logs` | 감사 로그 | 시스템 활동 이력 |
+| `/migration/status` | 마이그레이션 상태 | DB 스키마 버전 관리 |
+| `/migration/run` | 마이그레이션 실행 | DB 업데이트 실행 |
 
-### 시스템 API
+### 🔧 시스템 API 엔드포인트
 
-| 경로 | 설명 | 용도 |
+| 경로 | 설명 | 응답 형식 |
 |------|------|------|
-| `/health` | 헬스체크 | 서비스 상태 확인 |
-| `/api/documents/recent` | 최근 문서 API | AJAX 호출용 |
-| `/api/documents/popular` | 인기 문서 API | AJAX 호출용 |
-| `/api/documents/categories` | 카테고리 목록 API | AJAX 호출용 |
+| `/health` | 헬스체크 | JSON (status, timestamp, version) |
+| `/api/system/status` | 시스템 상태 | JSON (cpu, memory, disk) |
+| `/api/documents/recent` | 최근 문서 API | JSON 배열 |
+| `/api/documents/popular` | 인기 문서 API | JSON 배열 |
+| `/api/documents/categories` | 카테고리 목록 | JSON 배열 |
+| `/api/surveys/stats` | 설문 통계 API | JSON (001_count, 002_count) |
 
 ## 👤 계정 정보
 

@@ -161,16 +161,19 @@
     }
     
     .option-btn {
-        padding: 6px 10px;
+        padding: 6px 8px;
         border: 1px solid #d1d5db;
-        border-radius: 4px;
+        border-radius: 6px;
         background: #ffffff;
         font-size: 0.75rem;
         cursor: pointer;
         min-width: 50px;
         text-align: center;
-        white-space: nowrap;
-        flex-shrink: 0;
+        word-break: keep-all;
+        white-space: normal;
+        line-height: 1.2;
+        flex: 0 0 auto;
+        transition: all 0.2s ease;
     }
     
     .option-btn.selected {
@@ -216,6 +219,11 @@
     
     /* 모바일 반응형 */
     @media (max-width: 768px) {
+        .option-btn {
+            padding: 5px 6px;
+            font-size: 0.7rem;
+            min-width: 45px;
+        }
         .survey-container {
             padding: 10px;
         }
@@ -252,14 +260,19 @@
         .answer-options {
             align-self: stretch;
             justify-content: flex-start;
-            gap: 4px;
+            gap: 6px;
+            flex-wrap: wrap;
         }
         
         .option-btn {
             flex: 1;
             min-width: 0;
-            font-size: 0.7rem;
-            padding: 4px 6px;
+            font-size: 0.75rem;
+            padding: 6px 8px;
+            white-space: normal;
+            word-break: keep-all;
+            line-height: 1.2;
+            height: auto;
         }
     }
 </style>
