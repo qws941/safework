@@ -42,7 +42,7 @@ class Config:
     ALLOWED_EXTENSIONS = {"pdf", "xlsx", "xls", "csv"}
 
     # Application
-    APP_NAME = "SafeWork 근골격계 증상조사"
+    APP_NAME = "SafeWork 안전보건 관리시스템"
     ITEMS_PER_PAGE = 20
 
     # Dynamic version loading
