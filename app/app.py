@@ -76,13 +76,14 @@ def create_app(config_name=None):
     app.register_blueprint(document_bp, url_prefix="/documents")
     app.register_blueprint(document_admin_bp, url_prefix="/admin/documents")
 
-    # Create database tables with retry logic
+    # Database connection check (tables are created by MySQL image init.sql)
     with app.app_context():
         import time
 
         for i in range(30):  # Try for 30 seconds
             try:
-                db.create_all()
+                # Just test database connection, tables are already created by init.sql
+                db.engine.execute(db.text("SELECT 1"))
                 break
             except Exception as e:
                 if i == 29:  # Last attempt

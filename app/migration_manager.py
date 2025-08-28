@@ -39,41 +39,20 @@ class MigrationManager:
             self._ensure_migration_table()
 
     def _ensure_migration_table(self):
-        """마이그레이션 추적 테이블이 존재하는지 확인하고 생성"""
+        """마이그레이션 추적 테이블 확인 (init.sql에서 이미 생성됨)"""
         try:
-            # MySQL에서 migrations 테이블이 있는지 확인
+            # MySQL에서 migrations 테이블이 있는지 확인만 함
             with db.engine.connect() as conn:
                 result = conn.execute(
                     db.text("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'migrations'")
                 ).scalar()
 
-                if result == 0:
-                    # 마이그레이션 테이블 생성
-                    Migration.__table__.create(db.engine)
-                    current_app.logger.info("Created migrations tracking table")
+                if result > 0:
+                    current_app.logger.info("Migrations table exists (created by init.sql)")
+                else:
+                    current_app.logger.warning("Migrations table not found - should be created by init.sql")
         except Exception as e:
-            current_app.logger.error(f"Error ensuring migration table: {e}")
-            # 테이블 생성 재시도
-            try:
-                # 직접 SQL로 테이블 생성 (MySQL 호환)
-                with db.engine.connect() as conn:
-                    conn.execute(db.text("""
-                        CREATE TABLE IF NOT EXISTS migrations (
-                            id INT AUTO_INCREMENT PRIMARY KEY,
-                            version VARCHAR(50) UNIQUE NOT NULL,
-                            description VARCHAR(200) NOT NULL,
-                            filename VARCHAR(100) NOT NULL,
-                            checksum VARCHAR(64) NOT NULL,
-                            executed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                            execution_time FLOAT,
-                            success BOOLEAN DEFAULT TRUE,
-                            error_message TEXT
-                        )
-                    """))
-                    conn.commit()
-                current_app.logger.info("Created migrations table with direct SQL")
-            except Exception as e2:
-                current_app.logger.error(f"Error creating migrations table: {e2}")
+            current_app.logger.error(f"Error checking migration table: {e}")
 
     def _get_file_checksum(self, filepath: str) -> str:
         """파일의 SHA-256 체크섬 계산"""
