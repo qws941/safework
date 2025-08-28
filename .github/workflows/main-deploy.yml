@@ -44,7 +44,7 @@ jobs:
         tags: |
           ${{ env.REGISTRY }}/safework/app:latest
           ${{ env.REGISTRY }}/safework/app:${{ steps.version.outputs.version }}
-        platforms: linux/amd64
+        platforms: linux/amd64,linux/arm64
         
     - name: Build and push MySQL image
       uses: docker/build-push-action@v5
@@ -54,7 +54,7 @@ jobs:
         tags: |
           ${{ env.REGISTRY }}/safework/mysql:latest
           ${{ env.REGISTRY }}/safework/mysql:${{ steps.version.outputs.version }}
-        platforms: linux/amd64
+        platforms: linux/amd64,linux/arm64
         
     - name: Build and push Redis image
       uses: docker/build-push-action@v5
@@ -64,7 +64,7 @@ jobs:
         tags: |
           ${{ env.REGISTRY }}/safework/redis:latest
           ${{ env.REGISTRY }}/safework/redis:${{ steps.version.outputs.version }}
-        platforms: linux/amd64
+        platforms: linux/amd64,linux/arm64
         
     - name: Update version file
       run: |
