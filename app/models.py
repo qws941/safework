@@ -58,6 +58,11 @@ class Survey(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    
+    # 양식 구분 필드 추가
+    form_type = db.Column(db.String(50))  # 001_musculoskeletal, 002_new_employee 등
+    employee_number = db.Column(db.String(50))  # 사번
+    position = db.Column(db.String(100))  # 직위
 
     # I. 기본 정보
     name = db.Column(db.String(100), nullable=False)
@@ -193,6 +198,14 @@ class SurveyStatistics(db.Model):
 
     # 치료 필요 인원
     medical_treatment_count = db.Column(db.Integer, default=0)
+    
+    # Form 002 - 신규 입사자 건강검진 양식 추가 필드
+    height_cm = db.Column(db.Float)  # 신장
+    weight_kg = db.Column(db.Float)  # 체중
+    blood_type = db.Column(db.String(10))  # 혈액형
+    existing_conditions = db.Column(db.Text)  # 기존 질환 (JSON 문자열)
+    medication_history = db.Column(db.Text)  # 복용 약물
+    allergy_history = db.Column(db.Text)  # 알레르기 이력
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(

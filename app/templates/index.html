@@ -6,41 +6,116 @@
 <div class="text-center mb-5">
     <h1 class="display-4 fw-bold mb-4">
         <i class="bi bi-clipboard2-pulse"></i><br>
-        근골격계 증상조사
+        안전보건 관리 시스템
     </h1>
-    <p class="lead text-muted">직원 여러분의 건강한 근무환경을 위한 증상 조사입니다</p>
+    <p class="lead text-muted">직원 여러분의 건강하고 안전한 근무환경을 위한 통합 관리 시스템</p>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="section-card">
+            <h4 class="section-title mb-4">
+                <i class="bi bi-file-text"></i> 작성 가능한 양식
+            </h4>
+            <div class="row g-3">
+                <!-- 001 근골격계 증상조사표 -->
+                <div class="col-lg-4 col-md-6">
+                    <div class="card h-100 border-primary">
+                        <div class="card-header bg-primary text-white">
+                            <span class="badge bg-white text-primary">001</span> 근골격계 증상조사표
+                        </div>
+                        <div class="card-body">
+                            <p class="small">근골격계 질환 예방을 위한 증상 조사</p>
+                            <ul class="small text-muted mb-3">
+                                <li>작업 자세 및 반복 동작 평가</li>
+                                <li>신체 부위별 증상 체크</li>
+                                <li>작업 환경 개선 자료</li>
+                            </ul>
+                            <a href="{{ url_for('survey.musculoskeletal_symptom_survey') }}" class="btn btn-primary w-100">
+                                <i class="bi bi-pencil-square"></i> 작성하기
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 002 신규 입사자 건강검진 양식 -->
+                <div class="col-lg-4 col-md-6">
+                    <div class="card h-100 border-info">
+                        <div class="card-header bg-info text-white">
+                            <span class="badge bg-white text-info">002</span> 신규 입사자 건강검진
+                        </div>
+                        <div class="card-body">
+                            <p class="small">신규 입사자 건강 상태 확인</p>
+                            <ul class="small text-muted mb-3">
+                                <li>기본 신체 정보</li>
+                                <li>기존 질환 이력</li>
+                                <li>생활 습관 조사</li>
+                            </ul>
+                            <a href="{{ url_for('survey.new_employee_health_checkup_form') }}" class="btn btn-info w-100">
+                                <i class="bi bi-pencil-square"></i> 작성하기
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 추가 양식을 위한 placeholder -->
+                <div class="col-lg-4 col-md-6">
+                    <div class="card h-100 border-secondary">
+                        <div class="card-header bg-secondary text-white">
+                            <span class="badge bg-white text-secondary">+</span> 추가 예정
+                        </div>
+                        <div class="card-body">
+                            <p class="small text-muted">더 많은 양식이 추가될 예정입니다</p>
+                            <ul class="small text-muted mb-3">
+                                <li>작업환경측정 결과서</li>
+                                <li>안전교육 이수증</li>
+                                <li>건강검진 결과 보고서</li>
+                            </ul>
+                            <button class="btn btn-secondary w-100" disabled>
+                                <i class="bi bi-clock"></i> 준비중
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="row g-4">
+    {% if current_user.is_authenticated %}
     <div class="col-md-6">
         <div class="section-card h-100">
             <div class="text-center">
                 <div class="mb-3">
-                    <i class="bi bi-pencil-square" style="font-size: 3rem; color: var(--primary-color);"></i>
+                    <i class="bi bi-folder-open" style="font-size: 3rem; color: var(--primary-color);"></i>
                 </div>
-                <h3>증상조사표 작성</h3>
-                <p class="text-muted mb-4">모바일에서도 간편하게 작성 가능합니다</p>
-                <a href="{{ url_for('survey.new') }}" class="btn btn-primary btn-lg w-100">
-                    <i class="bi bi-arrow-right-circle"></i> 지금 작성하기
+                <h3>내 제출 이력</h3>
+                <p class="text-muted mb-4">제출한 양식들을 확인하세요</p>
+                <a href="{{ url_for('survey.my_surveys') }}" class="btn btn-outline-primary btn-lg w-100">
+                    <i class="bi bi-list-ul"></i> 이력 보기
                 </a>
             </div>
         </div>
     </div>
+    {% endif %}
     
+    {% if current_user.is_authenticated and current_user.is_admin %}
     <div class="col-md-6">
         <div class="section-card h-100">
             <div class="text-center">
                 <div class="mb-3">
-                    <i class="bi bi-shield-check" style="font-size: 3rem; color: var(--success-color);"></i>
+                    <i class="bi bi-gear" style="font-size: 3rem; color: var(--danger-color);"></i>
                 </div>
-                <h3>작업자 건강 관리</h3>
-                <p class="text-muted mb-4">근골격계 질환 예방을 위한 체계적 관리</p>
-                <div class="btn btn-outline-success btn-lg w-100 disabled">
-                    <i class="bi bi-heart-pulse"></i> 건강한 작업 환경
-                </div>
+                <h3>관리자 페이지</h3>
+                <p class="text-muted mb-4">제출된 데이터 관리 및 통계</p>
+                <a href="{{ url_for('survey.admin_dashboard') }}" class="btn btn-danger btn-lg w-100">
+                    <i class="bi bi-speedometer2"></i> 관리자 대시보드
+                </a>
             </div>
         </div>
     </div>
+    {% endif %}
 </div>
 
 <div class="section-card mt-4">

@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+{% block title %}조사표 상세보기{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="mb-4">
+        <a href="{{ url_for('survey.admin_dashboard') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> 목록으로
+        </a>
+    </div>
+    
+    <h2 class="mb-4">
+        조사표 상세 정보 #{{ survey.id }}
+        {% if survey.form_type %}
+            {% if '001' in survey.form_type %}
+                <span class="badge bg-primary">001 근골격계</span>
+            {% elif '002' in survey.form_type %}
+                <span class="badge bg-info">002 신규입사자</span>
+            {% endif %}
+        {% else %}
+            <span class="badge bg-primary">001 근골격계</span>
+        {% endif %}
+    </h2>
+    
+    <!-- 기본 정보 -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">기본 정보</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <strong>제출일시:</strong><br>
+                    {{ survey.created_at.strftime('%Y-%m-%d %H:%M:%S') if survey.created_at else '-' }}
+                </div>
+                <div class="col-md-3">
+                    <strong>사번:</strong><br>
+                    {{ survey.employee_number or '-' }}
+                </div>
+                <div class="col-md-3">
+                    <strong>이름:</strong><br>
+                    {{ survey.name }}
+                </div>
+                <div class="col-md-3">
+                    <strong>나이:</strong><br>
+                    {{ survey.age }}세
+                </div>
+            </div>
+            <hr>
+            <div class="row">
+                <div class="col-md-3">
+                    <strong>성별:</strong><br>
+                    {{ survey.gender or '-' }}
+                </div>
+                <div class="col-md-3">
+                    <strong>부서:</strong><br>
+                    {{ survey.department or '-' }}
+                </div>
+                <div class="col-md-3">
+                    <strong>직위:</strong><br>
+                    {{ survey.position or '-' }}
+                </div>
+                <div class="col-md-3">
+                    <strong>근무경력:</strong><br>
+                    {% if survey.work_years or survey.work_months %}
+                        {{ survey.work_years or 0 }}년 {{ survey.work_months or 0 }}개월
+                    {% else %}
+                        -
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Form 001 근골격계 관련 정보 -->
+    {% if not survey.form_type or '001' in (survey.form_type or '') %}
+    <div class="card mb-4">
+        <div class="card-header bg-warning">
+            <h5 class="mb-0">작업 정보</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <strong>작업형태:</strong><br>
+                    {{ survey.work_type or '-' }}
+                </div>
+                <div class="col-md-4">
+                    <strong>1일 근무시간:</strong><br>
+                    {{ survey.work_hours_per_day or '-' }}시간
+                </div>
+                <div class="col-md-4">
+                    <strong>휴식시간:</strong><br>
+                    {{ survey.break_time_minutes or '-' }}분
+                </div>
+            </div>
+            {% if survey.work_posture %}
+            <hr>
+            <div class="row">
+                <div class="col-12">
+                    <strong>작업 자세:</strong><br>
+                    {{ survey.work_posture }}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- 증상 정보 -->
+    <div class="card mb-4">
+        <div class="card-header bg-danger text-white">
+            <h5 class="mb-0">증상 정보</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>부위</th>
+                            <th>통증정도</th>
+                            <th>증상</th>
+                            <th>빈도</th>
+                            <th>지속기간</th>
+                            <th>강도</th>
+                            <th>업무영향</th>
+                            <th>지난1년</th>
+                            <th>지난1주</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- 목 -->
+                        <tr>
+                            <td><strong>목</strong></td>
+                            <td>{{ survey.neck_pain or 0 }}</td>
+                            <td>{{ survey.neck_symptoms or '-' }}</td>
+                            <td>{{ survey.neck_frequency or '-' }}</td>
+                            <td>{{ survey.neck_duration or '-' }}</td>
+                            <td>{{ survey.neck_severity or '-' }}</td>
+                            <td>{{ survey.neck_work_impact or '-' }}</td>
+                            <td>{{ '✓' if survey.neck_last_year else '-' }}</td>
+                            <td>{{ '✓' if survey.neck_last_week else '-' }}</td>
+                        </tr>
+                        <!-- 어깨 -->
+                        <tr>
+                            <td><strong>어깨</strong></td>
+                            <td>{{ survey.shoulder_pain or 0 }}</td>
+                            <td>{{ survey.shoulder_symptoms or '-' }}</td>
+                            <td>{{ survey.shoulder_frequency or '-' }}</td>
+                            <td>{{ survey.shoulder_duration or '-' }}</td>
+                            <td>{{ survey.shoulder_severity or '-' }}</td>
+                            <td>{{ survey.shoulder_work_impact or '-' }}</td>
+                            <td>{{ '✓' if survey.shoulder_last_year else '-' }}</td>
+                            <td>{{ '✓' if survey.shoulder_last_week else '-' }}</td>
+                        </tr>
+                        <!-- 팔/팔꿈치 -->
+                        <tr>
+                            <td><strong>팔/팔꿈치</strong></td>
+                            <td>{{ survey.arm_pain or 0 }}</td>
+                            <td>{{ survey.arm_symptoms or '-' }}</td>
+                            <td>{{ survey.arm_frequency or '-' }}</td>
+                            <td>{{ survey.arm_duration or '-' }}</td>
+                            <td>{{ survey.arm_severity or '-' }}</td>
+                            <td>{{ survey.arm_work_impact or '-' }}</td>
+                            <td>{{ '✓' if survey.arm_last_year else '-' }}</td>
+                            <td>{{ '✓' if survey.arm_last_week else '-' }}</td>
+                        </tr>
+                        <!-- 손/손목/손가락 -->
+                        <tr>
+                            <td><strong>손/손목</strong></td>
+                            <td>{{ survey.hand_pain or 0 }}</td>
+                            <td>{{ survey.hand_symptoms or '-' }}</td>
+                            <td>{{ survey.hand_frequency or '-' }}</td>
+                            <td>{{ survey.hand_duration or '-' }}</td>
+                            <td>{{ survey.hand_severity or '-' }}</td>
+                            <td>{{ survey.hand_work_impact or '-' }}</td>
+                            <td>{{ '✓' if survey.hand_last_year else '-' }}</td>
+                            <td>{{ '✓' if survey.hand_last_week else '-' }}</td>
+                        </tr>
+                        <!-- 등/허리 -->
+                        <tr>
+                            <td><strong>등/허리</strong></td>
+                            <td>{{ survey.back_pain or 0 }}</td>
+                            <td>{{ survey.back_symptoms or '-' }}</td>
+                            <td>{{ survey.back_frequency or '-' }}</td>
+                            <td>{{ survey.back_duration or '-' }}</td>
+                            <td>{{ survey.back_severity or '-' }}</td>
+                            <td>{{ survey.back_work_impact or '-' }}</td>
+                            <td>{{ '✓' if survey.back_last_year else '-' }}</td>
+                            <td>{{ '✓' if survey.back_last_week else '-' }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Form 002 신규입사자 관련 정보 -->
+    {% if survey.form_type and '002' in survey.form_type %}
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">신체 정보</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <strong>신장:</strong><br>
+                    {{ survey.height_cm or '-' }} cm
+                </div>
+                <div class="col-md-3">
+                    <strong>체중:</strong><br>
+                    {{ survey.weight_kg or '-' }} kg
+                </div>
+                <div class="col-md-3">
+                    <strong>BMI:</strong><br>
+                    {% if survey.height_cm and survey.weight_kg %}
+                        {{ ((survey.weight_kg / ((survey.height_cm/100) ** 2)) | round(1)) }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </div>
+                <div class="col-md-3">
+                    <strong>혈액형:</strong><br>
+                    {{ survey.blood_type or '-' }}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-warning">
+            <h5 class="mb-0">건강 이력</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-12 mb-3">
+                    <strong>기존 질환:</strong><br>
+                    {{ survey.existing_conditions or '없음' }}
+                </div>
+                <div class="col-md-12 mb-3">
+                    <strong>복용 약물:</strong><br>
+                    {{ survey.medication_history or '없음' }}
+                </div>
+                <div class="col-md-12">
+                    <strong>알레르기 이력:</strong><br>
+                    {{ survey.allergy_history or '없음' }}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- 작업 버튼 -->
+    <div class="mb-5">
+        <a href="{{ url_for('survey.admin_dashboard') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> 목록으로
+        </a>
+        <button onclick="window.print()" class="btn btn-primary">
+            <i class="bi bi-printer"></i> 인쇄
+        </button>
+    </div>
+</div>
+{% endblock %}

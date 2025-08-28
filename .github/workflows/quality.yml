@@ -2,9 +2,9 @@ name: Quality Assurance Pipeline
 
 on:
   push:
-    branches: [ main, develop, staging ]
+    branches: [ master, main, develop, staging ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ master, main, develop ]
   workflow_dispatch:
 
 env:

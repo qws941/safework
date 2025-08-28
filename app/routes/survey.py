@@ -11,9 +11,9 @@ from models import AuditLog, Survey, db
 survey_bp = Blueprint("survey", __name__)
 
 
-@survey_bp.route("/new", methods=["GET", "POST"])
-def new():
-    """새 증상조사표 작성 - 로그인 불필요"""
+@survey_bp.route("/001_musculoskeletal_symptom_survey", methods=["GET", "POST"])
+def musculoskeletal_symptom_survey():
+    """근골격계 증상조사표 (001) - 로그인 불필요"""
     form = SurveyForm()
 
     if form.validate_on_submit():
@@ -173,7 +173,49 @@ def new():
         flash("증상조사표가 성공적으로 제출되었습니다.", "success")
         return redirect(url_for("survey.complete", id=survey.id))
 
-    return render_template("survey/new.html", form=form)
+    return render_template("survey/001_musculoskeletal_symptom_survey.html", form=form)
+
+
+@survey_bp.route("/002_new_employee_health_checkup_form", methods=["GET", "POST"])
+def new_employee_health_checkup_form():
+    """신규 입사자 건강검진 양식 (002) - 로그인 불필요"""
+    form = SurveyForm()
+
+    if form.validate_on_submit():
+        # 기본적으로 익명 사용자 ID 1을 사용
+        user_id = 1  # 익명 사용자
+        if current_user.is_authenticated:
+            user_id = current_user.id
+
+        survey = Survey(
+            user_id=user_id,
+            form_type="002_new_employee_health_checkup",  # 양식 타입 구분
+            employee_number=request.form.get("employee_number"),
+            name=request.form.get("name"),
+            department=request.form.get("department"),
+            position=request.form.get("position"),
+            age=request.form.get("age", type=int),
+            gender=request.form.get("gender"),
+            work_years=request.form.get("work_years", type=float),
+            work_months=request.form.get("work_months", type=int),
+            # 기본 건강 정보
+            height_cm=request.form.get("height_cm", type=float),
+            weight_kg=request.form.get("weight_kg", type=float),
+            blood_type=request.form.get("blood_type"),
+            # 기존 질병 이력
+            existing_conditions=json.dumps(request.form.getlist("existing_conditions")),
+            medication_history=request.form.get("medication_history"),
+            allergy_history=request.form.get("allergy_history"),
+            # 추가 필드는 필요시 확장
+        )
+
+        db.session.add(survey)
+        db.session.commit()
+
+        flash("신규 입사자 건강검진 양식이 성공적으로 제출되었습니다.", "success")
+        return redirect(url_for("survey.complete", id=survey.id))
+
+    return render_template("survey/002_new_employee_health_checkup_form.html", form=form)
 
 
 @survey_bp.route("/complete/<int:id>")
@@ -195,6 +237,161 @@ def my_surveys():
     )
 
     return render_template("survey/my_surveys.html", surveys=surveys)
+
+
+@survey_bp.route("/admin")
+@login_required
+def admin_dashboard():
+    """관리자 대시보드 - 제출된 모든 조사표 보기"""
+    # 관리자 권한 체크 (필요시)
+    # if not current_user.is_admin:
+    #     flash("관리자 권한이 필요합니다.", "error")
+    #     return redirect(url_for("main.index"))
+    
+    # 필터 파라미터
+    form_type = request.args.get("form_type", "all")
+    search_query = request.args.get("search", "")
+    page = request.args.get("page", 1, type=int)
+    
+    # 기본 쿼리
+    query = Survey.query
+    
+    # 양식 타입별 필터링
+    if form_type == "001":
+        query = query.filter(Survey.form_type.contains("001"))
+    elif form_type == "002":
+        query = query.filter(Survey.form_type.contains("002"))
+    
+    # 검색어 필터링
+    if search_query:
+        query = query.filter(
+            db.or_(
+                Survey.name.contains(search_query),
+                Survey.employee_number.contains(search_query),
+                Survey.department.contains(search_query)
+            )
+        )
+    
+    # 페이지네이션
+    surveys = query.order_by(Survey.submission_date.desc()).paginate(
+        page=page, per_page=20, error_out=False
+    )
+    
+    # 통계 데이터
+    total_001 = Survey.query.filter(Survey.form_type.contains("001")).count()
+    total_002 = Survey.query.filter(Survey.form_type.contains("002")).count()
+    
+    return render_template(
+        "survey/admin_dashboard.html",
+        surveys=surveys,
+        form_type=form_type,
+        search_query=search_query,
+        total_001=total_001,
+        total_002=total_002
+    )
+
+
+@survey_bp.route("/admin/001_musculoskeletal")
+@login_required
+def admin_001_musculoskeletal():
+    """관리자 - 001 근골격계 증상조사표 목록"""
+    page = request.args.get("page", 1, type=int)
+    
+    surveys = Survey.query.filter(
+        db.or_(
+            Survey.form_type.contains("001"),
+            Survey.form_type == None  # 기존 데이터 호환성
+        )
+    ).order_by(Survey.submission_date.desc()).paginate(
+        page=page, per_page=20, error_out=False
+    )
+    
+    return render_template(
+        "survey/admin_001_list.html",
+        surveys=surveys,
+        title="근골격계 증상조사표 (001) 목록"
+    )
+
+
+@survey_bp.route("/admin/002_new_employee")
+@login_required
+def admin_002_new_employee():
+    """관리자 - 002 신규 입사자 건강검진 양식 목록"""
+    page = request.args.get("page", 1, type=int)
+    
+    surveys = Survey.query.filter(
+        Survey.form_type.contains("002")
+    ).order_by(Survey.submission_date.desc()).paginate(
+        page=page, per_page=20, error_out=False
+    )
+    
+    return render_template(
+        "survey/admin_002_list.html",
+        surveys=surveys,
+        title="신규 입사자 건강검진 양식 (002) 목록"
+    )
+
+
+@survey_bp.route("/admin/survey/<int:id>")
+@login_required
+def admin_survey_detail(id):
+    """관리자 - 조사표 상세 보기"""
+    survey = Survey.query.get_or_404(id)
+    
+    return render_template(
+        "survey/admin_detail.html",
+        survey=survey
+    )
+
+
+@survey_bp.route("/admin/export/<form_type>")
+@login_required
+def admin_export(form_type):
+    """관리자 - 데이터 엑셀 다운로드"""
+    import pandas as pd
+    from io import BytesIO
+    from flask import send_file
+    
+    # 양식별 데이터 조회
+    if form_type == "001":
+        surveys = Survey.query.filter(
+            db.or_(Survey.form_type.contains("001"), Survey.form_type == None)
+        ).all()
+    elif form_type == "002":
+        surveys = Survey.query.filter(Survey.form_type.contains("002")).all()
+    else:
+        surveys = Survey.query.all()
+    
+    # DataFrame 생성
+    data = []
+    for survey in surveys:
+        data.append({
+            "제출일시": survey.submission_date,
+            "사번": survey.employee_number,
+            "이름": survey.name,
+            "부서": survey.department,
+            "직위": survey.position,
+            "나이": survey.age,
+            "성별": survey.gender,
+            "근무연수": survey.work_years,
+            # 추가 필드들...
+        })
+    
+    df = pd.DataFrame(data)
+    
+    # 엑셀 파일 생성
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='조사표 데이터')
+    
+    output.seek(0)
+    
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=f'survey_data_{form_type}_{datetime.now().strftime("%Y%m%d")}.xlsx'
+    )
 
 
 @survey_bp.route("/view/<int:id>")

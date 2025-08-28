@@ -46,6 +46,67 @@ def generate_document_number():
     return f"{prefix}-{new_num:04d}"
 
 
+@document_bp.route('/form/<document_name>')
+def document_form(document_name):
+    """Handle document forms by name (form_001, form_002, etc.)"""
+    # Validate document name format
+    if not document_name or not document_name.startswith('form_'):
+        abort(404)
+    
+    # Map document names to their templates and data
+    form_templates = {
+        'form_001': {
+            'template': 'forms/form_001_initial.html',
+            'title': '초기 안전 점검 보고서',
+            'description': '작업 시작 전 초기 안전 상태를 점검하는 문서'
+        },
+        'form_002': {
+            'template': 'forms/form_002_daily.html', 
+            'title': '일일 안전 점검 보고서',
+            'description': '매일 수행하는 정기 안전 점검 문서'
+        }
+    }
+    
+    # Check if the requested form exists
+    if document_name not in form_templates:
+        flash(f"문서 '{document_name}'을 찾을 수 없습니다.", 'error')
+        abort(404)
+    
+    form_info = form_templates[document_name]
+    
+    # Create document template if it doesn't exist
+    template = DocumentTemplate.query.filter_by(name=document_name).first()
+    if not template:
+        template = DocumentTemplate(
+            name=document_name,
+            title=form_info['title'],
+            description=form_info['description'],
+            template_path=form_info['template'],
+            is_active=True
+        )
+        db.session.add(template)
+        db.session.commit()
+    
+    # Try to render the template
+    try:
+        return render_template(
+            form_info['template'],
+            document_name=document_name,
+            title=form_info['title'],
+            description=form_info['description'],
+            template=template
+        )
+    except Exception as e:
+        # If template doesn't exist, create a default one
+        current_app.logger.warning(f"Template not found for {document_name}: {e}")
+        return render_template(
+            'forms/form_default.html',
+            document_name=document_name,
+            title=form_info['title'],
+            description=form_info['description'],
+            template=template
+        )
+
 @document_bp.route('/')
 def index():
     """문서 목록 메인 페이지 (사용자용)"""

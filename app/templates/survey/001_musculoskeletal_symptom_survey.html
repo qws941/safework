@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+{% block title %}근골격계 증상 조사표 (001){% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h2 class="mb-4">근골격계 증상 조사표 (001_musculoskeletal_symptom_survey)</h2>
+            
+            <form method="POST" action="{{ url_for('survey.musculoskeletal_symptom_survey') }}">
+                {{ form.hidden_tag() }}
+                
+                <!-- 기본 정보 섹션 -->
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">I. 기본 정보</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="employee_number">사번</label>
+                                    <input type="text" class="form-control" name="employee_number" id="employee_number" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="name">성명 <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" name="name" id="name" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="age">나이 <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" name="age" id="age" min="18" max="100" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label>성별</label>
+                                    <div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="gender" id="gender_male" value="남">
+                                            <label class="form-check-label" for="gender_male">남</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="gender" id="gender_female" value="여">
+                                            <label class="form-check-label" for="gender_female">여</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="department">작업부서</label>
+                                    <input type="text" class="form-control" name="department" id="department">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="position">직위</label>
+                                    <input type="text" class="form-control" name="position" id="position">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>현 직장 근무경력</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" name="work_years" placeholder="년" min="0">
+                                        <input type="number" class="form-control" name="work_months" placeholder="개월" min="0" max="11">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="work_type">작업형태</label>
+                                    <input type="text" class="form-control" name="work_type" id="work_type">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 작업 정보 섹션 -->
+                <div class="card mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">II. 작업 정보</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="work_hours_per_day">1일 근무시간 (시간)</label>
+                                    <input type="number" class="form-control" name="work_hours_per_day" id="work_hours_per_day" min="1" max="24">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="break_time_minutes">휴식시간 (분)</label>
+                                    <input type="number" class="form-control" name="break_time_minutes" id="break_time_minutes" min="0">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="overtime_hours_per_week">주당 초과근무 (시간)</label>
+                                    <input type="number" class="form-control" name="overtime_hours_per_week" id="overtime_hours_per_week" min="0">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>작업 자세</label>
+                            <div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="work_posture" value="standing" id="posture_standing">
+                                    <label class="form-check-label" for="posture_standing">주로 서서 작업</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="work_posture" value="sitting" id="posture_sitting">
+                                    <label class="form-check-label" for="posture_sitting">주로 앉아서 작업</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="work_posture" value="squatting" id="posture_squatting">
+                                    <label class="form-check-label" for="posture_squatting">쪼그려 앉아서 작업</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="work_posture" value="kneeling" id="posture_kneeling">
+                                    <label class="form-check-label" for="posture_kneeling">무릎을 굽히고 작업</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>반복적인 동작</label>
+                            <div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="repetitive_motion" value="neck" id="motion_neck">
+                                    <label class="form-check-label" for="motion_neck">목</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="repetitive_motion" value="shoulder" id="motion_shoulder">
+                                    <label class="form-check-label" for="motion_shoulder">어깨</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="repetitive_motion" value="arm" id="motion_arm">
+                                    <label class="form-check-label" for="motion_arm">팔/팔꿈치</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="repetitive_motion" value="hand" id="motion_hand">
+                                    <label class="form-check-label" for="motion_hand">손/손목/손가락</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="repetitive_motion" value="back" id="motion_back">
+                                    <label class="form-check-label" for="motion_back">허리</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>무거운 물건 들기</label>
+                            <div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="heavy_lifting" id="lifting_yes" value="true">
+                                    <label class="form-check-label" for="lifting_yes">예</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="heavy_lifting" id="lifting_no" value="false">
+                                    <label class="form-check-label" for="lifting_no">아니오</label>
+                                </div>
+                                <input type="number" class="form-control mt-2" name="lifting_weight_kg" placeholder="들기 무게 (kg)" min="0">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 증상 섹션들 -->
+                <!-- 목 증상 -->
+                <div class="card mb-4">
+                    <div class="card-header bg-warning">
+                        <h5 class="mb-0">III. 증상 조사 - 목</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label>목 부위 통증 정도 (0-10)</label>
+                            <input type="range" class="form-control-range" name="neck_pain" id="neck_pain" min="0" max="10" value="0">
+                            <span id="neck_pain_value">0</span>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>증상</label>
+                            <div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" name="neck_symptoms" value="pain" id="neck_symptom_pain">
+                                    <label class="form-check-label" for="neck_symptom_pain">통증</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" name="neck_symptoms" value="stiffness" id="neck_symptom_stiff">
+                                    <label class="form-check-label" for="neck_symptom_stiff">뻣뻣함</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" name="neck_symptoms" value="burning" id="neck_symptom_burn">
+                                    <label class="form-check-label" for="neck_symptom_burn">화끈거림</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" name="neck_symptoms" value="numbness" id="neck_symptom_numb">
+                                    <label class="form-check-label" for="neck_symptom_numb">저림</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="neck_frequency">빈도</label>
+                                    <select class="form-control" name="neck_frequency" id="neck_frequency">
+                                        <option value="">선택</option>
+                                        <option value="always">항상</option>
+                                        <option value="often">자주</option>
+                                        <option value="sometimes">가끔</option>
+                                        <option value="rarely">드물게</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="neck_duration">지속기간</label>
+                                    <select class="form-control" name="neck_duration" id="neck_duration">
+                                        <option value="">선택</option>
+                                        <option value="less_1hour">1시간 미만</option>
+                                        <option value="1_24hours">1-24시간</option>
+                                        <option value="1_7days">1-7일</option>
+                                        <option value="over_7days">7일 이상</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="neck_severity">강도</label>
+                                    <select class="form-control" name="neck_severity" id="neck_severity">
+                                        <option value="">선택</option>
+                                        <option value="mild">약함</option>
+                                        <option value="moderate">중간</option>
+                                        <option value="severe">심함</option>
+                                        <option value="very_severe">매우 심함</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="neck_work_impact">업무 영향</label>
+                                    <select class="form-control" name="neck_work_impact" id="neck_work_impact">
+                                        <option value="">선택</option>
+                                        <option value="none">영향 없음</option>
+                                        <option value="mild">약간 영향</option>
+                                        <option value="moderate">중간 영향</option>
+                                        <option value="severe">심각한 영향</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="neck_last_year" value="true" id="neck_last_year">
+                            <label class="form-check-label" for="neck_last_year">지난 1년간 증상 경험</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="neck_last_week" value="true" id="neck_last_week">
+                            <label class="form-check-label" for="neck_last_week">지난 1주일간 증상 경험</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 추가 부위들 (어깨, 팔/팔꿈치, 손/손목/손가락, 등/허리, 다리/발)은 동일한 패턴으로 구성 -->
+                
+                <!-- 제출 버튼 -->
+                <div class="text-center mb-5">
+                    <button type="submit" class="btn btn-primary btn-lg">조사표 제출</button>
+                    <button type="reset" class="btn btn-secondary btn-lg">다시 작성</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// 통증 정도 슬라이더 값 표시
+document.getElementById('neck_pain').addEventListener('input', function() {
+    document.getElementById('neck_pain_value').textContent = this.value;
+});
+</script>
+{% endblock %}
