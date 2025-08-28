@@ -1,600 +1,77 @@
-name: 🚀 SafeWork 통합 배포 파이프라인 | Dynamic Version & Multi-Service
+name: SafeWork Simple Deploy
 
 on:
   push:
     branches: [main, master]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - '.github/workflows/pages.yml'
-  pull_request:
-    branches: [main, master]
-    types: [opened, synchronize, reopened]
   workflow_dispatch:
-    inputs:
-      force_deploy:
-        description: '강제 배포 (모든 서비스)'
-        required: false
-        default: false
-        type: boolean
-      target_services:
-        description: '배포 대상 서비스 선택'
-        required: false
-        default: 'all'
-        type: choice
-        options:
-        - all
-        - app
-        - mysql
-        - redis
 
 env:
   REGISTRY: registry.jclee.me
-  BASE_NAME: safework
   REGISTRY_USER: admin
   REGISTRY_PASSWORD: bingogo1
 
 jobs:
-  # ========================================
-  # 1. 동적 버전 생성 및 변경 감지
-  # ========================================
-  prepare:
-    name: "🔍 버전 생성 & 변경 감지"
+  build-and-deploy:
+    name: Build and Deploy SafeWork
     runs-on: ubuntu-latest
-    outputs:
-      should_deploy: ${{ steps.changes.outputs.should_deploy }}
-      version: ${{ steps.version.outputs.version }}
-      git_hash: ${{ steps.version.outputs.git_hash }}
-      git_count: ${{ steps.version.outputs.git_count }}
-      build_date: ${{ steps.version.outputs.build_date }}
-      build_app: ${{ steps.changes.outputs.build_app }}
-      build_mysql: ${{ steps.changes.outputs.build_mysql }}
-      build_redis: ${{ steps.changes.outputs.build_redis }}
-      migrate_needed: ${{ steps.changes.outputs.migrate_needed }}
     
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-        
-    - name: "🔍 스마트 변경 감지"
-      id: changes
-      run: |
-        echo "🔍 변경사항 분석 중..."
-        
-        SHOULD_DEPLOY=false
-        BUILD_APP=false
-        BUILD_MYSQL=false 
-        BUILD_REDIS=false
-        MIGRATE_NEEDED=false
-        FORCE_DEPLOY="${{ inputs.force_deploy }}"
-        TARGET_SERVICES="${{ inputs.target_services }}"
-        
-        # 강제 배포 처리
-        if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "$FORCE_DEPLOY" = "true" ]; then
-          echo "🔨 강제 배포 요청됨"
-          SHOULD_DEPLOY=true
-          if [ "$TARGET_SERVICES" = "all" ] || [ "$TARGET_SERVICES" = "app" ]; then
-            BUILD_APP=true
-          fi
-          if [ "$TARGET_SERVICES" = "all" ] || [ "$TARGET_SERVICES" = "mysql" ]; then
-            BUILD_MYSQL=true
-          fi
-          if [ "$TARGET_SERVICES" = "all" ] || [ "$TARGET_SERVICES" = "redis" ]; then
-            BUILD_REDIS=true
-          fi
-        else
-          # 파일 변경 감지
-          if [ "${{ github.event_name }}" = "push" ]; then
-            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
-          else
-            CHANGED_FILES=$(git diff --name-only origin/main HEAD 2>/dev/null || echo "")
-          fi
-          
-          # 애플리케이션 변경 감지
-          if echo "$CHANGED_FILES" | grep -qE "^app/.*\.(py|html|js|css)$|^requirements\.txt$|^Dockerfile$"; then
-            echo "✅ 애플리케이션 코드 변경 감지"
-            BUILD_APP=true
-            SHOULD_DEPLOY=true
-          fi
-          
-          # 마이그레이션 변경 감지
-          if echo "$CHANGED_FILES" | grep -qE "^app/migrations/.*\.py$|^app/migration_|^app/models"; then
-            echo "✅ 데이터베이스 마이그레이션 감지"
-            MIGRATE_NEEDED=true
-            BUILD_APP=true
-            SHOULD_DEPLOY=true
-          fi
-          
-          # MySQL 설정 변경
-          if echo "$CHANGED_FILES" | grep -qE "docker-compose.*mysql|mysql"; then
-            echo "✅ MySQL 설정 변경 감지"
-            BUILD_MYSQL=true
-            SHOULD_DEPLOY=true
-          fi
-          
-          # Redis 설정 변경
-          if echo "$CHANGED_FILES" | grep -qE "docker-compose.*redis|redis"; then
-            echo "✅ Redis 설정 변경 감지"
-            BUILD_REDIS=true
-            SHOULD_DEPLOY=true
-          fi
-          
-          # CI/CD 파일 변경
-          if echo "$CHANGED_FILES" | grep -qE "^\.github/workflows/.*\.yml$"; then
-            echo "✅ CI/CD 설정 변경 감지"
-            BUILD_APP=true
-            SHOULD_DEPLOY=true
-          fi
-        fi
-        
-        echo "should_deploy=$SHOULD_DEPLOY" >> $GITHUB_OUTPUT
-        echo "build_app=$BUILD_APP" >> $GITHUB_OUTPUT
-        echo "build_mysql=$BUILD_MYSQL" >> $GITHUB_OUTPUT
-        echo "build_redis=$BUILD_REDIS" >> $GITHUB_OUTPUT
-        echo "migrate_needed=$MIGRATE_NEEDED" >> $GITHUB_OUTPUT
-        
-        echo "📊 결과 - 배포: $SHOULD_DEPLOY | App: $BUILD_APP | MySQL: $BUILD_MYSQL | Redis: $BUILD_REDIS | Migration: $MIGRATE_NEEDED"
-
-    - name: "📦 동적 버전 생성"  
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Generate version
       id: version
       run: |
-        echo "📦 동적 버전 생성 중..."
+        VERSION=$(date +%Y%m%d.%H%M)
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Generated version: $VERSION"
         
-        # Git 정보 수집
-        GIT_COUNT=$(git rev-list --count HEAD 2>/dev/null || echo "0")
-        GIT_HASH=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-        GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
-        BUILD_DATE=$(date +%Y%m%d-%H%M%S)
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Login to Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ env.REGISTRY_USER }}
+        password: ${{ env.REGISTRY_PASSWORD }}
         
-        # SafeWork 버전 체계: v2.{커밋수}.{해시}
-        SEMANTIC_VERSION="2.${GIT_COUNT}.${GIT_HASH}"
+    - name: Build and push App image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./app
+        push: true
+        tags: |
+          ${{ env.REGISTRY }}/safework/app:latest
+          ${{ env.REGISTRY }}/safework/app:${{ steps.version.outputs.version }}
+        platforms: linux/amd64
         
-        echo "version=$SEMANTIC_VERSION" >> $GITHUB_OUTPUT
-        echo "git_hash=$GIT_HASH" >> $GITHUB_OUTPUT  
-        echo "git_count=$GIT_COUNT" >> $GITHUB_OUTPUT
-        echo "build_date=$BUILD_DATE" >> $GITHUB_OUTPUT
+    - name: Build and push MySQL image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./mysql
+        push: true
+        tags: |
+          ${{ env.REGISTRY }}/safework/mysql:latest
+          ${{ env.REGISTRY }}/safework/mysql:${{ steps.version.outputs.version }}
+        platforms: linux/amd64
         
-        echo "📦 동적 버전: v$SEMANTIC_VERSION"
-        echo "🏗️ 빌드 시간: $BUILD_DATE"
-        echo "📊 총 커밋: $GIT_COUNT"
-        echo "🔖 Git Hash: $GIT_HASH"
-
-  # ========================================
-  # 2. 빠른 빌드 및 배포 (테스트/보안 검사 생략)
-  # ========================================
-
-  # ========================================
-  # 3. SafeWork 애플리케이션 빌드 (커스텀 이미지)
-  # ========================================
-  build-app:
-    name: "🏥 SafeWork App 빌드 (Custom)"
-    needs: prepare
-    if: needs.prepare.outputs.build_app == 'true'
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: "🐳 레지스트리 로그인"
+    - name: Build and push Redis image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./redis
+        push: true
+        tags: |
+          ${{ env.REGISTRY }}/safework/redis:latest
+          ${{ env.REGISTRY }}/safework/redis:${{ steps.version.outputs.version }}
+        platforms: linux/amd64
+        
+    - name: Update version file
       run: |
-        echo "${{ env.REGISTRY_PASSWORD }}" | docker login ${{ env.REGISTRY }} -u ${{ env.REGISTRY_USER }} --password-stdin
-    
-    - name: "🏗️ SafeWork 커스텀 앱 이미지 빌드 & 푸시"
+        echo "${{ steps.version.outputs.version }}" > app/VERSION
+        
+    - name: Deploy success notification
       run: |
-        VERSION="${{ needs.prepare.outputs.version }}"
-        BUILD_DATE="${{ needs.prepare.outputs.build_date }}"
-        GIT_COUNT="${{ needs.prepare.outputs.git_count }}"
-        GIT_HASH="${{ needs.prepare.outputs.git_hash }}"
-        
-        echo "🏥 SafeWork 커스텀 애플리케이션 빌드..."
-        echo "📦 버전: v$VERSION"
-        echo "📅 빌드 시간: $BUILD_DATE"
-        
-        # 버전 정보를 앱에 주입
-        echo "$VERSION" > app/VERSION
-        echo "$BUILD_DATE" > app/BUILD_DATE
-        echo "$GIT_HASH" > app/GIT_HASH
-        
-        # Docker 커스텀 앱 이미지 빌드
-        docker build \
-          -t ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/app:latest \
-          -t ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/app:v$VERSION \
-          -t ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/app:$BUILD_DATE \
-          --build-arg VERSION=$VERSION \
-          --build-arg BUILD_DATE=$BUILD_DATE \
-          --build-arg VCS_REF=${{ github.sha }} \
-          --build-arg BUILD_NUMBER=${{ github.run_number }} \
-          --build-arg COMMIT_SHA=${{ github.sha }} \
-          --build-arg COMMIT_COUNT=$GIT_COUNT \
-          --build-arg GIT_HASH=$GIT_HASH \
-          --label "org.opencontainers.image.title=SafeWork-App" \
-          --label "org.opencontainers.image.description=SafeWork Flask Application with MySQL migrations" \
-          --label "org.opencontainers.image.version=$VERSION" \
-          --label "org.opencontainers.image.revision=${{ github.sha }}" \
-          --label "org.opencontainers.image.created=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
-          --label "org.opencontainers.image.source=${{ github.repositoryUrl }}" \
-          -f app/Dockerfile \
-          ./app
-        
-        echo "📤 앱 이미지 레지스트리 푸시..."
-        docker push ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/app:latest
-        docker push ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/app:v$VERSION
-        docker push ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/app:$BUILD_DATE
-        
-        echo "✅ SafeWork 앱 빌드 완료: v$VERSION"
-
-  # ========================================
-  # 4. MySQL 커스텀 이미지 빌드 (필요시)
-  # ========================================
-  build-mysql:
-    name: "🐬 MySQL 커스텀 빌드"
-    needs: prepare
-    if: needs.prepare.outputs.build_mysql == 'true'
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: "🐳 레지스트리 로그인"
-      run: |
-        echo "${{ env.REGISTRY_PASSWORD }}" | docker login ${{ env.REGISTRY }} -u ${{ env.REGISTRY_USER }} --password-stdin
-    
-    - name: "🏗️ MySQL 커스텀 이미지 빌드 & 푸시"
-      run: |
-        VERSION="${{ needs.prepare.outputs.version }}"
-        BUILD_DATE="${{ needs.prepare.outputs.build_date }}"
-        
-        echo "🐬 MySQL 커스텀 이미지 빌드..."
-        echo "📦 버전: v$VERSION"
-        echo "📅 빌드 시간: $BUILD_DATE"
-        
-        # MySQL 커스텀 이미지 빌드
-        docker build \
-          -t ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/mysql:latest \
-          -t ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/mysql:v$VERSION \
-          -t ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/mysql:$BUILD_DATE \
-          --build-arg VERSION=$VERSION \
-          --build-arg BUILD_DATE=$BUILD_DATE \
-          --build-arg VCS_REF=${{ github.sha }} \
-          --label "org.opencontainers.image.title=SafeWork-MySQL" \
-          --label "org.opencontainers.image.description=SafeWork MySQL Database with Korean timezone and performance optimizations" \
-          --label "org.opencontainers.image.version=$VERSION" \
-          --label "org.opencontainers.image.revision=${{ github.sha }}" \
-          --label "org.opencontainers.image.created=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
-          --label "org.opencontainers.image.source=${{ github.repositoryUrl }}" \
-          -f mysql/Dockerfile \
-          ./mysql
-        
-        echo "📤 MySQL 이미지 레지스트리 푸시..."
-        docker push ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/mysql:latest
-        docker push ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/mysql:v$VERSION
-        docker push ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/mysql:$BUILD_DATE
-        
-        echo "✅ MySQL 커스텀 이미지 빌드 완료: v$VERSION"
-
-  # ========================================
-  # 5. Redis 커스텀 이미지 빌드 (필요시)
-  # ========================================
-  build-redis:
-    name: "⚡ Redis 커스텀 빌드"
-    needs: prepare
-    if: needs.prepare.outputs.build_redis == 'true'
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: "🐳 레지스트리 로그인"
-      run: |
-        echo "${{ env.REGISTRY_PASSWORD }}" | docker login ${{ env.REGISTRY }} -u ${{ env.REGISTRY_USER }} --password-stdin
-    
-    - name: "🏗️ Redis 커스텀 이미지 빌드 & 푸시"
-      run: |
-        VERSION="${{ needs.prepare.outputs.version }}"
-        BUILD_DATE="${{ needs.prepare.outputs.build_date }}"
-        
-        echo "⚡ Redis 커스텀 이미지 빌드..."
-        echo "📦 버전: v$VERSION"
-        echo "📅 빌드 시간: $BUILD_DATE"
-        
-        # Redis 커스텀 이미지 빌드
-        docker build \
-          -t ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/redis:latest \
-          -t ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/redis:v$VERSION \
-          -t ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/redis:$BUILD_DATE \
-          --build-arg VERSION=$VERSION \
-          --build-arg BUILD_DATE=$BUILD_DATE \
-          --build-arg VCS_REF=${{ github.sha }} \
-          --label "org.opencontainers.image.title=SafeWork-Redis" \
-          --label "org.opencontainers.image.description=SafeWork Redis Cache with performance optimizations" \
-          --label "org.opencontainers.image.version=$VERSION" \
-          --label "org.opencontainers.image.revision=${{ github.sha }}" \
-          --label "org.opencontainers.image.created=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
-          --label "org.opencontainers.image.source=${{ github.repositoryUrl }}" \
-          -f redis/Dockerfile \
-          ./redis
-        
-        echo "📤 Redis 이미지 레지스트리 푸시..."
-        docker push ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/redis:latest
-        docker push ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/redis:v$VERSION
-        docker push ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/redis:$BUILD_DATE
-        
-        echo "✅ Redis 커스텀 이미지 빌드 완료: v$VERSION"
-
-  # ========================================
-  # 6. 프로덕션 배포 (개별 이미지 업데이트)
-  # ========================================
-  deploy:
-    name: "🚀 프로덕션 배포"
-    needs: [prepare, build-app, build-mysql, build-redis]
-    if: always() && needs.prepare.outputs.should_deploy == 'true'
-    runs-on: self-hosted
-    environment: production
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: "📦 버전 정보 표시"
-      run: |
-        NEW_VERSION="${{ needs.prepare.outputs.version }}"
-        GIT_HASH="${{ needs.prepare.outputs.git_hash }}"
-        GIT_COUNT="${{ needs.prepare.outputs.git_count }}"
-        BUILD_DATE="${{ needs.prepare.outputs.build_date }}"
-        MIGRATE_NEEDED="${{ needs.prepare.outputs.migrate_needed }}"
-        
-        echo "==============================================="
-        echo "🚀 SafeWork 프로덕션 배포"
-        echo "==============================================="
-        echo "📦 새 버전: v$NEW_VERSION"
-        echo "🔖 Git Hash: $GIT_HASH"
-        echo "📊 총 커밋 수: $GIT_COUNT"
-        echo "📅 빌드 시간: $BUILD_DATE"
-        echo "🔄 마이그레이션 필요: $MIGRATE_NEEDED"
-        echo "==============================================="
-        
-        # 현재 버전 확인
-        CURRENT_VERSION=$(docker ps --filter "name=safework" --format "table {{.Image}}" | grep -oE 'v[0-9.]+' | head -1 || echo "none")
-        
-        if [ "$CURRENT_VERSION" != "none" ] && [ "$CURRENT_VERSION" != "v$NEW_VERSION" ]; then
-          echo "🔄 버전 업그레이드: $CURRENT_VERSION → v$NEW_VERSION"
-        elif [ "$CURRENT_VERSION" = "none" ]; then
-          echo "🆕 새로운 배포: v$NEW_VERSION"
-        else
-          echo "♻️ 재배포: v$NEW_VERSION"
-        fi
-
-    - name: "🔄 마이그레이션 실행 (필요시)"
-      if: needs.prepare.outputs.migrate_needed == 'true'
-      run: |
-        echo "🔄 데이터베이스 마이그레이션 실행..."
-        
-        cd /home/jclee/safework || cd /home/jclee/app/safework || cd /home/jclee/app/safework2 || cd ~/safework
-        
-        # Python 환경 활성화
-        if [ -f "venv/bin/activate" ]; then
-          source venv/bin/activate
-        elif [ -f ".venv/bin/activate" ]; then
-          source .venv/bin/activate
-        fi
-        
-        # 마이그레이션 실행
-        cd app
-        python -c "
-from migration_manager import MigrationManager
-from app import create_app
-import sys
-
-app = create_app()
-with app.app_context():
-    manager = MigrationManager(app)
-    status = manager.get_migration_status()
-    print(f'📊 대기 중인 마이그레이션: {status[\"pending_count\"]}개')
-    
-    if status['pending_count'] > 0:
-        print('🔄 마이그레이션 실행 중...')
-        if manager.migrate():
-            print('✅ 마이그레이션 성공')
-        else:
-            print('❌ 마이그레이션 실패')
-            sys.exit(1)
-    else:
-        print('ℹ️ 적용할 마이그레이션 없음')
-        " || echo "⚠️ 마이그레이션 스크립트 실행 실패 (무시하고 계속)"
-
-    - name: "🐳 개별 이미지 업데이트 및 배포"
-      run: |
-        VERSION="${{ needs.prepare.outputs.version }}"
-        BUILD_APP="${{ needs.prepare.outputs.build_app }}"
-        BUILD_MYSQL="${{ needs.prepare.outputs.build_mysql }}" 
-        BUILD_REDIS="${{ needs.prepare.outputs.build_redis }}"
-        
-        echo "🐳 SafeWork 개별 이미지 업데이트 중..."
-        echo "📦 버전: v$VERSION"
-        echo "🏥 App 업데이트: $BUILD_APP"
-        echo "🐬 MySQL 업데이트: $BUILD_MYSQL"
-        echo "⚡ Redis 업데이트: $BUILD_REDIS"
-        
-        # 배포 디렉토리로 이동
-        cd /home/jclee/app/safework2
-        
-        # 레지스트리 로그인
-        echo "${{ env.REGISTRY_PASSWORD }}" | docker login ${{ env.REGISTRY }} -u ${{ env.REGISTRY_USER }} --password-stdin
-        
-        # 개별 이미지 업데이트
-        SERVICES_TO_UPDATE=""
-        
-        if [ "$BUILD_APP" = "true" ] && [ "${{ needs.build-app.result }}" = "success" ]; then
-          echo "🏥 App 이미지 업데이트..."
-          docker pull ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/app:latest
-          SERVICES_TO_UPDATE="$SERVICES_TO_UPDATE app"
-        fi
-        
-        if [ "$BUILD_MYSQL" = "true" ] && [ "${{ needs.build-mysql.result }}" = "success" ]; then
-          echo "🐬 MySQL 이미지 업데이트..."
-          docker pull ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/mysql:latest
-          SERVICES_TO_UPDATE="$SERVICES_TO_UPDATE mysql"
-        fi
-        
-        if [ "$BUILD_REDIS" = "true" ] && [ "${{ needs.build-redis.result }}" = "success" ]; then
-          echo "⚡ Redis 이미지 업데이트..."  
-          docker pull ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/redis:latest
-          SERVICES_TO_UPDATE="$SERVICES_TO_UPDATE redis"
-        fi
-        
-        if [ -n "$SERVICES_TO_UPDATE" ]; then
-          echo "🔄 업데이트할 서비스: $SERVICES_TO_UPDATE"
-          
-          # 순차적 서비스 업데이트 (무중단 배포)
-          for service in $SERVICES_TO_UPDATE; do
-            echo "🔄 $service 업데이트 중..."
-            docker-compose up -d --no-deps $service
-            
-            # 서비스별 헬스체크
-            if [ "$service" = "app" ]; then
-              echo "⏳ App 헬스체크 중..."
-              for i in {1..20}; do
-                if curl -f http://localhost:4545/health > /dev/null 2>&1; then
-                  echo "✅ App 헬스체크 성공"
-                  break
-                fi
-                echo "⏳ App 헬스체크 대기 중... ($i/20)"
-                sleep 3
-              done
-            fi
-            
-            echo "✅ $service 업데이트 완료"
-          done
-        else
-          echo "ℹ️ 업데이트할 이미지가 없습니다"
-        fi
-        
-        # 이전 이미지 정리
-        docker image prune -f --filter "dangling=true"
-        
-        echo "✅ SafeWork 이미지 업데이트 완료: v$VERSION"
-
-    - name: "🔍 배포 검증"
-      run: |
-        VERSION="${{ needs.prepare.outputs.version }}"
-        
-        echo "🔍 배포 상태 검증 중..."
-        
-        # 서비스 상태 확인
-        if docker ps | grep -q safework; then
-          echo "✅ SafeWork 컨테이너 실행 중"
-          
-          # 버전 확인
-          DEPLOYED_VERSION=$(curl -s http://localhost:5000/health | grep -oE '"version":"[^"]*"' | cut -d'"' -f4 || echo "unknown")
-          
-          if [ "$DEPLOYED_VERSION" = "v$VERSION" ] || [ "$DEPLOYED_VERSION" = "$VERSION" ]; then
-            echo "✅ 올바른 버전 배포됨: $DEPLOYED_VERSION"
-          else
-            echo "⚠️ 버전 불일치 - 예상: v$VERSION, 실제: $DEPLOYED_VERSION"
-          fi
-          
-          # 주요 엔드포인트 테스트
-          ENDPOINTS=("/" "/health" "/login" "/survey")
-          for endpoint in "${ENDPOINTS[@]}"; do
-            if curl -f -s -o /dev/null -w "%{http_code}" http://localhost:5000$endpoint | grep -qE "200|302|401"; then
-              echo "✅ $endpoint 엔드포인트 정상"
-            else
-              echo "⚠️ $endpoint 엔드포인트 응답 없음"
-            fi
-          done
-        else
-          echo "❌ SafeWork 컨테이너가 실행되지 않음"
-          docker ps
-          exit 1
-        fi
-
-  # ========================================
-  # 7. 배포 요약 리포트
-  # ========================================  
-  summary:
-    name: "📊 배포 요약"
-    needs: [prepare, build-app, build-mysql, build-redis, deploy]
-    if: always()
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: "📊 배포 리포트 생성"
-      run: |
-        echo "# 🏥 SafeWork 배포 리포트" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        
-        echo "## 📦 버전 정보" >> $GITHUB_STEP_SUMMARY
-        echo "| 항목 | 값 | 설명 |" >> $GITHUB_STEP_SUMMARY
-        echo "|------|----|----- |" >> $GITHUB_STEP_SUMMARY
-        echo "| 📦 버전 | \`v${{ needs.prepare.outputs.version }}\` | SafeWork 버전 |" >> $GITHUB_STEP_SUMMARY
-        echo "| 🔖 Git Hash | \`${{ needs.prepare.outputs.git_hash }}\` | 커밋 해시 |" >> $GITHUB_STEP_SUMMARY
-        echo "| 📊 커밋 수 | \`${{ needs.prepare.outputs.git_count }}\` | 총 커밋 수 |" >> $GITHUB_STEP_SUMMARY
-        echo "| 📅 빌드 시간 | \`${{ needs.prepare.outputs.build_date }}\` | 빌드 시간 |" >> $GITHUB_STEP_SUMMARY
-        echo "| 🐳 이미지 | \`${{ env.REGISTRY }}/${{ env.BASE_NAME }}:v${{ needs.prepare.outputs.version }}\` | Docker 이미지 |" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        
-        echo "## 🏗️ 빌드 상태" >> $GITHUB_STEP_SUMMARY
-        echo "| 서비스 | 빌드 여부 | 상태 |" >> $GITHUB_STEP_SUMMARY
-        echo "|--------|-----------|------|" >> $GITHUB_STEP_SUMMARY
-        
-        # 앱 빌드 상태
-        if [ "${{ needs.prepare.outputs.build_app }}" = "true" ]; then
-          if [ "${{ needs.build-app.result }}" = "success" ]; then
-            echo "| 🏥 SafeWork App | ✅ | 성공 |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| 🏥 SafeWork App | ❌ | 실패 |" >> $GITHUB_STEP_SUMMARY
-          fi
-        else
-          echo "| 🏥 SafeWork App | ⏭️ | 스킵 |" >> $GITHUB_STEP_SUMMARY
-        fi
-        
-        # MySQL 상태
-        if [ "${{ needs.prepare.outputs.build_mysql }}" = "true" ]; then
-          echo "| 🐬 MySQL | ✅ | 준비됨 |" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "| 🐬 MySQL | ⏭️ | 스킵 |" >> $GITHUB_STEP_SUMMARY
-        fi
-        
-        # Redis 상태
-        if [ "${{ needs.prepare.outputs.build_redis }}" = "true" ]; then
-          echo "| ⚡ Redis | ✅ | 준비됨 |" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "| ⚡ Redis | ⏭️ | 스킵 |" >> $GITHUB_STEP_SUMMARY
-        fi
-        
-        echo "" >> $GITHUB_STEP_SUMMARY
-        
-        # 마이그레이션 상태
-        if [ "${{ needs.prepare.outputs.migrate_needed }}" = "true" ]; then
-          echo "## 🔄 데이터베이스 마이그레이션" >> $GITHUB_STEP_SUMMARY
-          echo "✅ 마이그레이션이 실행되었습니다." >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-        fi
-        
-        echo "## 🚀 배포 상태" >> $GITHUB_STEP_SUMMARY
-        if [ "${{ needs.deploy.result }}" = "success" ]; then
-          echo "✅ **배포 성공** - SafeWork가 성공적으로 배포되었습니다." >> $GITHUB_STEP_SUMMARY
-        elif [ "${{ needs.deploy.result }}" = "skipped" ]; then
-          echo "⏭️ **배포 스킵** - 변경사항이 없어 배포를 건너뛰었습니다." >> $GITHUB_STEP_SUMMARY
-        else
-          echo "❌ **배포 실패** - 배포 중 문제가 발생했습니다." >> $GITHUB_STEP_SUMMARY
-        fi
-        
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "## 📊 시스템 정보" >> $GITHUB_STEP_SUMMARY
-        echo "- **🌐 서비스 URL:** http://safework.jclee.me" >> $GITHUB_STEP_SUMMARY
-        echo "- **💚 헬스체크:** http://safework.jclee.me/health" >> $GITHUB_STEP_SUMMARY
-        echo "- **📋 설문조사:** http://safework.jclee.me/survey" >> $GITHUB_STEP_SUMMARY
-        echo "- **📊 대시보드:** http://safework.jclee.me/dashboard" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "## 🔧 추가 정보" >> $GITHUB_STEP_SUMMARY
-        echo "- **Workflow Run:** #${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
-        echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-        echo "- **Actor:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
-        echo "- **Event:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
-
-    - name: "📨 알림 전송 (실패시)"
-      if: failure()
-      run: |
-        echo "❌ SafeWork 배포 실패 알림"
-        # Slack, Discord, Email 등 알림 서비스 연동 가능
+        echo "🎉 SafeWork 배포 완료!"
+        echo "🏷️ Version: ${{ steps.version.outputs.version }}"
+        echo "🐳 Images pushed to ${{ env.REGISTRY }}/safework/*"
