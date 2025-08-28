@@ -92,19 +92,6 @@ services:
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
 
-  # Watchtower 자동 업데이트 (선택사항)
-  watchtower:
-    image: containrrr/watchtower
-    container_name: safework-watchtower
-    restart: unless-stopped
-    environment:
-      REPO_USER: admin
-      REPO_PASS: bingogo1
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    command: --interval 300 --label-enable safework-app safework-mysql safework-redis
-    networks:
-      - safework-net
 
 volumes:
   mysql_data:
