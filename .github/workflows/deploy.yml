@@ -123,6 +123,16 @@ jobs:
         # VERSION 파일도 자동 업데이트
         echo $VERSION > app/VERSION
     
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install Python dependencies
+      run: |
+        cd app
+        pip install -r requirements.txt
+    
     - name: Run database migrations
       run: |
         cd app
