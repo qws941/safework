@@ -6,7 +6,7 @@ Version: 002
 This migration creates the default admin user for SafeWork system.
 """
 
-from app.models import User, db
+from models import User, db
 
 
 def upgrade():

@@ -7,7 +7,7 @@ This migration creates the initial database schema for SafeWork project
 including users, surveys, statistics, and audit logs.
 """
 
-from app.models import db
+from models import db
 
 
 def upgrade():

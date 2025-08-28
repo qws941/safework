@@ -6,7 +6,7 @@ Version: 003
 This migration adds additional indexes and constraints for better performance.
 """
 
-from app.models import db
+from models import db
 
 
 def upgrade():
