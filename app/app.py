@@ -148,7 +148,9 @@ def create_app(config_name=None):
     return app
 
 
+# Create application instance for gunicorn
+app = create_app()
+
 if __name__ == "__main__":
-    # Create application instance only when run directly
-    app = create_app()
+    # Run directly in development
     app.run(host="0.0.0.0", port=5000, debug=False)
