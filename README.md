@@ -1,16 +1,16 @@
 # SafeWork - 근골격계 증상조사표 시스템
 
-PDF 001 근골격계 증상조사표를 정확하게 구현한 온라인 증상조사 시스템 (v1.2.0)
+PDF 001 근골격계 증상조사표를 정확하게 구현한 온라인 증상조사 시스템 (v1.3.0)
 
-## 🎯 최신 업데이트 (v1.2.0)
+## 🎯 최신 업데이트 (v1.3.0) - 문서 관리 시스템 추가
 
+- ✅ **문서 관리 시스템**: 문서 업로드/다운로드, 버전 관리, 카테고리 분류
 - ✅ **고급 CI/CD 파이프라인**: 보안 스캔, 품질 검사, 다단계 배포 자동화
 - ✅ **데이터베이스 마이그레이션 시스템**: 웹 관리 인터페이스와 CLI 도구
 - ✅ **보안 강화**: Trivy, Bandit, Safety를 통한 취약점 스캔 자동화
 - ✅ **품질 관리**: Black, Flake8, Pylint를 통한 코드 품질 자동 검사
 - ✅ **다중 환경 지원**: Development, Staging, Production 환경 자동 관리
 - ✅ **모니터링 & 알림**: Slack/Discord 통합 및 실시간 상태 모니터링
-- ✅ **파일 구조 최적화**: 영문 파일명 적용 및 중복 파일 정리
 
 ## 🚀 특징
 
@@ -20,6 +20,7 @@ PDF 001 근골격계 증상조사표를 정확하게 구현한 온라인 증상�
 - 📊 **실시간 통계**: 관리자 대시보드
 - 📋 **Excel 내보내기**: 데이터 분석 지원
 - 🔒 **안전한 데이터 관리**: 개인정보 보호
+- 📁 **문서 관리 시스템**: 안전 문서, 양식, 교육 자료 중앙 관리
 - 🗂️ **마이그레이션 시스템**: 데이터베이스 스키마 버전 관리
 - 🛡️ **보안 스캔**: 자동 취약점 검사 및 보안 모니터링
 
@@ -42,6 +43,63 @@ registry.jclee.me/safework/app:latest     # 메인 애플리케이션 (포트 45
 registry.jclee.me/safework/mysql:latest   # MySQL 데이터베이스 (포트 3306)
 registry.jclee.me/safework/redis:latest   # Redis 캐시 (포트 6379)
 ```
+
+## 🌐 주요 URL 경로
+
+### 일반 사용자 페이지
+
+| 경로 | 설명 | 접근 권한 |
+|------|------|-----------|
+| `/` | 메인 페이지 | 모두 |
+| `/survey/new` | 증상조사표 작성 | 모두 (익명 가능) |
+| `/survey/my_surveys` | 내 제출 이력 | 로그인 필요 |
+| `/survey/view/<id>` | 제출 조사표 보기 | 로그인 필요 |
+| `/auth/login` | 로그인 | 모두 |
+| `/auth/register` | 회원가입 | 모두 |
+| `/auth/logout` | 로그아웃 | 로그인 필요 |
+
+### 문서 관리 페이지
+
+| 경로 | 설명 | 접근 권한 |
+|------|------|-----------|
+| `/documents/` | 문서 목록 | 모두 |
+| `/documents/view/<id>` | 문서 상세보기 | 문서 권한에 따라 |
+| `/documents/download/<id>` | 문서 다운로드 | 문서 권한에 따라 |
+| `/documents/templates` | 템플릿 양식 목록 | 모두 |
+| `/documents/search` | 문서 검색 | 모두 |
+
+### 관리자 페이지
+
+| 경로 | 설명 | 기능 |
+|------|------|------|
+| `/admin/dashboard` | 관리자 대시보드 | 통계, 현황 모니터링 |
+| `/admin/surveys` | 증상조사 관리 | 제출 데이터 조회, Excel 다운로드 |
+| `/admin/users` | 사용자 관리 | 사용자 목록, 권한 관리 |
+| `/admin/documents/` | 문서 관리 | 문서 목록, 업로드, 수정, 삭제 |
+| `/admin/documents/upload` | 문서 업로드 | 새 문서 추가 |
+| `/admin/documents/categories` | 카테고리 관리 | 문서 카테고리 설정 |
+| `/admin/migrations` | 마이그레이션 관리 | DB 스키마 버전 관리 |
+
+### 시스템 API
+
+| 경로 | 설명 | 용도 |
+|------|------|------|
+| `/health` | 헬스체크 | 서비스 상태 확인 |
+| `/api/documents/recent` | 최근 문서 API | AJAX 호출용 |
+| `/api/documents/popular` | 인기 문서 API | AJAX 호출용 |
+| `/api/documents/categories` | 카테고리 목록 API | AJAX 호출용 |
+
+## 👤 계정 정보
+
+### 관리자 계정
+- **ID**: admin
+- **비밀번호**: safework2024
+- **권한**: 모든 기능 접근 가능
+
+### 테스트 계정
+- **ID**: test
+- **비밀번호**: test123
+- **권한**: 일반 사용자
 
 ## 🚀 자동화된 배포 시스템
 
@@ -104,92 +162,6 @@ graph TD
 - 📊 **실시간 모니터링**: 배포 후 자동 헬스체크 및 성능 모니터링  
 - 🔔 **스마트 알림**: 성공/실패 시 Slack/Discord 자동 알림
 
-#### 🤖 자동 모니터링 & 알림 시스템
-
-SafeWork의 지능형 알림 시스템이 배포 전 과정을 자동으로 모니터링하고 알려줍니다.
-
-**📢 실시간 알림 설정 (1회 설정)**
-
-```bash
-# GitHub Repository > Settings > Secrets and variables > Actions
-
-🔔 Slack 자동 알림
-SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
-
-🔔 Discord 자동 알림  
-DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/YOUR/WEBHOOK/URL
-```
-
-**📊 자동 알림 종류:**
-
-| 알림 시점 | 메시지 예시 | 포함 정보 |
-|-----------|-------------|-----------|
-| 🚀 **배포 시작** | "SafeWork 배포 시작됨" | 브랜치, 커밋, 시작 시간 |
-| ✅ **보안 스캔 완료** | "보안 스캔 통과: 취약점 0개" | 스캔 결과, 발견된 이슈 |
-| ✅ **테스트 성공** | "모든 테스트 통과 (95% 커버리지)" | 테스트 결과, 커버리지 |
-| 🎉 **배포 성공** | "Production 배포 완료!" | 환경, 버전, 배포 시간 |
-| 🚨 **배포 실패** | "배포 실패: 보안 스캔 오류" | 실패 원인, 로그 링크 |
-| 🔄 **자동 롤백** | "자동 롤백 완료: v1.1.0" | 롤백 버전, 복구 시간 |
-
-**🎯 스마트 알림 기능:**
-- 📍 **상황 인식**: 실패 단계에 따라 다른 알림 발송
-- 🔗 **원클릭 접근**: 로그, 대시보드 링크 자동 포함
-- 📈 **성능 요약**: 배포 시간, 성능 지표 자동 분석
-- 👥 **팀 맞춤형**: 역할별 다른 알림 레벨 지원
-
-#### 📋 배포 파이프라인 단계
-
-1. **준비 단계** (`prepare`)
-   - 환경 결정 (main→production, staging→staging, develop→development)
-   - 버전 생성 (태그 기반 또는 타임스탬프)
-   - 배포 권한 확인
-
-2. **빌드 및 테스트** (`build-and-test`)
-   - Docker 이미지 빌드 (AMD64, ARM64)
-   - 통합 테스트 실행
-   - 보안 스캔 (Trivy)
-
-3. **스테이징 배포** (`deploy-staging`)
-   - 스테이징 환경 자동 배포
-   - 스모크 테스트 실행
-   - 배포 알림
-
-4. **프로덕션 승인** (`production-approval`)
-   - 수동 승인 대기 (GitHub Environment Protection)
-   - 체크리스트 검토
-
-5. **프로덕션 배포** (`deploy-production`)
-   - 배포 전 백업
-   - Blue-Green 배포
-   - 배포 후 검증
-   - GitHub Release 생성
-
-6. **모니터링** (`post-deployment`)
-   - 5분간 헬스 모니터링
-   - 성능 기준선 설정
-   - 알림 발송
-
-#### 🎯 브랜치별 배포 전략
-
-| 브랜치 | 환경 | 배포 방식 | 승인 |
-|--------|------|-----------|------|
-| `main` | Production | 자동 → 수동 승인 | 필요 |
-| `staging` | Staging | 완전 자동 | 불필요 |
-| `develop` | Development | 완전 자동 | 불필요 |
-| `v*` (태그) | Production | 자동 → 수동 승인 | 필요 |
-
-#### 📢 알림 설정
-
-배포 성공/실패 시 자동 알림을 받으려면 GitHub Secrets에 웹훅 URL을 설정하세요:
-
-```bash
-# Slack 알림
-SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
-
-# Discord 알림
-DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/YOUR/WEBHOOK/URL
-```
-
 ### 2. 🤖 자동화된 로컬 개발 환경
 
 개발자를 위한 원클릭 자동화 개발 환경입니다.
@@ -232,55 +204,6 @@ make dev-seed       # 테스트 데이터 자동 생성
 make dev-reset      # DB 자동 리셋 및 재구성
 ```
 
-#### 개발 도구 사용
-
-```bash
-# 마이그레이션 관리
-make migrate-status              # 마이그레이션 상태 확인
-make migrate-run                 # 대기 중인 마이그레이션 실행
-make migrate-create desc="설명"   # 새 마이그레이션 생성
-make migrate-rollback            # 마이그레이션 롤백
-
-# 개발 도구
-make test                        # 테스트 실행
-make lint                        # 코드 품질 검사
-make build                       # 이미지 빌드
-make push                        # Registry 푸시
-
-# 백업/복원
-make migrate-backup              # 데이터베이스 백업
-make migrate-restore file=backup.sql  # 백업에서 복원
-```
-
-### 3. 수동 배포 (긴급용) ⚠️
-
-**⚠️ 주의**: 수동 배포는 긴급 상황에서만 사용하세요. 보안 검사와 품질 검사를 건너뛰므로 위험합니다.
-
-```bash
-# 🚨 긴급 상황에서만 사용!
-
-# 1. 이미지 빌드
-./build.sh
-
-# 2. Registry 로그인 (관리자만)
-docker login registry.jclee.me -u admin
-# 비밀번호는 별도 관리 (보안상 README에 노출 금지)
-
-# 3. 이미지 푸시
-docker push registry.jclee.me/safework/app:latest
-docker push registry.jclee.me/safework/mysql:latest  
-docker push registry.jclee.me/safework/redis:latest
-
-# 4. 배포 트리거
-./trigger-deploy.sh
-```
-
-**수동 배포 시 주의사항:**
-- 보안 스캔 없이 배포되므로 취약점 위험 존재
-- 코드 품질 검사 생략으로 버그 발생 가능성 증가
-- 배포 후 수동으로 헬스체크 및 모니터링 필요
-- 가능한 한 빨리 GitOps 워크플로로 재배포 권장
-
 ## 🗂️ 프로젝트 구조
 
 ```
@@ -295,9 +218,29 @@ safework/
 │   └── SECRETS.md             # Secrets 설정 가이드
 ├── app/                       # Flask 애플리케이션
 │   ├── models.py             # 데이터베이스 모델
+│   ├── models_document.py    # 문서 관리 모델
 │   ├── routes/               # 라우트 정의
+│   │   ├── admin.py         # 관리자 라우트
+│   │   ├── auth.py          # 인증 라우트
+│   │   ├── document.py      # 문서 사용자 라우트
+│   │   ├── document_admin.py # 문서 관리자 라우트
+│   │   ├── health.py        # 헬스체크 라우트
+│   │   ├── main.py          # 메인 라우트
+│   │   ├── migration.py     # 마이그레이션 라우트
+│   │   └── survey.py        # 증상조사 라우트
 │   ├── templates/            # HTML 템플릿
+│   │   ├── admin/           # 관리자 템플릿
+│   │   ├── auth/            # 인증 템플릿
+│   │   ├── document/        # 문서 사용자 템플릿
+│   │   ├── document_admin/  # 문서 관리자 템플릿
+│   │   └── survey/          # 증상조사 템플릿
 │   ├── migrations/           # 데이터베이스 마이그레이션
+│   │   ├── 001_initial_schema.py
+│   │   ├── 002_create_admin_user.py
+│   │   ├── 003_optimize_performance.py
+│   │   └── 004_add_document_management.py
+│   ├── forms.py             # 증상조사 폼
+│   ├── forms_document.py    # 문서 관리 폼
 │   ├── migration_manager.py  # 마이그레이션 관리자
 │   ├── migrate.py           # 마이그레이션 CLI
 │   └── Dockerfile           # App 컨테이너
@@ -348,12 +291,27 @@ safework/
 - 📄 PDF 양식 다운로드 (`/forms/001_musculoskeletal_symptom_survey.pdf`)
 - 📝 제출 이력 확인
 - 📱 모바일 반응형 인터페이스
+- 📁 문서 검색 및 다운로드
+- 📑 템플릿 양식 활용
+
+### 문서 관리 기능
+- 📂 카테고리별 문서 분류
+- 🔍 문서 검색 (제목, 설명, 태그)
+- 📥 문서 다운로드 및 조회
+- 📊 조회수/다운로드수 추적
+- 🔖 버전 관리 시스템
+- 🔐 접근 권한 제어 (공개/비공개/관리자 전용)
+- 📋 문서 템플릿 제공
 
 ### 관리자 기능
 - 📊 실시간 대시보드 (`/admin/dashboard`)
 - 📋 제출 데이터 조회/검색 (`/admin/surveys`)
 - 📥 Excel 다운로드
 - 📈 통계 분석 및 고위험군 모니터링
+- 📁 문서 업로드 및 관리 (`/admin/documents`)
+- 🏷️ 카테고리 관리 (`/admin/documents/categories`)
+- 📝 문서 버전 관리
+- 📊 문서 접근 로그 조회
 - 🗂️ 마이그레이션 관리 (`/admin/migrations`)
 
 ### 시스템 기능
@@ -377,11 +335,7 @@ safework/
 - 📝 감사 로그
 - 🌐 IP 기반 접근 제어
 - 🛡️ 보안 헤더 설정
-
-### 컴플라이언스
-- 📋 GDPR 컴플라이언스 확인
-- 📜 라이선스 컴플라이언스 체크
-- 🔍 보안 헤더 검증
+- 🔑 문서 접근 권한 관리
 
 ## 📈 품질 관리
 
@@ -393,7 +347,7 @@ safework/
 - **Import 정렬**: isort
 
 ### 테스트
-- **단위 테스트**: pytest
+- **단위 테스트**: pytest (39/39 통과)
 - **통합 테스트**: Docker Compose 기반
 - **성능 테스트**: 벤치마크 및 부하 테스트
 - **접근성 테스트**: axe, pa11y, Lighthouse
@@ -428,6 +382,12 @@ python app/migrate.py rollback --version 002
 - 웹에서 마이그레이션 실행/롤백
 - 실시간 진행 상황 모니터링
 
+### 현재 마이그레이션
+1. `001_initial_schema.py`: 초기 데이터베이스 스키마
+2. `002_create_admin_user.py`: 관리자 계정 생성
+3. `003_optimize_performance.py`: 성능 최적화
+4. `004_add_document_management.py`: 문서 관리 시스템 테이블
+
 자세한 내용은 [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md)를 참조하세요.
 
 ## 📊 모니터링 & 로깅
@@ -454,6 +414,7 @@ docker logs -f safework-app
 - 데이터베이스 성능 모니터링
 - 메모리 및 CPU 사용량 추적
 - 사용자 접근 패턴 분석
+- 문서 접근 통계
 
 ## 🚨 문제 해결
 
@@ -489,6 +450,24 @@ make restart
 ```
 
 ## 📈 버전 히스토리
+
+### v1.3.0 (2025-08-28) 🎉
+- **문서 관리 시스템**: 완전한 문서 관리 기능 구현
+  - 문서 업로드/다운로드 시스템
+  - 카테고리별 분류 및 태그 관리
+  - 버전 관리 및 변경 이력 추적
+  - 접근 권한 제어 (공개/비공개/관리자)
+  - 문서 템플릿 시스템
+  - 검색 및 필터링 기능
+  - 접근 로그 및 통계
+- **UI/UX 개선**: 
+  - 문서 관리 페이지 추가
+  - 네비게이션 메뉴 개선
+  - Font Awesome 아이콘 통합
+- **데이터베이스**: 
+  - 5개의 새로운 테이블 추가
+  - 문서 관리 마이그레이션 (004)
+- **테스트**: 39/39 테스트 통과 (100%)
 
 ### v1.2.0 (2024-08-28) 🚀
 - **고급 CI/CD 파이프라인**: 보안, 품질, 배포 자동화 완성
