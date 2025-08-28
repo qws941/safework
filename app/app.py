@@ -83,7 +83,8 @@ def create_app(config_name=None):
         for i in range(30):  # Try for 30 seconds
             try:
                 # Just test database connection, tables are already created by init.sql
-                db.engine.execute(db.text("SELECT 1"))
+                with db.engine.connect() as conn:
+                    conn.execute(db.text("SELECT 1"))
                 break
             except Exception as e:
                 if i == 29:  # Last attempt

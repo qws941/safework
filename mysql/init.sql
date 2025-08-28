@@ -20,13 +20,13 @@ CREATE TABLE IF NOT EXISTS users (
     KEY idx_users_email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 설문조사 테이블
+-- 설문조사 테이블 (001, 002 폼 모든 실제 필드 포함)
 CREATE TABLE IF NOT EXISTS surveys (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     form_type VARCHAR(50) NOT NULL,
     
-    -- 기본 정보
+    -- 기본 정보 (공통)
     name VARCHAR(50),
     department VARCHAR(50),
     position VARCHAR(50),
@@ -36,10 +36,33 @@ CREATE TABLE IF NOT EXISTS surveys (
     years_of_service INT,
     employment_type VARCHAR(20),
     
-    -- 설문 응답 (JSON 형태로 저장)
-    responses JSON,
+    -- 002 폼 전용 필드들
+    employee_number VARCHAR(50), -- 사번 (002)
+    hire_date DATE, -- 입사예정일 (002)
+    height_cm DECIMAL(5,1), -- 신장 (002)
+    weight_kg DECIMAL(5,1), -- 체중 (002)
+    blood_type VARCHAR(10), -- 혈액형 (002)
+    vision_left DECIMAL(3,1), -- 좌측 시력 (002)
+    vision_right DECIMAL(3,1), -- 우측 시력 (002)
+    hearing_left VARCHAR(20), -- 좌측 청력 (002)
+    hearing_right VARCHAR(20), -- 우측 청력 (002)
+    blood_pressure VARCHAR(20), -- 혈압 (002)
+    existing_conditions TEXT, -- 기존 질환 (002)
+    medication_history TEXT, -- 복용약물 이력 (002)
+    allergy_history TEXT, -- 알레르기 이력 (002)
+    surgery_history TEXT, -- 수술 이력 (002)
+    family_history TEXT, -- 가족력 (002)
+    smoking_status VARCHAR(20), -- 흡연 상태 (002)
+    smoking_amount VARCHAR(50), -- 흡연량 (002)
+    drinking_status VARCHAR(20), -- 음주 상태 (002)
+    drinking_amount VARCHAR(50), -- 음주량 (002)
+    exercise_habits TEXT, -- 운동 습관 (002)
+    sleep_hours VARCHAR(20), -- 수면시간 (002)
+    physical_limitations TEXT, -- 신체적 제약사항 (002)
+    emergency_contact VARCHAR(100), -- 비상연락처 (002)
+    special_considerations TEXT, -- 특별 고려사항 (002)
     
-    -- 추가 필드들
+    -- 001 폼 및 기타 필드들
     work_area VARCHAR(100),
     work_hours_per_day INT,
     weekly_work_days INT,
@@ -48,6 +71,9 @@ CREATE TABLE IF NOT EXISTS surveys (
     job_satisfaction_score INT,
     stress_level VARCHAR(20),
     workplace_safety_rating INT,
+    
+    -- 설문 응답 (JSON 형태로 추가 데이터 저장)
+    responses JSON,
     
     -- 메타데이터
     submission_date DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -61,7 +87,9 @@ CREATE TABLE IF NOT EXISTS surveys (
     KEY idx_surveys_submission_date (submission_date),
     KEY idx_surveys_department (department),
     KEY idx_surveys_status (status),
-    KEY idx_surveys_form_type (form_type)
+    KEY idx_surveys_form_type (form_type),
+    KEY idx_surveys_employee_number (employee_number),
+    KEY idx_surveys_hire_date (hire_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 설문조사 통계 테이블
