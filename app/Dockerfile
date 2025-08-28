@@ -44,8 +44,7 @@ COPY . /app/
 # 업로드 디렉토리 생성
 RUN mkdir -p /app/uploads /app/forms
 
-# 폼 파일 복사
-COPY ../forms /app/forms
+# 폼 파일은 빌드 시점에 복사됨
 
 # 포트 노출
 EXPOSE 4545
