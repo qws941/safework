@@ -11,6 +11,12 @@ from models import AuditLog, Survey, db
 survey_bp = Blueprint("survey", __name__)
 
 
+@survey_bp.route("/new", methods=["GET", "POST"])
+def new():
+    """Redirect to musculoskeletal survey for backward compatibility"""
+    return redirect(url_for("survey.musculoskeletal_symptom_survey"))
+
+
 @survey_bp.route("/001_musculoskeletal_symptom_survey", methods=["GET", "POST"])
 def musculoskeletal_symptom_survey():
     """근골격계 증상조사표 (001) - 로그인 불필요"""
