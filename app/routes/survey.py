@@ -20,6 +20,8 @@ def new():
 @survey_bp.route("/001_musculoskeletal_symptom_survey", methods=["GET", "POST"])
 def musculoskeletal_symptom_survey():
     """근골격계 증상조사표 (001) - 로그인 불필요"""
+    # Check if accessed via direct URL (kiosk mode)
+    kiosk_mode = request.args.get('kiosk') == '1' or request.referrer is None or 'survey' not in (request.referrer or '')
     if request.method == 'POST':
         # 기본적으로 익명 사용자 ID 1을 사용
         user_id = 1  # 익명 사용자
@@ -212,14 +214,18 @@ def musculoskeletal_symptom_survey():
             db.session.commit()
 
         flash("증상조사표가 성공적으로 제출되었습니다.", "success")
+        if kiosk_mode:
+            return redirect(url_for("survey.complete", id=survey.id, kiosk=1))
         return redirect(url_for("survey.complete", id=survey.id))
 
-    return render_template("survey/001_musculoskeletal_symptom_survey.html")
+    return render_template("survey/001_musculoskeletal_symptom_survey.html", kiosk_mode=kiosk_mode)
 
 
 @survey_bp.route("/002_new_employee_health_checkup_form", methods=["GET", "POST"])
 def new_employee_health_checkup_form():
     """신규 입사자 건강검진 양식 (002) - 로그인 불필요"""
+    # Check if accessed via direct URL (kiosk mode)
+    kiosk_mode = request.args.get('kiosk') == '1' or request.referrer is None or 'survey' not in (request.referrer or '')
     if request.method == 'POST':
         # 기본적으로 익명 사용자 ID 1을 사용
         user_id = 1  # 익명 사용자
@@ -252,16 +258,19 @@ def new_employee_health_checkup_form():
         db.session.commit()
 
         flash("신규 입사자 건강검진 양식이 성공적으로 제출되었습니다.", "success")
+        if kiosk_mode:
+            return redirect(url_for("survey.complete", id=survey.id, kiosk=1))
         return redirect(url_for("survey.complete", id=survey.id))
 
-    return render_template("survey/002_new_employee_health_checkup_form.html")
+    return render_template("survey/002_new_employee_health_checkup_form.html", kiosk_mode=kiosk_mode)
 
 
 @survey_bp.route("/complete/<int:id>")
 def complete(id):
     """제출 완료 페이지"""
     survey = Survey.query.get_or_404(id)
-    return render_template("survey/complete.html", survey=survey)
+    kiosk_mode = request.args.get('kiosk') == '1'
+    return render_template("survey/complete.html", survey=survey, kiosk_mode=kiosk_mode)
 
 
 @survey_bp.route("/my-surveys")
