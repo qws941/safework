@@ -1,5 +1,5 @@
 import os
-import time
+import time as time_module
 from datetime import datetime
 
 import redis
@@ -18,7 +18,7 @@ def create_app(config_name=None):
     app = Flask(__name__)
     
     # 시스템 시작 시간 저장
-    app.start_time = time.time()
+    app.start_time = time_module.time()
 
     # Load configuration
     config_name = config_name or os.environ.get("FLASK_CONFIG", "production")
@@ -131,7 +131,7 @@ def create_app(config_name=None):
             app_version = "1.1.2"
 
         # 시스템 업타임 계산
-        uptime_seconds = time.time() - app.start_time
+        uptime_seconds = time_module.time() - app.start_time
         uptime_days = int(uptime_seconds // 86400)
         uptime_hours = int((uptime_seconds % 86400) // 3600)
         uptime_minutes = int((uptime_seconds % 3600) // 60)
