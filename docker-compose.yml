@@ -6,9 +6,6 @@ services:
     image: registry.jclee.me/safework/mysql:latest
     container_name: safework-mysql
     restart: unless-stopped
-    build:
-      context: ./mysql
-      dockerfile: Dockerfile
     environment:
       MYSQL_ROOT_PASSWORD: safework2024root
       MYSQL_DATABASE: safework_db
@@ -28,7 +25,6 @@ services:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-psafework2024root"]
       interval: 30s
       timeout: 3s
-      start-period: 30s
       retries: 3
 
   # Redis 캐시 (커스텀 이미지 v1.3.1)
@@ -36,9 +32,6 @@ services:
     image: registry.jclee.me/safework/redis:latest
     container_name: safework-redis
     restart: unless-stopped
-    build:
-      context: ./redis
-      dockerfile: Dockerfile
     environment:
       REDIS_REPLICATION_MODE: master
       REDIS_PASSWORD: ""
@@ -53,7 +46,6 @@ services:
       test: ["CMD", "redis-cli", "ping"]
       interval: 30s
       timeout: 3s
-      start-period: 5s
       retries: 3
 
   # SafeWork 애플리케이션 (커스텀 이미지 v1.3.1)
@@ -61,9 +53,6 @@ services:
     image: registry.jclee.me/safework/app:latest
     container_name: safework-app
     restart: unless-stopped
-    build:
-      context: ./app
-      dockerfile: Dockerfile
     depends_on:
       mysql:
         condition: service_healthy
@@ -91,7 +80,6 @@ services:
       TZ: Asia/Seoul
     volumes:
       - app_uploads:/app/uploads
-      - ./forms:/app/forms:ro
     ports:
       - "4545:4545"
     networks:
@@ -100,7 +88,6 @@ services:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:4545/health')"]
       interval: 30s
       timeout: 3s
-      start-period: 5s
       retries: 3
     labels:
       - "com.centurylinklabs.watchtower.enable=true"

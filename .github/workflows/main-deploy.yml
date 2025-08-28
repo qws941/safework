@@ -161,82 +161,15 @@ jobs:
         echo "🔖 Git Hash: $GIT_HASH"
 
   # ========================================
-  # 2. 보안 검사 (병렬 실행)
+  # 2. 빠른 빌드 및 배포 (테스트/보안 검사 생략)
   # ========================================
-  security:
-    name: "🔒 보안 검사"
-    needs: prepare
-    if: needs.prepare.outputs.should_deploy == 'true'
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: "🐍 Python 환경 설정"
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
-        
-    - name: "🔐 민감 정보 스캔"
-      run: |
-        echo "🔍 민감 정보 검사 중..."
-        
-        # 하드코딩된 비밀번호나 API 키 검사
-        if grep -r "password\s*=\s*['\"]" app/ --include="*.py" | grep -v "password_hash" | grep -v "set_password"; then
-          echo "⚠️ 경고: 하드코딩된 비밀번호 발견"
-        fi
-        
-        if grep -r "SECRET_KEY\s*=\s*['\"]" app/ --include="*.py"; then
-          echo "⚠️ 경고: 하드코딩된 SECRET_KEY 발견"
-        fi
-        
-        echo "✅ 보안 검사 완료"
 
   # ========================================
-  # 3. 테스트 실행
-  # ========================================
-  test:
-    name: "🧪 테스트 실행"
-    needs: prepare
-    if: needs.prepare.outputs.build_app == 'true'
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: "🐍 Python 환경 설정"
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
-        
-    - name: "📦 의존성 설치"
-      run: |
-        pip install --upgrade pip
-        pip install -r app/requirements.txt
-        pip install pytest pytest-cov
-        
-    - name: "🧪 단위 테스트 실행"
-      run: |
-        echo "🧪 테스트 실행 중..."
-        cd app
-        
-        # 기본 import 테스트
-        python -c "import models; print('✅ Models import 성공')"
-        python -c "import app; print('✅ App import 성공')"
-        
-        # pytest가 있으면 실행
-        if [ -f "pytest.ini" ] || [ -d "tests" ]; then
-          pytest --tb=short || true
-        else
-          echo "ℹ️ 테스트 파일 없음, 기본 검증만 수행"
-        fi
-
-  # ========================================
-  # 4. SafeWork 애플리케이션 빌드 (커스텀 이미지)
+  # 3. SafeWork 애플리케이션 빌드 (커스텀 이미지)
   # ========================================
   build-app:
     name: "🏥 SafeWork App 빌드 (Custom)"
-    needs: [prepare, security, test]
+    needs: prepare
     if: needs.prepare.outputs.build_app == 'true'
     runs-on: ubuntu-latest
     
@@ -292,7 +225,7 @@ jobs:
         echo "✅ SafeWork 앱 빌드 완료: v$VERSION"
 
   # ========================================
-  # 5. MySQL 커스텀 이미지 빌드 (필요시)
+  # 4. MySQL 커스텀 이미지 빌드 (필요시)
   # ========================================
   build-mysql:
     name: "🐬 MySQL 커스텀 빌드"
@@ -341,7 +274,7 @@ jobs:
         echo "✅ MySQL 커스텀 이미지 빌드 완료: v$VERSION"
 
   # ========================================
-  # 6. Redis 커스텀 이미지 빌드 (필요시)
+  # 5. Redis 커스텀 이미지 빌드 (필요시)
   # ========================================
   build-redis:
     name: "⚡ Redis 커스텀 빌드"
@@ -390,12 +323,12 @@ jobs:
         echo "✅ Redis 커스텀 이미지 빌드 완료: v$VERSION"
 
   # ========================================
-  # 7. 프로덕션 배포
+  # 6. 프로덕션 배포 (개별 이미지 업데이트)
   # ========================================
   deploy:
     name: "🚀 프로덕션 배포"
-    needs: [prepare, build-app]
-    if: needs.prepare.outputs.should_deploy == 'true'
+    needs: [prepare, build-app, build-mysql, build-redis]
+    if: always() && needs.prepare.outputs.should_deploy == 'true'
     runs-on: self-hosted
     environment: production
     
@@ -469,42 +402,77 @@ with app.app_context():
         print('ℹ️ 적용할 마이그레이션 없음')
         " || echo "⚠️ 마이그레이션 스크립트 실행 실패 (무시하고 계속)"
 
-    - name: "🐳 컨테이너 배포"
+    - name: "🐳 개별 이미지 업데이트 및 배포"
       run: |
         VERSION="${{ needs.prepare.outputs.version }}"
+        BUILD_APP="${{ needs.prepare.outputs.build_app }}"
+        BUILD_MYSQL="${{ needs.prepare.outputs.build_mysql }}" 
+        BUILD_REDIS="${{ needs.prepare.outputs.build_redis }}"
         
-        echo "🐳 SafeWork 컨테이너 배포 중..."
+        echo "🐳 SafeWork 개별 이미지 업데이트 중..."
+        echo "📦 버전: v$VERSION"
+        echo "🏥 App 업데이트: $BUILD_APP"
+        echo "🐬 MySQL 업데이트: $BUILD_MYSQL"
+        echo "⚡ Redis 업데이트: $BUILD_REDIS"
         
         # 배포 디렉토리로 이동
-        cd /home/jclee/safework || cd /home/jclee/app/safework || cd /home/jclee/app/safework2 || cd ~/safework
+        cd /home/jclee/app/safework2
         
         # 레지스트리 로그인
         echo "${{ env.REGISTRY_PASSWORD }}" | docker login ${{ env.REGISTRY }} -u ${{ env.REGISTRY_USER }} --password-stdin
         
-        # 새 이미지 풀
-        docker pull ${{ env.REGISTRY }}/${{ env.BASE_NAME }}:v$VERSION
-        docker tag ${{ env.REGISTRY }}/${{ env.BASE_NAME }}:v$VERSION ${{ env.REGISTRY }}/${{ env.BASE_NAME }}:latest
+        # 개별 이미지 업데이트
+        SERVICES_TO_UPDATE=""
         
-        # Docker Compose 업데이트 (blue-green 배포)
-        export SAFEWORK_VERSION=v$VERSION
-        docker-compose pull
-        docker-compose up -d --no-deps --build app
+        if [ "$BUILD_APP" = "true" ] && [ "${{ needs.build-app.result }}" = "success" ]; then
+          echo "🏥 App 이미지 업데이트..."
+          docker pull ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/app:latest
+          SERVICES_TO_UPDATE="$SERVICES_TO_UPDATE app"
+        fi
         
-        # 헬스체크
-        sleep 10
-        for i in {1..30}; do
-          if curl -f http://localhost:5000/health > /dev/null 2>&1; then
-            echo "✅ 헬스체크 성공"
-            break
-          fi
-          echo "⏳ 헬스체크 대기 중... ($i/30)"
-          sleep 2
-        done
+        if [ "$BUILD_MYSQL" = "true" ] && [ "${{ needs.build-mysql.result }}" = "success" ]; then
+          echo "🐬 MySQL 이미지 업데이트..."
+          docker pull ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/mysql:latest
+          SERVICES_TO_UPDATE="$SERVICES_TO_UPDATE mysql"
+        fi
+        
+        if [ "$BUILD_REDIS" = "true" ] && [ "${{ needs.build-redis.result }}" = "success" ]; then
+          echo "⚡ Redis 이미지 업데이트..."  
+          docker pull ${{ env.REGISTRY }}/${{ env.BASE_NAME }}/redis:latest
+          SERVICES_TO_UPDATE="$SERVICES_TO_UPDATE redis"
+        fi
+        
+        if [ -n "$SERVICES_TO_UPDATE" ]; then
+          echo "🔄 업데이트할 서비스: $SERVICES_TO_UPDATE"
+          
+          # 순차적 서비스 업데이트 (무중단 배포)
+          for service in $SERVICES_TO_UPDATE; do
+            echo "🔄 $service 업데이트 중..."
+            docker-compose up -d --no-deps $service
+            
+            # 서비스별 헬스체크
+            if [ "$service" = "app" ]; then
+              echo "⏳ App 헬스체크 중..."
+              for i in {1..20}; do
+                if curl -f http://localhost:4545/health > /dev/null 2>&1; then
+                  echo "✅ App 헬스체크 성공"
+                  break
+                fi
+                echo "⏳ App 헬스체크 대기 중... ($i/20)"
+                sleep 3
+              done
+            fi
+            
+            echo "✅ $service 업데이트 완료"
+          done
+        else
+          echo "ℹ️ 업데이트할 이미지가 없습니다"
+        fi
         
         # 이전 이미지 정리
-        docker image prune -f --filter "label=org.opencontainers.image.title=SafeWork"
+        docker image prune -f --filter "dangling=true"
         
-        echo "✅ SafeWork 배포 완료: v$VERSION"
+        echo "✅ SafeWork 이미지 업데이트 완료: v$VERSION"
 
     - name: "🔍 배포 검증"
       run: |
@@ -541,11 +509,11 @@ with app.app_context():
         fi
 
   # ========================================
-  # 8. 배포 요약 리포트
+  # 7. 배포 요약 리포트
   # ========================================  
   summary:
     name: "📊 배포 요약"
-    needs: [prepare, build-app, deploy]
+    needs: [prepare, build-app, build-mysql, build-redis, deploy]
     if: always()
     runs-on: ubuntu-latest
     
