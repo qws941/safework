@@ -1,0 +1,373 @@
+{% extends "base.html" %}
+
+{% block title %}증상조사표 작성 - {{ app_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pain-visual {
+        background: linear-gradient(to right, #10b981 0%, #f59e0b 50%, #ef4444 100%);
+        height: 10px;
+        border-radius: 5px;
+        margin: 10px 0;
+        position: relative;
+    }
+    
+    .pain-indicator {
+        position: absolute;
+        top: -5px;
+        width: 20px;
+        height: 20px;
+        background: white;
+        border: 3px solid #667eea;
+        border-radius: 50%;
+        transition: left 0.3s;
+    }
+    
+    .body-part-section {
+        background: #f8fafc;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+    
+    .form-check-input:checked {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+    
+    .required::after {
+        content: " *";
+        color: red;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<form method="POST" action="{{ url_for('survey.new') }}" id="surveyForm">
+    {{ form.hidden_tag() }}
+    
+    <h2 class="text-center mb-4">
+        <i class="bi bi-clipboard2-pulse"></i> 근골격계 증상조사표
+    </h2>
+    
+    <!-- 1. 기본 정보 -->
+    <div class="section-card">
+        <h4 class="section-title">
+            <i class="bi bi-person-badge"></i> 기본 정보
+        </h4>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="name" class="form-label required">성명</label>
+                {{ form.name(class="form-control", placeholder="홍길동") }}
+                {% if form.name.errors %}
+                    <div class="text-danger small">{{ form.name.errors[0] }}</div>
+                {% endif %}
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="employee_number" class="form-label">사번</label>
+                {{ form.employee_number(class="form-control", placeholder="20240001") }}
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="department" class="form-label required">부서/공정</label>
+                {{ form.department(class="form-control", placeholder="생산1팀") }}
+                {% if form.department.errors %}
+                    <div class="text-danger small">{{ form.department.errors[0] }}</div>
+                {% endif %}
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="position" class="form-label">직위/직급</label>
+                {{ form.position(class="form-control", placeholder="대리") }}
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="age" class="form-label required">나이</label>
+                {{ form.age(class="form-control", type="number", min="18", max="100") }}
+                {% if form.age.errors %}
+                    <div class="text-danger small">{{ form.age.errors[0] }}</div>
+                {% endif %}
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="gender" class="form-label required">성별</label>
+                {{ form.gender(class="form-select") }}
+                {% if form.gender.errors %}
+                    <div class="text-danger small">{{ form.gender.errors[0] }}</div>
+                {% endif %}
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="work_years" class="form-label required">현 작업 근무년수</label>
+                {{ form.work_years(class="form-control", type="number", step="0.5", min="0", placeholder="2.5") }}
+                {% if form.work_years.errors %}
+                    <div class="text-danger small">{{ form.work_years.errors[0] }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- 2. 작업 정보 -->
+    <div class="section-card">
+        <h4 class="section-title">
+            <i class="bi bi-briefcase"></i> 작업 정보
+        </h4>
+        <div class="row">
+            <div class="col-md-12 mb-3">
+                <label for="work_type" class="form-label required">작업내용</label>
+                {{ form.work_type(class="form-control", placeholder="조립 라인 작업, 중량물 취급 등") }}
+                {% if form.work_type.errors %}
+                    <div class="text-danger small">{{ form.work_type.errors[0] }}</div>
+                {% endif %}
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="work_hours_per_day" class="form-label required">1일 평균 작업시간(시간)</label>
+                {{ form.work_hours_per_day(class="form-control", type="number", step="0.5", min="1", max="24", placeholder="8") }}
+                {% if form.work_hours_per_day.errors %}
+                    <div class="text-danger small">{{ form.work_hours_per_day.errors[0] }}</div>
+                {% endif %}
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="break_time_minutes" class="form-label">휴식시간(분)</label>
+                {{ form.break_time_minutes(class="form-control", type="number", min="0", max="480", placeholder="60") }}
+            </div>
+        </div>
+    </div>
+    
+    <!-- 3. 신체 부위별 증상 -->
+    <div class="section-card">
+        <h4 class="section-title">
+            <i class="bi bi-activity"></i> 신체 부위별 통증 정도
+        </h4>
+        <p class="text-muted mb-3">각 부위의 통증 정도를 0(없음)에서 10(극심함)까지 선택해주세요.</p>
+        
+        <!-- 목 -->
+        <div class="body-part-section">
+            <h6><i class="bi bi-circle-fill text-primary"></i> 목</h6>
+            <div class="pain-scale">
+                {% for value, label in form.neck_pain.choices %}
+                <input type="radio" id="neck_{{ value }}" name="neck_pain" value="{{ value }}">
+                <label for="neck_{{ value }}" 
+                    class="{% if value|int <= 3 %}pain-level-0-3{% elif value|int <= 6 %}pain-level-4-6{% else %}pain-level-7-10{% endif %}">
+                    {{ value }}
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- 어깨 -->
+        <div class="body-part-section">
+            <h6><i class="bi bi-circle-fill text-primary"></i> 어깨</h6>
+            <div class="pain-scale">
+                {% for value, label in form.shoulder_pain.choices %}
+                <input type="radio" id="shoulder_{{ value }}" name="shoulder_pain" value="{{ value }}">
+                <label for="shoulder_{{ value }}"
+                    class="{% if value|int <= 3 %}pain-level-0-3{% elif value|int <= 6 %}pain-level-4-6{% else %}pain-level-7-10{% endif %}">
+                    {{ value }}
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- 팔/팔꿈치 -->
+        <div class="body-part-section">
+            <h6><i class="bi bi-circle-fill text-primary"></i> 팔/팔꿈치</h6>
+            <div class="pain-scale">
+                {% for value, label in form.arm_pain.choices %}
+                <input type="radio" id="arm_{{ value }}" name="arm_pain" value="{{ value }}">
+                <label for="arm_{{ value }}"
+                    class="{% if value|int <= 3 %}pain-level-0-3{% elif value|int <= 6 %}pain-level-4-6{% else %}pain-level-7-10{% endif %}">
+                    {{ value }}
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- 손/손목/손가락 -->
+        <div class="body-part-section">
+            <h6><i class="bi bi-circle-fill text-primary"></i> 손/손목/손가락</h6>
+            <div class="pain-scale">
+                {% for value, label in form.hand_pain.choices %}
+                <input type="radio" id="hand_{{ value }}" name="hand_pain" value="{{ value }}">
+                <label for="hand_{{ value }}"
+                    class="{% if value|int <= 3 %}pain-level-0-3{% elif value|int <= 6 %}pain-level-4-6{% else %}pain-level-7-10{% endif %}">
+                    {{ value }}
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- 등 -->
+        <div class="body-part-section">
+            <h6><i class="bi bi-circle-fill text-primary"></i> 등</h6>
+            <div class="pain-scale">
+                {% for value, label in form.back_pain.choices %}
+                <input type="radio" id="back_{{ value }}" name="back_pain" value="{{ value }}">
+                <label for="back_{{ value }}"
+                    class="{% if value|int <= 3 %}pain-level-0-3{% elif value|int <= 6 %}pain-level-4-6{% else %}pain-level-7-10{% endif %}">
+                    {{ value }}
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- 허리 -->
+        <div class="body-part-section">
+            <h6><i class="bi bi-circle-fill text-primary"></i> 허리</h6>
+            <div class="pain-scale">
+                {% for value, label in form.waist_pain.choices %}
+                <input type="radio" id="waist_{{ value }}" name="waist_pain" value="{{ value }}">
+                <label for="waist_{{ value }}"
+                    class="{% if value|int <= 3 %}pain-level-0-3{% elif value|int <= 6 %}pain-level-4-6{% else %}pain-level-7-10{% endif %}">
+                    {{ value }}
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- 다리/무릎/발 -->
+        <div class="body-part-section">
+            <h6><i class="bi bi-circle-fill text-primary"></i> 다리/무릎/발</h6>
+            <div class="pain-scale">
+                {% for value, label in form.leg_pain.choices %}
+                <input type="radio" id="leg_{{ value }}" name="leg_pain" value="{{ value }}">
+                <label for="leg_{{ value }}"
+                    class="{% if value|int <= 3 %}pain-level-0-3{% elif value|int <= 6 %}pain-level-4-6{% else %}pain-level-7-10{% endif %}">
+                    {{ value }}
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- 4. 증상 특성 -->
+    <div class="section-card">
+        <h4 class="section-title">
+            <i class="bi bi-clipboard-heart"></i> 증상 특성
+        </h4>
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label for="pain_frequency" class="form-label">통증 빈도</label>
+                {{ form.pain_frequency(class="form-select") }}
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="pain_timing" class="form-label">통증 발생 시기</label>
+                {{ form.pain_timing(class="form-select") }}
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="pain_characteristics" class="form-label">통증 특징</label>
+                {{ form.pain_characteristics(class="form-select") }}
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="symptom_start_date" class="form-label">증상 시작일</label>
+                {{ form.symptom_start_date(class="form-control", type="date") }}
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="symptom_duration_months" class="form-label">증상 지속 기간(개월)</label>
+                {{ form.symptom_duration_months(class="form-control", type="number", min="0", placeholder="6") }}
+            </div>
+        </div>
+    </div>
+    
+    <!-- 5. 치료 이력 -->
+    <div class="section-card">
+        <h4 class="section-title">
+            <i class="bi bi-hospital"></i> 치료 이력
+        </h4>
+        <div class="form-check mb-3">
+            {{ form.medical_treatment(class="form-check-input") }}
+            <label class="form-check-label" for="medical_treatment">
+                의학적 치료를 받은 경험이 있습니다
+            </label>
+        </div>
+        <div class="mb-3">
+            <label for="treatment_details" class="form-label">치료 내용</label>
+            {{ form.treatment_details(class="form-control", rows="3", placeholder="병원명, 치료 방법, 기간 등을 자유롭게 작성해주세요") }}
+        </div>
+    </div>
+    
+    <!-- 6. 업무 관련성 -->
+    <div class="section-card">
+        <h4 class="section-title">
+            <i class="bi bi-link-45deg"></i> 업무 관련성
+        </h4>
+        <div class="form-check mb-3">
+            {{ form.work_related(class="form-check-input") }}
+            <label class="form-check-label" for="work_related">
+                증상이 업무와 관련있다고 생각합니다
+            </label>
+        </div>
+        <div class="mb-3">
+            <label for="work_related_details" class="form-label">업무 관련성 설명</label>
+            {{ form.work_related_details(class="form-control", rows="3", placeholder="업무와 증상의 관련성에 대해 설명해주세요") }}
+        </div>
+    </div>
+    
+    <!-- 7. 추가 사항 -->
+    <div class="section-card">
+        <h4 class="section-title">
+            <i class="bi bi-chat-text"></i> 기타 사항
+        </h4>
+        <div class="mb-3">
+            {{ form.additional_notes(class="form-control", rows="3", placeholder="추가로 전달하고 싶은 내용이 있으시면 작성해주세요") }}
+        </div>
+    </div>
+    
+    <!-- 8. 개인정보 동의 -->
+    <div class="section-card">
+        <div class="form-check">
+            {{ form.privacy_consent(class="form-check-input") }}
+            <label class="form-check-label" for="privacy_consent">
+                <strong class="required">개인정보 수집 및 이용에 동의합니다</strong>
+                <br>
+                <small class="text-muted">수집된 정보는 근골격계 질환 예방 및 관리 목적으로만 사용됩니다.</small>
+            </label>
+        </div>
+        {% if form.privacy_consent.errors %}
+            <div class="text-danger small">{{ form.privacy_consent.errors[0] }}</div>
+        {% endif %}
+    </div>
+    
+    <!-- 제출 버튼 -->
+    <div class="text-center mt-4">
+        {{ form.submit(class="btn btn-primary btn-lg px-5") }}
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 폼 유효성 검사
+    document.getElementById('surveyForm').addEventListener('submit', function(e) {
+        const requiredFields = document.querySelectorAll('[required]');
+        let isValid = true;
+        
+        requiredFields.forEach(field => {
+            if (!field.value) {
+                field.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                field.classList.remove('is-invalid');
+            }
+        });
+        
+        if (!isValid) {
+            e.preventDefault();
+            alert('필수 항목을 모두 입력해주세요.');
+        }
+    });
+    
+    // 통증 레벨 선택 시 시각적 피드백
+    document.querySelectorAll('.pain-scale input').forEach(input => {
+        input.addEventListener('change', function() {
+            const parent = this.closest('.body-part-section');
+            const value = parseInt(this.value);
+            if (value >= 7) {
+                parent.style.borderLeft = '4px solid #ef4444';
+            } else if (value >= 4) {
+                parent.style.borderLeft = '4px solid #f59e0b';
+            } else {
+                parent.style.borderLeft = '4px solid #10b981';
+            }
+        });
+    });
+</script>
+{% endblock %}

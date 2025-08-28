@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}홈 - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="text-center mb-5">
+    <h1 class="display-4 fw-bold mb-4">
+        <i class="bi bi-clipboard2-pulse"></i><br>
+        근골격계 증상조사
+    </h1>
+    <p class="lead text-muted">직원 여러분의 건강한 근무환경을 위한 증상 조사입니다</p>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-6">
+        <div class="section-card h-100">
+            <div class="text-center">
+                <div class="mb-3">
+                    <i class="bi bi-pencil-square" style="font-size: 3rem; color: var(--primary-color);"></i>
+                </div>
+                <h3>증상조사표 작성</h3>
+                <p class="text-muted mb-4">모바일에서도 간편하게 작성 가능합니다</p>
+                <a href="{{ url_for('survey.new') }}" class="btn btn-primary btn-lg w-100">
+                    <i class="bi bi-arrow-right-circle"></i> 지금 작성하기
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="section-card h-100">
+            <div class="text-center">
+                <div class="mb-3">
+                    <i class="bi bi-file-earmark-pdf" style="font-size: 3rem; color: var(--danger-color);"></i>
+                </div>
+                <h3>조사표 양식 다운로드</h3>
+                <p class="text-muted mb-4">PDF 양식을 다운로드하여 확인하세요</p>
+                <a href="{{ url_for('main.download_form') }}" class="btn btn-outline-danger btn-lg w-100">
+                    <i class="bi bi-download"></i> PDF 다운로드
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="section-card mt-4">
+    <h4 class="section-title">
+        <i class="bi bi-info-circle"></i> 조사 안내
+    </h4>
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <div class="d-flex align-items-start">
+                <div class="flex-shrink-0">
+                    <span class="badge bg-primary rounded-circle p-2">1</span>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h6>정확한 정보 입력</h6>
+                    <p class="text-muted small">본인의 증상을 정확하게 체크해주세요</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="d-flex align-items-start">
+                <div class="flex-shrink-0">
+                    <span class="badge bg-primary rounded-circle p-2">2</span>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h6>개인정보 보호</h6>
+                    <p class="text-muted small">제출된 정보는 안전하게 관리됩니다</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="d-flex align-items-start">
+                <div class="flex-shrink-0">
+                    <span class="badge bg-primary rounded-circle p-2">3</span>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h6>건강관리 지원</h6>
+                    <p class="text-muted small">조사 결과를 바탕으로 개선방안을 마련합니다</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
