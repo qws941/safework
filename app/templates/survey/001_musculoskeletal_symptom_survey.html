@@ -258,7 +258,7 @@
 {% block content %}
 <div class="survey-container">
     <form method="POST" action="{{ url_for('survey.musculoskeletal_symptom_survey') }}" id="surveyForm">
-        {{ form.hidden_tag() }}
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         
         <div class="text-center mb-4">
             <h2 style="color: #1f2937; margin-bottom: 5px;">
@@ -274,13 +274,17 @@
             </h4>
             
             <div class="form-row">
-                <div class="form-group half">
-                    <label class="form-label required">성명</label>
-                    {{ form.name(class="form-control", placeholder="홍길동") }}
+                <div class="form-group third">
+                    <label class="form-label">사번</label>
+                    <input type="text" name="employee_number" class="form-control" placeholder="EMP001">
                 </div>
-                <div class="form-group half">
+                <div class="form-group third">
+                    <label class="form-label required">성명</label>
+                    <input type="text" name="name" class="form-control" placeholder="홍길동" required>
+                </div>
+                <div class="form-group third">
                     <label class="form-label required">연령</label>
-                    {{ form.age(class="form-control", placeholder="35") }}
+                    <input type="number" name="age" class="form-control" placeholder="35" required>
                 </div>
             </div>
             
@@ -288,46 +292,51 @@
                 <div class="form-group">
                     <label class="form-label required">성별</label>
                     <div class="radio-group">
-                        {% for value, label in form.gender.choices %}
                         <div class="radio-item">
-                            <input type="radio" id="gender_{{ value }}" name="gender" value="{{ value }}" 
-                                   {% if form.gender.data == value %}checked{% endif %}>
-                            <label for="gender_{{ value }}">{{ label }}</label>
+                            <input type="radio" id="gender_male" name="gender" value="남" required>
+                            <label for="gender_male">남</label>
                         </div>
-                        {% endfor %}
+                        <div class="radio-item">
+                            <input type="radio" id="gender_female" name="gender" value="여" required>
+                            <label for="gender_female">여</label>
+                        </div>
                     </div>
                 </div>
             </div>
             
             <div class="form-row">
-                <div class="form-group">
+                <div class="form-group half">
                     <label class="form-label required">작업부서</label>
-                    {{ form.department(class="form-control", placeholder="생산1팀") }}
+                    <input type="text" name="department" class="form-control" placeholder="생산1팀" required>
+                </div>
+                <div class="form-group half">
+                    <label class="form-label">직위</label>
+                    <input type="text" name="position" class="form-control" placeholder="사원">
                 </div>
             </div>
             
             <div class="form-row">
                 <div class="form-group half">
                     <label class="form-label">현 직장경력 (년)</label>
-                    {{ form.work_years(class="form-control", placeholder="5") }}
+                    <input type="number" name="work_years" class="form-control" placeholder="5">
                 </div>
                 <div class="form-group half">
                     <label class="form-label">현 직장경력 (개월)</label>
-                    {{ form.work_months(class="form-control", placeholder="3") }}
+                    <input type="number" name="work_months" class="form-control" placeholder="3">
                 </div>
             </div>
             
             <div class="form-row">
                 <div class="form-group">
                     <label class="form-label">라인</label>
-                    {{ form.line(class="form-control", placeholder="A라인") }}
+                    <input type="text" name="line" class="form-control" placeholder="A라인">
                 </div>
             </div>
             
             <div class="form-row">
                 <div class="form-group">
                     <label class="form-label">수행작업</label>
-                    {{ form.work_name(class="form-control", placeholder="조립 작업") }}
+                    <input type="text" name="work_name" class="form-control" placeholder="조립 작업">
                 </div>
             </div>
             
@@ -335,12 +344,14 @@
                 <div class="form-group">
                     <label class="form-label">결혼여부</label>
                     <div class="radio-group">
-                        {% for value, label in form.marriage_status.choices %}
                         <div class="radio-item">
-                            <input type="radio" id="marriage_{{ value }}" name="marriage_status" value="{{ value }}">
-                            <label for="marriage_{{ value }}">{{ label }}</label>
+                            <input type="radio" id="marriage_single" name="marriage_status" value="미혼">
+                            <label for="marriage_single">미혼</label>
                         </div>
-                        {% endfor %}
+                        <div class="radio-item">
+                            <input type="radio" id="marriage_married" name="marriage_status" value="기혼">
+                            <label for="marriage_married">기혼</label>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -355,33 +366,33 @@
             <div class="form-row">
                 <div class="form-group">
                     <label class="form-label">작업내용</label>
-                    {{ form.current_work_details(class="form-control", rows="3", placeholder="현재 수행하고 있는 작업에 대해 상세히 기술해주세요") }}
+                    <textarea name="current_work_details" class="form-control" rows="3" placeholder="현재 수행하고 있는 작업에 대해 상세히 기술해주세요"></textarea>
                 </div>
             </div>
             
             <div class="form-row">
                 <div class="form-group half">
                     <label class="form-label">작업기간 (년)</label>
-                    {{ form.current_work_years(class="form-control", placeholder="3") }}
+                    <input type="number" name="current_work_years" class="form-control" placeholder="3">
                 </div>
                 <div class="form-group half">
                     <label class="form-label">작업기간 (개월)</label>
-                    {{ form.current_work_months(class="form-control", placeholder="6") }}
+                    <input type="number" name="current_work_months" class="form-control" placeholder="6">
                 </div>
             </div>
             
             <div class="form-row">
                 <div class="form-group third">
                     <label class="form-label">1일 근무시간</label>
-                    {{ form.work_hours_per_day(class="form-control", placeholder="8") }}
+                    <input type="number" name="work_hours_per_day" class="form-control" placeholder="8">
                 </div>
                 <div class="form-group third">
                     <label class="form-label">휴식시간 (분)</label>
-                    {{ form.break_time_minutes(class="form-control", placeholder="60") }}
+                    <input type="number" name="break_time_minutes" class="form-control" placeholder="60">
                 </div>
                 <div class="form-group third">
                     <label class="form-label">휴식횟수</label>
-                    {{ form.break_frequency(class="form-control", placeholder="2") }}
+                    <input type="number" name="break_frequency" class="form-control" placeholder="2">
                 </div>
             </div>
         </div>
@@ -395,18 +406,18 @@
             <div class="form-row">
                 <div class="form-group">
                     <label class="form-label">이전 작업내용</label>
-                    {{ form.previous_work_details(class="form-control", rows="3", placeholder="이전에 수행했던 작업에 대해 기술해주세요") }}
+                    <textarea name="previous_work_details" class="form-control" rows="3" placeholder="이전에 수행했던 작업에 대해 기술해주세요"></textarea>
                 </div>
             </div>
             
             <div class="form-row">
                 <div class="form-group half">
                     <label class="form-label">이전 작업기간 (년)</label>
-                    {{ form.previous_work_years(class="form-control", placeholder="2") }}
+                    <input type="number" name="previous_work_years" class="form-control" placeholder="2">
                 </div>
                 <div class="form-group half">
                     <label class="form-label">이전 작업기간 (개월)</label>
-                    {{ form.previous_work_months(class="form-control", placeholder="4") }}
+                    <input type="number" name="previous_work_months" class="form-control" placeholder="4">
                 </div>
             </div>
         </div>
@@ -419,27 +430,27 @@
             
             <div class="checkbox-group">
                 <div class="checkbox-item">
-                    {{ form.hobby_computer() }}
+                    <input type="checkbox" name="hobby_computer" id="hobby_computer">
                     <label for="hobby_computer">컴퓨터 관련활동</label>
                 </div>
                 <div class="checkbox-item">
-                    {{ form.hobby_instrument() }}
+                    <input type="checkbox" name="hobby_instrument" id="hobby_instrument">
                     <label for="hobby_instrument">악기연주(피아노, 바이올린 등)</label>
                 </div>
                 <div class="checkbox-item">
-                    {{ form.hobby_knitting() }}
+                    <input type="checkbox" name="hobby_knitting" id="hobby_knitting">
                     <label for="hobby_knitting">뜨개질/자수/붓글씨</label>
                 </div>
                 <div class="checkbox-item">
-                    {{ form.hobby_racket_sports() }}
+                    <input type="checkbox" name="hobby_racket_sports" id="hobby_racket_sports">
                     <label for="hobby_racket_sports">테니스/배드민턴/스쿼시</label>
                 </div>
                 <div class="checkbox-item">
-                    {{ form.hobby_ball_sports() }}
+                    <input type="checkbox" name="hobby_ball_sports" id="hobby_ball_sports">
                     <label for="hobby_ball_sports">축구/족구/농구/스키</label>
                 </div>
                 <div class="checkbox-item">
-                    {{ form.hobby_none() }}
+                    <input type="checkbox" name="hobby_none" id="hobby_none">
                     <label for="hobby_none">해당사항 없음</label>
                 </div>
             </div>
@@ -454,12 +465,26 @@
             <div class="form-group">
                 <label class="form-label">하루 평균 가사노동시간</label>
                 <div class="radio-group">
-                    {% for value, label in form.housework_hours.choices %}
                     <div class="radio-item">
-                        <input type="radio" id="housework_{{ loop.index }}" name="housework_hours" value="{{ value }}">
-                        <label for="housework_{{ loop.index }}">{{ label }}</label>
+                        <input type="radio" id="housework_1" name="housework_hours" value="거의안함">
+                        <label for="housework_1">거의안함</label>
                     </div>
-                    {% endfor %}
+                    <div class="radio-item">
+                        <input type="radio" id="housework_2" name="housework_hours" value="1시간미만">
+                        <label for="housework_2">1시간미만</label>
+                    </div>
+                    <div class="radio-item">
+                        <input type="radio" id="housework_3" name="housework_hours" value="1-2시간">
+                        <label for="housework_3">1-2시간</label>
+                    </div>
+                    <div class="radio-item">
+                        <input type="radio" id="housework_4" name="housework_hours" value="2-3시간">
+                        <label for="housework_4">2-3시간</label>
+                    </div>
+                    <div class="radio-item">
+                        <input type="radio" id="housework_5" name="housework_hours" value="3시간이상">
+                        <label for="housework_5">3시간이상</label>
+                    </div>
                 </div>
             </div>
         </div>
@@ -472,27 +497,27 @@
             
             <div class="checkbox-group">
                 <div class="checkbox-item">
-                    {{ form.disease_rheumatoid() }}
+                    <input type="checkbox" name="disease_rheumatoid" id="disease_rheumatoid">
                     <label for="disease_rheumatoid">류머티스 관절염</label>
                 </div>
                 <div class="checkbox-item">
-                    {{ form.disease_diabetes() }}
+                    <input type="checkbox" name="disease_diabetes" id="disease_diabetes">
                     <label for="disease_diabetes">당뇨병</label>
                 </div>
                 <div class="checkbox-item">
-                    {{ form.disease_lupus() }}
+                    <input type="checkbox" name="disease_lupus" id="disease_lupus">
                     <label for="disease_lupus">루프스병</label>
                 </div>
                 <div class="checkbox-item">
-                    {{ form.disease_gout() }}
+                    <input type="checkbox" name="disease_gout" id="disease_gout">
                     <label for="disease_gout">통풍</label>
                 </div>
                 <div class="checkbox-item">
-                    {{ form.disease_alcoholism() }}
+                    <input type="checkbox" name="disease_alcoholism" id="disease_alcoholism">
                     <label for="disease_alcoholism">알코올중독</label>
                 </div>
                 <div class="checkbox-item">
-                    {{ form.disease_none() }}
+                    <input type="checkbox" name="disease_none" id="disease_none">
                     <label for="disease_none">아니오</label>
                 </div>
             </div>
@@ -501,12 +526,14 @@
                 <div class="form-group">
                     <label class="form-label">현재상태</label>
                     <div class="radio-group">
-                        {% for value, label in form.disease_status.choices %}
                         <div class="radio-item">
-                            <input type="radio" id="disease_status_{{ value }}" name="disease_status" value="{{ value }}">
-                            <label for="disease_status_{{ value }}">{{ label }}</label>
+                            <input type="radio" id="disease_status_cured" name="disease_status" value="완치">
+                            <label for="disease_status_cured">완치</label>
                         </div>
-                        {% endfor %}
+                        <div class="radio-item">
+                            <input type="radio" id="disease_status_treatment" name="disease_status" value="치료나 관찰 중">
+                            <label for="disease_status_treatment">치료나 관찰 중</label>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -521,38 +548,40 @@
             <div class="form-group">
                 <label class="form-label">과거 운동/사고로 다친 적이 있습니까?</label>
                 <div class="radio-group">
-                    {% for value, label in form.past_accident.choices %}
                     <div class="radio-item">
-                        <input type="radio" id="past_accident_{{ value }}" name="past_accident" value="{{ value }}">
-                        <label for="past_accident_{{ value }}">{{ label }}</label>
+                        <input type="radio" id="past_accident_yes" name="past_accident" value="예">
+                        <label for="past_accident_yes">예</label>
                     </div>
-                    {% endfor %}
+                    <div class="radio-item">
+                        <input type="radio" id="past_accident_no" name="past_accident" value="아니오">
+                        <label for="past_accident_no">아니오</label>
+                    </div>
                 </div>
             </div>
             
             <div class="checkbox-group" style="margin-top: 15px;">
                 <div class="checkbox-item">
-                    {{ form.accident_hand() }}
+                    <input type="checkbox" name="accident_hand" id="accident_hand">
                     <label for="accident_hand">손/손가락/손목</label>
                 </div>
                 <div class="checkbox-item">
-                    {{ form.accident_arm() }}
+                    <input type="checkbox" name="accident_arm" id="accident_arm">
                     <label for="accident_arm">팔/팔꿈치</label>
                 </div>
                 <div class="checkbox-item">
-                    {{ form.accident_shoulder() }}
+                    <input type="checkbox" name="accident_shoulder" id="accident_shoulder">
                     <label for="accident_shoulder">어깨</label>
                 </div>
                 <div class="checkbox-item">
-                    {{ form.accident_neck() }}
+                    <input type="checkbox" name="accident_neck" id="accident_neck">
                     <label for="accident_neck">목</label>
                 </div>
                 <div class="checkbox-item">
-                    {{ form.accident_waist() }}
+                    <input type="checkbox" name="accident_waist" id="accident_waist">
                     <label for="accident_waist">허리</label>
                 </div>
                 <div class="checkbox-item">
-                    {{ form.accident_leg() }}
+                    <input type="checkbox" name="accident_leg" id="accident_leg">
                     <label for="accident_leg">다리/발</label>
                 </div>
             </div>
@@ -567,12 +596,22 @@
             <div class="form-group">
                 <label class="form-label">현재 일의 육체적 부담 정도</label>
                 <div class="radio-group">
-                    {% for value, label in form.physical_burden.choices %}
                     <div class="radio-item">
-                        <input type="radio" id="physical_{{ loop.index }}" name="physical_burden" value="{{ value }}">
-                        <label for="physical_{{ loop.index }}">{{ label }}</label>
+                        <input type="radio" id="physical_1" name="physical_burden" value="전혀힘들지않음">
+                        <label for="physical_1">전혀힘들지않음</label>
                     </div>
-                    {% endfor %}
+                    <div class="radio-item">
+                        <input type="radio" id="physical_2" name="physical_burden" value="견딜만함">
+                        <label for="physical_2">견딜만함</label>
+                    </div>
+                    <div class="radio-item">
+                        <input type="radio" id="physical_3" name="physical_burden" value="약간힘듦">
+                        <label for="physical_3">약간힘듦</label>
+                    </div>
+                    <div class="radio-item">
+                        <input type="radio" id="physical_4" name="physical_burden" value="매우힘듦">
+                        <label for="physical_4">매우힘듦</label>
+                    </div>
                 </div>
             </div>
         </div>
@@ -586,12 +625,14 @@
             <div class="form-group">
                 <label class="form-label required">지난 1년 동안 통증이나 불편함을 느끼신 적이 있습니까?</label>
                 <div class="radio-group">
-                    {% for value, label in form.has_symptoms.choices %}
                     <div class="radio-item">
-                        <input type="radio" id="has_symptoms_{{ value }}" name="has_symptoms" value="{{ value }}" required>
-                        <label for="has_symptoms_{{ value }}">{{ label }}</label>
+                        <input type="radio" id="has_symptoms_yes" name="has_symptoms" value="예" required>
+                        <label for="has_symptoms_yes">예</label>
                     </div>
-                    {% endfor %}
+                    <div class="radio-item">
+                        <input type="radio" id="has_symptoms_no" name="has_symptoms" value="아니오" required>
+                        <label for="has_symptoms_no">아니오</label>
+                    </div>
                 </div>
             </div>
             
@@ -639,7 +680,7 @@
 
         <!-- 제출 버튼 -->
         <div class="submit-section">
-            {{ form.submit(class="submit-btn") }}
+            <button type="submit" class="submit-btn">제출하기</button>
         </div>
     </form>
 </div>
