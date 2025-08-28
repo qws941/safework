@@ -8,6 +8,7 @@ including users, surveys, statistics, and audit logs.
 """
 
 from models import db
+from sqlalchemy import text
 
 
 def upgrade():
@@ -17,47 +18,49 @@ def upgrade():
     db.create_all()
 
     # Create indexes for better performance
-    db.engine.execute(
-        """
-        CREATE INDEX IF NOT EXISTS idx_surveys_user_id ON surveys(user_id);
-    """
-    )
+    with db.engine.connect() as conn:
+        conn.execute(
+            text("""
+            CREATE INDEX IF NOT EXISTS idx_surveys_user_id ON surveys(user_id);
+        """)
+        )
+        conn.commit()
 
-    db.engine.execute(
-        """
-        CREATE INDEX IF NOT EXISTS idx_surveys_submission_date ON surveys(submission_date);
-    """
-    )
+        conn.execute(
+            text("""
+            CREATE INDEX IF NOT EXISTS idx_surveys_submission_date ON surveys(submission_date);
+        """)
+        )
 
-    db.engine.execute(
-        """
-        CREATE INDEX IF NOT EXISTS idx_surveys_department ON surveys(department);
-    """
-    )
+        conn.execute(
+            text("""
+            CREATE INDEX IF NOT EXISTS idx_surveys_department ON surveys(department);
+        """)
+        )
 
-    db.engine.execute(
-        """
-        CREATE INDEX IF NOT EXISTS idx_surveys_status ON surveys(status);
-    """
-    )
+        conn.execute(
+            text("""
+            CREATE INDEX IF NOT EXISTS idx_surveys_status ON surveys(status);
+        """)
+        )
 
-    db.engine.execute(
-        """
-        CREATE INDEX IF NOT EXISTS idx_survey_statistics_date ON survey_statistics(stat_date);
-    """
-    )
+        conn.execute(
+            text("""
+            CREATE INDEX IF NOT EXISTS idx_survey_statistics_date ON survey_statistics(stat_date);
+        """)
+        )
 
-    db.engine.execute(
-        """
-        CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
-    """
-    )
+        conn.execute(
+            text("""
+            CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
+        """)
+        )
 
-    db.engine.execute(
-        """
-        CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at);
-    """
-    )
+        conn.execute(
+            text("""
+            CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at);
+        """)
+        )
 
     print("✅ Created initial database schema with indexes")
 
@@ -67,13 +70,15 @@ def downgrade():
 
     # Drop indexes first
     try:
-        db.engine.execute("DROP INDEX IF EXISTS idx_surveys_user_id;")
-        db.engine.execute("DROP INDEX IF EXISTS idx_surveys_submission_date;")
-        db.engine.execute("DROP INDEX IF EXISTS idx_surveys_department;")
-        db.engine.execute("DROP INDEX IF EXISTS idx_surveys_status;")
-        db.engine.execute("DROP INDEX IF EXISTS idx_survey_statistics_date;")
-        db.engine.execute("DROP INDEX IF EXISTS idx_audit_logs_user_id;")
-        db.engine.execute("DROP INDEX IF EXISTS idx_audit_logs_created_at;")
+        with db.engine.connect() as conn:
+            conn.execute(text("DROP INDEX IF EXISTS idx_surveys_user_id;"))
+            conn.execute(text("DROP INDEX IF EXISTS idx_surveys_submission_date;"))
+            conn.execute(text("DROP INDEX IF EXISTS idx_surveys_department;"))
+            conn.execute(text("DROP INDEX IF EXISTS idx_surveys_status;"))
+            conn.execute(text("DROP INDEX IF EXISTS idx_survey_statistics_date;"))
+            conn.execute(text("DROP INDEX IF EXISTS idx_audit_logs_user_id;"))
+            conn.execute(text("DROP INDEX IF EXISTS idx_audit_logs_created_at;"))
+            conn.commit()
     except Exception as e:
         print(f"Warning: Could not drop some indexes: {e}")
 
