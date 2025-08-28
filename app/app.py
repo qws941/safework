@@ -3,6 +3,7 @@ from flask import Flask, render_template, redirect, url_for, flash, request
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_migrate import Migrate
 from models import db, User, Survey, SurveyStatistics, AuditLog
+from migration_manager import MigrationManager
 from config import config
 import redis
 from datetime import datetime
@@ -18,6 +19,10 @@ def create_app(config_name=None):
     # Initialize extensions
     db.init_app(app)
     migrate = Migrate(app, db)
+    
+    # Initialize migration manager
+    migration_manager = MigrationManager(app)
+    app.migration_manager = migration_manager
     
     # Initialize Login Manager
     login_manager = LoginManager()
@@ -45,11 +50,13 @@ def create_app(config_name=None):
     from routes.survey import survey_bp
     from routes.admin import admin_bp
     from routes.health import health_bp
+    from routes.migration import migration_bp
     
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(survey_bp, url_prefix='/survey')
     app.register_blueprint(admin_bp, url_prefix='/admin')
+    app.register_blueprint(migration_bp, url_prefix='/admin')
     app.register_blueprint(health_bp)
     
     # Create database tables with retry logic
@@ -102,9 +109,17 @@ def create_app(config_name=None):
     # Context processors
     @app.context_processor
     def inject_config():
+        # VERSION 파일에서 직접 읽어오기
+        try:
+            version_file = os.path.join(os.path.dirname(__file__), 'VERSION')
+            with open(version_file, 'r') as f:
+                app_version = f.read().strip()
+        except:
+            app_version = '1.1.2'
+        
         return {
             'app_name': app.config['APP_NAME'],
-            'app_version': app.config['APP_VERSION']
+            'app_version': app_version
         }
     
     # Audit logging

@@ -1,7 +1,10 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, IntegerField, FloatField, SelectField, TextAreaField, BooleanField, DateField, RadioField, PasswordField, SubmitField
-from wtforms.validators import DataRequired, Email, Length, NumberRange, Optional, EqualTo
-from datetime import date
+from wtforms import (
+    StringField, IntegerField, SelectField, TextAreaField, 
+    BooleanField, RadioField, PasswordField, SubmitField, DateField
+)
+from wtforms.validators import DataRequired, Email, Length, Optional, EqualTo, NumberRange
+
 
 class LoginForm(FlaskForm):
     """로그인 폼"""
@@ -9,6 +12,7 @@ class LoginForm(FlaskForm):
     password = PasswordField('비밀번호', validators=[DataRequired()])
     remember_me = BooleanField('로그인 상태 유지')
     submit = SubmitField('로그인')
+
 
 class RegisterForm(FlaskForm):
     """회원가입 폼"""
@@ -19,131 +23,92 @@ class RegisterForm(FlaskForm):
     submit = SubmitField('회원가입')
 
 class SurveyForm(FlaskForm):
-    """근골격계 증상조사표 폼"""
+    """근골격계 증상조사표 폼 - PDF 001 정확 구현"""
     
-    # 1. 기본 정보
-    employee_number = StringField('사번', validators=[Optional(), Length(max=50)])
+    # I. 기본정보 (PDF 테이블과 동일)
     name = StringField('성명', validators=[DataRequired(), Length(min=2, max=100)])
-    department = StringField('부서/공정', validators=[DataRequired(), Length(max=100)])
-    position = StringField('직위/직급', validators=[Optional(), Length(max=100)])
-    age = IntegerField('나이', validators=[DataRequired(), NumberRange(min=18, max=100)])
-    gender = SelectField('성별', choices=[
-        ('', '선택하세요'),
-        ('남', '남성'),
-        ('여', '여성')
+    age = IntegerField('연령', validators=[DataRequired(), NumberRange(min=18, max=100)])
+    gender = RadioField('성별', choices=[('남', '남'), ('여', '여')], validators=[DataRequired()])
+    work_years = IntegerField('현 직장경력(년)', validators=[Optional(), NumberRange(min=0, max=50)])
+    work_months = IntegerField('현 직장경력(개월)', validators=[Optional(), NumberRange(min=0, max=11)])
+    
+    department = StringField('작업부서', validators=[DataRequired(), Length(max=100)])
+    line = StringField('라인', validators=[Optional(), Length(max=100)])
+    work_name = StringField('수행작업', validators=[Optional(), Length(max=200)])
+    marriage_status = RadioField('결혼여부', choices=[('기혼', '기혼'), ('미혼', '미혼')], validators=[Optional()])
+    
+    # 현재하고 있는 작업
+    current_work_details = TextAreaField('작업내용', validators=[Optional(), Length(max=500)])
+    current_work_years = IntegerField('작업기간(년)', validators=[Optional(), NumberRange(min=0, max=50)])
+    current_work_months = IntegerField('작업기간(개월)', validators=[Optional(), NumberRange(min=0, max=11)])
+    
+    # 1일 근무시간
+    work_hours_per_day = IntegerField('1일 근무시간', validators=[Optional(), NumberRange(min=1, max=24)])
+    break_time_minutes = IntegerField('휴식시간(분)', validators=[Optional(), NumberRange(min=0, max=480)])
+    break_frequency = IntegerField('휴식횟수', validators=[Optional(), NumberRange(min=0, max=10)])
+    
+    # 현작업 하기 전 작업
+    previous_work_details = TextAreaField('이전 작업내용', validators=[Optional(), Length(max=500)])
+    previous_work_years = IntegerField('이전 작업기간(년)', validators=[Optional(), NumberRange(min=0, max=50)])
+    previous_work_months = IntegerField('이전 작업기간(개월)', validators=[Optional(), NumberRange(min=0, max=11)])
+    
+    # 1. 여가 및 취미활동
+    hobby_computer = BooleanField('컴퓨터 관련활동')
+    hobby_instrument = BooleanField('악기연주(피아노, 바이올린 등)')
+    hobby_knitting = BooleanField('뜨개질/자수/붓글씨')
+    hobby_racket_sports = BooleanField('테니스/배드민턴/스쿼시')
+    hobby_ball_sports = BooleanField('축구/족구/농구/스키')
+    hobby_none = BooleanField('해당사항 없음')
+    
+    # 2. 가사노동시간
+    housework_hours = RadioField('하루 평균 가사노동시간', choices=[
+        ('거의하지않는다', '거의 하지 않는다'),
+        ('1시간미만', '1시간 미만'),
+        ('1-2시간', '1-2시간 미만'),
+        ('2-3시간', '2-3시간 미만'),
+        ('3시간이상', '3시간 이상')
+    ], validators=[Optional()])
+    
+    # 3. 진단받은 질병
+    disease_rheumatoid = BooleanField('류머티스 관절염')
+    disease_diabetes = BooleanField('당뇨병')
+    disease_lupus = BooleanField('루프스병')
+    disease_gout = BooleanField('통풍')
+    disease_alcoholism = BooleanField('알코올중독')
+    disease_none = BooleanField('아니오')
+    disease_status = RadioField('현재상태', choices=[
+        ('완치', '완치'),
+        ('치료중', '치료나 관찰 중')
+    ], validators=[Optional()])
+    
+    # 4. 과거 사고
+    past_accident = RadioField('과거 운동/사고로 다친 적', choices=[
+        ('아니오', '아니오'),
+        ('예', '예')
+    ], validators=[Optional()])
+    accident_hand = BooleanField('손/손가락/손목')
+    accident_arm = BooleanField('팔/팔꿈치')
+    accident_shoulder = BooleanField('어깨')
+    accident_neck = BooleanField('목')
+    accident_waist = BooleanField('허리')
+    accident_leg = BooleanField('다리/발')
+    
+    # 5. 육체적 부담 정도
+    physical_burden = RadioField('현재 일의 육체적 부담 정도', choices=[
+        ('전혀힘들지않음', '전혀 힘들지 않음'),
+        ('견딜만함', '견딜만 함'),
+        ('약간힘듦', '약간 힘듦'),
+        ('매우힘듦', '매우 힘듦')
+    ], validators=[Optional()])
+    
+    # II. 근골격계 증상 - 지난 1년 동안 통증 경험
+    has_symptoms = RadioField('지난 1년 동안 통증이나 불편함을 느끼신 적이 있습니까?', choices=[
+        ('아니오', '아니오'),
+        ('예', '예')
     ], validators=[DataRequired()])
     
-    # 2. 근무 정보
-    work_years = FloatField('현 작업 근무년수', validators=[DataRequired(), NumberRange(min=0, max=50)])
-    work_type = StringField('작업내용', validators=[DataRequired(), Length(max=200)])
-    work_hours_per_day = FloatField('1일 평균 작업시간(시간)', validators=[DataRequired(), NumberRange(min=1, max=24)])
-    break_time_minutes = IntegerField('휴식시간(분)', validators=[Optional(), NumberRange(min=0, max=480)])
-    
-    # 3. 신체 부위별 증상 (0-10 통증 척도)
-    neck_pain = RadioField('목 통증', choices=[
-        ('0', '0 - 통증없음'),
-        ('1', '1'), ('2', '2'), ('3', '3'),
-        ('4', '4'), ('5', '5'), ('6', '6'),
-        ('7', '7'), ('8', '8'), ('9', '9'),
-        ('10', '10 - 극심한 통증')
-    ], default='0', coerce=int)
-    
-    shoulder_pain = RadioField('어깨 통증', choices=[
-        ('0', '0 - 통증없음'),
-        ('1', '1'), ('2', '2'), ('3', '3'),
-        ('4', '4'), ('5', '5'), ('6', '6'),
-        ('7', '7'), ('8', '8'), ('9', '9'),
-        ('10', '10 - 극심한 통증')
-    ], default='0', coerce=int)
-    
-    arm_pain = RadioField('팔/팔꿈치 통증', choices=[
-        ('0', '0 - 통증없음'),
-        ('1', '1'), ('2', '2'), ('3', '3'),
-        ('4', '4'), ('5', '5'), ('6', '6'),
-        ('7', '7'), ('8', '8'), ('9', '9'),
-        ('10', '10 - 극심한 통증')
-    ], default='0', coerce=int)
-    
-    hand_pain = RadioField('손/손목/손가락 통증', choices=[
-        ('0', '0 - 통증없음'),
-        ('1', '1'), ('2', '2'), ('3', '3'),
-        ('4', '4'), ('5', '5'), ('6', '6'),
-        ('7', '7'), ('8', '8'), ('9', '9'),
-        ('10', '10 - 극심한 통증')
-    ], default='0', coerce=int)
-    
-    back_pain = RadioField('등 통증', choices=[
-        ('0', '0 - 통증없음'),
-        ('1', '1'), ('2', '2'), ('3', '3'),
-        ('4', '4'), ('5', '5'), ('6', '6'),
-        ('7', '7'), ('8', '8'), ('9', '9'),
-        ('10', '10 - 극심한 통증')
-    ], default='0', coerce=int)
-    
-    waist_pain = RadioField('허리 통증', choices=[
-        ('0', '0 - 통증없음'),
-        ('1', '1'), ('2', '2'), ('3', '3'),
-        ('4', '4'), ('5', '5'), ('6', '6'),
-        ('7', '7'), ('8', '8'), ('9', '9'),
-        ('10', '10 - 극심한 통증')
-    ], default='0', coerce=int)
-    
-    leg_pain = RadioField('다리/무릎/발 통증', choices=[
-        ('0', '0 - 통증없음'),
-        ('1', '1'), ('2', '2'), ('3', '3'),
-        ('4', '4'), ('5', '5'), ('6', '6'),
-        ('7', '7'), ('8', '8'), ('9', '9'),
-        ('10', '10 - 극심한 통증')
-    ], default='0', coerce=int)
-    
-    # 4. 증상 특성
-    pain_frequency = SelectField('통증 빈도', choices=[
-        ('', '선택하세요'),
-        ('항상', '항상 아프다'),
-        ('자주', '작업 중 자주 아프다'),
-        ('가끔', '작업 중 가끔 아프다'),
-        ('작업후', '작업이 끝난 후 아프다'),
-        ('퇴근후', '퇴근 후 집에서 아프다'),
-        ('기타', '기타')
-    ])
-    
-    pain_timing = SelectField('통증 발생 시기', choices=[
-        ('', '선택하세요'),
-        ('오전', '주로 오전'),
-        ('오후', '주로 오후'),
-        ('저녁', '주로 저녁'),
-        ('항상', '하루 종일'),
-        ('불규칙', '불규칙')
-    ])
-    
-    pain_characteristics = SelectField('통증 특징', choices=[
-        ('', '선택하세요'),
-        ('쑤심', '쑤시는 통증'),
-        ('저림', '저리는 통증'),
-        ('찌름', '찌르는 통증'),
-        ('당김', '당기는 통증'),
-        ('화끈', '화끈거리는 통증'),
-        ('무감각', '무감각'),
-        ('복합', '복합적 증상')
-    ])
-    
-    # 5. 증상 이력
-    symptom_start_date = DateField('증상 시작일', validators=[Optional()], format='%Y-%m-%d')
-    symptom_duration_months = IntegerField('증상 지속 기간(개월)', validators=[Optional(), NumberRange(min=0, max=600)])
-    
-    # 6. 치료 이력
-    medical_treatment = BooleanField('의학적 치료 받은 경험')
-    treatment_details = TextAreaField('치료 내용 (병원명, 치료방법 등)', validators=[Optional(), Length(max=500)])
-    
-    # 7. 업무 관련성
-    work_related = BooleanField('증상이 업무와 관련있다고 생각함')
-    work_related_details = TextAreaField('업무 관련성 설명', validators=[Optional(), Length(max=500)])
-    
-    # 8. 추가 정보
-    additional_notes = TextAreaField('기타 특이사항', validators=[Optional(), Length(max=1000)])
-    
-    # 9. 개인정보 동의
-    privacy_consent = BooleanField('개인정보 수집 및 이용에 동의합니다', validators=[DataRequired()])
+    # 통증 부위별 상세 정보는 동적으로 처리
+    # JavaScript로 예를 선택한 경우에만 표시
     
     submit = SubmitField('제출하기')
 

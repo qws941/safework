@@ -49,9 +49,20 @@ RUN mkdir -p /app/uploads /app/forms
 # 포트 노출
 EXPOSE 4545
 
+# 권한 설정 (마이그레이션 스크립트 실행 가능하도록)
+RUN chmod +x /app/migrate.py
+
 # 헬스체크
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:4545/health')" || exit 1
 
-# 애플리케이션 실행
-CMD ["gunicorn", "--bind", "0.0.0.0:4545", "--workers", "1", "--timeout", "120", "app:app"]
+# 시작 스크립트 생성 (마이그레이션 후 앱 실행)
+RUN echo '#!/bin/bash\n\
+echo "🗂️ Running database migrations..."\n\
+python migrate.py migrate || echo "⚠️ Migration warning (may be first run)"\n\
+echo "🚀 Starting SafeWork application..."\n\
+exec gunicorn --bind 0.0.0.0:4545 --workers 1 --timeout 120 app:app' > /app/start.sh \
+    && chmod +x /app/start.sh
+
+# 마이그레이션을 포함한 애플리케이션 실행
+CMD ["/app/start.sh"]

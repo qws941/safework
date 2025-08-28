@@ -16,13 +16,17 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
     
     # Relationships
-    surveys = db.relationship('Survey', 
-                             foreign_keys='Survey.user_id',
-                             backref='user', 
-                             lazy='dynamic')
+    surveys = db.relationship(
+        'Survey',
+        foreign_keys='Survey.user_id',
+        backref='user',
+        lazy='dynamic'
+    )
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -32,6 +36,7 @@ class User(UserMixin, db.Model):
     
     def __repr__(self):
         return f'<User {self.username}>'
+
 
 class Survey(db.Model):
     """근골격계 증상조사표 모델 - PDF 기준"""
@@ -133,10 +138,13 @@ class Survey(db.Model):
     reviewed_at = db.Column(db.DateTime)
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
     
     def __repr__(self):
         return f'<Survey {self.name} - {self.submission_date}>'
+
 
 class SurveyStatistics(db.Model):
     """통계 데이터 캐싱용 모델"""
@@ -168,10 +176,13 @@ class SurveyStatistics(db.Model):
     medical_treatment_count = db.Column(db.Integer, default=0)
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
     
     def __repr__(self):
         return f'<SurveyStatistics {self.stat_date}>'
+
 
 class AuditLog(db.Model):
     """감사 로그"""

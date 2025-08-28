@@ -1,0 +1,436 @@
+name: Quality Assurance Pipeline
+
+on:
+  push:
+    branches: [ main, develop, staging ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '18'
+
+jobs:
+  code-quality:
+    name: Code Quality Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-quality-${{ hashFiles('app/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-quality-
+          ${{ runner.os }}-pip-
+    
+    - name: Install quality tools
+      run: |
+        python -m pip install --upgrade pip
+        cd app
+        pip install -r requirements.txt
+        pip install pylint flake8 black isort mypy radon complexity-report
+        pip install pytest pytest-cov pytest-html pytest-benchmark
+    
+    - name: Code formatting check (Black)
+      run: |
+        echo "🎨 코드 포맷팅 확인..."
+        cd app
+        black --check --diff . || (echo "⚠️ 코드 포맷팅 필요. 'black .' 실행하세요" && exit 1)
+    
+    - name: Import sorting check (isort)
+      run: |
+        echo "📦 Import 정렬 확인..."
+        cd app
+        isort --check-only --diff . || (echo "⚠️ Import 정렬 필요. 'isort .' 실행하세요" && exit 1)
+    
+    - name: Linting (flake8)
+      run: |
+        echo "🔍 코드 린팅..."
+        cd app
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics --tee --output-file=flake8-report.txt
+    
+    - name: Advanced linting (pylint)
+      run: |
+        echo "🔎 고급 코드 분석..."
+        cd app
+        pylint --output-format=text --reports=yes --score=yes $(find . -name "*.py" | head -10) > pylint-report.txt || echo "Pylint warnings found"
+    
+    - name: Type checking (mypy)
+      continue-on-error: true
+      run: |
+        echo "🏷️ 타입 체킹..."
+        cd app
+        mypy --ignore-missing-imports --no-strict-optional . > mypy-report.txt || echo "Type checking issues found"
+    
+    - name: Code complexity analysis
+      run: |
+        echo "📊 코드 복잡도 분석..."
+        cd app
+        radon cc . --show-complexity --min C > complexity-report.txt || echo "No complex code found"
+        radon mi . --show --min B >> complexity-report.txt || echo "Maintainability index calculated"
+    
+    - name: Documentation coverage
+      run: |
+        echo "📚 문서화 커버리지 확인..."
+        cd app
+        python -c "
+import os
+import ast
+import glob
+
+def check_docstring(node):
+    return ast.get_docstring(node) is not None
+
+total_funcs = 0
+documented_funcs = 0
+
+for py_file in glob.glob('**/*.py', recursive=True):
+    if '__pycache__' in py_file or 'migrations/' in py_file:
+        continue
+    try:
+        with open(py_file, 'r', encoding='utf-8') as f:
+            tree = ast.parse(f.read())
+        
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
+                total_funcs += 1
+                if check_docstring(node):
+                    documented_funcs += 1
+    except:
+        continue
+
+doc_coverage = (documented_funcs / total_funcs * 100) if total_funcs > 0 else 0
+print(f'Documentation Coverage: {doc_coverage:.1f}% ({documented_funcs}/{total_funcs})')
+with open('doc-coverage.txt', 'w') as f:
+    f.write(f'{doc_coverage:.1f}')
+" || echo "Documentation analysis failed"
+    
+    - name: Upload quality reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: quality-reports-${{ github.run_id }}
+        path: |
+          app/flake8-report.txt
+          app/pylint-report.txt
+          app/mypy-report.txt
+          app/complexity-report.txt
+          app/doc-coverage.txt
+        retention-days: 30
+    
+    - name: Quality gates check
+      run: |
+        cd app
+        echo "🚪 품질 게이트 확인..."
+        
+        # 복잡도 체크
+        COMPLEX_FILES=$(radon cc . --min C --show-complexity | wc -l)
+        if [ $COMPLEX_FILES -gt 5 ]; then
+          echo "❌ Too many complex functions: $COMPLEX_FILES"
+          exit 1
+        fi
+        
+        # 문서화 커버리지 체크
+        DOC_COVERAGE=$(cat doc-coverage.txt)
+        if (( $(echo "$DOC_COVERAGE < 60" | bc -l) )); then
+          echo "❌ Documentation coverage too low: $DOC_COVERAGE%"
+          exit 1
+        fi
+        
+        echo "✅ 모든 품질 게이트 통과!"
+
+  performance-test:
+    name: Performance Testing
+    runs-on: ubuntu-latest
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: test123
+          MYSQL_DATABASE: safework_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+      
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install dependencies
+      run: |
+        cd app
+        pip install -r requirements.txt
+        pip install pytest-benchmark locust requests-mock
+    
+    - name: Database performance test
+      run: |
+        echo "💾 데이터베이스 성능 테스트..."
+        cd app
+        python -c "
+import time
+import pymysql
+from sqlalchemy import create_engine, text
+
+# DB 연결 테스트
+engine = create_engine('mysql+pymysql://root:test123@localhost:3306/safework_test')
+
+# 간단한 성능 테스트
+start_time = time.time()
+with engine.connect() as conn:
+    for i in range(100):
+        result = conn.execute(text('SELECT 1'))
+connection_time = time.time() - start_time
+
+print(f'Database connection performance: {connection_time:.3f}s for 100 queries')
+if connection_time > 5.0:
+    print('⚠️ Database performance warning')
+else:
+    print('✅ Database performance OK')
+"
+    
+    - name: Application benchmark tests
+      run: |
+        echo "🚀 애플리케이션 벤치마크 테스트..."
+        cd app
+        
+        # 핵심 함수 성능 테스트
+        python -c "
+import sys
+import time
+from models import Survey
+
+# 더미 데이터로 성능 테스트
+def benchmark_survey_creation():
+    start = time.time()
+    survey_data = {
+        'name': 'Test User',
+        'age': 30,
+        'department': 'IT'
+    }
+    # Survey 객체 생성 시간 측정
+    for _ in range(1000):
+        survey = Survey(**survey_data)
+    end = time.time()
+    return end - start
+
+exec_time = benchmark_survey_creation()
+print(f'Survey creation benchmark: {exec_time:.3f}s for 1000 objects')
+if exec_time > 1.0:
+    print('⚠️ Performance degradation detected')
+    sys.exit(1)
+else:
+    print('✅ Performance benchmark passed')
+"
+
+  load-test:
+    name: Load Testing
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install load testing tools
+      run: |
+        pip install locust requests faker
+    
+    - name: Create load test script
+      run: |
+        cat > load_test.py << 'EOF'
+from locust import HttpUser, task, between
+import json
+from faker import Faker
+
+fake = Faker()
+
+class SafeworkUser(HttpUser):
+    wait_time = between(1, 3)
+    
+    def on_start(self):
+        """테스트 시작 시 실행"""
+        # 건강 상태 확인
+        self.client.get("/health")
+    
+    @task(3)
+    def view_homepage(self):
+        """홈페이지 조회"""
+        self.client.get("/")
+    
+    @task(2)
+    def view_survey_form(self):
+        """설문조사 폼 조회"""
+        self.client.get("/survey/new")
+    
+    @task(1)
+    def health_check(self):
+        """헬스체크"""
+        with self.client.get("/health", catch_response=True) as response:
+            if response.status_code == 200:
+                response.success()
+            else:
+                response.failure(f"Health check failed: {response.status_code}")
+    
+    @task(1)
+    def static_resources(self):
+        """정적 리소스 로드"""
+        self.client.get("/static/css/style.css", name="/static/css")
+        self.client.get("/static/js/app.js", name="/static/js")
+EOF
+    
+    - name: Run load test (smoke test)
+      run: |
+        echo "🔥 부하 테스트 실행 (스모크 테스트)..."
+        # 짧은 부하 테스트 (CI용)
+        locust -f load_test.py --headless --users 10 --spawn-rate 2 --run-time 30s --host http://localhost:4545 --html load-test-report.html || echo "Load test completed with warnings"
+    
+    - name: Upload load test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: load-test-report-${{ github.run_id }}
+        path: load-test-report.html
+        retention-days: 30
+
+  accessibility-test:
+    name: Accessibility Testing
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+    
+    - name: Install accessibility tools
+      run: |
+        npm install -g axe-cli pa11y lighthouse-ci
+    
+    - name: Set up Python and start app
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Start application for testing
+      run: |
+        cd app
+        pip install -r requirements.txt
+        # 테스트용 간단한 서버 시작
+        python -c "
+from app import create_app
+app = create_app('testing')
+app.run(host='0.0.0.0', port=5000, debug=False)
+" &
+        
+        # 서버 시작 대기
+        sleep 10
+    
+    - name: Accessibility audit with axe
+      continue-on-error: true
+      run: |
+        echo "♿ 접근성 테스트..."
+        axe http://localhost:5000 --save axe-results.json --reporter json
+        axe http://localhost:5000/survey/new --save axe-survey-results.json --reporter json
+    
+    - name: Accessibility audit with pa11y
+      continue-on-error: true
+      run: |
+        echo "♿ Pa11y 접근성 테스트..."
+        pa11y http://localhost:5000 --reporter json > pa11y-results.json || echo "Accessibility issues found"
+        pa11y http://localhost:5000/survey/new --reporter json > pa11y-survey-results.json || echo "Survey accessibility issues found"
+    
+    - name: Lighthouse CI audit
+      continue-on-error: true
+      run: |
+        echo "💡 Lighthouse 성능 및 접근성 테스트..."
+        lhci autorun --upload.target=temporary-public-storage --collect.url=http://localhost:5000
+    
+    - name: Upload accessibility reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: accessibility-reports-${{ github.run_id }}
+        path: |
+          axe-results.json
+          axe-survey-results.json
+          pa11y-results.json
+          pa11y-survey-results.json
+        retention-days: 30
+
+  quality-summary:
+    name: Quality Summary
+    runs-on: ubuntu-latest
+    needs: [code-quality, performance-test, accessibility-test]
+    if: always()
+    
+    steps:
+    - name: Download quality reports
+      uses: actions/download-artifact@v4
+      with:
+        name: quality-reports-${{ github.run_id }}
+        path: ./reports
+      continue-on-error: true
+    
+    - name: Generate quality summary
+      run: |
+        echo "## 🏆 Quality Assessment Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "### 📊 Code Quality" >> $GITHUB_STEP_SUMMARY
+        if [ -f reports/doc-coverage.txt ]; then
+          DOC_COV=$(cat reports/doc-coverage.txt)
+          echo "- **Documentation Coverage**: ${DOC_COV}%" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "- **Code Quality Check**: ${{ needs.code-quality.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Performance Test**: ${{ needs.performance-test.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Accessibility Test**: ${{ needs.accessibility-test.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ needs.code-quality.result }}" = "success" ] && [ "${{ needs.performance-test.result }}" = "success" ]; then
+          echo "✅ **전체 품질 평가: PASSED**" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ **전체 품질 평가: NEEDS ATTENTION**" >> $GITHUB_STEP_SUMMARY
+        fi

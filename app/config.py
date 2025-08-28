@@ -42,20 +42,15 @@ class Config:
     ITEMS_PER_PAGE = 20
     
     # Dynamic version loading
-    @classmethod
-    def get_version(cls):
+    @property
+    def APP_VERSION(self):
         """Load version from VERSION file"""
-        version_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'VERSION')
+        version_file = os.path.join(os.path.dirname(__file__), 'VERSION')
         try:
             with open(version_file, 'r') as f:
                 return f.read().strip()
         except:
-            return '1.0.0'
-    
-    @property
-    def APP_VERSION(self):
-        """Dynamic version property"""
-        return self.get_version()
+            return '1.1.2'
     
     # Admin
     ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME', 'admin')

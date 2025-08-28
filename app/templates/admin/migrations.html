@@ -1,0 +1,419 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .migration-item {
+        border-left: 4px solid #ddd;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        background: #f8f9fa;
+        border-radius: 0 0.25rem 0.25rem 0;
+    }
+    
+    .migration-item.applied {
+        border-left-color: #28a745;
+        background: #f8fff8;
+    }
+    
+    .migration-item.pending {
+        border-left-color: #ffc107;
+        background: #fffef8;
+    }
+    
+    .migration-item.failed {
+        border-left-color: #dc3545;
+        background: #fff8f8;
+    }
+    
+    .migration-status {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    
+    .status-applied {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    
+    .status-pending {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+    
+    .status-failed {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
+    .btn-group-sm > .btn, .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+    
+    .migration-actions {
+        margin-top: 0.5rem;
+    }
+    
+    .loading {
+        opacity: 0.6;
+        pointer-events: none;
+    }
+    
+    .summary-card {
+        border: none;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- 페이지 헤더 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">데이터베이스 마이그레이션</h1>
+            <p class="text-muted mb-0">데이터베이스 스키마 변경 내역을 관리합니다</p>
+        </div>
+        <div>
+            <button class="btn btn-outline-secondary btn-sm" onclick="refreshStatus()">
+                <i class="fas fa-sync-alt"></i> 새로고침
+            </button>
+            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createMigrationModal">
+                <i class="fas fa-plus"></i> 새 마이그레이션
+            </button>
+        </div>
+    </div>
+    
+    <!-- 상태 요약 -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card summary-card text-center">
+                <div class="card-body">
+                    <h5 class="card-title text-primary">{{ status.total_migrations }}</h5>
+                    <p class="card-text text-muted">전체 마이그레이션</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card summary-card text-center">
+                <div class="card-body">
+                    <h5 class="card-title text-success">{{ status.applied_count }}</h5>
+                    <p class="card-text text-muted">적용 완료</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card summary-card text-center">
+                <div class="card-body">
+                    <h5 class="card-title text-warning">{{ status.pending_count }}</h5>
+                    <p class="card-text text-muted">대기 중</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card summary-card text-center">
+                <div class="card-body">
+                    {% if status.pending_count > 0 %}
+                    <button class="btn btn-success btn-sm" onclick="runMigrations()">
+                        <i class="fas fa-play"></i> 마이그레이션 실행
+                    </button>
+                    {% else %}
+                    <span class="badge bg-success">최신 상태</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 마이그레이션 목록 -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">마이그레이션 내역</h5>
+        </div>
+        <div class="card-body" id="migrations-list">
+            {% if status.migrations %}
+                {% for migration in status.migrations %}
+                <div class="migration-item {% if migration.applied %}applied{% else %}pending{% endif %}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <div class="d-flex align-items-center mb-2">
+                                <h6 class="mb-0 me-3">
+                                    {% if migration.applied %}
+                                        <i class="fas fa-check-circle text-success me-1"></i>
+                                    {% else %}
+                                        <i class="fas fa-clock text-warning me-1"></i>
+                                    {% endif %}
+                                    {{ migration.version }}
+                                </h6>
+                                <span class="migration-status {% if migration.applied %}status-applied{% else %}status-pending{% endif %}">
+                                    {% if migration.applied %}적용됨{% else %}대기 중{% endif %}
+                                </span>
+                                {% if migration.applied and not migration.get('success', True) %}
+                                    <span class="migration-status status-failed ms-2">실패</span>
+                                {% endif %}
+                            </div>
+                            <p class="mb-1">{{ migration.description }}</p>
+                            <small class="text-muted">
+                                파일: {{ migration.filename }}
+                                {% if migration.applied and migration.get('executed_at') %}
+                                    | 실행: {{ migration.executed_at }}
+                                {% endif %}
+                                {% if migration.applied and migration.get('execution_time') %}
+                                    | 소요시간: {{ "%.3f"|format(migration.execution_time) }}초
+                                {% endif %}
+                            </small>
+                            {% if migration.applied and migration.get('error_message') %}
+                                <div class="mt-2">
+                                    <small class="text-danger">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                        오류: {{ migration.error_message }}
+                                    </small>
+                                </div>
+                            {% endif %}
+                        </div>
+                        {% if migration.applied %}
+                        <div class="migration-actions">
+                            <button class="btn btn-outline-danger btn-sm" 
+                                    onclick="rollbackMigration('{{ migration.version }}')"
+                                    title="롤백">
+                                <i class="fas fa-undo"></i>
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-database text-muted" style="font-size: 3rem;"></i>
+                    <p class="text-muted mt-3">마이그레이션이 없습니다.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- 새 마이그레이션 생성 모달 -->
+<div class="modal fade" id="createMigrationModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">새 마이그레이션 생성</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createMigrationForm">
+                    <div class="mb-3">
+                        <label for="migrationDescription" class="form-label">마이그레이션 설명</label>
+                        <input type="text" class="form-control" id="migrationDescription" 
+                               placeholder="예: Add user preferences table" required>
+                        <div class="form-text">
+                            스키마 변경 내용을 간단히 설명해주세요.
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <button type="button" class="btn btn-primary" onclick="createMigration()">생성</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 롤백 확인 모달 -->
+<div class="modal fade" id="rollbackModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">마이그레이션 롤백</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>주의:</strong> 마이그레이션 롤백은 데이터 손실을 초래할 수 있습니다.
+                </div>
+                <p>마이그레이션 <strong id="rollback-version"></strong>을(를) 롤백하시겠습니까?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <button type="button" class="btn btn-danger" id="confirmRollback">롤백</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentRollbackVersion = null;
+
+// 상태 새로고침
+function refreshStatus() {
+    location.reload();
+}
+
+// 마이그레이션 실행
+function runMigrations() {
+    if (!confirm('대기 중인 모든 마이그레이션을 실행하시겠습니까?')) {
+        return;
+    }
+    
+    const button = event.target;
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 실행 중...';
+    button.disabled = true;
+    
+    fetch('{{ url_for("migration.api_run_migrations") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('success', data.message);
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showAlert('danger', data.error || '마이그레이션 실행 중 오류가 발생했습니다.');
+        }
+    })
+    .catch(error => {
+        showAlert('danger', '네트워크 오류가 발생했습니다.');
+        console.error('Error:', error);
+    })
+    .finally(() => {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    });
+}
+
+// 마이그레이션 롤백
+function rollbackMigration(version) {
+    currentRollbackVersion = version;
+    document.getElementById('rollback-version').textContent = version;
+    
+    const rollbackModal = new bootstrap.Modal(document.getElementById('rollbackModal'));
+    rollbackModal.show();
+}
+
+// 롤백 확인
+document.getElementById('confirmRollback').addEventListener('click', function() {
+    if (!currentRollbackVersion) return;
+    
+    const button = this;
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 롤백 중...';
+    button.disabled = true;
+    
+    fetch('{{ url_for("migration.api_rollback_migration") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({
+            version: currentRollbackVersion
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('success', data.message);
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showAlert('danger', data.error || '롤백 중 오류가 발생했습니다.');
+        }
+        
+        // 모달 닫기
+        bootstrap.Modal.getInstance(document.getElementById('rollbackModal')).hide();
+    })
+    .catch(error => {
+        showAlert('danger', '네트워크 오류가 발생했습니다.');
+        console.error('Error:', error);
+    })
+    .finally(() => {
+        button.innerHTML = originalText;
+        button.disabled = false;
+        currentRollbackVersion = null;
+    });
+});
+
+// 새 마이그레이션 생성
+function createMigration() {
+    const description = document.getElementById('migrationDescription').value.trim();
+    
+    if (!description) {
+        showAlert('warning', '마이그레이션 설명을 입력해주세요.');
+        return;
+    }
+    
+    const button = event.target;
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 생성 중...';
+    button.disabled = true;
+    
+    fetch('{{ url_for("migration.api_create_migration") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({
+            description: description
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('success', data.message);
+            setTimeout(() => location.reload(), 1000);
+            
+            // 모달 닫기
+            bootstrap.Modal.getInstance(document.getElementById('createMigrationModal')).hide();
+        } else {
+            showAlert('danger', data.error || '마이그레이션 생성 중 오류가 발생했습니다.');
+        }
+    })
+    .catch(error => {
+        showAlert('danger', '네트워크 오류가 발생했습니다.');
+        console.error('Error:', error);
+    })
+    .finally(() => {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    });
+}
+
+// 알림 표시
+function showAlert(type, message) {
+    const alertHtml = `
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    
+    // 기존 알림 제거
+    const existingAlerts = document.querySelectorAll('.alert');
+    existingAlerts.forEach(alert => alert.remove());
+    
+    // 새 알림 추가
+    const container = document.querySelector('.container-fluid');
+    container.insertAdjacentHTML('afterbegin', alertHtml);
+}
+
+// 폼 초기화 (모달 닫힐 때)
+document.getElementById('createMigrationModal').addEventListener('hidden.bs.modal', function() {
+    document.getElementById('createMigrationForm').reset();
+});
+</script>
+{% endblock %}

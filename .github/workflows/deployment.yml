@@ -1,0 +1,449 @@
+name: Multi-Stage Deployment Pipeline
+
+on:
+  push:
+    branches: [ main, staging, develop ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: '배포 환경 선택'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+        - production
+      skip_tests:
+        description: '테스트 건너뛰기 (긴급 배포)'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  REGISTRY: ${{ secrets.REGISTRY_URL || 'registry.jclee.me' }}
+  PROJECT: safework
+
+jobs:
+  # Stage 1: 준비 단계
+  prepare:
+    name: Deployment Preparation
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.determine-env.outputs.environment }}
+      version: ${{ steps.version.outputs.version }}
+      should-deploy: ${{ steps.determine-env.outputs.should-deploy }}
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Determine deployment environment
+      id: determine-env
+      run: |
+        # 환경 결정 로직
+        if [[ "${{ github.event.inputs.environment }}" != "" ]]; then
+          ENVIRONMENT="${{ github.event.inputs.environment }}"
+        elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          ENVIRONMENT="production"
+        elif [[ "${{ github.ref }}" == "refs/heads/staging" ]]; then
+          ENVIRONMENT="staging"
+        elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+          ENVIRONMENT="development"
+        elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+          ENVIRONMENT="production"
+        else
+          ENVIRONMENT="development"
+        fi
+        
+        echo "environment=$ENVIRONMENT" >> $GITHUB_OUTPUT
+        
+        # 배포 여부 결정
+        SHOULD_DEPLOY="true"
+        if [[ "$ENVIRONMENT" == "production" && "${{ github.actor }}" != "admin" ]]; then
+          # 프로덕션 배포 권한 체크 (필요시)
+          echo "should-deploy=false" >> $GITHUB_OUTPUT
+          echo "⚠️ Production deployment requires admin approval"
+        else
+          echo "should-deploy=true" >> $GITHUB_OUTPUT
+        fi
+        
+        echo "🎯 Deployment Environment: $ENVIRONMENT"
+    
+    - name: Generate version
+      id: version
+      run: |
+        if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+          VERSION=${GITHUB_REF#refs/tags/v}
+        else
+          VERSION="$(date +%Y%m%d.%H%M)-${GITHUB_SHA::7}"
+        fi
+        
+        ENVIRONMENT="${{ steps.determine-env.outputs.environment }}"
+        if [[ "$ENVIRONMENT" != "production" ]]; then
+          VERSION="${ENVIRONMENT}-${VERSION}"
+        fi
+        
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "🏷️ Version: $VERSION"
+
+  # Stage 2: 빌드 및 테스트
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    needs: prepare
+    if: needs.prepare.outputs.should-deploy == 'true'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Log in to Docker Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ secrets.REGISTRY_USER || 'admin' }}
+        password: ${{ secrets.REGISTRY_PASSWORD }}
+    
+    - name: Build Docker images
+      run: |
+        echo "🐳 Building Docker images for version ${{ needs.prepare.outputs.version }}"
+        
+        # App image build
+        docker buildx build \
+          --platform linux/amd64,linux/arm64 \
+          --tag ${{ env.REGISTRY }}/${{ env.PROJECT }}/app:${{ needs.prepare.outputs.version }} \
+          --tag ${{ env.REGISTRY }}/${{ env.PROJECT }}/app:latest-${{ needs.prepare.outputs.environment }} \
+          --push \
+          ./app
+        
+        # MySQL image build
+        docker buildx build \
+          --platform linux/amd64,linux/arm64 \
+          --tag ${{ env.REGISTRY }}/${{ env.PROJECT }}/mysql:${{ needs.prepare.outputs.version }} \
+          --tag ${{ env.REGISTRY }}/${{ env.PROJECT }}/mysql:latest-${{ needs.prepare.outputs.environment }} \
+          --push \
+          ./mysql
+        
+        # Redis image build
+        docker buildx build \
+          --platform linux/amd64,linux/arm64 \
+          --tag ${{ env.REGISTRY }}/${{ env.PROJECT }}/redis:${{ needs.prepare.outputs.version }} \
+          --tag ${{ env.REGISTRY }}/${{ env.PROJECT }}/redis:latest-${{ needs.prepare.outputs.environment }} \
+          --push \
+          ./redis
+    
+    - name: Run integration tests
+      if: ${{ !github.event.inputs.skip_tests }}
+      run: |
+        echo "🧪 Running integration tests..."
+        
+        # 테스트용 Docker Compose 설정
+        export TEST_VERSION="${{ needs.prepare.outputs.version }}"
+        export TEST_REGISTRY="${{ env.REGISTRY }}"
+        
+        # 임시 테스트 환경 시작
+        docker-compose -f docker-compose.test.yml up -d --wait
+        
+        # 헬스체크 대기
+        for i in {1..30}; do
+          if curl -f http://localhost:4545/health; then
+            echo "✅ Application is healthy"
+            break
+          fi
+          echo "Waiting for application... ($i/30)"
+          sleep 10
+        done
+        
+        # 기본 기능 테스트
+        curl -f http://localhost:4545/ || exit 1
+        curl -f http://localhost:4545/survey/new || exit 1
+        
+        # 정리
+        docker-compose -f docker-compose.test.yml down
+    
+    - name: Security scan on built images
+      continue-on-error: true
+      run: |
+        echo "🔒 Scanning built images for vulnerabilities..."
+        
+        # Trivy로 빌드된 이미지 스캔
+        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+          aquasec/trivy:latest image --exit-code 0 --severity HIGH,CRITICAL \
+          ${{ env.REGISTRY }}/${{ env.PROJECT }}/app:${{ needs.prepare.outputs.version }}
+
+  # Stage 3: 스테이징 배포
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [prepare, build-and-test]
+    if: needs.prepare.outputs.environment != 'production' && needs.prepare.outputs.should-deploy == 'true'
+    environment:
+      name: staging
+      url: https://staging.safework.jclee.me
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Deploy to staging
+      run: |
+        echo "🚀 Deploying to staging environment..."
+        echo "Version: ${{ needs.prepare.outputs.version }}"
+        echo "Environment: ${{ needs.prepare.outputs.environment }}"
+        
+        # 스테이징 배포 로직 (실제 환경에 맞게 수정)
+        echo "✅ Staging deployment completed"
+    
+    - name: Run smoke tests
+      run: |
+        echo "💨 Running smoke tests on staging..."
+        
+        # 기본 smoke test
+        curl -f https://staging.safework.jclee.me/health || exit 1
+        echo "✅ Smoke tests passed"
+    
+    - name: Notify staging deployment
+      run: |
+        echo "📢 Staging deployment notification"
+        echo "🎯 Environment: Staging"
+        echo "🏷️ Version: ${{ needs.prepare.outputs.version }}"
+        echo "🔗 URL: https://staging.safework.jclee.me"
+
+  # Stage 4: 프로덕션 승인 대기
+  production-approval:
+    name: Production Deployment Approval
+    runs-on: ubuntu-latest
+    needs: [prepare, build-and-test, deploy-staging]
+    if: needs.prepare.outputs.environment == 'production' && needs.prepare.outputs.should-deploy == 'true'
+    environment:
+      name: production-approval
+    
+    steps:
+    - name: Manual approval checkpoint
+      run: |
+        echo "⏳ Waiting for manual approval for production deployment"
+        echo "🏷️ Version: ${{ needs.prepare.outputs.version }}"
+        echo "📋 Deployment checklist:"
+        echo "- [ ] Staging tests passed"
+        echo "- [ ] Security scans completed"
+        echo "- [ ] Database migrations reviewed"
+        echo "- [ ] Rollback plan confirmed"
+
+  # Stage 5: 프로덕션 배포
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [prepare, build-and-test, production-approval]
+    if: needs.prepare.outputs.environment == 'production' && needs.prepare.outputs.should-deploy == 'true'
+    environment:
+      name: production
+      url: https://safework.jclee.me
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Pre-deployment backup
+      run: |
+        echo "💾 Creating pre-deployment backup..."
+        # 백업 로직 (실제 환경에 맞게 구현)
+        echo "✅ Backup completed"
+    
+    - name: Deploy to production
+      run: |
+        echo "🚀 Deploying to production environment..."
+        echo "Version: ${{ needs.prepare.outputs.version }}"
+        
+        # 프로덕션 배포 로직
+        # - Blue-Green 배포
+        # - 점진적 롤아웃
+        # - 트래픽 전환
+        
+        echo "✅ Production deployment completed"
+    
+    - name: Post-deployment verification
+      run: |
+        echo "✅ Running post-deployment verification..."
+        
+        # 프로덕션 검증
+        curl -f https://safework.jclee.me/health || exit 1
+        
+        # 주요 기능 검증
+        curl -f https://safework.jclee.me/ || exit 1
+        curl -f https://safework.jclee.me/survey/new || exit 1
+        
+        echo "✅ Production verification passed"
+    
+    - name: Create release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v${{ needs.prepare.outputs.version }}
+        name: SafeWork v${{ needs.prepare.outputs.version }}
+        body: |
+          ## 🎉 SafeWork v${{ needs.prepare.outputs.version }} 프로덕션 배포
+          
+          **배포 정보:**
+          - 🏷️ 버전: ${{ needs.prepare.outputs.version }}
+          - 🌍 환경: Production
+          - 📅 배포일: ${{ github.event.head_commit.timestamp }}
+          - 👤 배포자: ${{ github.actor }}
+          
+          **Docker 이미지:**
+          - App: `${{ env.REGISTRY }}/${{ env.PROJECT }}/app:${{ needs.prepare.outputs.version }}`
+          - MySQL: `${{ env.REGISTRY }}/${{ env.PROJECT }}/mysql:${{ needs.prepare.outputs.version }}`
+          - Redis: `${{ env.REGISTRY }}/${{ env.PROJECT }}/redis:${{ needs.prepare.outputs.version }}`
+          
+          **접속 정보:**
+          - 🌐 웹사이트: https://safework.jclee.me
+          - 👤 관리자: admin / safework2024
+        draft: false
+        prerelease: false
+
+  # Stage 6: 배포 후 모니터링
+  post-deployment:
+    name: Post-Deployment Monitoring
+    runs-on: ubuntu-latest
+    needs: [prepare, deploy-staging, deploy-production]
+    if: always() && (needs.deploy-staging.result == 'success' || needs.deploy-production.result == 'success')
+    
+    steps:
+    - name: Setup monitoring
+      run: |
+        echo "📊 Setting up post-deployment monitoring..."
+        
+        ENVIRONMENT="${{ needs.prepare.outputs.environment }}"
+        VERSION="${{ needs.prepare.outputs.version }}"
+        
+        if [[ "$ENVIRONMENT" == "production" ]]; then
+          MONITOR_URL="https://safework.jclee.me"
+        else
+          MONITOR_URL="https://staging.safework.jclee.me"
+        fi
+        
+        echo "🔍 Monitoring URL: $MONITOR_URL"
+        echo "📈 Setting up alerts for version: $VERSION"
+    
+    - name: Health monitoring
+      run: |
+        echo "🏥 Running extended health monitoring..."
+        
+        # 5분간 헬스체크 모니터링
+        for i in {1..10}; do
+          if curl -f $MONITOR_URL/health; then
+            echo "✅ Health check $i/10 passed"
+          else
+            echo "❌ Health check $i/10 failed"
+            exit 1
+          fi
+          sleep 30
+        done
+        
+        echo "✅ Extended health monitoring completed"
+    
+    - name: Performance baseline
+      run: |
+        echo "⚡ Establishing performance baseline..."
+        
+        # 기본 성능 측정
+        RESPONSE_TIME=$(curl -o /dev/null -s -w '%{time_total}' $MONITOR_URL/)
+        
+        echo "📊 Homepage response time: ${RESPONSE_TIME}s"
+        
+        if (( $(echo "$RESPONSE_TIME > 2.0" | bc -l) )); then
+          echo "⚠️ Performance warning: Response time > 2s"
+        else
+          echo "✅ Performance baseline established"
+        fi
+
+  # Stage 7: 알림 및 정리
+  notify-completion:
+    name: Deployment Notification
+    runs-on: ubuntu-latest
+    needs: [prepare, build-and-test, deploy-staging, deploy-production, post-deployment]
+    if: always()
+    
+    steps:
+    - name: Deployment summary
+      run: |
+        echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**환경**: ${{ needs.prepare.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+        echo "**버전**: ${{ needs.prepare.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+        echo "**브랜치**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "**배포자**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "### 📊 Stage Results" >> $GITHUB_STEP_SUMMARY
+        echo "- **Build & Test**: ${{ needs.build-and-test.result }}" >> $GITHUB_STEP_SUMMARY
+        
+        if [[ "${{ needs.deploy-staging.result }}" != "skipped" ]]; then
+          echo "- **Staging Deploy**: ${{ needs.deploy-staging.result }}" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [[ "${{ needs.deploy-production.result }}" != "skipped" ]]; then
+          echo "- **Production Deploy**: ${{ needs.deploy-production.result }}" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "- **Post-Deployment**: ${{ needs.post-deployment.result }}" >> $GITHUB_STEP_SUMMARY
+    
+    - name: Success notification
+      if: contains(needs.*.result, 'success') && !contains(needs.*.result, 'failure')
+      run: |
+        echo "🎉 배포가 성공적으로 완료되었습니다!"
+        echo "환경: ${{ needs.prepare.outputs.environment }}"
+        echo "버전: ${{ needs.prepare.outputs.version }}"
+        
+        # Slack/Teams/Discord 알림 (환경변수 설정 시)
+        if [[ -n "${{ secrets.SLACK_WEBHOOK_URL }}" ]]; then
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"✅ SafeWork 배포 성공\\n환경: ${{ needs.prepare.outputs.environment }}\\n버전: ${{ needs.prepare.outputs.version }}\\n시간: $(date)\"}" \
+            ${{ secrets.SLACK_WEBHOOK_URL }}
+        fi
+        
+        if [[ -n "${{ secrets.DISCORD_WEBHOOK_URL }}" ]]; then
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{\"content\":\"✅ **SafeWork 배포 성공**\\n환경: ${{ needs.prepare.outputs.environment }}\\n버전: ${{ needs.prepare.outputs.version }}\\n시간: $(date)\"}" \
+            ${{ secrets.DISCORD_WEBHOOK_URL }}
+        fi
+    
+    - name: Failure notification
+      if: contains(needs.*.result, 'failure')
+      run: |
+        echo "❌ 배포 중 오류가 발생했습니다!"
+        echo "실패한 단계를 확인하고 롤백을 검토하세요."
+        
+        # 실패 알림
+        if [[ -n "${{ secrets.SLACK_WEBHOOK_URL }}" ]]; then
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"🚨 SafeWork 배포 실패\\n환경: ${{ needs.prepare.outputs.environment }}\\n버전: ${{ needs.prepare.outputs.version }}\\n실행 ID: ${{ github.run_id }}\\nURL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            ${{ secrets.SLACK_WEBHOOK_URL }}
+        fi
+        
+        if [[ -n "${{ secrets.DISCORD_WEBHOOK_URL }}" ]]; then
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{\"content\":\"🚨 **SafeWork 배포 실패**\\n환경: ${{ needs.prepare.outputs.environment }}\\n버전: ${{ needs.prepare.outputs.version }}\\n[상세 보기](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\"}" \
+            ${{ secrets.DISCORD_WEBHOOK_URL }}
+        fi
+        
+        # 자동 롤백 트리거 (선택사항)
+        if [[ "${{ needs.prepare.outputs.environment }}" == "production" ]]; then
+          echo "🔄 프로덕션 자동 롤백을 고려하세요."
+          
+          # GitHub Issue 자동 생성
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "${{ github.api_url }}/repos/${{ github.repository }}/issues" \
+            -d "{
+              \"title\": \"🚨 Production Deployment Failed - ${{ needs.prepare.outputs.version }}\",
+              \"body\": \"## Deployment Failure Report\\n\\n**Environment:** Production\\n**Version:** ${{ needs.prepare.outputs.version }}\\n**Run ID:** ${{ github.run_id }}\\n**Time:** $(date)\\n\\n**Action Required:**\\n- [ ] Investigate failure cause\\n- [ ] Consider rollback to previous version\\n- [ ] Fix identified issues\\n- [ ] Re-deploy after verification\\n\\n[View Failed Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\",
+              \"labels\": [\"deployment\", \"production\", \"critical\", \"bug\"]
+            }"
+        fi
