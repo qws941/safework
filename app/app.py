@@ -1,4 +1,5 @@
 import os
+import time
 from datetime import datetime
 
 import redis
@@ -15,6 +16,9 @@ from models import AuditLog, Survey, SurveyStatistics, User, db
 def create_app(config_name=None):
     """Application factory"""
     app = Flask(__name__)
+    
+    # 시스템 시작 시간 저장
+    app.start_time = time.time()
 
     # Load configuration
     config_name = config_name or os.environ.get("FLASK_CONFIG", "production")
@@ -126,7 +130,25 @@ def create_app(config_name=None):
         except:
             app_version = "1.1.2"
 
-        return {"app_name": app.config["APP_NAME"], "app_version": app_version}
+        # 시스템 업타임 계산
+        uptime_seconds = time.time() - app.start_time
+        uptime_days = int(uptime_seconds // 86400)
+        uptime_hours = int((uptime_seconds % 86400) // 3600)
+        uptime_minutes = int((uptime_seconds % 3600) // 60)
+        
+        if uptime_days > 0:
+            uptime_str = f"{uptime_days}일 {uptime_hours}시간 {uptime_minutes}분"
+        elif uptime_hours > 0:
+            uptime_str = f"{uptime_hours}시간 {uptime_minutes}분"
+        else:
+            uptime_str = f"{uptime_minutes}분"
+
+        return {
+            "app_name": app.config["APP_NAME"], 
+            "app_version": app_version,
+            "system_uptime": uptime_str,
+            "start_time": datetime.fromtimestamp(app.start_time).strftime("%Y-%m-%d %H:%M:%S")
+        }
 
     # Audit logging
     @app.before_request

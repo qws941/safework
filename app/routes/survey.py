@@ -30,21 +30,58 @@ def musculoskeletal_symptom_survey():
 
         survey = Survey(
             user_id=user_id,
+            form_type="001_musculoskeletal_symptom_survey",
+            # I. 기본 정보
             employee_number=request.form.get("employee_number"),
             name=request.form.get("name"),
-            department=request.form.get("department"),
-            position=request.form.get("position"),
             age=request.form.get("age", type=int),
             gender=request.form.get("gender"),
-            work_years=request.form.get("work_years", type=float),
+            work_years=request.form.get("work_years", type=int),
             work_months=request.form.get("work_months", type=int),
-            # 작업 정보
-            work_type=request.form.get("work_type"),
-            work_hours_per_day=request.form.get("work_hours_per_day", type=float),
+            department=request.form.get("department"),
+            line=request.form.get("line"),
+            work_name=request.form.get("work_name"),
+            marriage_status=request.form.get("marriage_status"),
+            # 현재하고 있는 작업
+            current_work_details=request.form.get("current_work_details"),
+            current_work_years=request.form.get("current_work_years", type=int),
+            current_work_months=request.form.get("current_work_months", type=int),
+            # 1일 근무시간 및 휴식
+            work_hours_per_day=request.form.get("work_hours_per_day", type=int),
             break_time_minutes=request.form.get("break_time_minutes", type=int),
-            overtime_hours_per_week=request.form.get(
-                "overtime_hours_per_week", type=float
-            ),
+            break_frequency=request.form.get("break_frequency", type=int),
+            # 현작업 하기 전 작업
+            previous_work_details=request.form.get("previous_work_details"),
+            previous_work_years=request.form.get("previous_work_years", type=int),
+            previous_work_months=request.form.get("previous_work_months", type=int),
+            # 1. 여가 및 취미활동
+            hobby_computer=request.form.get("hobby_computer") == "on",
+            hobby_instrument=request.form.get("hobby_instrument") == "on",
+            hobby_knitting=request.form.get("hobby_knitting") == "on",
+            hobby_racket_sports=request.form.get("hobby_racket_sports") == "on",
+            hobby_ball_sports=request.form.get("hobby_ball_sports") == "on",
+            hobby_none=request.form.get("hobby_none") == "on",
+            # 2. 가사노동시간
+            housework_hours=request.form.get("housework_hours"),
+            # 3. 진단받은 질병
+            disease_rheumatoid=request.form.get("disease_rheumatoid") == "on",
+            disease_diabetes=request.form.get("disease_diabetes") == "on",
+            disease_lupus=request.form.get("disease_lupus") == "on",
+            disease_gout=request.form.get("disease_gout") == "on",
+            disease_alcoholism=request.form.get("disease_alcoholism") == "on",
+            disease_status=request.form.get("disease_status"),
+            # 4. 과거 사고
+            past_accident=request.form.get("past_accident") == "예",
+            accident_hand=request.form.get("accident_hand") == "on",
+            accident_arm=request.form.get("accident_arm") == "on", 
+            accident_shoulder=request.form.get("accident_shoulder") == "on",
+            accident_neck=request.form.get("accident_neck") == "on",
+            accident_waist=request.form.get("accident_waist") == "on",
+            accident_leg=request.form.get("accident_leg") == "on",
+            # 5. 육체적 부담 정도
+            physical_burden=request.form.get("physical_burden"),
+            # II. 근골격계 증상
+            has_symptoms=request.form.get("has_symptoms") == "예",
             # 작업 형태
             work_posture=json.dumps(request.form.getlist("work_posture")),
             repetitive_motion=json.dumps(request.form.getlist("repetitive_motion")),
