@@ -95,6 +95,78 @@ def cmd_validate(args):
     print(f"✅ 빌드 타입: {info['build_type']}")
 
 
+def cmd_tag_create(args):
+    """태그 생성 명령"""
+    vm = VersionManager()
+    
+    result = vm.create_tag(args.name, args.message)
+    if result:
+        print(f"✅ 태그가 성공적으로 생성되었습니다.")
+        
+        # 생성된 태그 정보 표시
+        git_info = vm.get_git_info()
+        current_tag = git_info['tag']
+        if current_tag != 'unknown':
+            print(f"📌 태그: {current_tag}")
+            
+        if args.push:
+            push_result = vm.push_tag(current_tag)
+            if push_result:
+                print(f"🚀 태그가 원격 저장소로 푸시되었습니다.")
+            else:
+                print(f"❌ 원격 푸시에 실패했습니다.")
+    else:
+        print(f"❌ 태그 생성에 실패했습니다.")
+
+
+def cmd_tag_list(args):
+    """태그 목록 명령"""
+    vm = VersionManager()
+    tags = vm.list_tags(args.limit)
+    
+    if tags:
+        print(f"📋 최근 태그 목록 (최대 {args.limit}개):\n")
+        for i, tag in enumerate(tags, 1):
+            tag_info = vm.get_tag_info(tag)
+            print(f"{i:2}. {tag}")
+            print(f"    🔗 커밋: {tag_info['commit']}")
+            print(f"    📅 날짜: {tag_info['date']}")
+            if tag_info['message'] and tag_info['message'] != 'unknown':
+                print(f"    💬 메시지: {tag_info['message']}")
+            print()
+    else:
+        print("📋 태그가 없습니다.")
+
+
+def cmd_tag_info(args):
+    """태그 정보 명령"""
+    vm = VersionManager()
+    tag_info = vm.get_tag_info(args.tag_name)
+    
+    print(f"📌 태그: {tag_info['tag']}")
+    print(f"🔗 커밋: {tag_info['commit']}")
+    print(f"📅 날짜: {tag_info['date']}")
+    if tag_info['message'] and tag_info['message'] != 'unknown':
+        print(f"💬 메시지: {tag_info['message']}")
+
+
+def cmd_tag_delete(args):
+    """태그 삭제 명령"""
+    vm = VersionManager()
+    
+    print(f"⚠️  태그 '{args.tag_name}'를 삭제하시겠습니까?")
+    confirm = input("삭제하려면 'yes'를 입력하세요: ")
+    
+    if confirm.lower() == 'yes':
+        result = vm.delete_tag(args.tag_name, args.remote)
+        if result:
+            print(f"✅ 태그 '{args.tag_name}'가 삭제되었습니다.")
+        else:
+            print(f"❌ 태그 삭제에 실패했습니다.")
+    else:
+        print("🚫 태그 삭제가 취소되었습니다.")
+
+
 def main():
     parser = argparse.ArgumentParser(description='SafeWork 버전 관리 CLI')
     subparsers = parser.add_subparsers(dest='command', help='사용 가능한 명령어')
@@ -124,6 +196,33 @@ def main():
     # validate 명령어
     validate_parser = subparsers.add_parser('validate', help='버전 시스템 검증')
     validate_parser.set_defaults(func=cmd_validate)
+    
+    # tag 명령어
+    tag_parser = subparsers.add_parser('tag', help='Git 태그 관리')
+    tag_subparsers = tag_parser.add_subparsers(dest='tag_command', help='태그 명령어')
+    
+    # tag create
+    tag_create = tag_subparsers.add_parser('create', help='새 태그 생성')
+    tag_create.add_argument('--name', '-n', help='태그 이름 (미지정 시 자동 생성)')
+    tag_create.add_argument('--message', '-m', help='태그 메시지')
+    tag_create.add_argument('--push', action='store_true', help='생성 후 원격으로 푸시')
+    tag_create.set_defaults(func=cmd_tag_create)
+    
+    # tag list
+    tag_list = tag_subparsers.add_parser('list', help='태그 목록')
+    tag_list.add_argument('--limit', '-l', type=int, default=10, help='표시할 태그 개수')
+    tag_list.set_defaults(func=cmd_tag_list)
+    
+    # tag info
+    tag_info = tag_subparsers.add_parser('info', help='특정 태그 정보')
+    tag_info.add_argument('tag_name', help='태그 이름')
+    tag_info.set_defaults(func=cmd_tag_info)
+    
+    # tag delete  
+    tag_delete = tag_subparsers.add_parser('delete', help='태그 삭제')
+    tag_delete.add_argument('tag_name', help='삭제할 태그 이름')
+    tag_delete.add_argument('--remote', action='store_true', help='원격 태그도 삭제')
+    tag_delete.set_defaults(func=cmd_tag_delete)
     
     args = parser.parse_args()
     

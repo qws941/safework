@@ -153,3 +153,130 @@ def export_version_info():
     except Exception as e:
         flash(f'내보내기 중 오류가 발생했습니다: {str(e)}', 'error')
         return redirect(url_for('version_admin.index'))
+
+
+# === Git 태그 관리 API ===
+
+@version_admin_bp.route('/api/tags', methods=['GET'])
+@login_required
+@admin_required
+def api_tags_list():
+    """태그 목록 API"""
+    try:
+        from version_manager import VersionManager
+        vm = VersionManager()
+        
+        limit = request.args.get('limit', 10, type=int)
+        tags = vm.list_tags(limit)
+        
+        # 각 태그의 상세 정보 추가
+        tag_list = []
+        for tag in tags:
+            tag_info = vm.get_tag_info(tag)
+            tag_list.append(tag_info)
+        
+        return jsonify({
+            'success': True,
+            'tags': tag_list,
+            'count': len(tag_list)
+        })
+        
+    except ImportError:
+        return jsonify({'success': False, 'error': '버전 관리 모듈을 가져올 수 없습니다.'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@version_admin_bp.route('/api/tags', methods=['POST'])
+@login_required
+@admin_required
+def api_tags_create():
+    """태그 생성 API"""
+    try:
+        from version_manager import VersionManager
+        vm = VersionManager()
+        
+        data = request.get_json() or {}
+        tag_name = data.get('name')
+        message = data.get('message', f'Release created by {current_user.username}')
+        push_remote = data.get('push', False)
+        
+        # 태그 생성
+        success = vm.create_tag(tag_name, message)
+        if not success:
+            return jsonify({'success': False, 'error': '태그 생성에 실패했습니다.'})
+        
+        # 원격 푸시 (요청한 경우)
+        if push_remote:
+            git_info = vm.get_git_info()
+            current_tag = git_info['tag']
+            if current_tag != 'unknown':
+                push_success = vm.push_tag(current_tag)
+                if not push_success:
+                    return jsonify({
+                        'success': True, 
+                        'warning': '태그는 생성되었으나 원격 푸시에 실패했습니다.',
+                        'tag': current_tag
+                    })
+        
+        return jsonify({
+            'success': True,
+            'message': '태그가 성공적으로 생성되었습니다.',
+            'tag': git_info['tag'] if 'git_info' in locals() else 'created'
+        })
+        
+    except ImportError:
+        return jsonify({'success': False, 'error': '버전 관리 모듈을 가져올 수 없습니다.'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@version_admin_bp.route('/api/tags/<tag_name>', methods=['DELETE'])
+@login_required
+@admin_required
+def api_tags_delete(tag_name):
+    """태그 삭제 API"""
+    try:
+        from version_manager import VersionManager
+        vm = VersionManager()
+        
+        data = request.get_json() or {}
+        delete_remote = data.get('remote', True)
+        
+        success = vm.delete_tag(tag_name, delete_remote)
+        if success:
+            return jsonify({
+                'success': True,
+                'message': f'태그 "{tag_name}"가 삭제되었습니다.'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': '태그 삭제에 실패했습니다.'
+            })
+            
+    except ImportError:
+        return jsonify({'success': False, 'error': '버전 관리 모듈을 가져올 수 없습니다.'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@version_admin_bp.route('/api/tags/<tag_name>', methods=['GET'])
+@login_required
+@admin_required
+def api_tags_info(tag_name):
+    """특정 태그 정보 API"""
+    try:
+        from version_manager import VersionManager
+        vm = VersionManager()
+        
+        tag_info = vm.get_tag_info(tag_name)
+        return jsonify({
+            'success': True,
+            'tag': tag_info
+        })
+        
+    except ImportError:
+        return jsonify({'success': False, 'error': '버전 관리 모듈을 가져올 수 없습니다.'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})

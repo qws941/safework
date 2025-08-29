@@ -142,6 +142,48 @@
         </div>
     </div>
 
+    <!-- Git 태그 관리 -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h4><i class="fas fa-tags"></i> Git 태그 관리</h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>태그 생성</h5>
+                    <div class="form-group">
+                        <label for="tagName">태그 이름 (선택사항)</label>
+                        <input type="text" class="form-control" id="tagName" placeholder="v3.0.0-20250829-1234-abc12345">
+                        <small class="form-text text-muted">미입력 시 자동 생성됩니다</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="tagMessage">태그 메시지</label>
+                        <input type="text" class="form-control" id="tagMessage" placeholder="Release 메시지">
+                    </div>
+                    <div class="form-check mb-3">
+                        <input type="checkbox" class="form-check-input" id="pushTag">
+                        <label class="form-check-label" for="pushTag">
+                            원격 저장소로 푸시
+                        </label>
+                    </div>
+                    <button class="btn btn-success" onclick="createTag()">
+                        <i class="fas fa-tag"></i> 태그 생성
+                    </button>
+                </div>
+                
+                <div class="col-md-6">
+                    <h5>기존 태그 목록</h5>
+                    <div id="tagsList" class="tag-list">
+                        <div class="text-muted">로딩 중...</div>
+                    </div>
+                    <button class="btn btn-outline-primary btn-sm" onclick="loadTags()">
+                        <i class="fas fa-refresh"></i> 새로고침
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 추가 도구 -->
     <div class="card mt-4">
         <div class="card-header">
@@ -187,5 +229,105 @@ function refreshVersionInfo() {
             alert('버전 정보를 새로고침하는 중 오류가 발생했습니다.');
         });
 }
+
+function loadTags() {
+    fetch('{{ url_for("version_admin.api_tags_list") }}')
+        .then(response => response.json())
+        .then(data => {
+            const tagsList = document.getElementById('tagsList');
+            if (data.success && data.tags.length > 0) {
+                tagsList.innerHTML = data.tags.map(tag => `
+                    <div class="tag-item mb-2 p-2 border rounded">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <strong>${tag.tag}</strong>
+                                <small class="text-muted d-block">커밋: ${tag.commit}</small>
+                                <small class="text-muted d-block">${tag.date}</small>
+                                ${tag.message && tag.message !== 'unknown' ? `<div class="text-muted mt-1">${tag.message}</div>` : ''}
+                            </div>
+                            <button class="btn btn-outline-danger btn-sm" onclick="deleteTag('${tag.tag}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                tagsList.innerHTML = '<div class="text-muted">태그가 없습니다</div>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading tags:', error);
+            document.getElementById('tagsList').innerHTML = '<div class="text-danger">태그 로드 실패</div>';
+        });
+}
+
+function createTag() {
+    const tagName = document.getElementById('tagName').value;
+    const message = document.getElementById('tagMessage').value;
+    const push = document.getElementById('pushTag').checked;
+    
+    const data = {
+        name: tagName || null,
+        message: message || null,
+        push: push
+    };
+    
+    fetch('{{ url_for("version_admin.api_tags_create") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            alert(`✅ ${result.message}`);
+            document.getElementById('tagName').value = '';
+            document.getElementById('tagMessage').value = '';
+            document.getElementById('pushTag').checked = false;
+            loadTags(); // 태그 목록 새로고침
+            refreshVersionInfo(); // 버전 정보 새로고침
+        } else {
+            alert(`❌ ${result.error}`);
+        }
+    })
+    .catch(error => {
+        console.error('Error creating tag:', error);
+        alert('태그 생성 중 오류가 발생했습니다.');
+    });
+}
+
+function deleteTag(tagName) {
+    if (!confirm(`정말로 태그 "${tagName}"를 삭제하시겠습니까?`)) {
+        return;
+    }
+    
+    fetch(`{{ url_for("version_admin.api_tags_delete", tag_name="TAGNAME") }}`.replace('TAGNAME', tagName), {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ remote: true })
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            alert(`✅ ${result.message}`);
+            loadTags(); // 태그 목록 새로고침
+        } else {
+            alert(`❌ ${result.error}`);
+        }
+    })
+    .catch(error => {
+        console.error('Error deleting tag:', error);
+        alert('태그 삭제 중 오류가 발생했습니다.');
+    });
+}
+
+// 페이지 로드시 태그 목록 로드
+document.addEventListener('DOMContentLoaded', function() {
+    loadTags();
+});
 </script>
 {% endblock %}

@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional
 
 
 class VersionManager:
-    """동적 버전 관리 클래스"""
+    """Git SHA 기반 태그 및 버전 관리 클래스"""
     
     def __init__(self, app_dir: str = None):
         self.app_dir = app_dir or os.path.dirname(__file__)
@@ -108,6 +108,113 @@ class VersionManager:
             }
         
         return self._version_info
+    
+    def create_tag(self, tag_name: str = None, message: str = None) -> bool:
+        """Git 태그 생성"""
+        try:
+            if tag_name is None:
+                # 자동 태그 이름 생성 (v3.0.0-YYYYMMDD-HHMM-SHA)
+                git_info = self.get_git_info()
+                timestamp = datetime.now().strftime('%Y%m%d-%H%M')
+                tag_name = f"v3.0.0-{timestamp}-{git_info['commit_short']}"
+            
+            if message is None:
+                message = f"Release {tag_name}"
+            
+            # 태그 생성
+            result = subprocess.run([
+                'git', 'tag', '-a', tag_name, '-m', message
+            ], capture_output=True, text=True, timeout=10)
+            
+            if result.returncode == 0:
+                # VERSION 파일 업데이트
+                self.update_version_file(tag_name)
+                self._version_info = None  # 캐시 무효화
+                return True
+            return False
+            
+        except Exception:
+            return False
+    
+    def push_tag(self, tag_name: str) -> bool:
+        """태그를 원격 저장소로 푸시"""
+        try:
+            result = subprocess.run([
+                'git', 'push', 'origin', tag_name
+            ], capture_output=True, text=True, timeout=30)
+            
+            return result.returncode == 0
+        except Exception:
+            return False
+    
+    def list_tags(self, limit: int = 10) -> list:
+        """최근 태그 목록 반환"""
+        try:
+            result = subprocess.run([
+                'git', 'tag', '--list', '--sort=-version:refname'
+            ], capture_output=True, text=True, timeout=10)
+            
+            if result.returncode == 0:
+                tags = result.stdout.strip().split('\n')
+                return [tag for tag in tags if tag][:limit]
+            return []
+        except Exception:
+            return []
+    
+    def get_tag_info(self, tag_name: str) -> Dict[str, str]:
+        """특정 태그의 상세 정보"""
+        try:
+            # 태그 커밋 SHA
+            result = subprocess.run([
+                'git', 'rev-list', '-n', '1', tag_name
+            ], capture_output=True, text=True, timeout=5)
+            
+            info = {'tag': tag_name, 'commit': 'unknown', 'date': 'unknown', 'message': 'unknown'}
+            
+            if result.returncode == 0:
+                info['commit'] = result.stdout.strip()[:8]
+            
+            # 태그 날짜
+            result = subprocess.run([
+                'git', 'log', '-1', '--format=%ci', tag_name
+            ], capture_output=True, text=True, timeout=5)
+            
+            if result.returncode == 0:
+                info['date'] = result.stdout.strip()
+            
+            # 태그 메시지
+            result = subprocess.run([
+                'git', 'tag', '-l', '--format=%(contents)', tag_name
+            ], capture_output=True, text=True, timeout=5)
+            
+            if result.returncode == 0 and result.stdout.strip():
+                info['message'] = result.stdout.strip()
+            
+            return info
+        except Exception:
+            return {'tag': tag_name, 'commit': 'error', 'date': 'error', 'message': 'error'}
+    
+    def delete_tag(self, tag_name: str, remote: bool = True) -> bool:
+        """태그 삭제"""
+        try:
+            # 로컬 태그 삭제
+            result = subprocess.run([
+                'git', 'tag', '-d', tag_name
+            ], capture_output=True, text=True, timeout=10)
+            
+            local_success = result.returncode == 0
+            
+            if remote and local_success:
+                # 원격 태그 삭제
+                result = subprocess.run([
+                    'git', 'push', 'origin', f':refs/tags/{tag_name}'
+                ], capture_output=True, text=True, timeout=30)
+                
+                return result.returncode == 0
+            
+            return local_success
+        except Exception:
+            return False
     
     def _detect_build_type(self) -> str:
         """빌드 타입 감지"""
