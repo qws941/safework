@@ -4,37 +4,66 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-SafeWork is a Korean workplace health and safety management system built with Flask 3.0+, providing musculoskeletal symptom surveys (001) and new employee health checkups (002) along with comprehensive administrative dashboards.
+SafeWork is a Korean workplace health and safety management system built with Flask 3.0+, providing musculoskeletal symptom surveys (001) and new employee health checkups (002) along with comprehensive administrative dashboards and RESTful APIs.
+
+### Key Features
+- **Survey System**: 001 (musculoskeletal symptoms) and 002 (new employee health checkup) forms
+- **SafeWork Dashboard**: Complete employee health management system at `/admin/safework`
+- **RESTful API**: JWT-authenticated API endpoints for programmatic access
+- **Anonymous Submissions**: Public survey access without login (user_id=1)
+- **Document Management**: Safety document upload/versioning system
 
 ## Development Commands
 
 ### Essential Commands
 ```bash
-# Local Development
-make up                     # Start all containers (MySQL, Redis, App)
-make down                   # Stop all containers
-make status                 # Check service health
-make logs                   # View application logs
+# Local Development (No Makefile - use Docker Compose directly)
+docker-compose up -d        # Start all containers (MySQL, Redis, App)
+docker-compose down         # Stop all containers
+docker-compose ps           # Check service health
+docker-compose logs -f app  # View application logs
 
 # Testing
-make test-local            # Run pytest locally
-make test-docker          # Run tests in Docker
-python3 -m pytest tests/ -v --tb=short  # Direct pytest
+docker exec safework-app python3 -m pytest tests/ -v  # Run all tests in Docker
+docker exec safework-app python3 -m pytest tests/test_survey.py -v  # Run specific test file
+docker exec safework-app python3 -m pytest tests/ -k "test_submit" -v  # Run tests matching pattern
+cd app && python3 -m pytest tests/ -v --tb=short      # Run tests locally
 
 # Code Quality
 python3 -m black --line-length 100 app/  # Format code
 python3 -m flake8 --max-line-length=100 --ignore=E501,W503 app/  # Lint
 
-# Database
-make migrate-status        # Check migration status
-make migrate-run          # Apply pending migrations
-make migrate-rollback     # Rollback last migration
+# Database Migrations
+docker exec safework-app python migrate.py status     # Check migration status
+docker exec safework-app python migrate.py upgrade    # Apply pending migrations
+docker exec safework-app python migrate.py rollback   # Rollback last migration
+# Web interface available at: http://localhost:4545/admin/migrations
 
 # Deployment
-make deploy               # Trigger GitHub Actions
-make release v=1.2.0     # Create release tag
+./deploy.sh                # Production deployment script
 git push origin main      # Production deployment (requires approval)
 git push origin develop   # Development auto-deployment
+```
+
+## Project Structure
+
+```
+safework2/
+├── app/                    # Flask application
+│   ├── routes/            # Blueprint route handlers
+│   ├── templates/         # Jinja2 templates
+│   ├── migrations/        # Database migrations
+│   ├── tests/            # Test suite
+│   ├── app.py            # Application factory
+│   ├── models*.py        # SQLAlchemy models
+│   ├── forms*.py         # WTForms definitions
+│   └── requirements.txt  # Python dependencies
+├── mysql/                 # MySQL configuration
+│   └── init.sql          # Database initialization
+├── redis/                # Redis configuration
+├── .github/workflows/    # CI/CD pipelines
+├── docker-compose.yml    # Container orchestration
+└── deploy.sh            # Production deployment script
 ```
 
 ## High-Level Architecture
@@ -104,6 +133,18 @@ Document, DocumentCategory, DocumentVersion
 - **Production**: Push to `main` branch → Manual approval required
 - **Images**: Built with timestamps (YYYYMMDD.HHMM format)
 
+## Dependencies
+
+### Core Python Packages
+- **Flask 3.0.0**: Web framework
+- **Flask-SQLAlchemy 3.1.1**: Database ORM
+- **PyMySQL 1.1.0**: MySQL connector
+- **Redis 5.0.1**: Cache client
+- **openpyxl 3.1.2**: Excel export
+- **pytest 7.4.3**: Testing framework
+- **black 23.12.1**: Code formatter
+- **flake8 7.0.0**: Linter
+
 ## Critical Configuration
 
 ### Environment Variables
@@ -161,6 +202,31 @@ docker exec safework-app python3 -m pytest tests/
 - `/admin/safework/health-checks` - Health examinations
 - `/admin/safework/medications` - Medicine inventory
 - `/api/safework/*` - RESTful API with JWT auth
+
+## Debugging Tips
+
+### Container Access
+```bash
+docker exec -it safework-app bash          # Access app container
+docker exec -it safework-mysql mysql -u safework -p  # Access MySQL (password: safework2024)
+docker exec -it safework-redis redis-cli   # Access Redis
+```
+
+### Checking Logs
+```bash
+docker-compose logs app | tail -100        # Last 100 lines of app logs
+docker-compose logs mysql --follow         # Follow MySQL logs
+docker logs safework-app --since 5m        # Logs from last 5 minutes
+```
+
+### Database Queries
+```bash
+# Check survey submissions
+docker exec safework-mysql mysql -u safework -psafework2024 safework_db -e "SELECT * FROM surveys ORDER BY created_at DESC LIMIT 10;"
+
+# Check users
+docker exec safework-mysql mysql -u safework -psafework2024 safework_db -e "SELECT id, username, email, is_admin FROM users;"
+```
 
 ## Common Issues and Solutions
 
