@@ -75,6 +75,14 @@ def create_app(config_name=None):
     app.register_blueprint(document_bp, url_prefix="/documents")
     app.register_blueprint(document_admin_bp, url_prefix="/admin/documents")
 
+    # Version management admin routes
+    try:
+        from routes.version_admin import version_admin_bp
+        app.register_blueprint(version_admin_bp, url_prefix="/admin/version")
+        app.logger.info("Version management admin loaded successfully")
+    except ImportError as e:
+        app.logger.warning(f"Version management admin not loaded: {e}")
+
     # SafeWork API routes (v2.0)
     try:
         from routes.api_safework_v2 import api_safework_bp
@@ -137,19 +145,24 @@ def create_app(config_name=None):
     # Context processors
     @app.context_processor
     def inject_config():
-        # Git 커밋 해시를 버전으로 사용 (단일 소스)
+        # Enhanced version management using version_manager
         try:
-            import subprocess
-
-            result = subprocess.run(
-                ["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True, timeout=2
-            )
-            if result.returncode == 0:
-                app_version = result.stdout.strip()
-            else:
+            from version_manager import get_version, get_version_info
+            app_version = get_version()
+            version_info = get_version_info()
+        except ImportError:
+            # Fallback to simple git version
+            try:
+                import subprocess
+                result = subprocess.run(
+                    ["git", "rev-parse", "--short", "HEAD"], 
+                    capture_output=True, text=True, timeout=2
+                )
+                app_version = result.stdout.strip() if result.returncode == 0 else "unknown"
+                version_info = {"version": app_version, "source": "git"}
+            except:
                 app_version = "unknown"
-        except:
-            app_version = "unknown"
+                version_info = {"version": app_version, "source": "fallback"}
 
         # 시스템 업타임 계산
         uptime_seconds = time_module.time() - app.start_time
@@ -167,6 +180,7 @@ def create_app(config_name=None):
         return {
             "app_name": app.config["APP_NAME"],
             "app_version": app_version,
+            "version_info": version_info,  # Enhanced version info
             "system_uptime": uptime_str,
             "start_time": datetime.fromtimestamp(
                 app.start_time, tz=timezone(timedelta(hours=9))

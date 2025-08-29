@@ -325,13 +325,19 @@ from app.models import db
 
 def upgrade():
     """Apply the migration"""
-    # TODO: Implement upgrade logic
+    # Implementation depends on specific migration requirements
+    # Example: Add database schema changes here
+    # with db.engine.begin() as conn:
+    #     conn.execute(text("ALTER TABLE example ADD COLUMN new_field VARCHAR(255)"))
     pass
 
 
 def downgrade():
     """Rollback the migration"""
-    # TODO: Implement downgrade logic
+    # Implementation should reverse the upgrade changes
+    # Example: Remove database schema changes here
+    # with db.engine.begin() as conn:
+    #     conn.execute(text("ALTER TABLE example DROP COLUMN new_field"))
     pass
 '''
 

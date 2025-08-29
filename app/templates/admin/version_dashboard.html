@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}버전 관리 - SafeWork 관리자{% endblock %}
+
+{% block head %}
+<style>
+.version-card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 10px 0;
+    background: #f9f9f9;
+}
+
+.version-display {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #2c5aa0;
+    margin-bottom: 10px;
+}
+
+.git-info {
+    background: #f8f9fa;
+    border-left: 4px solid #28a745;
+    padding: 15px;
+    margin: 15px 0;
+}
+
+.build-info {
+    background: #e9ecef;
+    border-left: 4px solid #ffc107;
+    padding: 15px;
+    margin: 15px 0;
+}
+
+.version-actions {
+    margin-top: 20px;
+}
+
+.version-actions .btn {
+    margin: 5px 10px 5px 0;
+}
+
+.json-output {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 15px;
+    max-height: 300px;
+    overflow-y: auto;
+    font-family: monospace;
+    font-size: 0.9rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1><i class="fas fa-code-branch"></i> SafeWork 버전 관리</h1>
+    
+    <!-- 현재 버전 카드 -->
+    <div class="version-card">
+        <div class="row">
+            <div class="col-md-6">
+                <h3>현재 버전</h3>
+                <div class="version-display">{{ version_info.version }}</div>
+                <p><strong>빌드 타입:</strong> 
+                    <span class="badge 
+                        {% if version_info.build_type == 'production' %}badge-success
+                        {% elif version_info.build_type == 'development' %}badge-warning
+                        {% else %}badge-info{% endif %}">
+                        {{ version_info.build_type }}
+                    </span>
+                </p>
+                <p><strong>빌드 시간:</strong> {{ version_info.build_time }}</p>
+                {% if version_info.file_version %}
+                <p><strong>VERSION 파일:</strong> {{ version_info.file_version }}</p>
+                {% endif %}
+            </div>
+            <div class="col-md-6">
+                <h4>Git 정보</h4>
+                <div class="git-info">
+                    <p><strong>브랜치:</strong> {{ git_info.branch }}</p>
+                    <p><strong>커밋:</strong> {{ git_info.commit_short }} 
+                        <small class="text-muted">({{ git_info.commit_hash }})</small></p>
+                    <p><strong>태그:</strong> {{ git_info.tag }}</p>
+                    <p><strong>커밋 날짜:</strong> {{ git_info.commit_date }}</p>
+                    <p><strong>메시지:</strong> <em>{{ git_info.commit_message }}</em></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 버전 업데이트 액션 -->
+    <div class="card">
+        <div class="card-header">
+            <h4><i class="fas fa-tools"></i> 버전 업데이트</h4>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('version_admin.update_version') }}">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>자동 업데이트</h5>
+                        <div class="form-group">
+                            <button type="submit" name="type" value="auto" class="btn btn-primary">
+                                <i class="fas fa-magic"></i> 자동 버전 생성
+                            </button>
+                            <small class="form-text text-muted">
+                                Git 브랜치와 커밋 정보를 바탕으로 자동으로 버전을 생성합니다.
+                            </small>
+                        </div>
+                        
+                        <h5>시맨틱 버전 범프</h5>
+                        <div class="btn-group" role="group">
+                            <button type="submit" name="type" value="major" class="btn btn-danger">
+                                Major (v4.0.0)
+                            </button>
+                            <button type="submit" name="type" value="minor" class="btn btn-warning">
+                                Minor (v3.1.0)
+                            </button>
+                            <button type="submit" name="type" value="patch" class="btn btn-info">
+                                Patch (v3.0.1)
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h5>수동 버전 설정</h5>
+                        <div class="form-group">
+                            <input type="text" name="custom_version" class="form-control" 
+                                   placeholder="예: v3.0.2-custom">
+                            <button type="submit" name="type" value="custom" class="btn btn-secondary mt-2">
+                                <i class="fas fa-edit"></i> 수동 설정
+                            </button>
+                            <small class="form-text text-muted">
+                                원하는 버전 문자열을 직접 입력하세요.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 추가 도구 -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h4><i class="fas fa-cog"></i> 추가 도구</h4>
+        </div>
+        <div class="card-body">
+            <div class="btn-group" role="group">
+                <a href="{{ url_for('version_admin.version_history') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-history"></i> 버전 히스토리
+                </a>
+                <a href="{{ url_for('version_admin.export_version_info') }}" class="btn btn-outline-success">
+                    <i class="fas fa-download"></i> 버전 정보 내보내기
+                </a>
+                <button class="btn btn-outline-info" onclick="refreshVersionInfo()">
+                    <i class="fas fa-refresh"></i> 정보 새로고침
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 상세 JSON 정보 -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h4><i class="fas fa-code"></i> 상세 버전 정보 (JSON)</h4>
+        </div>
+        <div class="card-body">
+            <div class="json-output" id="versionJson">
+                {{ version_info | tojson | safe }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function refreshVersionInfo() {
+    fetch('{{ url_for("version_admin.api_info") }}')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('versionJson').textContent = JSON.stringify(data, null, 2);
+        })
+        .catch(error => {
+            console.error('Error refreshing version info:', error);
+            alert('버전 정보를 새로고침하는 중 오류가 발생했습니다.');
+        });
+}
+</script>
+{% endblock %}

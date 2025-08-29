@@ -6,7 +6,9 @@ class Config:
     """Base configuration"""
 
     SECRET_KEY = os.environ.get(
-        "SECRET_KEY", "safework-secret-key-change-in-production"
+        "SECRET_KEY", 
+        # WARNING: Change this in production! Use a strong random key
+        "dev-only-key-CHANGE-IN-PRODUCTION-" + str(hash("safework"))[:16]
     )
 
     # Database
@@ -45,16 +47,30 @@ class Config:
     APP_NAME = "SafeWork 안전보건 관리시스템"
     ITEMS_PER_PAGE = 20
 
-    # Dynamic version loading
+    # Dynamic version loading (enhanced)
     @property
     def APP_VERSION(self):
-        """Load version from VERSION file"""
-        version_file = os.path.join(os.path.dirname(__file__), "VERSION")
+        """Load version using enhanced version manager"""
         try:
-            with open(version_file, "r") as f:
-                return f.read().strip()
-        except:
-            return "1.1.2"
+            from version_manager import get_version
+            return get_version()
+        except ImportError:
+            # Fallback to VERSION file
+            version_file = os.path.join(os.path.dirname(__file__), "VERSION")
+            try:
+                with open(version_file, "r") as f:
+                    return f.read().strip()
+            except:
+                return "3.0.0-fallback"
+    
+    @property
+    def APP_VERSION_INFO(self):
+        """Get detailed version information"""
+        try:
+            from version_manager import get_version_info
+            return get_version_info()
+        except ImportError:
+            return {"version": self.APP_VERSION, "source": "fallback"}
 
     # Admin
     ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
