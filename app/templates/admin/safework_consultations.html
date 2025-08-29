@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+
+{% block title %}건강상담 기록 관리 - SafeWork{% endblock %}
+
+{% block extra_css %}
+<style>
+.consultation-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #667eea;
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.consultation-table {
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    border: none;
+}
+
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.status-completed {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-in-progress {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-scheduled {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.btn-group .btn {
+    margin-right: 5px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-2 p-0">
+            {% include 'admin/admin_sidebar.html' %}
+        </div>
+        
+        <!-- Main Content -->
+        <div class="col-md-10" style="margin-left: 250px;">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-chat-dots"></i> 건강상담 기록 관리</h2>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#consultationModal">
+                    <i class="bi bi-plus"></i> 새 상담 기록
+                </button>
+            </div>
+
+            <!-- 통계 카드 -->
+            <div class="consultation-stats">
+                <div class="stat-card">
+                    <div class="stat-value">{{ consultations|length }}</div>
+                    <div class="stat-label">총 상담 건수</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">
+                        {{ consultations|selectattr('status', 'equalto', 'COMPLETED')|list|length }}
+                    </div>
+                    <div class="stat-label">완료된 상담</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">
+                        {{ consultations|selectattr('status', 'equalto', 'IN_PROGRESS')|list|length }}
+                    </div>
+                    <div class="stat-label">진행중인 상담</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">85.2%</div>
+                    <div class="stat-label">상담 만족도</div>
+                </div>
+            </div>
+
+            <!-- 상담 목록 -->
+            <div class="consultation-table">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>상담일</th>
+                            <th>성명</th>
+                            <th>부서</th>
+                            <th>상담 유형</th>
+                            <th>상담사</th>
+                            <th>상담 주제</th>
+                            <th>상태</th>
+                            <th>관리</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for consultation in consultations %}
+                        <tr>
+                            <td>{{ consultation.date }}</td>
+                            <td>{{ consultation.worker_name }}</td>
+                            <td>{{ consultation.department }}</td>
+                            <td>{{ consultation.consultation_type }}</td>
+                            <td>{{ consultation.counselor }}</td>
+                            <td>{{ consultation.topic }}</td>
+                            <td>
+                                <span class="status-badge 
+                                    {% if consultation.status == 'COMPLETED' %}status-completed
+                                    {% elif consultation.status == 'IN_PROGRESS' %}status-in-progress
+                                    {% else %}status-scheduled{% endif %}">
+                                    {% if consultation.status == 'COMPLETED' %}완료
+                                    {% elif consultation.status == 'IN_PROGRESS' %}진행중
+                                    {% else %}예정{% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-outline-primary" title="상세보기">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary" title="수정">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 상담 기록 추가 모달 -->
+<div class="modal fade" id="consultationModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">새 건강상담 기록</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">상담일</label>
+                                <input type="date" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">근로자 선택</label>
+                                <select class="form-select" required>
+                                    <option value="">선택하세요</option>
+                                    <option value="1">김철수 (생산부)</option>
+                                    <option value="2">이영희 (품질관리부)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">상담 유형</label>
+                                <select class="form-select" required>
+                                    <option value="">선택하세요</option>
+                                    <option value="개인상담">개인상담</option>
+                                    <option value="집단상담">집단상담</option>
+                                    <option value="전화상담">전화상담</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">상담사</label>
+                                <select class="form-select" required>
+                                    <option value="">선택하세요</option>
+                                    <option value="보건관리자">보건관리자</option>
+                                    <option value="산업간호사">산업간호사</option>
+                                    <option value="상담사">상담사</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">상담 주제</label>
+                        <input type="text" class="form-control" placeholder="예: 스트레스 관리, 금연 상담 등" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">상담 내용</label>
+                        <textarea class="form-control" rows="4" placeholder="상담 내용을 입력하세요"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">후속 조치</label>
+                        <textarea class="form-control" rows="3" placeholder="후속 조치사항이 있다면 입력하세요"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <button type="button" class="btn btn-primary">저장</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

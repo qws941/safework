@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}특별관리 대상자 관리 - SafeWork{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-2 p-0">
+            {% include 'admin/admin_sidebar.html' %}
+        </div>
+        
+        <div class="col-md-10" style="margin-left: 250px;">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-person-exclamation"></i> 특별관리 대상자 관리</h2>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#specialModal">
+                    <i class="bi bi-plus"></i> 대상자 등록
+                </button>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>성명</th>
+                                <th>사번</th>
+                                <th>부서</th>
+                                <th>관리 사유</th>
+                                <th>관리 등급</th>
+                                <th>최근 검진</th>
+                                <th>다음 검진</th>
+                                <th>상태</th>
+                                <th>관리</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for worker in special_workers %}
+                            <tr>
+                                <td>{{ worker.name }}</td>
+                                <td>{{ worker.employee_number }}</td>
+                                <td>{{ worker.department }}</td>
+                                <td>{{ worker.reason }}</td>
+                                <td><span class="badge bg-warning">{{ worker.management_level }}</span></td>
+                                <td>{{ worker.last_check }}</td>
+                                <td>{{ worker.next_check }}</td>
+                                <td>
+                                    {% if worker.status == 'ACTIVE' %}
+                                        <span class="badge bg-success">관리중</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">해제</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-outline-primary" title="상세보기">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary" title="수정">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

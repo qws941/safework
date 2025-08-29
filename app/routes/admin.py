@@ -936,3 +936,218 @@ def safework_medication_inventory_advanced():
 def safework_notifications_dashboard():
     """실시간 알림 시스템 대시보드"""
     return render_template("admin/notifications_dashboard.html")
+
+
+# 추가 SafeWork 관리 라우트들
+@admin_bp.route("/safework/consultations")
+@admin_required
+def safework_consultations():
+    """건강상담 기록 관리"""
+    consultations = [
+        {
+            'id': 1, 'date': '2024-01-15', 'worker_name': '김철수',
+            'department': '생산부', 'consultation_type': '개인상담',
+            'counselor': '보건관리자', 'topic': '스트레스 관리',
+            'status': 'COMPLETED'
+        },
+        {
+            'id': 2, 'date': '2024-01-16', 'worker_name': '이영희',
+            'department': '품질관리부', 'consultation_type': '집단상담',
+            'counselor': '산업간호사', 'topic': '금연 프로그램',
+            'status': 'IN_PROGRESS'
+        }
+    ]
+    return render_template("admin/safework_consultations.html", consultations=consultations)
+
+@admin_bp.route("/safework/health-programs")
+@admin_required
+def safework_health_programs():
+    """건강증진 프로그램 관리"""
+    programs = [
+        {
+            'id': 1, 'name': '금연 프로그램', 'start_date': '2024-01-01',
+            'end_date': '2024-03-31', 'participants': 25,
+            'completion_rate': 68.0, 'status': 'ACTIVE'
+        },
+        {
+            'id': 2, 'name': '운동 프로그램', 'start_date': '2024-02-01',
+            'end_date': '2024-04-30', 'participants': 40,
+            'completion_rate': 82.5, 'status': 'ACTIVE'
+        }
+    ]
+    return render_template("admin/safework_health_programs.html", programs=programs)
+
+@admin_bp.route("/safework/special-management")
+@admin_required
+def safework_special_management():
+    """특별관리 대상자 관리"""
+    special_workers = [
+        {
+            'id': 1, 'name': '박지성', 'employee_number': '2024001',
+            'department': '생산부', 'reason': '고혈압',
+            'management_level': 'C1', 'last_check': '2024-01-10',
+            'next_check': '2024-07-10', 'status': 'ACTIVE'
+        },
+        {
+            'id': 2, 'name': '김연아', 'employee_number': '2024002',
+            'department': '품질관리부', 'reason': '당뇨',
+            'management_level': 'C2', 'last_check': '2024-01-15',
+            'next_check': '2024-04-15', 'status': 'ACTIVE'
+        }
+    ]
+    return render_template("admin/safework_special_management.html", special_workers=special_workers)
+
+@admin_bp.route("/safework/environment-measurements")
+@admin_required
+def safework_environment_measurements():
+    """작업환경측정 관리"""
+    measurements = [
+        {
+            'id': 1, 'measurement_date': '2024-01-15', 'workplace': '생산라인 A',
+            'measurement_type': '소음', 'result': '82.5 dB',
+            'standard': '90 dB', 'status': 'NORMAL', 'next_measurement': '2024-07-15'
+        },
+        {
+            'id': 2, 'measurement_date': '2024-01-16', 'workplace': '화학물질 취급실',
+            'measurement_type': '톨루엔', 'result': '15 ppm',
+            'standard': '50 ppm', 'status': 'NORMAL', 'next_measurement': '2024-07-16'
+        }
+    ]
+    return render_template("admin/safework_environment_measurements.html", measurements=measurements)
+
+@admin_bp.route("/safework/risk-assessment")
+@admin_required
+def safework_risk_assessment():
+    """위험성 평가 관리"""
+    assessments = [
+        {
+            'id': 1, 'workplace': '생산라인 A', 'hazard': '기계 협착',
+            'risk_level': 'HIGH', 'probability': 3, 'severity': 4,
+            'risk_score': 12, 'control_measures': '안전가드 설치',
+            'assessment_date': '2024-01-10', 'assessor': '안전관리자'
+        },
+        {
+            'id': 2, 'workplace': '창고', 'hazard': '추락',
+            'risk_level': 'MEDIUM', 'probability': 2, 'severity': 3,
+            'risk_score': 6, 'control_measures': '안전난간 설치',
+            'assessment_date': '2024-01-12', 'assessor': '안전관리자'
+        }
+    ]
+    return render_template("admin/safework_risk_assessment.html", assessments=assessments)
+
+@admin_bp.route("/safework/msds")
+@admin_required
+def safework_msds():
+    """MSDS 관리"""
+    msds_list = [
+        {
+            'id': 1, 'chemical_name': '톨루엔', 'cas_number': '108-88-3',
+            'supplier': '한국화학', 'last_updated': '2024-01-01',
+            'expiry_date': '2027-01-01', 'usage_department': '생산부',
+            'hazard_level': 'HIGH', 'storage_location': '화학물질창고 A-1'
+        },
+        {
+            'id': 2, 'chemical_name': '아세톤', 'cas_number': '67-64-1',
+            'supplier': '대한케미칼', 'last_updated': '2024-01-15',
+            'expiry_date': '2027-01-15', 'usage_department': '품질관리부',
+            'hazard_level': 'MEDIUM', 'storage_location': '화학물질창고 B-2'
+        }
+    ]
+    return render_template("admin/safework_msds.html", msds_list=msds_list)
+
+@admin_bp.route("/safework/protective-equipment")
+@admin_required
+def safework_protective_equipment():
+    """보호구 관리"""
+    equipment = [
+        {
+            'id': 1, 'name': '안전헬멧', 'category': '머리보호구',
+            'total_quantity': 150, 'distributed': 142, 'available': 8,
+            'last_inspection': '2024-01-10', 'next_inspection': '2024-04-10',
+            'replacement_cycle': '2년', 'status': 'NORMAL'
+        },
+        {
+            'id': 2, 'name': '안전화', 'category': '발보호구',
+            'total_quantity': 200, 'distributed': 195, 'available': 5,
+            'last_inspection': '2024-01-15', 'next_inspection': '2024-04-15',
+            'replacement_cycle': '1년', 'status': 'LOW_STOCK'
+        }
+    ]
+    return render_template("admin/safework_protective_equipment.html", equipment=equipment)
+
+@admin_bp.route("/safework/education")
+@admin_required
+def safework_education():
+    """교육 이수 현황 관리"""
+    education_stats = {
+        'total_workers': 245,
+        'completed_safety': 230,
+        'completed_health': 225,
+        'completion_rate_safety': 93.9,
+        'completion_rate_health': 91.8
+    }
+    
+    education_records = [
+        {
+            'id': 1, 'worker_name': '김철수', 'employee_number': '2024001',
+            'department': '생산부', 'education_type': '안전교육',
+            'completed_date': '2024-01-10', 'valid_until': '2024-12-31',
+            'instructor': '안전관리자', 'hours': 4, 'status': 'COMPLETED'
+        },
+        {
+            'id': 2, 'worker_name': '이영희', 'employee_number': '2024002',
+            'department': '품질관리부', 'education_type': '보건교육',
+            'completed_date': '2024-01-15', 'valid_until': '2024-12-31',
+            'instructor': '보건관리자', 'hours': 3, 'status': 'COMPLETED'
+        }
+    ]
+    
+    return render_template("admin/safework_education.html", 
+                         education_stats=education_stats, 
+                         education_records=education_records)
+
+@admin_bp.route("/safework/certifications")
+@admin_required
+def safework_certifications():
+    """자격/면허 관리"""
+    certifications = [
+        {
+            'id': 1, 'worker_name': '박지성', 'employee_number': '2024001',
+            'certification_name': '산업안전기사', 'certification_number': 'IS-2023-001',
+            'issue_date': '2023-05-15', 'expiry_date': '2028-05-14',
+            'issuing_agency': '한국산업인력공단', 'status': 'VALID'
+        },
+        {
+            'id': 2, 'worker_name': '김연아', 'employee_number': '2024002',
+            'certification_name': '보건관리자', 'certification_number': 'HM-2022-015',
+            'issue_date': '2022-03-20', 'expiry_date': '2025-03-19',
+            'issuing_agency': '한국산업인력공단', 'status': 'EXPIRING_SOON'
+        }
+    ]
+    return render_template("admin/safework_certifications.html", certifications=certifications)
+
+@admin_bp.route("/safework/departments")
+@admin_required
+def safework_departments():
+    """부서별 현황 관리"""
+    department_stats = [
+        {
+            'department': '생산부', 'total_workers': 85,
+            'health_check_completed': 80, 'education_completed': 82,
+            'accident_count': 2, 'high_risk_workers': 5,
+            'completion_rate': 94.1
+        },
+        {
+            'department': '품질관리부', 'total_workers': 45,
+            'health_check_completed': 44, 'education_completed': 45,
+            'accident_count': 0, 'high_risk_workers': 2,
+            'completion_rate': 97.8
+        },
+        {
+            'department': '경영지원부', 'total_workers': 35,
+            'health_check_completed': 35, 'education_completed': 34,
+            'accident_count': 0, 'high_risk_workers': 1,
+            'completion_rate': 97.1
+        }
+    ]
+    return render_template("admin/safework_departments.html", department_stats=department_stats)

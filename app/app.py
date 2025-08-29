@@ -75,13 +75,6 @@ def create_app(config_name=None):
     app.register_blueprint(document_bp, url_prefix="/documents")
     app.register_blueprint(document_admin_bp, url_prefix="/admin/documents")
 
-    # Version management admin routes
-    try:
-        from routes.version_admin import version_admin_bp
-        app.register_blueprint(version_admin_bp, url_prefix="/admin/version")
-        app.logger.info("Version management admin loaded successfully")
-    except ImportError as e:
-        app.logger.warning(f"Version management admin not loaded: {e}")
 
     # SafeWork API routes (v2.0)
     try:
@@ -145,24 +138,45 @@ def create_app(config_name=None):
     # Context processors
     @app.context_processor
     def inject_config():
-        # Enhanced version management using version_manager
+        # 워크플로우에서 생성된 Git 태그 기반 버전 표시
         try:
-            from version_manager import get_version, get_version_info
-            app_version = get_version()
-            version_info = get_version_info()
-        except ImportError:
-            # Fallback to simple git version
-            try:
-                import subprocess
-                result = subprocess.run(
-                    ["git", "rev-parse", "--short", "HEAD"], 
-                    capture_output=True, text=True, timeout=2
-                )
-                app_version = result.stdout.strip() if result.returncode == 0 else "unknown"
-                version_info = {"version": app_version, "source": "git"}
-            except:
-                app_version = "unknown"
-                version_info = {"version": app_version, "source": "fallback"}
+            import subprocess
+            # 워크플로우에서 생성한 최신 태그 조회
+            result = subprocess.run([
+                "git", "describe", "--tags", "--exact-match"
+            ], capture_output=True, text=True, timeout=2)
+            
+            if result.returncode == 0:
+                app_version = result.stdout.strip()
+                version_info = {
+                    "version": app_version,
+                    "source": "workflow-tag",
+                    "note": "Version from GitHub Actions workflow tag"
+                }
+            else:
+                # 태그가 없으면 현재 커밋의 Git SHA로 임시 버전 생성
+                result = subprocess.run([
+                    "git", "rev-parse", "--short", "HEAD"
+                ], capture_output=True, text=True, timeout=2)
+                if result.returncode == 0:
+                    from datetime import datetime
+                    timestamp = datetime.now().strftime('%Y%m%d-%H%M')
+                    app_version = f"v3.0.{timestamp}-{result.stdout.strip()}"
+                    version_info = {
+                        "version": app_version,
+                        "source": "git-sha",
+                        "note": "Temporary version from Git SHA (waiting for workflow tag)"
+                    }
+                else:
+                    raise Exception("Git command failed")
+        except:
+            # Git 명령 실패시 fallback
+            app_version = app.config["APP_VERSION"]
+            version_info = {
+                "version": app_version,
+                "source": "config-fallback", 
+                "note": "Fallback static version"
+            }
 
         # 시스템 업타임 계산
         uptime_seconds = time_module.time() - app.start_time

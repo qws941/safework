@@ -47,30 +47,20 @@ class Config:
     APP_NAME = "SafeWork 안전보건 관리시스템"
     ITEMS_PER_PAGE = 20
 
-    # Dynamic version loading (enhanced)
+    # Simple version (managed by workflow only)
     @property
     def APP_VERSION(self):
-        """Load version using enhanced version manager"""
-        try:
-            from version_manager import get_version
-            return get_version()
-        except ImportError:
-            # Fallback to VERSION file
-            version_file = os.path.join(os.path.dirname(__file__), "VERSION")
-            try:
-                with open(version_file, "r") as f:
-                    return f.read().strip()
-            except:
-                return "3.0.0-fallback"
+        """단순 버전 표시 (워크플로우에서만 관리)"""
+        return "3.0.0"
     
     @property
     def APP_VERSION_INFO(self):
-        """Get detailed version information"""
-        try:
-            from version_manager import get_version_info
-            return get_version_info()
-        except ImportError:
-            return {"version": self.APP_VERSION, "source": "fallback"}
+        """단순 버전 정보"""
+        return {
+            "version": self.APP_VERSION, 
+            "source": "static",
+            "note": "Version managed by GitHub Actions workflow only"
+        }
 
     # Admin
     ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")

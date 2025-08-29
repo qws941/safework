@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}건강증진 프로그램 관리 - SafeWork{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-2 p-0">
+            {% include 'admin/admin_sidebar.html' %}
+        </div>
+        
+        <div class="col-md-10" style="margin-left: 250px;">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-heart-pulse"></i> 건강증진 프로그램 관리</h2>
+                <button class="btn btn-primary">
+                    <i class="bi bi-plus"></i> 프로그램 등록
+                </button>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>프로그램명</th>
+                                <th>시작일</th>
+                                <th>종료일</th>
+                                <th>참여인원</th>
+                                <th>완료율</th>
+                                <th>상태</th>
+                                <th>관리</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for program in programs %}
+                            <tr>
+                                <td>{{ program.name }}</td>
+                                <td>{{ program.start_date }}</td>
+                                <td>{{ program.end_date }}</td>
+                                <td>{{ program.participants }}명</td>
+                                <td>
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar" style="width: {{ program.completion_rate }}%">
+                                            {{ program.completion_rate }}%
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-success">{{ program.status }}</span>
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-outline-primary" title="상세보기">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary" title="수정">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

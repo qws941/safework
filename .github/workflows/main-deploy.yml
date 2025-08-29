@@ -1,0 +1,76 @@
+name: SafeWork Build & Deploy
+
+on:
+  push:
+    branches: [ master, main ]
+
+env:
+  REGISTRY: registry.jclee.me
+  PROJECT_NAME: safework
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Generate Version from Git SHA
+      id: version
+      run: |
+        TIMESTAMP=$(date +'%Y%m%d-%H%M')
+        COMMIT_SHA=$(git rev-parse --short HEAD)
+        VERSION="v3.0.${TIMESTAMP}-${COMMIT_SHA}"
+        
+        echo "Generated version: $VERSION (Git SHA based)"
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "commit_sha=$COMMIT_SHA" >> $GITHUB_OUTPUT
+
+    - name: Create Git Tag
+      run: |
+        VERSION="${{ steps.version.outputs.version }}"
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git tag -a "$VERSION" -m "Release $VERSION"
+        git push origin "$VERSION"
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Login to Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: admin
+        password: ${{ secrets.REGISTRY_PASSWORD }}
+
+    - name: Build and push App image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./app
+        push: true
+        tags: |
+          ${{ env.REGISTRY }}/${{ env.PROJECT_NAME }}/app:${{ steps.version.outputs.version }}
+          ${{ env.REGISTRY }}/${{ env.PROJECT_NAME }}/app:latest
+
+    - name: Build and push MySQL image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./mysql
+        push: true
+        tags: |
+          ${{ env.REGISTRY }}/${{ env.PROJECT_NAME }}/mysql:${{ steps.version.outputs.version }}
+          ${{ env.REGISTRY }}/${{ env.PROJECT_NAME }}/mysql:latest
+
+    - name: Build and push Redis image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./redis
+        push: true
+        tags: |
+          ${{ env.REGISTRY }}/${{ env.PROJECT_NAME }}/redis:${{ steps.version.outputs.version }}
+          ${{ env.REGISTRY }}/${{ env.PROJECT_NAME }}/redis:latest
+
+    - name: Deploy Complete
+      run: |
+        echo "🚀 Deploy Complete: ${{ steps.version.outputs.version }}"
+        echo "Registry: ${{ env.REGISTRY }}/${{ env.PROJECT_NAME }}"

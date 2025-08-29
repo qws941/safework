@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+
+{% block title %}위험성 평가 관리 - SafeWork{% endblock %}
+
+{% block extra_css %}
+<style>
+.risk-matrix {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 5px;
+    margin: 20px 0;
+}
+
+.risk-cell {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    border-radius: 4px;
+}
+
+.risk-low { background: #d4edda; color: #155724; }
+.risk-medium { background: #fff3cd; color: #856404; }
+.risk-high { background: #f8d7da; color: #721c24; }
+
+.assessment-table {
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    border: none;
+}
+
+.risk-score {
+    font-weight: bold;
+    padding: 4px 8px;
+    border-radius: 4px;
+    color: white;
+}
+
+.risk-score.high { background: #dc3545; }
+.risk-score.medium { background: #ffc107; color: #212529; }
+.risk-score.low { background: #28a745; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-2 p-0">
+            {% include 'admin/admin_sidebar.html' %}
+        </div>
+        
+        <!-- Main Content -->
+        <div class="col-md-10" style="margin-left: 250px;">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-exclamation-triangle"></i> 위험성 평가 관리</h2>
+                <div class="btn-group">
+                    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#assessmentModal">
+                        <i class="bi bi-plus"></i> 위험성 평가
+                    </button>
+                    <button class="btn btn-primary">
+                        <i class="bi bi-download"></i> 평가 보고서
+                    </button>
+                </div>
+            </div>
+
+            <!-- 위험성 매트릭스 -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">위험성 매트릭스 (발생가능성 × 중대성)</h5>
+                </div>
+                <div class="card-body">
+                    <div class="risk-matrix">
+                        <div class="risk-cell risk-medium">6</div>
+                        <div class="risk-cell risk-medium">8</div>
+                        <div class="risk-cell risk-high">10</div>
+                        <div class="risk-cell risk-high">12</div>
+                        <div class="risk-cell risk-high">15</div>
+                        <div class="risk-cell risk-low">3</div>
+                        <div class="risk-cell risk-medium">4</div>
+                        <div class="risk-cell risk-medium">6</div>
+                        <div class="risk-cell risk-medium">8</div>
+                        <div class="risk-cell risk-high">10</div>
+                        <div class="risk-cell risk-low">2</div>
+                        <div class="risk-cell risk-low">3</div>
+                        <div class="risk-cell risk-medium">4</div>
+                        <div class="risk-cell risk-medium">6</div>
+                        <div class="risk-cell risk-medium">8</div>
+                        <div class="risk-cell risk-low">1</div>
+                        <div class="risk-cell risk-low">2</div>
+                        <div class="risk-cell risk-low">3</div>
+                        <div class="risk-cell risk-medium">4</div>
+                        <div class="risk-cell risk-medium">6</div>
+                        <div class="risk-cell risk-low">1</div>
+                        <div class="risk-cell risk-low">1</div>
+                        <div class="risk-cell risk-low">2</div>
+                        <div class="risk-cell risk-low">3</div>
+                        <div class="risk-cell risk-medium">4</div>
+                    </div>
+                    <div class="row text-center mt-3">
+                        <div class="col"><small>위험성 등급: <span class="risk-low px-2">저위험 (1-3)</span> 
+                        <span class="risk-medium px-2">중위험 (4-8)</span> <span class="risk-high px-2">고위험 (9-15)</span></small></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 위험성 평가 목록 -->
+            <div class="assessment-table">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>작업장</th>
+                            <th>위험요인</th>
+                            <th>발생가능성</th>
+                            <th>중대성</th>
+                            <th>위험점수</th>
+                            <th>위험등급</th>
+                            <th>개선대책</th>
+                            <th>평가일</th>
+                            <th>평가자</th>
+                            <th>관리</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for assessment in assessments %}
+                        <tr>
+                            <td>{{ assessment.workplace }}</td>
+                            <td>{{ assessment.hazard }}</td>
+                            <td class="text-center">{{ assessment.probability }}</td>
+                            <td class="text-center">{{ assessment.severity }}</td>
+                            <td class="text-center">
+                                <span class="risk-score 
+                                    {% if assessment.risk_score >= 9 %}high
+                                    {% elif assessment.risk_score >= 4 %}medium
+                                    {% else %}low{% endif %}">
+                                    {{ assessment.risk_score }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if assessment.risk_level == 'HIGH' %}
+                                    <span class="badge bg-danger">고위험</span>
+                                {% elif assessment.risk_level == 'MEDIUM' %}
+                                    <span class="badge bg-warning text-dark">중위험</span>
+                                {% else %}
+                                    <span class="badge bg-success">저위험</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ assessment.control_measures }}</td>
+                            <td>{{ assessment.assessment_date }}</td>
+                            <td>{{ assessment.assessor }}</td>
+                            <td>
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-outline-primary" title="상세보기">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary" title="재평가">
+                                        <i class="bi bi-arrow-clockwise"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 위험성 평가 모달 -->
+<div class="modal fade" id="assessmentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">위험성 평가 등록</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">작업장/공정</label>
+                                <input type="text" class="form-control" placeholder="예: 생산라인 A" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">위험요인</label>
+                                <input type="text" class="form-control" placeholder="예: 기계 협착" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">발생가능성 (1-5)</label>
+                                <select class="form-select" required>
+                                    <option value="">선택</option>
+                                    <option value="1">1 - 매우 낮음</option>
+                                    <option value="2">2 - 낮음</option>
+                                    <option value="3">3 - 보통</option>
+                                    <option value="4">4 - 높음</option>
+                                    <option value="5">5 - 매우 높음</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">중대성 (1-5)</label>
+                                <select class="form-select" required>
+                                    <option value="">선택</option>
+                                    <option value="1">1 - 경미</option>
+                                    <option value="2">2 - 약간</option>
+                                    <option value="3">3 - 보통</option>
+                                    <option value="4">4 - 심각</option>
+                                    <option value="5">5 - 치명적</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">위험점수</label>
+                                <input type="text" class="form-control" readonly placeholder="자동 계산">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">현재 안전대책</label>
+                        <textarea class="form-control" rows="2" placeholder="현재 적용중인 안전대책"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">개선대책</label>
+                        <textarea class="form-control" rows="3" placeholder="추가적인 개선대책" required></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">평가일</label>
+                                <input type="date" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">평가자</label>
+                                <input type="text" class="form-control" placeholder="평가자명" required>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <button type="button" class="btn btn-primary">등록</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

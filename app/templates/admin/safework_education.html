@@ -1,0 +1,312 @@
+{% extends "base.html" %}
+
+{% block title %}교육 이수 현황 관리 - SafeWork{% endblock %}
+
+{% block extra_css %}
+<style>
+.education-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #667eea;
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.progress-ring {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 10px;
+}
+
+.education-filters {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.education-table {
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    border: none;
+}
+
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.status-completed {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-expired {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.status-pending {
+    background: #fff3cd;
+    color: #856404;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-2 p-0">
+            {% include 'admin/admin_sidebar.html' %}
+        </div>
+        
+        <!-- Main Content -->
+        <div class="col-md-10" style="margin-left: 250px;">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-mortarboard"></i> 교육 이수 현황 관리</h2>
+                <div class="btn-group">
+                    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#educationModal">
+                        <i class="bi bi-plus"></i> 교육 등록
+                    </button>
+                    <button class="btn btn-primary">
+                        <i class="bi bi-download"></i> Excel 다운로드
+                    </button>
+                </div>
+            </div>
+
+            <!-- 통계 카드 -->
+            <div class="education-stats">
+                <div class="stat-card">
+                    <div class="stat-value">{{ education_stats.total_workers }}</div>
+                    <div class="stat-label">총 대상자</div>
+                </div>
+                <div class="stat-card">
+                    <div class="progress-ring">
+                        <svg width="80" height="80">
+                            <circle cx="40" cy="40" r="30" fill="none" stroke="#e9ecef" stroke-width="8"/>
+                            <circle cx="40" cy="40" r="30" fill="none" stroke="#28a745" stroke-width="8"
+                                stroke-dasharray="{{ (education_stats.completion_rate_safety * 188.5) / 100 }} 188.5"
+                                stroke-dashoffset="0" transform="rotate(-90 40 40)"/>
+                        </svg>
+                    </div>
+                    <div class="stat-value">{{ education_stats.completion_rate_safety }}%</div>
+                    <div class="stat-label">안전교육 이수율</div>
+                </div>
+                <div class="stat-card">
+                    <div class="progress-ring">
+                        <svg width="80" height="80">
+                            <circle cx="40" cy="40" r="30" fill="none" stroke="#e9ecef" stroke-width="8"/>
+                            <circle cx="40" cy="40" r="30" fill="none" stroke="#17a2b8" stroke-width="8"
+                                stroke-dasharray="{{ (education_stats.completion_rate_health * 188.5) / 100 }} 188.5"
+                                stroke-dashoffset="0" transform="rotate(-90 40 40)"/>
+                        </svg>
+                    </div>
+                    <div class="stat-value">{{ education_stats.completion_rate_health }}%</div>
+                    <div class="stat-label">보건교육 이수율</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">12</div>
+                    <div class="stat-label">이수 만료 예정</div>
+                </div>
+            </div>
+
+            <!-- 필터 -->
+            <div class="education-filters">
+                <form class="row g-3">
+                    <div class="col-md-3">
+                        <select class="form-select">
+                            <option value="">전체 부서</option>
+                            <option value="생산부">생산부</option>
+                            <option value="품질관리부">품질관리부</option>
+                            <option value="경영지원부">경영지원부</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select">
+                            <option value="">교육 유형</option>
+                            <option value="안전교육">안전교육</option>
+                            <option value="보건교육">보건교육</option>
+                            <option value="화학물질교육">화학물질교육</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-select">
+                            <option value="">이수 상태</option>
+                            <option value="COMPLETED">이수 완료</option>
+                            <option value="EXPIRED">이수 만료</option>
+                            <option value="PENDING">이수 필요</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <input type="text" class="form-control" placeholder="성명 검색">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">검색</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- 교육 이수 목록 -->
+            <div class="education-table">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>사번</th>
+                            <th>성명</th>
+                            <th>부서</th>
+                            <th>교육 유형</th>
+                            <th>이수일</th>
+                            <th>유효기간</th>
+                            <th>교육시간</th>
+                            <th>강사</th>
+                            <th>상태</th>
+                            <th>관리</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in education_records %}
+                        <tr>
+                            <td>{{ record.employee_number }}</td>
+                            <td>{{ record.worker_name }}</td>
+                            <td>{{ record.department }}</td>
+                            <td>{{ record.education_type }}</td>
+                            <td>{{ record.completed_date }}</td>
+                            <td>{{ record.valid_until }}</td>
+                            <td>{{ record.hours }}시간</td>
+                            <td>{{ record.instructor }}</td>
+                            <td>
+                                <span class="status-badge 
+                                    {% if record.status == 'COMPLETED' %}status-completed
+                                    {% elif record.status == 'EXPIRED' %}status-expired
+                                    {% else %}status-pending{% endif %}">
+                                    {% if record.status == 'COMPLETED' %}이수 완료
+                                    {% elif record.status == 'EXPIRED' %}이수 만료
+                                    {% else %}이수 필요{% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-outline-primary" title="수료증 발급">
+                                        <i class="bi bi-award"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary" title="수정">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 교육 등록 모달 -->
+<div class="modal fade" id="educationModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">교육 이수 등록</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">교육일</label>
+                                <input type="date" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">교육 유형</label>
+                                <select class="form-select" required>
+                                    <option value="">선택하세요</option>
+                                    <option value="안전교육">안전교육</option>
+                                    <option value="보건교육">보건교육</option>
+                                    <option value="화학물질교육">화학물질교육</option>
+                                    <option value="소방교육">소방교육</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">교육시간</label>
+                                <input type="number" class="form-control" placeholder="시간" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">강사</label>
+                                <input type="text" class="form-control" placeholder="강사명" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">교육 대상자</label>
+                        <div class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="selectAll">
+                                <label class="form-check-label fw-bold" for="selectAll">전체 선택</label>
+                            </div>
+                            <hr>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="worker1">
+                                <label class="form-check-label" for="worker1">김철수 (생산부)</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="worker2">
+                                <label class="form-check-label" for="worker2">이영희 (품질관리부)</label>
+                            </div>
+                            <!-- 더 많은 근로자 목록 -->
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">교육 내용</label>
+                        <textarea class="form-control" rows="3" placeholder="교육 내용 요약"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <button type="button" class="btn btn-primary">등록</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
