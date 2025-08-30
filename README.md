@@ -1,8 +1,28 @@
 # SafeWork - 산업안전보건 관리 시스템
 
-근골격계 증상조사표(001) 및 신규입사자 건강검진(002)을 포함한 완성된 산업안전보건 관리 플랫폼 (v3.0.0)
+근골격계 증상조사표(001) 및 신규입사자 건강검진(002)을 포함한 완성된 산업안전보건 관리 플랫폼 (v3.1.0)
 
-## 🆕 최신 업데이트 (v3.0.0) - SafeWork Full Stack 구현 완료
+## 🆕 최신 업데이트 (v3.1.0) - 완전한 관리자 패널 시스템
+
+### Phase 5 - 13개 SafeWork 관리자 패널 완성 (2024-08-30)
+- 🎯 **완전한 관리자 패널 구현**
+  - 20개 SafeWork 전용 템플릿 완성
+  - 13개 전문화된 관리자 패널
+  - 건강상담, 안전교육, 위험성평가 등 핵심 기능
+  - 모든 패널에 CRUD 기능과 Excel 내보내기
+
+- 💼 **전문화된 SafeWork 관리 기능**
+  - 근로자 마스터 데이터 관리
+  - 건강검진 및 의무실 방문 추적
+  - 의약품 재고 및 만료일 관리
+  - MSDS 및 보호장비 관리 시스템
+  - 부서별 안전관리 현황 대시보드
+
+- 📊 **통합 모니터링 시스템**
+  - 실시간 건강상태 모니터링
+  - 위험성평가 및 작업환경측정
+  - 안전교육 이수현황 추적
+  - 자격증 및 인증서 관리
 
 ### Phase 4 - 백엔드 API 및 데이터베이스 통합 (2025-08-29)
 - 🎯 **완전한 백엔드 API 구현**
@@ -172,12 +192,36 @@ registry.jclee.me/safework/redis:latest   # Redis 캐시 (포트 6379)
 | `/admin/documents/delete/<id>` | 문서 삭제 | 문서 삭제 |
 | `/admin/documents/categories` | 카테고리 관리 | 문서 분류 설정 |
 
-### 🛡️ 관리자 전용 페이지
+### 🛡️ SafeWork 관리자 전용 페이지 (13개 전문 패널)
 
+#### 핵심 관리 기능
 | 경로 | 설명 | 기능 |
 |------|------|------|
-| `/admin/dashboard` | 관리자 대시보드 | 전체 시스템 현황 |
+| `/admin/dashboard` | 메인 관리자 대시보드 | 전체 시스템 현황 |
 | `/admin/surveys` | 증상조사 통합 관리 | 제출 데이터 전체 관리 |
+| `/admin/safework` | SafeWork 메인 대시보드 | 종합 건강안전 현황 |
+
+#### SafeWork 전문 관리 패널
+| 경로 | 설명 | 주요 기능 |
+|------|------|---------|
+| `/admin/safework/workers` | 근로자 관리 | 직원 마스터 데이터, 건강상태 추적 |
+| `/admin/safework/health-checks` | 건강검진 관리 | 정기검진, 특수검진 일정 및 결과 |
+| `/admin/safework/medical-visits` | 의무실 방문 관리 | 진료기록, 활력징후, 후속조치 |
+| `/admin/safework/medications` | 의약품 관리 | 재고관리, 유효기간, 처방기록 |
+| `/admin/safework/consultations` | 건강상담 기록 | 개인상담, 집단상담, 상담이력 |
+| `/admin/safework/health-programs` | 건강증진 프로그램 | 금연, 금주, 운동 프로그램 |
+| `/admin/safework/special-management` | 특별관리 대상자 | 고위험군, 특수건강진단 대상자 |
+| `/admin/safework/environment-measurements` | 작업환경측정 | 소음, 분진, 화학물질 측정 결과 |
+| `/admin/safework/risk-assessment` | 위험성 평가 | 위험요인 평가, 개선대책 |
+| `/admin/safework/msds` | 물질안전보건자료 | MSDS 관리, 화학물질 정보 |
+| `/admin/safework/protective-equipment` | 보호장비 관리 | 개인보호장비 지급, 점검 |
+| `/admin/safework/education` | 안전교육 관리 | 교육계획, 이수현황, 평가 |
+| `/admin/safework/certifications` | 자격증 관리 | 안전관리자, 보건관리자 자격 |
+| `/admin/safework/departments` | 부서별 현황 | 부서별 안전보건 통계 |
+
+#### 시스템 관리
+| 경로 | 설명 | 기능 |
+|------|------|------|
 | `/admin/users` | 사용자 관리 | 사용자 목록, 권한 설정 |
 | `/admin/logs` | 감사 로그 | 시스템 활동 이력 |
 | `/migration/status` | 마이그레이션 상태 | DB 스키마 버전 관리 |
@@ -408,16 +452,33 @@ safework/
 - 🔐 접근 권한 제어 (공개/비공개/관리자 전용)
 - 📋 문서 템플릿 제공
 
-### 관리자 기능
-- 📊 실시간 대시보드 (`/admin/dashboard`)
-- 📋 제출 데이터 조회/검색 (`/admin/surveys`)
-- 📥 Excel 다운로드
-- 📈 통계 분석 및 고위험군 모니터링
-- 📁 문서 업로드 및 관리 (`/admin/documents`)
-- 🏷️ 카테고리 관리 (`/admin/documents/categories`)
-- 📝 문서 버전 관리
-- 📊 문서 접근 로그 조회
-- 🗂️ 마이그레이션 관리 (`/admin/migrations`)
+### SafeWork 관리자 기능 (13개 전문 패널)
+- 📊 **통합 대시보드** (`/admin/safework`) - 종합 건강안전 현황 모니터링
+- 👥 **근로자 관리** (`/admin/safework/workers`) - 직원 마스터 데이터 및 건강상태 추적
+- 🏥 **건강검진 관리** (`/admin/safework/health-checks`) - 정기/특수검진 일정 및 결과 관리
+- 🩺 **의무실 방문** (`/admin/safework/medical-visits`) - 진료기록 및 활력징후 추적
+- 💊 **의약품 관리** (`/admin/safework/medications`) - 재고관리 및 유효기간 모니터링
+- 🗣️ **건강상담 기록** (`/admin/safework/consultations`) - 개인/집단 상담 이력 관리
+- 🏃 **건강증진 프로그램** (`/admin/safework/health-programs`) - 금연/금주/운동 프로그램
+- ⚠️ **특별관리 대상자** (`/admin/safework/special-management`) - 고위험군 특별 관리
+- 🌡️ **작업환경측정** (`/admin/safework/environment-measurements`) - 소음/분진/화학물질 측정
+- ⚡ **위험성 평가** (`/admin/safework/risk-assessment`) - 위험요인 평가 및 개선대책
+- 🧪 **MSDS 관리** (`/admin/safework/msds`) - 물질안전보건자료 통합 관리
+- 🦺 **보호장비 관리** (`/admin/safework/protective-equipment`) - 개인보호장비 지급/점검
+- 📚 **안전교육 관리** (`/admin/safework/education`) - 교육계획/이수현황/평가
+- 📜 **자격증 관리** (`/admin/safework/certifications`) - 안전/보건관리자 자격 관리
+- 🏢 **부서별 현황** (`/admin/safework/departments`) - 부서별 안전보건 통계
+
+### 시스템 관리 기능
+- 📊 실시간 대시보드 (`/admin/dashboard`) - 전체 시스템 현황
+- 📋 제출 데이터 조회/검색 (`/admin/surveys`) - 증상조사 통합 관리
+- 📥 Excel 다운로드 - 모든 패널에서 데이터 내보내기 지원
+- 📈 통계 분석 및 고위험군 모니터링 - 실시간 건강안전 지표
+- 📁 문서 업로드 및 관리 (`/admin/documents`) - 안전보건 문서 중앙화
+- 🏷️ 카테고리 관리 (`/admin/documents/categories`) - 문서 분류 체계
+- 📝 문서 버전 관리 - 문서 변경 이력 추적
+- 📊 문서 접근 로그 조회 - 문서 사용 패턴 분석
+- 🗂️ 마이그레이션 관리 (`/admin/migrations`) - 데이터베이스 스키마 관리
 
 ### 시스템 기능
 - 🔍 헬스 체크 (`/health`)
@@ -566,6 +627,18 @@ docker-compose up -d
 ```
 
 ## 📈 버전 히스토리
+
+### v3.1.0 (2024-08-30) 🎉
+- **완전한 SafeWork 관리자 패널**: 13개 전문화된 관리 패널 완성
+  - 건강상담, 건강증진, 특별관리, 작업환경측정 관리
+  - 위험성평가, MSDS, 보호장비, 안전교육 관리
+  - 자격증 관리, 부서별 현황 대시보드
+  - 20개 SafeWork 전용 템플릿과 완전한 CRUD 기능
+- **통합 SafeWork 시스템**: 산업안전보건 전 영역 디지털화
+  - 근로자부터 안전관리까지 원스톱 관리
+  - 실시간 모니터링 및 Excel 내보내기
+  - Bootstrap 기반 반응형 UI/UX
+- **관리자 패널 복원**: 기존 누락된 메뉴 기능 완전 구현
 
 ### v1.4.0 (2025-08-28) 🎉
 - **완성된 시스템**: SafeWork 산업안전보건 관리 시스템 전체 기능 완성

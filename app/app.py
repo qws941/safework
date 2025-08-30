@@ -1,5 +1,4 @@
 import os
-import os
 import time as time_module
 from datetime import datetime, timezone, timedelta
 
@@ -159,7 +158,6 @@ def create_app(config_name=None):
                     "git", "rev-parse", "--short", "HEAD"
                 ], capture_output=True, text=True, timeout=2)
                 if result.returncode == 0:
-                    from datetime import datetime
                     timestamp = datetime.now().strftime('%Y%m%d-%H%M')
                     app_version = f"v3.0.{timestamp}-{result.stdout.strip()}"
                     version_info = {
