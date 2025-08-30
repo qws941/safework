@@ -149,8 +149,45 @@ DocumentVersion     # Version control for documents
 - **Graceful Degradation**: System continues to function even if optional components fail
 
 ### Survey System Implementation
-- **001 Form**: 6 body parts with conditional logic, JSON data storage
-- **002 Form**: 29 comprehensive health fields
+
+#### 001 Musculoskeletal Symptom Survey (PDF-Compliant Implementation)
+The 001 form has been completely redesigned to match the official PDF version exactly:
+
+**Form Structure:**
+- **Basic Information**: Employee details, work experience, department info
+- **Current Work Details**: Job description, work duration, daily hours, break schedule
+- **Previous Work History**: Details of work before current position  
+- **Pre-screening Questions**: 5 comprehensive sections
+  - Leisure activities (6 options with exclusive "none" selection)
+  - Housework hours (5-level scale)
+  - Diagnosed diseases (5 conditions with treatment status)
+  - Past accidents (6 body parts with conditional display)
+  - Physical burden assessment (4-level scale)
+- **Symptom Assessment**: 6×6 matrix evaluation
+  - 6 body parts: neck, shoulder, arm/elbow, hand/wrist/finger, waist, leg/foot
+  - 6 questions per part: location, duration, severity, frequency, last week, treatment
+
+**Technical Implementation:**
+- **Conditional Display Logic**: Disease status and accident details show/hide based on selections
+- **Exclusive Selections**: "None" options automatically clear other selections
+- **JSON Data Collection**: Symptom matrix data serialized to JSON for server processing
+- **Client-side Validation**: Required field checking and symptom completion validation
+- **Template Architecture**: 1300+ lines of HTML with embedded JavaScript functionality
+
+**Server Processing:**
+```python
+# JSON symptom data handling in routes/survey.py
+symptoms_json_data = request.form.get("symptoms_json_data")
+symptom_data_dict = json.loads(symptoms_json_data) if symptoms_json_data else {}
+
+# Store in database JSON fields
+neck_data=symptom_data_dict.get('목', {}),
+shoulder_data=symptom_data_dict.get('어깨', {}),
+# ... additional body parts
+```
+
+#### 002 Form
+- **002 Form**: 29 comprehensive health fields for new employee checkups
 - **Anonymous Support**: Uses user_id=1 for public submissions
 - **Admin Dashboard**: `/admin/safework` with Excel export capabilities
 
@@ -401,8 +438,24 @@ docker exec safework-mysql mysql -u safework -psafework2024 safework_db -e "SELE
 
 ## Recent Development History
 
+### PDF-Compliant 001 Survey Implementation (2024-08-30)
+**Latest Update**: Complete redesign of 001 musculoskeletal symptom survey to match official PDF exactly
+
+**Major Changes:**
+- **Template Rewrite**: Complete restructure of `001_musculoskeletal_symptom_survey.html` (1300+ lines)
+- **JavaScript Enhancement**: Added conditional display logic, data collection, and validation
+- **Server Route Update**: Modified `routes/survey.py` to handle JSON symptom data structure
+- **Database Integration**: Symptom data now stored as JSON in dedicated fields (neck_data, shoulder_data, etc.)
+
+**New Features:**
+- 6×6 symptom assessment matrix with radio buttons and checkboxes
+- Conditional sections for disease status and accident details  
+- Exclusive selection logic for "none" options
+- Client-side form validation with Korean error messages
+- JSON serialization of complex symptom data for server processing
+
 ### Admin Panel Restoration (2024-08-30)
-Recently completed comprehensive admin panel restoration for SafeWork system:
+Comprehensive admin panel restoration for SafeWork system:
 
 **Issue Identified**: User reported missing admin panel menus that were previously available
 **Resolution**: Implemented 10 missing admin routes and corresponding HTML templates
@@ -431,6 +484,49 @@ Recently completed comprehensive admin panel restoration for SafeWork system:
 - Modal forms for CRUD operations
 - Excel export functionality
 - Bootstrap 4.6 responsive design
+
+## Form Development Patterns
+
+### 001 Survey Form Architecture  
+When working with the 001 musculoskeletal symptom survey, understand the key patterns:
+
+**Template Structure:**
+- **Section-based Layout**: Each form section uses `.section-card` container with consistent styling
+- **Conditional Sections**: Use `id` attributes and JavaScript show/hide logic (e.g., `disease_status_section`, `accident_details_section`)
+- **Matrix Tables**: Symptom assessment uses responsive tables with nested Jinja2 loops for body parts and questions
+
+**JavaScript Patterns:**
+```javascript
+// Conditional display pattern
+function toggleDiseaseStatus() {
+    const hasDisease = Array.from(diseaseCheckboxes).some(cb => cb.checked);
+    diseaseStatusDiv.style.display = hasDisease ? 'block' : 'none';
+}
+
+// JSON data collection pattern  
+const symptomData = {};
+bodyParts.forEach(part => {
+    const partKey = part.replace(/[\/]/g, '_');
+    if (sideInput) {
+        symptomData[partKey] = {
+            side: sideInput.value,
+            duration: durationInput?.value || '',
+            // ... other fields
+        };
+    }
+});
+```
+
+**Server Processing Pattern:**
+```python
+# Extract JSON data from form
+symptoms_json_data = request.form.get("symptoms_json_data")
+symptom_data_dict = json.loads(symptoms_json_data) if symptoms_json_data else {}
+
+# Map to database fields using Korean keys
+neck_data=symptom_data_dict.get('목', {}),
+shoulder_data=symptom_data_dict.get('어깨', {}),
+```
 
 ## Important Development Notes
 
