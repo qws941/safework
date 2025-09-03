@@ -146,7 +146,7 @@
         box-shadow: 
             0 0 0 4px rgba(99, 102, 241, 0.15),
             0 2px 8px rgba(99, 102, 241, 0.08);
-        background: #fefefe;
+        background: var(--sw-gray-50);
     }
     
     /* 체크박스/라디오 그룹 - 완전히 새로운 디자인 */
@@ -302,9 +302,9 @@
     }
     
     .option-btn.selected {
-        background: #3b82f6;
-        color: white;
-        border-color: #3b82f6;
+        background: var(--sw-primary);
+        color: var(--sw-white);
+        border-color: var(--sw-primary);
     }
     
     .question-row.disabled {
@@ -313,7 +313,7 @@
     }
     
     .question-row.disabled .question-text {
-        color: #9ca3af;
+        color: var(--sw-gray-600);
     }
     
     /* 증상 평가 테이블 - 완전히 새로운 디자인 */
@@ -349,13 +349,13 @@
     }
     
     .question-cell {
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        background: linear-gradient(135deg, var(--sw-gray-50) 0%, var(--sw-gray-100) 100%);
         font-weight: 600;
-        color: #1f2937;
+        color: var(--sw-gray-900);
         text-align: left;
         vertical-align: middle;
         padding: 18px 16px;
-        border: 1px solid #e5e7eb;
+        border: 1px solid var(--sw-gray-200);
         width: 300px;
         min-width: 300px;
         line-height: 1.4;
@@ -365,14 +365,14 @@
         text-align: center;
         vertical-align: middle;
         padding: 14px 10px;
-        border: 1px solid #e5e7eb;
-        background-color: #ffffff;
+        border: 1px solid var(--sw-gray-200);
+        background-color: var(--sw-white);
         min-width: 120px;
         transition: background-color 0.2s ease;
     }
     
     .answer-cell:hover {
-        background-color: #f9fafb;
+        background-color: var(--sw-gray-50);
     }
     
     .radio-group-vertical,
@@ -1187,38 +1187,6 @@
             </div>
         </div>
 
-        <!-- 가사노동시간 -->
-        <div class="section-card">
-            <h4 class="section-title">
-                <i class="bi bi-house"></i> 2. 가사노동시간
-            </h4>
-            
-            <div class="form-group">
-                <label class="form-label">하루 평균 가사노동시간</label>
-                <div class="radio-group">
-                    <div class="radio-item">
-                        <input type="radio" id="housework_1" name="housework_hours" value="거의안함">
-                        <label for="housework_1">거의안함</label>
-                    </div>
-                    <div class="radio-item">
-                        <input type="radio" id="housework_2" name="housework_hours" value="1시간미만">
-                        <label for="housework_2">1시간미만</label>
-                    </div>
-                    <div class="radio-item">
-                        <input type="radio" id="housework_3" name="housework_hours" value="1-2시간">
-                        <label for="housework_3">1-2시간</label>
-                    </div>
-                    <div class="radio-item">
-                        <input type="radio" id="housework_4" name="housework_hours" value="2-3시간">
-                        <label for="housework_4">2-3시간</label>
-                    </div>
-                    <div class="radio-item">
-                        <input type="radio" id="housework_5" name="housework_hours" value="3시간이상">
-                        <label for="housework_5">3시간이상</label>
-                    </div>
-                </div>
-            </div>
-        </div>
 
 
         <\!-- 제출 버튼 -->
