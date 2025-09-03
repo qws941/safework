@@ -483,6 +483,56 @@
             0 2px 8px rgba(0, 0, 0, 0.1);
     }
     
+    /* 반응형 테이블 스크롤 컨테이너 */
+    .table-responsive {
+        border-radius: 16px;
+        border: 1px solid var(--sw-gray-200);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        background: var(--sw-white);
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch; /* iOS 부드러운 스크롤 */
+        position: relative;
+    }
+
+    /* 스크롤바 스타일링 */
+    .table-responsive::-webkit-scrollbar {
+        height: 8px;
+    }
+
+    .table-responsive::-webkit-scrollbar-track {
+        background: var(--sw-gray-100);
+        border-radius: 4px;
+    }
+
+    .table-responsive::-webkit-scrollbar-thumb {
+        background: var(--sw-primary);
+        border-radius: 4px;
+    }
+
+    .table-responsive::-webkit-scrollbar-thumb:hover {
+        background: var(--sw-primary-dark);
+    }
+
+    /* 모바일에서 스크롤 가이드 표시 */
+    @media (max-width: 768px) {
+        .table-responsive::before {
+            content: "← 좌우로 스크롤하여 모든 항목을 확인하세요 →";
+            display: block;
+            text-align: center;
+            padding: 8px;
+            background: linear-gradient(135deg, var(--sw-primary-light) 0%, var(--sw-primary) 100%);
+            color: var(--sw-white);
+            font-size: 0.8rem;
+            font-weight: 600;
+            border-radius: 8px 8px 0 0;
+            margin-bottom: 0;
+        }
+        
+        .symptoms-table {
+            border-radius: 0 0 16px 16px;
+        }
+    }
+
     /* 반응형 디자인 */
     @media (max-width: 768px) {
         .survey-container {
@@ -518,8 +568,15 @@
         }
         
         .question-cell {
-            min-width: 200px;
-            width: 200px;
+            min-width: 250px;
+            width: 250px;
+            font-size: 0.85rem;
+            padding: 14px;
+        }
+
+        .answer-cell {
+            min-width: 100px;
+            padding: 10px 8px;
         }
         
         .submit-btn {
@@ -544,14 +601,21 @@
         }
         
         .question-cell {
-            min-width: 150px;
-            width: 150px;
+            min-width: 200px;
+            width: 200px;
             padding: 12px;
+            font-size: 0.8rem;
         }
-        
+
         .answer-cell {
+            min-width: 90px;
             padding: 8px 6px;
-            min-width: 80px;
+        }
+
+        .radio-group-vertical label,
+        .checkbox-group-vertical label {
+            font-size: 0.75rem;
+            gap: 4px;
         }
         
         .submit-btn {
