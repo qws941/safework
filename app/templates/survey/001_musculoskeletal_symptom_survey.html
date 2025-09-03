@@ -1099,18 +1099,6 @@
 </div>
 
 <script>
-// 증상 유무에 따른 상세 정보 표시/숨김
-document.querySelectorAll('input[name="has_symptoms"]').forEach(radio => {
-    radio.addEventListener('change', function() {
-        const symptomDetails = document.getElementById('symptom-details');
-        if (this.value === '예') {
-            symptomDetails.style.display = 'block';
-        } else {
-            symptomDetails.style.display = 'none';
-        }
-    });
-});
-
 // 폼 검증 및 제출 처리
 document.getElementById('surveyForm').addEventListener('submit', function(e) {
     const hasSymptoms = document.querySelector('input[name="has_symptoms"]:checked');
@@ -1255,8 +1243,93 @@ function collectSymptomData() {
     hiddenInput.value = JSON.stringify(symptomData);
 }
 
-// 초기 상태 설정
+// 초기 상태 설정 및 모든 이벤트 리스너 초기화
 document.addEventListener('DOMContentLoaded', function() {
+    // 증상 유무에 따른 상세 정보 표시/숨김
+    document.querySelectorAll('input[name="has_symptoms"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const symptomDetails = document.getElementById('symptom-details');
+            if (this.value === '예') {
+                symptomDetails.style.display = 'block';
+            } else {
+                symptomDetails.style.display = 'none';
+            }
+        });
+    });
+
+    // 질병 상태 조건부 표시
+    const diseaseCheckboxes = document.querySelectorAll('input[name^="disease_"]:not([name="disease_none"])');
+    const diseaseStatusDiv = document.getElementById('disease_status_section');
+
+    function toggleDiseaseStatus() {
+        const hasDisease = Array.from(diseaseCheckboxes).some(cb => cb.checked);
+        if (diseaseStatusDiv) {
+            diseaseStatusDiv.style.display = hasDisease ? 'block' : 'none';
+        }
+    }
+
+    diseaseCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', toggleDiseaseStatus);
+    });
+
+    // "아니오" 체크박스 처리
+    const diseaseNone = document.querySelector('input[name="disease_none"]');
+    if (diseaseNone) {
+        diseaseNone.addEventListener('change', function() {
+            if (this.checked) {
+                diseaseCheckboxes.forEach(cb => {
+                    cb.checked = false;
+                });
+            }
+            toggleDiseaseStatus();
+        });
+    }
+
+    diseaseCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            if (this.checked && diseaseNone) {
+                diseaseNone.checked = false;
+            }
+        });
+    });
+
+    // 과거 사고 조건부 표시
+    document.querySelectorAll('input[name="past_accident"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const accidentDetails = document.getElementById('accident_details_section');
+            if (accidentDetails) {
+                if (this.value === '예') {
+                    accidentDetails.style.display = 'block';
+                } else {
+                    accidentDetails.style.display = 'none';
+                }
+            }
+        });
+    });
+
+    // 여가활동 exclusive 처리
+    const leisureNone = document.querySelector('input[name="leisure_none"]');
+    const leisureCheckboxes = document.querySelectorAll('input[name^="leisure_"]:not([name="leisure_none"])');
+
+    if (leisureNone) {
+        leisureNone.addEventListener('change', function() {
+            if (this.checked) {
+                leisureCheckboxes.forEach(cb => {
+                    cb.checked = false;
+                });
+            }
+        });
+    }
+
+    leisureCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            if (this.checked && leisureNone) {
+                leisureNone.checked = false;
+            }
+        });
+    });
+
+    // 초기 상태 설정
     toggleDiseaseStatus();
 });
 </script>
