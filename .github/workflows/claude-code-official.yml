@@ -1,0 +1,66 @@
+name: Claude Code - SafeWork 자동화
+
+on:
+  issues:
+    types: [opened, labeled]
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+
+jobs:
+  claude:
+    if: |
+      (github.event_name == 'issues' && 
+       (contains(github.event.issue.labels.*.name, 'P0') || 
+        contains(github.event.issue.labels.*.name, 'enhancement') ||
+        contains(github.event.issue.labels.*.name, 'bug'))) ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude'))
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: SafeWork 이슈 자동 처리
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            SafeWork 프로젝트의 GitHub 이슈를 자동으로 처리해주세요.
+            
+            ## 프로젝트 컨텍스트
+            - Flask 3.0+ 기반 안전보건 관리시스템
+            - 001/002 설문 시스템 및 관리자 대시보드
+            - MySQL + Redis + Docker 환경
+            - 건설업 맞춤 기능 구현 중
+            
+            ## 현재 이슈 정보
+            ${{ github.event_name == 'issues' && format('이슈 #{0}: {1}', github.event.issue.number, github.event.issue.title) || format('댓글 이슈 #{0}', github.event.issue.number) }}
+            
+            ## 처리 방식
+            1. **이슈 분석**: 요구사항 및 기술적 복잡도 파악
+            2. **코드 검토**: 관련 파일 (templates/, routes/, models/) 분석  
+            3. **구현**: SafeWork 코딩 규칙 준수하여 자동 구현
+            4. **검증**: Docker 환경에서 테스트 실행
+            5. **PR 생성**: 완성된 코드로 Pull Request 생성
+            
+            ## 우선순위 처리
+            - **P0 라벨**: 최우선 즉시 처리
+            - **enhancement**: 기능 개선 구현
+            - **bug**: 버그 수정 및 검증
+            
+            ## 코딩 규칙
+            - CLAUDE.md 가이드라인 준수
+            - Flask 모범사례 적용  
+            - 기존 코드 스타일 유지
+            - MCP Serena 도구 활용한 정밀 코드 수정
+            - Docker 환경 테스트 필수
+            
+            자동 처리를 시작해주세요!
+
+      - name: 이슈 처리 결과 알림
+        if: always()
+        run: |
+          echo "🤖 Claude Code 자동 처리 완료"
+          echo "📋 이슈: ${{ github.event.issue.title || '댓글 이슈' }}"
+          echo "⏰ 처리 시간: $(date)"
+          echo "🔗 상세 로그: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
