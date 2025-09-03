@@ -81,17 +81,41 @@
     
     .checkbox-group,
     .radio-group {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 15px;
-        margin-top: 8px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+        margin-top: 12px;
     }
     
     .checkbox-item,
     .radio-item {
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 8px;
+        padding: 10px 12px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    
+    .checkbox-item:hover,
+    .radio-item:hover {
+        background: #f1f5f9;
+        border-color: #cbd5e1;
+    }
+    
+    .checkbox-item input:checked + label,
+    .radio-item input:checked + label {
+        color: #1e40af;
+        font-weight: 500;
+    }
+    
+    .checkbox-item:has(input:checked),
+    .radio-item:has(input:checked) {
+        background: #dbeafe;
+        border-color: #3b82f6;
     }
     
     .checkbox-item input,
@@ -191,37 +215,58 @@
         color: #9ca3af;
     }
     
-    /* PDF 테이블 스타일 */
+    /* 개선된 증상 평가 테이블 */
     .symptoms-table {
-        margin-bottom: 0;
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
         font-size: 0.85rem;
+        background: #ffffff;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
     }
     
     .symptoms-table th {
-        background-color: #e3f2fd !important;
+        background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+        color: #ffffff;
         text-align: center;
         vertical-align: middle;
         font-weight: 600;
-        padding: 12px 8px;
-        border: 1px solid #90caf9;
+        font-size: 0.9rem;
+        padding: 16px 12px;
+        border: none;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     
     .question-cell {
-        background-color: #f8f9fa;
-        font-weight: 500;
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        font-weight: 600;
+        color: #1f2937;
+        text-align: left;
         vertical-align: middle;
-        padding: 15px 12px;
-        border: 1px solid #dee2e6;
+        padding: 18px 16px;
+        border: 1px solid #e5e7eb;
         width: 300px;
         min-width: 300px;
+        line-height: 1.4;
     }
     
     .answer-cell {
         text-align: center;
         vertical-align: middle;
-        padding: 10px 8px;
-        border: 1px solid #dee2e6;
+        padding: 14px 10px;
+        border: 1px solid #e5e7eb;
+        background-color: #ffffff;
         min-width: 120px;
+        transition: background-color 0.2s ease;
+    }
+    
+    .answer-cell:hover {
+        background-color: #f9fafb;
     }
     
     .radio-group-vertical,
@@ -323,8 +368,14 @@
         
         .checkbox-group,
         .radio-group {
-            flex-direction: column;
+            grid-template-columns: 1fr;
             gap: 10px;
+        }
+        
+        .checkbox-item,
+        .radio-item {
+            padding: 12px;
+            margin: 0;
         }
         
         .question-row {
@@ -349,6 +400,61 @@
             word-break: keep-all;
             line-height: 1.2;
             height: auto;
+        }
+        
+        /* 모바일에서 증상 테이블 개선 */
+        .symptoms-table {
+            font-size: 0.75rem;
+            border-radius: 8px;
+        }
+        
+        .symptoms-table th {
+            padding: 12px 8px;
+            font-size: 0.8rem;
+        }
+        
+        .question-cell {
+            width: 200px;
+            min-width: 200px;
+            padding: 14px 10px;
+            font-size: 0.8rem;
+        }
+        
+        .answer-cell {
+            min-width: 100px;
+            padding: 12px 8px;
+        }
+        
+        .radio-group-vertical label {
+            font-size: 0.75rem;
+            padding: 6px 4px;
+            border-radius: 4px;
+        }
+        
+        .radio-group-vertical label:hover {
+            background-color: #f1f5f9;
+        }
+        
+        .radio-group-vertical input[type="radio"]:checked + span {
+            color: #1e40af;
+            font-weight: 600;
+        }
+    }
+    
+    /* 태블릿 크기 최적화 */
+    @media (max-width: 1024px) and (min-width: 769px) {
+        .checkbox-group,
+        .radio-group {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .symptoms-table {
+            font-size: 0.8rem;
+        }
+        
+        .question-cell {
+            width: 250px;
+            min-width: 250px;
         }
     }
 </style>
