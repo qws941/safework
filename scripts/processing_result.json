@@ -1,0 +1,15 @@
+{
+  "success": true,
+  "analysis": {
+    "related_files": [],
+    "file_analyses": {}
+  },
+  "implementation": {
+    "success": true,
+    "changes": [
+      "조건부 표시 기능 구현 예정"
+    ]
+  },
+  "changes": [],
+  "processor": "MCP serena 기반"
+}
