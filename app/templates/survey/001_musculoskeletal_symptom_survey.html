@@ -693,9 +693,62 @@
             </div>
             
             <div class="form-row">
-                <div class="form-group half">
+                <div class="form-group third">
+                    <label class="form-label required">업체명</label>
+                    <select name="company" class="form-control" required>
+                        <option value="">-- 업체를 선택하세요 --</option>
+                        <option value="미래도시건설">미래도시건설</option>
+                        <option value="직영팀">직영팀</option>
+                        <option value="포커스이엔씨">포커스이엔씨</option>
+                        <option value="골조팀">골조팀</option>
+                        <option value="티이엔">티이엔</option>
+                    </select>
+                </div>
+                <div class="form-group third">
+                    <label class="form-label required">공정명</label>
+                    <select name="process" class="form-control" required>
+                        <option value="">-- 공정을 선택하세요 --</option>
+                        <option value="철근">철근</option>
+                        <option value="형틀목공">형틀목공</option>
+                        <option value="콘크리트타설">콘크리트타설</option>
+                        <option value="비계">비계</option>
+                        <option value="전기">전기</option>
+                        <option value="배관">배관</option>
+                        <option value="방수">방수</option>
+                        <option value="도장">도장</option>
+                        <option value="미장">미장</option>
+                        <option value="석공">석공</option>
+                        <option value="타일">타일</option>
+                        <option value="토공">토공</option>
+                        <option value="굴삭">굴삭</option>
+                        <option value="크레인">크레인</option>
+                        <option value="신호수">신호수</option>
+                        <option value="용접">용접</option>
+                    </select>
+                </div>
+                <div class="form-group third">
                     <label class="form-label required">작업부서</label>
                     <input type="text" name="department" class="form-control" placeholder="생산1팀" required>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label required">직위/역할</label>
+                    <select name="role" class="form-control" required>
+                        <option value="">-- 직위/역할을 선택하세요 --</option>
+                        <option value="관리자">관리자</option>
+                        <option value="보통인부">보통인부</option>
+                        <option value="장비기사">장비기사</option>
+                        <option value="신호수">신호수</option>
+                        <option value="용접공">용접공</option>
+                        <option value="전기공">전기공</option>
+                        <option value="배관공">배관공</option>
+                        <option value="타워크레인운전원">타워크레인운전원</option>
+                        <option value="굴삭기기사">굴삭기기사</option>
+                        <option value="안전관리자">안전관리자</option>
+                        <option value="보건관리자">보건관리자</option>
+                    </select>
                 </div>
                 <div class="form-group half">
                     <label class="form-label">직위</label>
@@ -1026,123 +1079,85 @@
                     아래 표의 통증부위에 해당사항에 체크(✓)하고, 해당 통증부위의 세로줄로 내려가며 해당사항에 체크(✓)해 주십시오.
                 </div>
                 
-                <div class="table-responsive">
-                    <table class="table table-bordered symptoms-table">
-                        <thead class="table-primary">
-                            <tr>
-                                <th rowspan="2">질문</th>
-                                <th>목</th>
-                                <th>어깨</th>
-                                <th>팔/팔꿈치</th>
-                                <th>손/손목/손가락</th>
-                                <th>허리</th>
-                                <th>다리/발</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- 1. 통증의 구체적 부위 -->
-                            <tr>
-                                <td class="question-cell"><strong>1. 통증의 구체적 부위는?</strong></td>
-                                {% for part in ['목', '어깨', '팔/팔꿈치', '손/손목/손가락', '허리', '다리/발'] %}
-                                <td class="answer-cell">
-                                    <div class="radio-group-vertical">
-                                        <label><input type="radio" name="{{ part }}_side" value="오른쪽"> 오른쪽</label>
-                                        <label><input type="radio" name="{{ part }}_side" value="왼쪽"> 왼쪽</label>
-                                        <label><input type="radio" name="{{ part }}_side" value="양쪽모두"> 양쪽 모두</label>
+                <!-- 부위별 아코디언 UI -->
+                <div class="accordion" id="symptomAccordion">
+                    {% for part in [('목', 'neck'), ('어깨', 'shoulder'), ('팔/팔꿈치', 'arm'), ('손/손목/손가락', 'hand'), ('허리', 'waist'), ('다리/발', 'leg')] %}
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="heading{{ part[1] }}">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ part[1] }}" aria-expanded="false" aria-controls="collapse{{ part[1] }}">
+                                <i class="bi bi-person"></i> {{ part[0] }} 부위 증상 평가
+                            </button>
+                        </h2>
+                        <div id="collapse{{ part[1] }}" class="accordion-collapse collapse" aria-labelledby="heading{{ part[1] }}" data-bs-parent="#symptomAccordion">
+                            <div class="accordion-body">
+                                <div class="row">
+                                    <!-- 1. 통증의 구체적 부위 -->
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label"><strong>1. 통증의 구체적 부위는?</strong></label>
+                                        <div class="radio-group-vertical">
+                                            <label><input type="radio" name="{{ part[0] }}_side" value="오른쪽"> 오른쪽</label>
+                                            <label><input type="radio" name="{{ part[0] }}_side" value="왼쪽"> 왼쪽</label>
+                                            <label><input type="radio" name="{{ part[0] }}_side" value="양쪽모두"> 양쪽 모두</label>
+                                        </div>
                                     </div>
-                                </td>
-                                {% endfor %}
-                            </tr>
-                            
-                            <!-- 2. 한번 아프기 시작하면 통증기간은 얼마동안 지속됩니까? -->
-                            <tr>
-                                <td class="question-cell"><strong>2. 한번 아프기 시작하면 통증기간은 얼마동안 지속됩니까?</strong></td>
-                                {% for part in ['목', '어깨', '팔/팔꿈치', '손/손목/손가락', '허리', '다리/발'] %}
-                                <td class="answer-cell">
-                                    <div class="radio-group-vertical">
-                                        <label><input type="radio" name="{{ part }}_duration" value="1일미만"> 1일 미만</label>
-                                        <label><input type="radio" name="{{ part }}_duration" value="1일-1주일미만"> 1일-1주일 미만</label>
-                                        <label><input type="radio" name="{{ part }}_duration" value="1주일-1달미만"> 1주일-1달 미만</label>
-                                        <label><input type="radio" name="{{ part }}_duration" value="1달-6개월미만"> 1달-6개월 미만</label>
-                                        <label><input type="radio" name="{{ part }}_duration" value="6개월이상"> 6개월 이상</label>
+                                    
+                                    <!-- 2. 통증 지속 기간 -->
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label"><strong>2. 한번 아프기 시작하면 통증기간은 얼마동안 지속됩니까?</strong></label>
+                                        <div class="radio-group-vertical">
+                                            <label><input type="radio" name="{{ part[0] }}_duration" value="1일미만"> 1일 미만</label>
+                                            <label><input type="radio" name="{{ part[0] }}_duration" value="1일-1주일미만"> 1일-1주일 미만</label>
+                                            <label><input type="radio" name="{{ part[0] }}_duration" value="1주일-1달미만"> 1주일-1달 미만</label>
+                                            <label><input type="radio" name="{{ part[0] }}_duration" value="1달-6개월미만"> 1달-6개월 미만</label>
+                                            <label><input type="radio" name="{{ part[0] }}_duration" value="6개월이상"> 6개월 이상</label>
+                                        </div>
                                     </div>
-                                </td>
-                                {% endfor %}
-                            </tr>
-                            
-                            <!-- 3. 그때의 아픈 정도는 어느 정도입니까? -->
-                            <tr>
-                                <td class="question-cell">
-                                    <strong>3. 그때의 아픈 정도는 어느 정도입니까?</strong>
-                                    <div class="severity-guide">
-                                        <small>
-                                            <strong>보기:</strong><br>
-                                            <strong>약한 통증:</strong> 약간 불편한 정도이나 작업에 열중할 때는 못 느낀다<br>
-                                            <strong>중간 통증:</strong> 작업 중 통증이 있으나 귀가 후 휴식을 취하면 괜찮다<br>
-                                            <strong>심한 통증:</strong> 작업 중 통증이 비교적 심하고 귀가 후에도 통증이 계속된다<br>
-                                            <strong>매우 심한 통증:</strong> 통증 때문에 작업은 물론 일상생활을 하기가 어렵다
-                                        </small>
+                                    
+                                    <!-- 3. 아픈 정도 -->
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label"><strong>3. 그때의 아픈 정도는 어느 정도입니까?</strong></label>
+                                        <div class="radio-group-vertical">
+                                            <label><input type="radio" name="{{ part[0] }}_severity" value="약간아픔"> 약간 아픈 정도</label>
+                                            <label><input type="radio" name="{{ part[0] }}_severity" value="보통아픔"> 보통 아픈 정도</label>
+                                            <label><input type="radio" name="{{ part[0] }}_severity" value="심하게아픔"> 심하게 아픈 정도</label>
+                                            <label><input type="radio" name="{{ part[0] }}_severity" value="매우심하게아픔"> 매우 심하게 아픈 정도</label>
+                                        </div>
                                     </div>
-                                </td>
-                                {% for part in ['목', '어깨', '팔/팔꿈치', '손/손목/손가락', '허리', '다리/발'] %}
-                                <td class="answer-cell">
-                                    <div class="radio-group-vertical">
-                                        <label><input type="radio" name="{{ part }}_severity" value="약한통증"> 약한 통증</label>
-                                        <label><input type="radio" name="{{ part }}_severity" value="중간통증"> 중간 통증</label>
-                                        <label><input type="radio" name="{{ part }}_severity" value="심한통증"> 심한 통증</label>
-                                        <label><input type="radio" name="{{ part }}_severity" value="매우심한통증"> 매우 심한 통증</label>
+                                    
+                                    <!-- 4. 통증 빈도 -->
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label"><strong>4. 이러한 통증은 얼마나 자주 발생합니까?</strong></label>
+                                        <div class="radio-group-vertical">
+                                            <label><input type="radio" name="{{ part[0] }}_frequency" value="매일"> 매일</label>
+                                            <label><input type="radio" name="{{ part[0] }}_frequency" value="일주일에몇번"> 일주일에 몇 번</label>
+                                            <label><input type="radio" name="{{ part[0] }}_frequency" value="한달에몇번"> 한 달에 몇 번</label>
+                                            <label><input type="radio" name="{{ part[0] }}_frequency" value="일년에몇번"> 일년에 몇 번</label>
+                                        </div>
                                     </div>
-                                </td>
-                                {% endfor %}
-                            </tr>
-                            
-                            <!-- 4. 지난 1년 동안 이러한 증상을 얼마나 자주 경험하셨습니까? -->
-                            <tr>
-                                <td class="question-cell"><strong>4. 지난 1년 동안 이러한 증상을 얼마나 자주 경험하셨습니까?</strong></td>
-                                {% for part in ['목', '어깨', '팔/팔꿈치', '손/손목/손가락', '허리', '다리/발'] %}
-                                <td class="answer-cell">
-                                    <div class="radio-group-vertical">
-                                        <label><input type="radio" name="{{ part }}_frequency" value="6개월에1번"> 6개월에 1번</label>
-                                        <label><input type="radio" name="{{ part }}_frequency" value="2-3달에1번"> 2-3달에 1번</label>
-                                        <label><input type="radio" name="{{ part }}_frequency" value="1달에1번"> 1달에 1번</label>
-                                        <label><input type="radio" name="{{ part }}_frequency" value="1주일에1번"> 1주일에 1번</label>
-                                        <label><input type="radio" name="{{ part }}_frequency" value="매일"> 매일</label>
+                                    
+                                    <!-- 5. 지난주 통증 -->
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label"><strong>5. 지난 한 주 동안에도 이런 통증을 경험하셨습니까?</strong></label>
+                                        <div class="radio-group-vertical">
+                                            <label><input type="radio" name="{{ part[0] }}_lastweek" value="예"> 예</label>
+                                            <label><input type="radio" name="{{ part[0] }}_lastweek" value="아니오"> 아니오</label>
+                                        </div>
                                     </div>
-                                </td>
-                                {% endfor %}
-                            </tr>
-                            
-                            <!-- 5. 지난 1주일 동안에도 이러한 증상이 있었습니까? -->
-                            <tr>
-                                <td class="question-cell"><strong>5. 지난 1주일 동안에도 이러한 증상이 있었습니까?</strong></td>
-                                {% for part in ['목', '어깨', '팔/팔꿈치', '손/손목/손가락', '허리', '다리/발'] %}
-                                <td class="answer-cell">
-                                    <div class="radio-group-vertical">
-                                        <label><input type="radio" name="{{ part }}_last_week" value="아니오"> 아니오</label>
-                                        <label><input type="radio" name="{{ part }}_last_week" value="예"> 예</label>
+                                    
+                                    <!-- 6. 치료 여부 -->
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label"><strong>6. 이 통증 때문에 의사의 치료를 받으신 적이 있습니까?</strong></label>
+                                        <div class="radio-group-vertical">
+                                            <label><input type="radio" name="{{ part[0] }}_treatment" value="예"> 예</label>
+                                            <label><input type="radio" name="{{ part[0] }}_treatment" value="아니오"> 아니오</label>
+                                        </div>
                                     </div>
-                                </td>
-                                {% endfor %}
-                            </tr>
-                            
-                            <!-- 6. 지난 1년 동안 이러한 통증으로 인해 어떤 일이 있었습니까? -->
-                            <tr>
-                                <td class="question-cell"><strong>6. 지난 1년 동안 이러한 통증으로 인해 어떤 일이 있었습니까?</strong></td>
-                                {% for part in ['목', '어깨', '팔/팔꿈치', '손/손목/손가락', '허리', '다리/발'] %}
-                                <td class="answer-cell">
-                                    <div class="checkbox-group-vertical">
-                                        <label><input type="checkbox" name="{{ part }}_treatment" value="병원한의원치료"> 병원·한의원 치료</label>
-                                        <label><input type="checkbox" name="{{ part }}_treatment" value="약국치료"> 약국치료</label>
-                                        <label><input type="checkbox" name="{{ part }}_treatment" value="병가산재"> 병가, 산재</label>
-                                        <label><input type="checkbox" name="{{ part }}_treatment" value="작업전환"> 작업 전환</label>
-                                        <label><input type="checkbox" name="{{ part }}_treatment" value="해당사항없음"> 해당사항 없음</label>
-                                        <label><input type="text" name="{{ part }}_treatment_other" placeholder="기타 (구체적으로)" class="form-control form-control-sm"></label>
-                                    </div>
-                                </td>
-                                {% endfor %}
-                            </tr>
-                        </tbody>
-                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
                 </div>
         </div>
 

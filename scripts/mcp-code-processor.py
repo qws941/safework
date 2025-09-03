@@ -16,6 +16,12 @@ import tempfile
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+def json_serial(obj):
+    """JSON 직렬화를 위한 datetime 처리"""
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    raise TypeError(f"Type {type(obj)} not serializable")
+
 class MCPCodeProcessor:
     def __init__(self, issue_number, issue_title, issue_body=""):
         self.issue_number = issue_number
@@ -761,7 +767,7 @@ def main():
     result = processor.process_issue()
     
     # 결과를 JSON으로 출력
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    print(json.dumps(result, ensure_ascii=False, indent=2, default=json_serial))
     
     # 성공/실패 상태로 종료
     sys.exit(0 if result["success"] else 1)
