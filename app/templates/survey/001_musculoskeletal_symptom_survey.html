@@ -1100,282 +1100,8 @@
             </div>
         </div>
 
-        <!-- 진단받은 질병 -->
-        <div class="section-card">
-            <h4 class="section-title">
-                <i class="bi bi-heart-pulse"></i> 3. 진단받은 질병
-            </h4>
-            
-            <div class="checkbox-group">
-                <div class="checkbox-item">
-                    <input type="checkbox" name="disease_rheumatoid" id="disease_rheumatoid">
-                    <label for="disease_rheumatoid">류머티스 관절염</label>
-                </div>
-                <div class="checkbox-item">
-                    <input type="checkbox" name="disease_diabetes" id="disease_diabetes">
-                    <label for="disease_diabetes">당뇨병</label>
-                </div>
-                <div class="checkbox-item">
-                    <input type="checkbox" name="disease_lupus" id="disease_lupus">
-                    <label for="disease_lupus">루프스병</label>
-                </div>
-                <div class="checkbox-item">
-                    <input type="checkbox" name="disease_gout" id="disease_gout">
-                    <label for="disease_gout">통풍</label>
-                </div>
-                <div class="checkbox-item">
-                    <input type="checkbox" name="disease_alcoholism" id="disease_alcoholism">
-                    <label for="disease_alcoholism">알코올중독</label>
-                </div>
-                <div class="checkbox-item">
-                    <input type="checkbox" name="disease_none" id="disease_none">
-                    <label for="disease_none">아니오</label>
-                </div>
-            </div>
-            
-            <div class="form-row" style="margin-top: 15px;">
-                <div class="form-group">
-                    <label class="form-label">현재상태</label>
-                    <div class="radio-group">
-                        <div class="radio-item">
-                            <input type="radio" id="disease_status_cured" name="disease_status" value="완치">
-                            <label for="disease_status_cured">완치</label>
-                        </div>
-                        <div class="radio-item">
-                            <input type="radio" id="disease_status_treatment" name="disease_status" value="치료나 관찰 중">
-                            <label for="disease_status_treatment">치료나 관찰 중</label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
 
-        <!-- 과거 사고 -->
-        <div class="section-card">
-            <h4 class="section-title">
-                <i class="bi bi-bandaid"></i> 4. 과거 사고
-            </h4>
-            
-            <div class="form-group">
-                <label class="form-label">과거 운동/사고로 다친 적이 있습니까?</label>
-                <div class="radio-group">
-                    <div class="radio-item">
-                        <input type="radio" id="past_accident_yes" name="past_accident" value="예">
-                        <label for="past_accident_yes">예</label>
-                    </div>
-                    <div class="radio-item">
-                        <input type="radio" id="past_accident_no" name="past_accident" value="아니오">
-                        <label for="past_accident_no">아니오</label>
-                    </div>
-                </div>
-            </div>
-            
-            <div id="accident_details_section" class="checkbox-group" style="margin-top: 15px; display: none;">
-                <div class="checkbox-item">
-                    <input type="checkbox" name="accident_hand" id="accident_hand">
-                    <label for="accident_hand">손/손가락/손목</label>
-                </div>
-                <div class="checkbox-item">
-                    <input type="checkbox" name="accident_arm" id="accident_arm">
-                    <label for="accident_arm">팔/팔꿈치</label>
-                </div>
-                <div class="checkbox-item">
-                    <input type="checkbox" name="accident_shoulder" id="accident_shoulder">
-                    <label for="accident_shoulder">어깨</label>
-                </div>
-                <div class="checkbox-item">
-                    <input type="checkbox" name="accident_neck" id="accident_neck">
-                    <label for="accident_neck">목</label>
-                </div>
-                <div class="checkbox-item">
-                    <input type="checkbox" name="accident_waist" id="accident_waist">
-                    <label for="accident_waist">허리</label>
-                </div>
-                <div class="checkbox-item">
-                    <input type="checkbox" name="accident_leg" id="accident_leg">
-                    <label for="accident_leg">다리/발</label>
-                </div>
-            </div>
-        </div>
-
-        <!-- 육체적 부담 정도 -->
-        <div class="section-card">
-            <h4 class="section-title">
-                <i class="bi bi-speedometer2"></i> 5. 육체적 부담 정도
-            </h4>
-            
-            <div class="form-group">
-                <label class="form-label">현재 일의 육체적 부담 정도</label>
-                <div class="radio-group">
-                    <div class="radio-item">
-                        <input type="radio" id="physical_1" name="physical_burden" value="전혀힘들지않음">
-                        <label for="physical_1">전혀힘들지않음</label>
-                    </div>
-                    <div class="radio-item">
-                        <input type="radio" id="physical_2" name="physical_burden" value="견딜만함">
-                        <label for="physical_2">견딜만함</label>
-                    </div>
-                    <div class="radio-item">
-                        <input type="radio" id="physical_3" name="physical_burden" value="약간힘듦">
-                        <label for="physical_3">약간힘듦</label>
-                    </div>
-                    <div class="radio-item">
-                        <input type="radio" id="physical_4" name="physical_burden" value="매우힘듦">
-                        <label for="physical_4">매우힘듦</label>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- II. 근골격계 증상 -->
-        <div class="section-card">
-            <h4 class="section-title">
-                <i class="bi bi-heart-pulse"></i> II. 근골격계 증상
-            </h4>
-            
-            <div class="form-group">
-                <label class="form-label required">지난 1년 동안 통증이나 불편함을 느끼신 적이 있습니까?</label>
-                <div class="radio-group">
-                    <div class="radio-item">
-                        <input type="radio" id="has_symptoms_yes" name="has_symptoms" value="예" required>
-                        <label for="has_symptoms_yes">예</label>
-                    </div>
-                    <div class="radio-item">
-                        <input type="radio" id="has_symptoms_no" name="has_symptoms" value="아니오" required>
-                        <label for="has_symptoms_no">아니오</label>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- 증상 상세 정보는 "예" 선택 시 JavaScript로 동적 표시 -->
-            <div id="symptom-details" style="display: none; margin-top: 20px;">
-                <div class="alert alert-info">
-                    <strong>📋 통증부위별 상세 조사</strong><br>
-                    아래 표의 통증부위에 해당사항에 체크(✓)하고, 해당 통증부위의 세로줄로 내려가며 해당사항에 체크(✓)해 주십시오.
-                </div>
-                
-                <div class="table-responsive">
-                    <table class="table table-bordered symptoms-table">
-                        <thead class="table-primary">
-                            <tr>
-                                <th rowspan="2">질문</th>
-                                <th>목</th>
-                                <th>어깨</th>
-                                <th>팔/팔꿈치</th>
-                                <th>손/손목/손가락</th>
-                                <th>허리</th>
-                                <th>다리/발</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- 1. 통증의 구체적 부위 -->
-                            <tr>
-                                <td class="question-cell"><strong>1. 통증의 구체적 부위는?</strong></td>
-                                {% for part in ['목', '어깨', '팔/팔꿈치', '손/손목/손가락', '허리', '다리/발'] %}
-                                <td class="answer-cell">
-                                    <div class="radio-group-vertical">
-                                        <label><input type="radio" name="{{ part }}_side" value="오른쪽"> 오른쪽</label>
-                                        <label><input type="radio" name="{{ part }}_side" value="왼쪽"> 왼쪽</label>
-                                        <label><input type="radio" name="{{ part }}_side" value="양쪽모두"> 양쪽 모두</label>
-                                    </div>
-                                </td>
-                                {% endfor %}
-                            </tr>
-                            
-                            <!-- 2. 한번 아프기 시작하면 통증기간은 얼마동안 지속됩니까? -->
-                            <tr>
-                                <td class="question-cell"><strong>2. 한번 아프기 시작하면 통증기간은 얼마동안 지속됩니까?</strong></td>
-                                {% for part in ['목', '어깨', '팔/팔꿈치', '손/손목/손가락', '허리', '다리/발'] %}
-                                <td class="answer-cell">
-                                    <div class="radio-group-vertical">
-                                        <label><input type="radio" name="{{ part }}_duration" value="1일미만"> 1일 미만</label>
-                                        <label><input type="radio" name="{{ part }}_duration" value="1일-1주일미만"> 1일-1주일 미만</label>
-                                        <label><input type="radio" name="{{ part }}_duration" value="1주일-1달미만"> 1주일-1달 미만</label>
-                                        <label><input type="radio" name="{{ part }}_duration" value="1달-6개월미만"> 1달-6개월 미만</label>
-                                        <label><input type="radio" name="{{ part }}_duration" value="6개월이상"> 6개월 이상</label>
-                                    </div>
-                                </td>
-                                {% endfor %}
-                            </tr>
-                            
-                            <!-- 3. 그때의 아픈 정도는 어느 정도입니까? -->
-                            <tr>
-                                <td class="question-cell">
-                                    <strong>3. 그때의 아픈 정도는 어느 정도입니까?</strong>
-                                    <div class="severity-guide">
-                                        <small>
-                                            <strong>보기:</strong><br>
-                                            <strong>약한 통증:</strong> 약간 불편한 정도이나 작업에 열중할 때는 못 느낀다<br>
-                                            <strong>중간 통증:</strong> 작업 중 통증이 있으나 귀가 후 휴식을 취하면 괜찮다<br>
-                                            <strong>심한 통증:</strong> 작업 중 통증이 비교적 심하고 귀가 후에도 통증이 계속된다<br>
-                                            <strong>매우 심한 통증:</strong> 통증 때문에 작업은 물론 일상생활을 하기가 어렵다
-                                        </small>
-                                    </div>
-                                </td>
-                                {% for part in ['목', '어깨', '팔/팔꿈치', '손/손목/손가락', '허리', '다리/발'] %}
-                                <td class="answer-cell">
-                                    <div class="radio-group-vertical">
-                                        <label><input type="radio" name="{{ part }}_severity" value="약한통증"> 약한 통증</label>
-                                        <label><input type="radio" name="{{ part }}_severity" value="중간통증"> 중간 통증</label>
-                                        <label><input type="radio" name="{{ part }}_severity" value="심한통증"> 심한 통증</label>
-                                        <label><input type="radio" name="{{ part }}_severity" value="매우심한통증"> 매우 심한 통증</label>
-                                    </div>
-                                </td>
-                                {% endfor %}
-                            </tr>
-                            
-                            <!-- 4. 지난 1년 동안 이러한 증상을 얼마나 자주 경험하셨습니까? -->
-                            <tr>
-                                <td class="question-cell"><strong>4. 지난 1년 동안 이러한 증상을 얼마나 자주 경험하셨습니까?</strong></td>
-                                {% for part in ['목', '어깨', '팔/팔꿈치', '손/손목/손가락', '허리', '다리/발'] %}
-                                <td class="answer-cell">
-                                    <div class="radio-group-vertical">
-                                        <label><input type="radio" name="{{ part }}_frequency" value="6개월에1번"> 6개월에 1번</label>
-                                        <label><input type="radio" name="{{ part }}_frequency" value="2-3달에1번"> 2-3달에 1번</label>
-                                        <label><input type="radio" name="{{ part }}_frequency" value="1달에1번"> 1달에 1번</label>
-                                        <label><input type="radio" name="{{ part }}_frequency" value="1주일에1번"> 1주일에 1번</label>
-                                        <label><input type="radio" name="{{ part }}_frequency" value="매일"> 매일</label>
-                                    </div>
-                                </td>
-                                {% endfor %}
-                            </tr>
-                            
-                            <!-- 5. 지난 1주일 동안에도 이러한 증상이 있었습니까? -->
-                            <tr>
-                                <td class="question-cell"><strong>5. 지난 1주일 동안에도 이러한 증상이 있었습니까?</strong></td>
-                                {% for part in ['목', '어깨', '팔/팔꿈치', '손/손목/손가락', '허리', '다리/발'] %}
-                                <td class="answer-cell">
-                                    <div class="radio-group-vertical">
-                                        <label><input type="radio" name="{{ part }}_last_week" value="아니오"> 아니오</label>
-                                        <label><input type="radio" name="{{ part }}_last_week" value="예"> 예</label>
-                                    </div>
-                                </td>
-                                {% endfor %}
-                            </tr>
-                            
-                            <!-- 6. 지난 1년 동안 이러한 통증으로 인해 어떤 일이 있었습니까? -->
-                            <tr>
-                                <td class="question-cell"><strong>6. 지난 1년 동안 이러한 통증으로 인해 어떤 일이 있었습니까?</strong></td>
-                                {% for part in ['목', '어깨', '팔/팔꿈치', '손/손목/손가락', '허리', '다리/발'] %}
-                                <td class="answer-cell">
-                                    <div class="checkbox-group-vertical">
-                                        <label><input type="checkbox" name="{{ part }}_treatment" value="병원한의원치료"> 병원·한의원 치료</label>
-                                        <label><input type="checkbox" name="{{ part }}_treatment" value="약국치료"> 약국치료</label>
-                                        <label><input type="checkbox" name="{{ part }}_treatment" value="병가산재"> 병가, 산재</label>
-                                        <label><input type="checkbox" name="{{ part }}_treatment" value="작업전환"> 작업 전환</label>
-                                        <label><input type="checkbox" name="{{ part }}_treatment" value="해당사항없음"> 해당사항 없음</label>
-                                        <label><input type="text" name="{{ part }}_treatment_other" placeholder="기타 (구체적으로)" class="form-control form-control-sm"></label>
-                                    </div>
-                                </td>
-                                {% endfor %}
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- 제출 버튼 -->
+        <\!-- 제출 버튼 -->
         <div class="submit-section">
             <button type="submit" class="submit-btn">제출하기</button>
         </div>
@@ -1398,7 +1124,7 @@ document.querySelectorAll('input[name="has_symptoms"]').forEach(radio => {
 // 폼 검증 및 제출 처리
 document.getElementById('surveyForm').addEventListener('submit', function(e) {
     const hasSymptoms = document.querySelector('input[name="has_symptoms"]:checked');
-    if (!hasSymptoms) {
+    if (\!hasSymptoms) {
         e.preventDefault();
         alert('통증 경험 여부를 선택해 주세요.');
         return false;
@@ -1416,7 +1142,7 @@ document.getElementById('surveyForm').addEventListener('submit', function(e) {
             }
         });
         
-        if (!hasAnyResponse) {
+        if (\!hasAnyResponse) {
             e.preventDefault();
             alert('통증 부위를 하나 이상 선택해 주세요.');
             return false;
@@ -1447,101 +1173,96 @@ const diseaseNone = document.querySelector('input[name="disease_none"]');
 if (diseaseNone) {
     diseaseNone.addEventListener('change', function() {
         if (this.checked) {
-            diseaseCheckboxes.forEach(cb => cb.checked = false);
-            toggleDiseaseStatus();
+            diseaseCheckboxes.forEach(cb => {
+                cb.checked = false;
+            });
         }
-    });
-    
-    diseaseCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            if (this.checked) {
-                diseaseNone.checked = false;
-            }
-        });
     });
 }
 
-// 과거 사고 부위 조건부 표시
-const pastAccident = document.querySelectorAll('input[name="past_accident"]');
-const accidentDetailsDiv = document.getElementById('accident_details_section');
-
-pastAccident.forEach(radio => {
-    radio.addEventListener('change', function() {
-        if (accidentDetailsDiv) {
-            accidentDetailsDiv.style.display = this.value === '예' ? 'block' : 'none';
+diseaseCheckboxes.forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+        if (this.checked && diseaseNone) {
+            diseaseNone.checked = false;
         }
     });
 });
 
-// 취미활동 "해당사항 없음" 배타적 선택  
-const hobbyNone = document.querySelector('input[name="hobby_none"]');
-const hobbyCheckboxes = document.querySelectorAll('input[name^="hobby_"]:not([name="hobby_none"])');
-
-if (hobbyNone) {
-    hobbyNone.addEventListener('change', function() {
-        if (this.checked) {
-            hobbyCheckboxes.forEach(cb => cb.checked = false);
+// 과거 사고 조건부 표시
+document.querySelectorAll('input[name="past_accident"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        const accidentDetails = document.getElementById('accident_details_section');
+        if (this.value === '예') {
+            accidentDetails.style.display = 'block';
+        } else {
+            accidentDetails.style.display = 'none';
         }
     });
-    
-    hobbyCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            if (this.checked) {
-                hobbyNone.checked = false;
-            }
-        });
+});
+
+// 여가활동 exclusive 처리
+const leisureNone = document.querySelector('input[name="leisure_none"]');
+const leisureCheckboxes = document.querySelectorAll('input[name^="leisure_"]:not([name="leisure_none"])');
+
+if (leisureNone) {
+    leisureNone.addEventListener('change', function() {
+        if (this.checked) {
+            leisureCheckboxes.forEach(cb => {
+                cb.checked = false;
+            });
+        }
     });
 }
 
-// 폼 제출 전 증상 데이터 수집
-function collectSymptomData() {
-    const hasSymptoms = document.querySelector('input[name="has_symptoms"]:checked');
-    if (hasSymptoms && hasSymptoms.value === '예') {
-        const bodyParts = ['목', '어깨', '팔/팔꿈치', '손/손목/손가락', '허리', '다리/발'];
-        const symptomData = {};
-        
-        bodyParts.forEach(part => {
-            const partKey = part.replace(/[\/]/g, '_');
-            const sideInput = document.querySelector(`input[name="${part}_side"]:checked`);
-            
-            if (sideInput) {
-                const durationInput = document.querySelector(`input[name="${part}_duration"]:checked`);
-                const severityInput = document.querySelector(`input[name="${part}_severity"]:checked`);
-                const frequencyInput = document.querySelector(`input[name="${part}_frequency"]:checked`);
-                const lastWeekInput = document.querySelector(`input[name="${part}_last_week"]:checked`);
-                
-                const treatmentInputs = document.querySelectorAll(`input[name="${part}_treatment"]:checked`);
-                const treatmentOther = document.querySelector(`input[name="${part}_treatment_other"]`);
-                
-                const treatments = Array.from(treatmentInputs).map(input => input.value);
-                if (treatmentOther && treatmentOther.value.trim()) {
-                    treatments.push(treatmentOther.value.trim());
-                }
-                
-                symptomData[partKey] = {
-                    side: sideInput.value,
-                    duration: durationInput ? durationInput.value : '',
-                    severity: severityInput ? severityInput.value : '',
-                    frequency: frequencyInput ? frequencyInput.value : '',
-                    last_week: lastWeekInput ? lastWeekInput.value === '예' : false,
-                    treatment: treatments
-                };
-            }
-        });
-        
-        if (Object.keys(symptomData).length > 0) {
-            const existingHidden = document.querySelector('input[name="symptoms_json_data"]');
-            if (existingHidden) {
-                existingHidden.remove();
-            }
-            
-            const hiddenInput = document.createElement('input');
-            hiddenInput.type = 'hidden';
-            hiddenInput.name = 'symptoms_json_data';
-            hiddenInput.value = JSON.stringify(symptomData);
-            document.getElementById('surveyForm').appendChild(hiddenInput);
+leisureCheckboxes.forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+        if (this.checked && leisureNone) {
+            leisureNone.checked = false;
         }
+    });
+});
+
+// 증상 데이터 수집 함수
+function collectSymptomData() {
+    const bodyParts = ['목', '어깨', '팔/팔꿈치', '손/손목/손가락', '허리', '다리/발'];
+    const symptomData = {};
+    
+    bodyParts.forEach(part => {
+        const sideInput = document.querySelector(`input[name="${part}_side"]:checked`);
+        if (sideInput) {
+            const durationInput = document.querySelector(`input[name="${part}_duration"]:checked`);
+            const severityInput = document.querySelector(`input[name="${part}_severity"]:checked`);
+            const frequencyInput = document.querySelector(`input[name="${part}_frequency"]:checked`);
+            const lastWeekInput = document.querySelector(`input[name="${part}_last_week"]:checked`);
+            
+            const treatmentInputs = document.querySelectorAll(`input[name="${part}_treatment"]:checked`);
+            const treatmentOther = document.querySelector(`input[name="${part}_treatment_other"]`);
+            
+            let treatments = Array.from(treatmentInputs).map(input => input.value);
+            if (treatmentOther && treatmentOther.value) {
+                treatments.push(treatmentOther.value);
+            }
+            
+            symptomData[part] = {
+                side: sideInput.value,
+                duration: durationInput?.value || '',
+                severity: severityInput?.value || '',
+                frequency: frequencyInput?.value || '',
+                last_week: lastWeekInput?.value || '',
+                treatments: treatments
+            };
+        }
+    });
+    
+    // 데이터를 숨겨진 input에 저장
+    let hiddenInput = document.querySelector('input[name="symptoms_json_data"]');
+    if (\!hiddenInput) {
+        hiddenInput = document.createElement('input');
+        hiddenInput.type = 'hidden';
+        hiddenInput.name = 'symptoms_json_data';
+        document.getElementById('surveyForm').appendChild(hiddenInput);
     }
+    hiddenInput.value = JSON.stringify(symptomData);
 }
 
 // 초기 상태 설정
