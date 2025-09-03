@@ -11,6 +11,11 @@ on:
         default: false
         type: boolean
 
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
 jobs:
   # 1단계: 처리할 이슈들 수집
   collect-issues:
