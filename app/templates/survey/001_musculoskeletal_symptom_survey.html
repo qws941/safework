@@ -1114,7 +1114,7 @@ document.getElementById('surveyForm').addEventListener('submit', function(e) {
         let hasAnyResponse = false;
         
         bodyParts.forEach(part => {
-            const sideInputs = document.querySelectorAll(`input[name="${part}_side"]:checked`);
+            const sideInputs = document.querySelectorAll('input[name="' + part + '_side"]:checked');
             if (sideInputs.length > 0) {
                 hasAnyResponse = true;
             }
@@ -1206,15 +1206,15 @@ function collectSymptomData() {
     const symptomData = {};
     
     bodyParts.forEach(part => {
-        const sideInput = document.querySelector(`input[name="${part}_side"]:checked`);
+        const sideInput = document.querySelector('input[name="' + part + '_side"]:checked');
         if (sideInput) {
-            const durationInput = document.querySelector(`input[name="${part}_duration"]:checked`);
-            const severityInput = document.querySelector(`input[name="${part}_severity"]:checked`);
-            const frequencyInput = document.querySelector(`input[name="${part}_frequency"]:checked`);
-            const lastWeekInput = document.querySelector(`input[name="${part}_last_week"]:checked`);
+            const durationInput = document.querySelector('input[name="' + part + '_duration"]:checked');
+            const severityInput = document.querySelector('input[name="' + part + '_severity"]:checked');
+            const frequencyInput = document.querySelector('input[name="' + part + '_frequency"]:checked');
+            const lastWeekInput = document.querySelector('input[name="' + part + '_last_week"]:checked');
             
-            const treatmentInputs = document.querySelectorAll(`input[name="${part}_treatment"]:checked`);
-            const treatmentOther = document.querySelector(`input[name="${part}_treatment_other"]`);
+            const treatmentInputs = document.querySelectorAll('input[name="' + part + '_treatment"]:checked');
+            const treatmentOther = document.querySelector('input[name="' + part + '_treatment_other"]');
             
             let treatments = Array.from(treatmentInputs).map(input => input.value);
             if (treatmentOther && treatmentOther.value) {
