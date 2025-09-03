@@ -147,19 +147,9 @@ jobs:
         git checkout -b "$BRANCH_NAME"
         
         # 실제 MCP 기반 변경사항 커밋
+        echo "# 이슈 #${ISSUE_NUMBER} MCP 기반 자동 해결" >> CHANGELOG.md
         if [ -f ../scripts/processing_result.json ]; then
-          CHANGES=$(jq -r '.changes | join("\n- ")' ../scripts/processing_result.json || echo "MCP 기반 코드 수정")
-          echo "# 이슈 #${ISSUE_NUMBER} MCP 기반 자동 해결
-          
-## 변경사항
-- ${CHANGES}
-
-## 처리 방식
-- MCP serena 도구를 사용한 코드베이스 분석
-- 실제 코드 수정 및 개선 적용
-- 자동화된 테스트 검증" >> CHANGELOG.md
-        else
-          echo "# 이슈 #${ISSUE_NUMBER} 해결" >> CHANGELOG.md
+          echo "변경사항: $(jq -r '.changes | join(", ")' ../scripts/processing_result.json)" >> CHANGELOG.md
         fi
         
         # 실제 변경된 파일들 모두 추가
