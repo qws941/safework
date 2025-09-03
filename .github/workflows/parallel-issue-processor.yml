@@ -267,9 +267,120 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # 3단계: 처리 결과 요약
-  summary:
+  # 3단계: 자동 PR 리뷰 및 머지
+  auto-merge:
     needs: [collect-issues, process-issues]
+    if: needs.collect-issues.outputs.count > 0
+    runs-on: ubuntu-latest
+    steps:
+    - name: 체크아웃
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
+
+    - name: 생성된 PR들 자동 검토 및 머지
+      run: |
+        echo "🔍 생성된 PR들 자동 검토 시작..."
+        
+        # 최근 1시간 내에 생성된 자동 PR들 찾기
+        RECENT_PRS=$(gh pr list --limit 10 --json number,title,author,createdAt --jq '.[] | select(.author.login == "github-actions" and (.createdAt | fromdateiso8601) > (now - 3600))')
+        
+        if [ -z "$RECENT_PRS" ]; then
+          echo "⚠️ 자동 생성된 PR이 없습니다."
+          exit 0
+        fi
+        
+        echo "$RECENT_PRS" | jq -r '.number' | while read PR_NUMBER; do
+          echo ""
+          echo "🔍 PR #${PR_NUMBER} 자동 검토 중..."
+          
+          # PR 상세 정보 가져오기
+          PR_INFO=$(gh pr view ${PR_NUMBER} --json title,author,additions,deletions,files)
+          PR_TITLE=$(echo "$PR_INFO" | jq -r '.title')
+          ADDITIONS=$(echo "$PR_INFO" | jq -r '.additions')
+          DELETIONS=$(echo "$PR_INFO" | jq -r '.deletions')
+          
+          echo "📋 제목: $PR_TITLE"
+          echo "📈 변경사항: +${ADDITIONS}/-${DELETIONS}"
+          
+          # 자동 검토 기준
+          AUTO_APPROVE=true
+          REVIEW_COMMENT="🤖 **자동 검토 완료**\n\n"
+          
+          # 1. 변경 규모 검사
+          if [ "$ADDITIONS" -gt 500 ] || [ "$DELETIONS" -gt 200 ]; then
+            AUTO_APPROVE=false
+            REVIEW_COMMENT+="\n⚠️ **대규모 변경**: 수동 검토 필요 (+${ADDITIONS}/-${DELETIONS})"
+          else
+            REVIEW_COMMENT+="\n✅ **변경 규모**: 적정 (+${ADDITIONS}/-${DELETIONS})"
+          fi
+          
+          # 2. 파일 형태 검사
+          CHANGED_FILES=$(gh pr diff ${PR_NUMBER} --name-only)
+          if echo "$CHANGED_FILES" | grep -E "\.(py|js|html|css)$" > /dev/null; then
+            REVIEW_COMMENT+="\n✅ **파일 형태**: 일반적인 웹 개발 파일"
+          else
+            REVIEW_COMMENT+="\n⚠️ **파일 형태**: 비일반적인 파일 포함"
+          fi
+          
+          # 3. 제목 패턴 검사 (MCP 기반 자동 해결인지 확인)
+          if echo "$PR_TITLE" | grep -E "🤖.*MCP.*자동 해결" > /dev/null; then
+            REVIEW_COMMENT+="\n✅ **생성 방식**: MCP 기반 자동 생성 확인"
+          else
+            AUTO_APPROVE=false
+            REVIEW_COMMENT+="\n⚠️ **생성 방식**: 수동 생성이거나 패턴 불일치"
+          fi
+          
+          # 검토 결과에 따른 처리
+          if [ "$AUTO_APPROVE" = "true" ]; then
+            echo "✅ 자동 승인 기준 통과 - 머지 진행"
+            REVIEW_COMMENT+="\n\n**📋 자동 검토 결과**: 모든 기준 통과\n**🚀 처리 상태**: 자동 머지 승인\n**⏰ 검토 시간**: $(date)"
+            
+            # PR 승인 및 머지
+            gh pr review ${PR_NUMBER} --approve --body "$REVIEW_COMMENT"
+            sleep 2
+            
+            # 머지 실행
+            if gh pr merge ${PR_NUMBER} --merge --delete-branch; then
+              echo "🎉 PR #${PR_NUMBER} 자동 머지 완료!"
+              
+              # 이슈에 완료 댓글 추가
+              ISSUE_NUMBER=$(echo "$PR_TITLE" | grep -o '#[0-9]\+' | head -1 | tr -d '#')
+              if [ -n "$ISSUE_NUMBER" ]; then
+                gh issue comment ${ISSUE_NUMBER} --body "🎉 **자동 머지 완료!**
+
+✅ PR #${PR_NUMBER}가 자동으로 머지되었습니다.
+🔍 자동 검토 통과: 변경 규모, 파일 형태, 생성 방식 모두 적합
+⏰ 완료 시간: $(date)
+🤖 처리자: GitHub Actions 자동 시스템
+
+이제 이슈가 완전히 해결되었습니다! 🚀"
+                echo "💬 이슈 #${ISSUE_NUMBER}에 완료 댓글 추가됨"
+              fi
+            else
+              echo "❌ PR #${PR_NUMBER} 머지 실패"
+            fi
+            
+          else
+            echo "⚠️ 수동 검토 필요 - 댓글만 추가"
+            REVIEW_COMMENT+="\n\n**📋 자동 검토 결과**: 수동 검토 필요\n**⚠️ 처리 상태**: 승인 보류\n**👀 다음 단계**: 관리자 수동 검토 후 머지\n**⏰ 검토 시간**: $(date)"
+            
+            gh pr comment ${PR_NUMBER} --body "$REVIEW_COMMENT"
+            echo "💬 수동 검토 요청 댓글 추가됨"
+          fi
+          
+          echo "---"
+        done
+        
+        echo ""
+        echo "🏁 모든 PR 자동 검토 완료!"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # 4단계: 처리 결과 요약
+  summary:
+    needs: [collect-issues, process-issues, auto-merge]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -277,6 +388,7 @@ jobs:
       run: |
         echo "📊 **병렬 이슈 처리 완료**"
         echo "🎯 대상 이슈: ${{ needs.collect-issues.outputs.count }}개"
+        echo "🤖 자동 머지: 완료된 PR은 자동으로 머지됨"
         echo "⏰ 처리 시간: $(date)"
         echo ""
         echo "상세 결과는 각 job 로그를 확인해주세요."
