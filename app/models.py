@@ -68,8 +68,6 @@ class Survey(db.Model):
 
     # 양식 구분 필드 추가
     form_type = db.Column(db.String(50))  # 001_musculoskeletal, 002_new_employee 등
-    employee_number = db.Column(db.String(50))  # 사번
-    position = db.Column(db.String(100))  # 직위
 
     # I. 기본 정보
     name = db.Column(db.String(100), nullable=False)
@@ -77,10 +75,18 @@ class Survey(db.Model):
     gender = db.Column(db.String(10))  # 남/여
     work_years = db.Column(db.Integer)  # 현 직장경력 (년)
     work_months = db.Column(db.Integer)  # 현 직장경력 (개월)
-    department = db.Column(db.String(100))  # 작업부서
-    line = db.Column(db.String(100))  # 라인
-    work_name = db.Column(db.String(200))  # 수행작업
+    
+    # 건설업 맞춤 필드 (외래키)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False)  # 업체명
+    process_id = db.Column(db.Integer, db.ForeignKey("processes.id"), nullable=False)  # 공정명
+    role_id = db.Column(db.Integer, db.ForeignKey("roles.id"), nullable=False)  # 직위/역할
+    
     marriage_status = db.Column(db.String(10))  # 기혼/미혼
+    
+    # 관계 정의
+    company = db.relationship("Company", backref="surveys")
+    process = db.relationship("Process", backref="surveys")
+    role = db.relationship("Role", backref="surveys")
 
     # 현재하고 있는 작업
     current_work_details = db.Column(db.Text)  # 작업내용
@@ -232,3 +238,55 @@ class AuditLog(db.Model):
 
     def __repr__(self):
         return f"<AuditLog {self.action} by {self.user_id}>"
+
+
+# === 건설업 마스터 데이터 모델 === 
+
+class Company(db.Model):
+    """업체명 마스터 테이블"""
+    __tablename__ = "companies"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)  # 업체명
+    is_active = db.Column(db.Boolean, default=True)  # 활성화 상태
+    display_order = db.Column(db.Integer, default=0)  # 표시 순서
+    
+    created_at = db.Column(db.DateTime, default=kst_now)
+    updated_at = db.Column(db.DateTime, default=kst_now, onupdate=kst_now)
+    
+    def __repr__(self):
+        return f"<Company {self.name}>"
+
+
+class Process(db.Model):
+    """공정명 마스터 테이블"""
+    __tablename__ = "processes"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)  # 공정명
+    description = db.Column(db.String(200))  # 공정 설명
+    is_active = db.Column(db.Boolean, default=True)  # 활성화 상태
+    display_order = db.Column(db.Integer, default=0)  # 표시 순서
+    
+    created_at = db.Column(db.DateTime, default=kst_now)
+    updated_at = db.Column(db.DateTime, default=kst_now, onupdate=kst_now)
+    
+    def __repr__(self):
+        return f"<Process {self.name}>"
+
+
+class Role(db.Model):
+    """직위/역할 마스터 테이블"""
+    __tablename__ = "roles"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100), nullable=False, unique=True)  # 직위/역할
+    description = db.Column(db.String(200))  # 역할 설명
+    is_active = db.Column(db.Boolean, default=True)  # 활성화 상태
+    display_order = db.Column(db.Integer, default=0)  # 표시 순서
+    
+    created_at = db.Column(db.DateTime, default=kst_now)
+    updated_at = db.Column(db.DateTime, default=kst_now, onupdate=kst_now)
+    
+    def __repr__(self):
+        return f"<Role {self.title}>"
