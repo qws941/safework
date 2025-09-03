@@ -1102,7 +1102,7 @@
 // 폼 검증 및 제출 처리
 document.getElementById('surveyForm').addEventListener('submit', function(e) {
     const hasSymptoms = document.querySelector('input[name="has_symptoms"]:checked');
-    if (\!hasSymptoms) {
+    if (!hasSymptoms) {
         e.preventDefault();
         alert('통증 경험 여부를 선택해 주세요.');
         return false;
@@ -1120,7 +1120,7 @@ document.getElementById('surveyForm').addEventListener('submit', function(e) {
             }
         });
         
-        if (\!hasAnyResponse) {
+        if (!hasAnyResponse) {
             e.preventDefault();
             alert('통증 부위를 하나 이상 선택해 주세요.');
             return false;
@@ -1234,7 +1234,7 @@ function collectSymptomData() {
     
     // 데이터를 숨겨진 input에 저장
     let hiddenInput = document.querySelector('input[name="symptoms_json_data"]');
-    if (\!hiddenInput) {
+    if (!hiddenInput) {
         hiddenInput = document.createElement('input');
         hiddenInput.type = 'hidden';
         hiddenInput.name = 'symptoms_json_data';
