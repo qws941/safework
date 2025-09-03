@@ -88,7 +88,8 @@ class MCPCodeProcessor:
                             "lines": len(content.split('\n')),
                             "contains_keywords": self.check_issue_keywords_in_content(content)
                         }
-                        self.log_thinking(f"분석 완료: {file_path} ({len(content)} chars, {len(content.split('\n'))} lines)")
+                        line_count = len(content.split('\n'))
+                        self.log_thinking(f"분석 완료: {file_path} ({len(content)} chars, {line_count} lines)")
                 except Exception as e:
                     file_analyses[file_path] = {"exists": False, "error": str(e)}
                     
