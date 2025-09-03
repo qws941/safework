@@ -25,13 +25,7 @@ jobs:
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "commit_sha=$COMMIT_SHA" >> $GITHUB_OUTPUT
 
-    - name: Create Git Tag
-      run: |
-        VERSION="${{ steps.version.outputs.version }}"
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git tag -a "$VERSION" -m "Release $VERSION"
-        git push origin "$VERSION"
+    # Git tag creation removed - handled manually to avoid permission issues
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
