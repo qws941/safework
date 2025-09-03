@@ -1,0 +1,21 @@
+{
+  "success": true,
+  "analysis": {
+    "related_files": [],
+    "file_analyses": {}
+  },
+  "implementation": {
+    "success": true,
+    "changes": [
+      "부위별 아코디언 UI 구현 완료",
+      "아코디언 CSS 스타일 추가",
+      "아코디언 JavaScript 기능 추가"
+    ]
+  },
+  "changes": [
+    "부위별 아코디언 UI 구현 완료",
+    "아코디언 CSS 스타일 추가",
+    "아코디언 JavaScript 기능 추가"
+  ],
+  "processor": "MCP serena 기반"
+}
