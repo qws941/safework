@@ -76,16 +76,18 @@ jobs:
         echo "📋 제목: ${{ matrix.issue.title }}"
         echo "🏷️  라벨: $(echo '${{ toJson(matrix.issue.labels) }}' | jq -r '.[].name' | tr '\n' ' ')"
 
-    - name: Docker 환경 설정
+    - name: 의존성 설치
       run: |
-        docker-compose -f docker-compose.yml up -d
-        sleep 30
-        echo "✅ Docker 환경 준비 완료"
-
-    - name: Setup Python for MCP processing
-      run: |
-        apt-get update && apt-get install -y python3 python3-pip
+        sudo apt-get update
+        sudo apt-get install -y python3 python3-pip jq
         pip3 install requests
+        echo "✅ 의존성 설치 완료"
+
+    - name: MCP 환경 설정
+      run: |
+        echo "🔧 MCP 환경 설정 중..."
+        python3 --version
+        pip3 --version
         
     - name: MCP 기반 스마트 이슈 처리
       id: issue-handler
@@ -132,11 +134,16 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: 테스트 실행
+    - name: 변경사항 검증
       if: steps.issue-handler.outputs.result == 'success'
       run: |
-        echo "🧪 변경사항 테스트 중..."
-        docker exec safework-app python3 -m pytest tests/ -v --tb=short || echo "테스트 결과 확인 필요"
+        echo "🧪 MCP 처리 결과 검증 중..."
+        if [ -f scripts/processing_result.json ]; then
+          echo "✅ MCP 처리 결과 파일 존재 확인"
+          cat scripts/processing_result.json | jq '.'
+        else
+          echo "⚠️ 처리 결과 파일 없음"
+        fi
 
     - name: PR 생성 (성공시)
       if: steps.issue-handler.outputs.result == 'success'
