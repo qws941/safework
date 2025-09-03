@@ -44,7 +44,9 @@ jobs:
         
         COUNT=$(echo "$FILTERED_ISSUES" | jq 'length')
         
-        echo "issues=${FILTERED_ISSUES}" >> $GITHUB_OUTPUT
+        # JSON을 한 줄로 압축하여 출력
+        COMPRESSED_ISSUES=$(echo "$FILTERED_ISSUES" | jq -c .)
+        echo "issues=${COMPRESSED_ISSUES}" >> $GITHUB_OUTPUT
         echo "count=${COUNT}" >> $GITHUB_OUTPUT
         echo "🎯 처리할 이슈 ${COUNT}개 발견"
       env:
