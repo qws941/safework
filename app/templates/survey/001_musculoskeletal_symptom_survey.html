@@ -641,6 +641,67 @@
     .alert strong {
         font-weight: 700;
     }
+    
+    /* === 질병 단계식 입력 스타일 (Issue #11) === */
+    .disease-selection-grid {
+        margin-top: 20px;
+    }
+    
+    .disease-card {
+        border: 2px solid var(--sw-gray-200);
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        background: var(--sw-white);
+    }
+    
+    .disease-card:hover {
+        border-color: var(--sw-primary-light);
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
+    }
+    
+    .disease-card .card-title {
+        color: var(--sw-gray-700);
+        font-size: 1.1rem;
+        margin-bottom: 0;
+    }
+    
+    .remove-disease {
+        opacity: 0.7;
+        transition: all 0.2s ease;
+    }
+    
+    .remove-disease:hover {
+        opacity: 1;
+        transform: scale(1.05);
+    }
+    
+    .disease-option {
+        border-radius: 8px;
+        padding: 12px;
+        transition: all 0.2s ease;
+        font-weight: 500;
+    }
+    
+    .disease-option:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .disease-option.btn-success {
+        background-color: var(--sw-success);
+        border-color: var(--sw-success);
+    }
+    
+    .selected-diseases-container {
+        max-height: 500px;
+        overflow-y: auto;
+    }
+    
+    .alert-info {
+        background-color: rgba(99, 102, 241, 0.1);
+        border-color: var(--sw-primary-light);
+        color: var(--sw-primary-dark);
+    }
 </style>
 {% endblock %}
 
@@ -934,48 +995,74 @@
             <h4 class="section-title">
                 <i class="bi bi-heart-pulse"></i> 3. 진단받은 질병
             </h4>
-            <p class="mb-3"><small>귀하는 의사로부터 다음과 같은 질병에 대해 진단을 받은 적이 있습니까? (해당 질병에 체크)</small></p>
+            <p class="mb-3"><small>의사에게서 근골격계 관련 질병을 진단받은 적이 있습니까?</small></p>
             
-            <div class="checkbox-group">
-                <div class="checkbox-item">
-                    <input type="checkbox" id="disease_rheumatoid" name="disease_rheumatoid">
-                    <label for="disease_rheumatoid">류머티스 관절염</label>
+            <!-- Step 1: 예/아니오 선택 -->
+            <div class="radio-group">
+                <div class="radio-item">
+                    <input type="radio" id="diagnosed_no" name="diagnosed" value="no">
+                    <label for="diagnosed_no">아니오</label>
                 </div>
-                <div class="checkbox-item">
-                    <input type="checkbox" id="disease_diabetes" name="disease_diabetes">
-                    <label for="disease_diabetes">당뇨병</label>
-                </div>
-                <div class="checkbox-item">
-                    <input type="checkbox" id="disease_lupus" name="disease_lupus">
-                    <label for="disease_lupus">루프스병</label>
-                </div>
-                <div class="checkbox-item">
-                    <input type="checkbox" id="disease_gout" name="disease_gout">
-                    <label for="disease_gout">통풍</label>
-                </div>
-                <div class="checkbox-item">
-                    <input type="checkbox" id="disease_alcoholism" name="disease_alcoholism">
-                    <label for="disease_alcoholism">알코올중독</label>
-                </div>
-                <div class="checkbox-item">
-                    <input type="checkbox" id="disease_none" name="disease_none">
-                    <label for="disease_none">아니오</label>
+                <div class="radio-item">
+                    <input type="radio" id="diagnosed_yes" name="diagnosed" value="yes">
+                    <label for="diagnosed_yes">예</label>
                 </div>
             </div>
             
-            <div id="disease_status_section" style="display: none; margin-top: 15px;">
-                <label class="form-label">현재상태는?</label>
-                <div class="radio-group">
-                    <div class="radio-item">
-                        <input type="radio" id="disease_cured" name="disease_status" value="완치">
-                        <label for="disease_cured">완치</label>
-                    </div>
-                    <div class="radio-item">
-                        <input type="radio" id="disease_treating" name="disease_status" value="치료중">
-                        <label for="disease_treating">치료나 관찰 중</label>
+            <!-- Step 2: 질병 선택 그리드 (예 선택 시에만 표시) -->
+            <div id="disease_grid_section" style="display: none; margin-top: 20px;">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> 진단받은 질병을 선택하고 현재 상태를 지정해주세요.
+                </div>
+                
+                <div id="selected_diseases_container">
+                    <!-- 선택된 질병 카드들이 여기에 동적으로 추가됩니다 -->
+                </div>
+                
+                <!-- 질병 선택 그리드 -->
+                <div class="disease-selection-grid">
+                    <label class="form-label">질병 선택:</label>
+                    <div class="row g-2">
+                        <div class="col-md-4 col-6">
+                            <button type="button" class="btn btn-outline-primary w-100 disease-option" data-disease="류머티스관절염">
+                                <i class="bi bi-plus"></i> 류머티스관절염
+                            </button>
+                        </div>
+                        <div class="col-md-4 col-6">
+                            <button type="button" class="btn btn-outline-primary w-100 disease-option" data-disease="당뇨병">
+                                <i class="bi bi-plus"></i> 당뇨병
+                            </button>
+                        </div>
+                        <div class="col-md-4 col-6">
+                            <button type="button" class="btn btn-outline-primary w-100 disease-option" data-disease="루프스병">
+                                <i class="bi bi-plus"></i> 루프스병
+                            </button>
+                        </div>
+                        <div class="col-md-4 col-6">
+                            <button type="button" class="btn btn-outline-primary w-100 disease-option" data-disease="통풍">
+                                <i class="bi bi-plus"></i> 통풍
+                            </button>
+                        </div>
+                        <div class="col-md-4 col-6">
+                            <button type="button" class="btn btn-outline-primary w-100 disease-option" data-disease="알코올중독">
+                                <i class="bi bi-plus"></i> 알코올중독
+                            </button>
+                        </div>
+                        <div class="col-md-4 col-6">
+                            <button type="button" class="btn btn-outline-secondary w-100" id="disease_custom">
+                                <i class="bi bi-plus"></i> 기타 (직접입력)
+                            </button>
+                        </div>
                     </div>
                 </div>
+                
+                <div class="text-center mt-3">
+                    <small class="text-muted">질병을 선택하면 상태 지정 카드가 나타납니다</small>
+                </div>
             </div>
+            
+            <!-- 숨겨진 input 필드들 (서버 전송용) -->
+            <input type="hidden" id="diseases_data" name="diseases_data">
         </div>
 
         <!-- 4. 과거 사고 -->
@@ -1330,41 +1417,166 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // 질병 상태 조건부 표시
-    const diseaseCheckboxes = document.querySelectorAll('input[name^="disease_"]:not([name="disease_none"])');
-    const diseaseStatusDiv = document.getElementById('disease_status_section');
+    // 진단받은 질병 단계식 처리 (Issue #11)
+    const diagnosedRadios = document.querySelectorAll('input[name="diagnosed"]');
+    const diseaseGridSection = document.getElementById('disease_grid_section');
+    const selectedDiseasesContainer = document.getElementById('selected_diseases_container');
+    const diseaseOptions = document.querySelectorAll('.disease-option');
+    const diseaseCustomBtn = document.getElementById('disease_custom');
+    const diseasesDataInput = document.getElementById('diseases_data');
+    
+    let selectedDiseases = [];
 
-    function toggleDiseaseStatus() {
-        const hasDisease = Array.from(diseaseCheckboxes).some(cb => cb.checked);
-        if (diseaseStatusDiv) {
-            diseaseStatusDiv.style.display = hasDisease ? 'block' : 'none';
+    // Step 1: 예/아니오 라디오 버튼 처리
+    diagnosedRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.value === 'yes') {
+                diseaseGridSection.style.display = 'block';
+            } else {
+                diseaseGridSection.style.display = 'none';
+                selectedDiseases = [];
+                selectedDiseasesContainer.innerHTML = '';
+                updateDiseasesData();
+                resetDiseaseOptions();
+            }
+        });
+    });
+
+    // Step 2: 질병 선택 버튼 처리
+    diseaseOptions.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const diseaseName = this.dataset.disease;
+            if (!selectedDiseases.find(d => d.name === diseaseName)) {
+                addDiseaseCard(diseaseName);
+                this.classList.add('btn-success');
+                this.classList.remove('btn-outline-primary');
+                this.innerHTML = '<i class="bi bi-check"></i> ' + diseaseName;
+                this.disabled = true;
+            }
+        });
+    });
+
+    // 기타 질병 직접 입력
+    if (diseaseCustomBtn) {
+        diseaseCustomBtn.addEventListener('click', function() {
+            const customDisease = prompt('질병명을 입력해주세요:');
+            if (customDisease && customDisease.trim()) {
+                const diseaseName = customDisease.trim();
+                if (!selectedDiseases.find(d => d.name === diseaseName)) {
+                    addDiseaseCard(diseaseName, true);
+                }
+            }
+        });
+    }
+
+    // 질병 카드 추가 함수
+    function addDiseaseCard(diseaseName, isCustom = false) {
+        const diseaseId = 'disease_' + selectedDiseases.length;
+        
+        const cardHtml = `
+            <div class="card mb-3 disease-card" data-disease="${diseaseName}">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="card-title">
+                                <i class="bi bi-heart-pulse text-danger"></i> ${diseaseName}
+                                ${isCustom ? '<span class="badge bg-secondary ms-2">기타</span>' : ''}
+                            </h6>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-danger remove-disease" data-disease="${diseaseName}">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <label class="form-label">현재 상태:</label>
+                        <div class="radio-group">
+                            <div class="radio-item">
+                                <input type="radio" id="${diseaseId}_cured" name="${diseaseId}_status" value="완치">
+                                <label for="${diseaseId}_cured">완치</label>
+                            </div>
+                            <div class="radio-item">
+                                <input type="radio" id="${diseaseId}_treating" name="${diseaseId}_status" value="치료·관찰중">
+                                <label for="${diseaseId}_treating">치료·관찰중</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        selectedDiseasesContainer.insertAdjacentHTML('beforeend', cardHtml);
+        
+        // 질병 객체 추가
+        selectedDiseases.push({
+            name: diseaseName,
+            status: '',
+            isCustom: isCustom
+        });
+        
+        // 이벤트 리스너 추가
+        const card = selectedDiseasesContainer.lastElementChild;
+        
+        // 삭제 버튼
+        card.querySelector('.remove-disease').addEventListener('click', function() {
+            removeDiseaseCard(diseaseName);
+        });
+        
+        // 상태 라디오 버튼
+        card.querySelectorAll(`input[name="${diseaseId}_status"]`).forEach(radio => {
+            radio.addEventListener('change', function() {
+                const diseaseObj = selectedDiseases.find(d => d.name === diseaseName);
+                if (diseaseObj) {
+                    diseaseObj.status = this.value;
+                    updateDiseasesData();
+                }
+            });
+        });
+        
+        updateDiseasesData();
+    }
+
+    // 질병 카드 삭제 함수
+    function removeDiseaseCard(diseaseName) {
+        // 선택된 질병 배열에서 제거
+        selectedDiseases = selectedDiseases.filter(d => d.name !== diseaseName);
+        
+        // DOM에서 카드 제거
+        const card = selectedDiseasesContainer.querySelector(`[data-disease="${diseaseName}"]`);
+        if (card) {
+            card.remove();
         }
+        
+        // 버튼 상태 복원 (기본 질병인 경우)
+        const diseaseBtn = document.querySelector(`[data-disease="${diseaseName}"]`);
+        if (diseaseBtn) {
+            diseaseBtn.classList.add('btn-outline-primary');
+            diseaseBtn.classList.remove('btn-success');
+            diseaseBtn.innerHTML = '<i class="bi bi-plus"></i> ' + diseaseName;
+            diseaseBtn.disabled = false;
+        }
+        
+        updateDiseasesData();
     }
 
-    diseaseCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', toggleDiseaseStatus);
-    });
-
-    // "아니오" 체크박스 처리
-    const diseaseNone = document.querySelector('input[name="disease_none"]');
-    if (diseaseNone) {
-        diseaseNone.addEventListener('change', function() {
-            if (this.checked) {
-                diseaseCheckboxes.forEach(cb => {
-                    cb.checked = false;
-                });
-            }
-            toggleDiseaseStatus();
+    // 질병 선택 버튼 상태 초기화
+    function resetDiseaseOptions() {
+        diseaseOptions.forEach(btn => {
+            btn.classList.add('btn-outline-primary');
+            btn.classList.remove('btn-success');
+            btn.innerHTML = '<i class="bi bi-plus"></i> ' + btn.dataset.disease;
+            btn.disabled = false;
         });
     }
 
-    diseaseCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            if (this.checked && diseaseNone) {
-                diseaseNone.checked = false;
-            }
-        });
-    });
+    // 숨겨진 input 필드 업데이트
+    function updateDiseasesData() {
+        const data = {
+            diagnosed: selectedDiseases.length > 0,
+            diagnoses: selectedDiseases
+        };
+        diseasesDataInput.value = JSON.stringify(data);
+    }
 
     // 과거 사고 조건부 표시
     document.querySelectorAll('input[name="past_accident"]').forEach(radio => {
@@ -1402,8 +1614,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // 초기 상태 설정
-    toggleDiseaseStatus();
+    // 초기 상태 설정 - 질병 진단 관련 초기화는 새로운 시스템에서 자동 처리됨
 });
 </script>
 {% endblock %}
