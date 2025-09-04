@@ -41,15 +41,14 @@ def musculoskeletal_symptom_survey():
             user_id=user_id,
             form_type="001_musculoskeletal_symptom_survey",
             # I. 기본 정보
-            employee_number=request.form.get("employee_number"),
             name=request.form.get("name"),
             age=request.form.get("age", type=int),
             gender=request.form.get("gender"),
             work_years=request.form.get("work_years", type=int),
             work_months=request.form.get("work_months", type=int),
-            department=request.form.get("department"),
-            line=request.form.get("line"),
-            work_name=request.form.get("work_name"),
+            company=request.form.get("company"),
+            process=request.form.get("process"),
+            role=request.form.get("role"),
             marriage_status=request.form.get("marriage_status"),
             # 현재하고 있는 작업
             current_work_details=request.form.get("current_work_details"),

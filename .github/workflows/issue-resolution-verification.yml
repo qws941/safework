@@ -1,11 +1,10 @@
 name: 🔍 이슈 해소 증명 및 사용자 알림 시스템
 
 on:
-  # TEMPORARILY DISABLED - 자동 이슈 처리 중단
-  # issues:
-  #   types: [closed]
-  # issue_comment:
-  #   types: [created]
+  issues:
+    types: [closed]
+  issue_comment:
+    types: [created]
   workflow_dispatch:
     inputs:
       issue_number:

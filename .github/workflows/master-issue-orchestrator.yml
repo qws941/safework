@@ -1,15 +1,14 @@
 name: 🎭 SafeWork 마스터 이슈 오케스트레이터
 
 on:
-  # TEMPORARILY DISABLED - 자동 이슈 처리 중단
-  # issues:
-  #   types: [opened, edited, closed, reopened, labeled, unlabeled]
-  # issue_comment:
-  #   types: [created, edited, deleted]
-  # pull_request:
-  #   types: [opened, edited, closed, reopened, synchronize]
-  # pull_request_review:
-  #   types: [submitted, edited, dismissed]
+  issues:
+    types: [opened, edited, closed, reopened, labeled, unlabeled]
+  issue_comment:
+    types: [created, edited, deleted]
+  pull_request:
+    types: [opened, edited, closed, reopened, synchronize]
+  pull_request_review:
+    types: [submitted, edited, dismissed]
   workflow_dispatch:
     inputs:
       orchestration_mode:

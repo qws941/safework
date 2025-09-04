@@ -169,3 +169,26 @@ class SafeworkHealthPlan(db.Model):
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class SafeworkTodo(db.Model):
+    """SafeWork 프로젝트 Todo 관리"""
+    __tablename__ = 'safework_todos'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    priority = db.Column(db.String(20), default='Normal')  # High, Normal, Low
+    status = db.Column(db.String(20), default='Pending')  # Pending, In Progress, Completed, Cancelled
+    category = db.Column(db.String(50))  # Development, Testing, Deployment, Documentation
+    assigned_to = db.Column(db.String(100))
+    due_date = db.Column(db.Date)
+    completed_date = db.Column(db.DateTime)
+    progress = db.Column(db.Integer, default=0)  # 0-100 percent
+    labels = db.Column(db.String(500))  # Comma-separated tags
+    github_issue = db.Column(db.String(20))  # GitHub issue number if linked
+    estimated_hours = db.Column(db.Float)
+    actual_hours = db.Column(db.Float)
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

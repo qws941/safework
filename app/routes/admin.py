@@ -14,7 +14,8 @@ from models import AuditLog, Survey, SurveyStatistics, User, Process, db
 try:
     from models_safework_v2 import (
         SafeworkWorker, SafeworkHealthCheck, SafeworkMedicalVisit,
-        SafeworkMedication, SafeworkMedicationLog, SafeworkHealthPlan
+        SafeworkMedication, SafeworkMedicationLog, SafeworkHealthPlan,
+        SafeworkTodo
     )
 except ImportError:
     # SafeWork 모델이 없는 경우 더미 클래스 생성
@@ -22,6 +23,7 @@ except ImportError:
     class SafeworkHealthCheck: pass
     class SafeworkMedicalVisit: pass
     class SafeworkMedication: pass
+    class SafeworkTodo: pass
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -580,6 +582,71 @@ def safework_dashboard():
         department_pending=department_pending,
         alerts=alerts
     )
+
+
+@admin_bp.route("/safework/todos")
+@admin_required 
+def safework_todos():
+    """SafeWork Todo 관리 대시보드"""
+    page = request.args.get("page", 1, type=int)
+    per_page = 10
+    status_filter = request.args.get("status", "")
+    priority_filter = request.args.get("priority", "")
+    category_filter = request.args.get("category", "")
+    
+    try:
+        # Todo 데이터 조회
+        query = SafeworkTodo.query
+        
+        # 필터 적용
+        if status_filter:
+            query = query.filter(SafeworkTodo.status == status_filter)
+        if priority_filter:
+            query = query.filter(SafeworkTodo.priority == priority_filter)
+        if category_filter:
+            query = query.filter(SafeworkTodo.category == category_filter)
+            
+        # 페이지네이션 및 정렬
+        todos = query.order_by(SafeworkTodo.created_at.desc()).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
+        
+        # 통계 데이터
+        total_todos = SafeworkTodo.query.count()
+        pending_todos = SafeworkTodo.query.filter_by(status='Pending').count()
+        in_progress_todos = SafeworkTodo.query.filter_by(status='In Progress').count()
+        completed_todos = SafeworkTodo.query.filter_by(status='Completed').count()
+        high_priority_todos = SafeworkTodo.query.filter_by(priority='High').count()
+        
+        # 진행률 계산
+        if total_todos > 0:
+            completion_rate = round((completed_todos / total_todos) * 100, 1)
+        else:
+            completion_rate = 0
+            
+        return render_template("admin/safework_todos.html",
+            todos=todos,
+            total_todos=total_todos,
+            pending_todos=pending_todos,
+            in_progress_todos=in_progress_todos,
+            completed_todos=completed_todos,
+            high_priority_todos=high_priority_todos,
+            completion_rate=completion_rate,
+            current_status=status_filter,
+            current_priority=priority_filter,
+            current_category=category_filter
+        )
+    except Exception as e:
+        flash(f"Todo 데이터를 가져오는 중 오류가 발생했습니다: {str(e)}", "danger")
+        return render_template("admin/safework_todos.html",
+            todos=None,
+            total_todos=0,
+            pending_todos=0,
+            in_progress_todos=0,
+            completed_todos=0,
+            high_priority_todos=0,
+            completion_rate=0
+        )
 
 
 @admin_bp.route("/safework/workers")

@@ -19,6 +19,13 @@
             </a>
         </li>
         
+        <!-- Todo 관리 대시보드 -->
+        <li class="menu-item {{ 'active' if request.endpoint == 'admin.safework_todos' }}">
+            <a href="{{ url_for('admin.safework_todos') }}">
+                <i class="bi bi-list-task"></i> 📋 Todo 관리
+            </a>
+        </li>
+        
         <!-- 건강검진 관리 -->
         <li class="menu-item has-submenu">
             <a href="#" class="menu-toggle">
