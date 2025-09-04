@@ -61,7 +61,7 @@ jobs:
     - name: 📥 코드 체크아웃
       uses: actions/checkout@v4
       
-    - name: 🤖 Sub-agent: Workflow Orchestrator - 마스터 분석
+    - name: "🤖 Sub-agent: Workflow Orchestrator - 마스터 분석"
       id: analysis
       run: |
         echo "🎭 SafeWork 마스터 이슈 오케스트레이터 v2.0 시작"
@@ -184,7 +184,12 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        agent: ${{ fromJson(format('["{0}"]', needs.master-issue-analysis.outputs.required_agents)) }}
+        agent: 
+          - issue-manager
+          - code-quality-reviewer
+          - test-automation-specialist
+          - deployment-manager
+          - workflow-orchestrator
       fail-fast: false
       max-parallel: 3
       

@@ -73,7 +73,7 @@ jobs:
         
         echo "✅ 이슈 #$ISSUE_NUMBER 정보 수집 완료"
 
-    - name: 🤖 Sub-agent: Issue Manager 호출
+    - name: "🤖 Sub-agent: Issue Manager 호출"
       run: |
         echo "🤖 Sub-agent: Issue Manager - 이슈 해소 검증 시작"
         echo "📋 이슈: #${{ steps.issue_info.outputs.number }} - ${{ steps.issue_info.outputs.title }}"
