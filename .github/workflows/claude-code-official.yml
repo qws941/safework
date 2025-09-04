@@ -1,8 +1,6 @@
 name: Claude Code - SafeWork 자동화
 
 on:
-  issues:
-    types: [opened, labeled]
   issue_comment:
     types: [created]
   pull_request_review_comment:
@@ -11,10 +9,6 @@ on:
 jobs:
   claude:
     if: |
-      (github.event_name == 'issues' && 
-       (contains(github.event.issue.labels.*.name, 'P0') || 
-        contains(github.event.issue.labels.*.name, 'enhancement') ||
-        contains(github.event.issue.labels.*.name, 'bug'))) ||
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude'))
     runs-on: ubuntu-latest
     
@@ -24,6 +18,7 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          claude_args: "--no-auto-commit --require-approval --verbose-reporting --screenshot-evidence"
           prompt: |
             SafeWork 프로젝트의 GitHub 이슈를 자동으로 처리해주세요.
             
@@ -36,26 +31,31 @@ jobs:
             ## 현재 이슈 정보
             ${{ github.event_name == 'issues' && format('이슈 #{0}: {1}', github.event.issue.number, github.event.issue.title) || format('댓글 이슈 #{0}', github.event.issue.number) }}
             
-            ## 처리 방식
+            ## 처리 방식 - 사용자 확인 필수
             1. **이슈 분석**: 요구사항 및 기술적 복잡도 파악
-            2. **코드 검토**: 관련 파일 (templates/, routes/, models/) 분석  
-            3. **구현**: SafeWork 코딩 규칙 준수하여 자동 구현
-            4. **검증**: Docker 환경에서 테스트 실행
-            5. **PR 생성**: 완성된 코드로 Pull Request 생성
+            2. **코드 검토**: 관련 파일 (templates/, routes/, models/) 분석
+            3. **구현 계획**: 구체적인 구현 방안을 댓글로 제안
+            4. **사용자 승인**: @qws941 @seonmin994 확인 및 승인 대기
+            5. **승인 후 구현**: 사용자 승인 시에만 실제 코드 변경
+            6. **변경사항 상세 보고**: 수정된 파일, 추가된 기능, 테스트 결과 상세 제공
+            7. **MCP 스크린샷**: 구현 과정 시각적 증거 제공
             
             ## 우선순위 처리
             - **P0 라벨**: 최우선 즉시 처리
             - **enhancement**: 기능 개선 구현
             - **bug**: 버그 수정 및 검증
             
-            ## 코딩 규칙
+            ## 코딩 규칙 - 승인 후 진행
+            - **사용자 확인 우선**: 코드 변경 전 반드시 사용자 승인 필요
             - CLAUDE.md 가이드라인 준수
-            - Flask 모범사례 적용  
+            - Flask 모범사례 적용
             - 기존 코드 스타일 유지
             - MCP Serena 도구 활용한 정밀 코드 수정
             - Docker 환경 테스트 필수
+            - **변경사항 투명성**: 모든 수정 내역 상세 보고
+            - **증거 자료**: MCP 스크린샷으로 구현 과정 문서화
             
-            자동 처리를 시작해주세요!
+            **중요**: 사용자 승인 없이 코드 변경 금지. 계획 제안 후 승인 대기!
 
       - name: 이슈 처리 결과 알림
         if: always()
