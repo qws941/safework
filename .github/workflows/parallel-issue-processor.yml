@@ -15,6 +15,9 @@ permissions:
   contents: write
   issues: write
   pull-requests: write
+  actions: write
+  checks: write
+  repository-projects: write
 
 jobs:
   # 1단계: 처리할 이슈들 수집
