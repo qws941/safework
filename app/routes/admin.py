@@ -10,7 +10,7 @@ from openpyxl import Workbook
 from sqlalchemy import and_, func, or_, text
 
 from forms import AdminFilterForm
-from models import AuditLog, Survey, SurveyStatistics, User, db
+from models import AuditLog, Survey, SurveyStatistics, User, Process, db
 try:
     from models_safework_v2 import (
         SafeworkWorker, SafeworkHealthCheck, SafeworkMedicalVisit,
@@ -58,13 +58,14 @@ def dashboard():
     waist_count = Survey.query.filter(Survey.waist_data.isnot(None)).count()
     leg_count = Survey.query.filter(Survey.leg_data.isnot(None)).count()
     
-    # 증상이 있는 총 설문 수
-    high_risk_count = Survey.query.filter(Survey.has_symptoms == True).count()
+    # 증상이 있는 총 설문 수 (has_symptoms는 VARCHAR이므로 '예' 값으로 필터)
+    high_risk_count = Survey.query.filter(Survey.has_symptoms == '예').count()
 
-    # 부서별 제출 현황
+    # 공정별 제출 현황 (부서 대신 공정 사용)
     dept_stats = (
-        db.session.query(Survey.department, func.count(Survey.id).label("count"))
-        .group_by(Survey.department)
+        db.session.query(Process.name, func.count(Survey.id).label("count"))
+        .join(Survey, Survey.process_id == Process.id)
+        .group_by(Process.name)
         .all()
     )
 

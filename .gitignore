@@ -72,3 +72,13 @@ secrets/
 tmp/
 temp/
 *.tmp
+cookies.txt
+processing_result.json
+
+# MCP and automation files
+.playwright-mcp/
+.serena/
+
+# Development artifacts
+AUTOMATION_EXECUTION_REPORT.md
+CHANGELOG.md
