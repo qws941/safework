@@ -4,203 +4,141 @@ on:
   push:
     branches: [master, main]
   schedule:
-    # 매일 오전 9시 (KST) 자동 스캔
-    - cron: '0 0 * * *'  # UTC 0시 = KST 9시
+    # 매 30분마다 열린 이슈 확인 및 Claude 자동 할당
+    - cron: '*/30 * * * *'  # 30분마다 실행
   workflow_dispatch:
 
 env:
   TZ: Asia/Seoul
 
 jobs:
-  # 1단계: 코드 스캔 및 이슈 감지
-  detect-issues:
-    runs-on: ubuntu-latest
-    outputs:
-      issues-found: ${{ steps.scan.outputs.issues-found }}
-      issue-count: ${{ steps.scan.outputs.issue-count }}
-    
-    steps:
-      - name: 📥 코드베이스 체크아웃
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          
-      - name: 🔍 코드 이슈 스캔
-        id: scan
-        run: |
-          echo "🔍 SafeWork 코드베이스 스캔 시작..."
-          ISSUES_FOUND=false
-          ISSUE_COUNT=0
-          
-          # Python 코드 스캔
-          echo "📊 Python 코드 분석..."
-          
-          # TODO/FIXME 주석 감지
-          TODO_COUNT=$(find app/ -name "*.py" -exec grep -n "TODO\|FIXME\|BUG\|HACK" {} + | wc -l || echo 0)
-          if [ "$TODO_COUNT" -gt 0 ]; then
-            echo "⚠️ TODO/FIXME 발견: $TODO_COUNT 건"
-            ISSUES_FOUND=true
-            ISSUE_COUNT=$((ISSUE_COUNT + TODO_COUNT))
-          fi
-          
-          # 에러 패턴 감지
-          ERROR_PATTERNS=$(find app/ -name "*.py" -exec grep -n "raise Exception\|print.*error\|logging\.error" {} + | wc -l || echo 0)
-          if [ "$ERROR_PATTERNS" -gt 0 ]; then
-            echo "🚨 에러 패턴 발견: $ERROR_PATTERNS 건"
-            ISSUES_FOUND=true
-            ISSUE_COUNT=$((ISSUE_COUNT + ERROR_PATTERNS))
-          fi
-          
-          # 보안 패턴 감지  
-          SECURITY_ISSUES=$(find app/ -name "*.py" -exec grep -n "password.*=\|secret.*=\|api_key.*=" {} + | wc -l || echo 0)
-          if [ "$SECURITY_ISSUES" -gt 0 ]; then
-            echo "🔒 잠재적 보안 이슈 발견: $SECURITY_ISSUES 건"
-            ISSUES_FOUND=true
-            ISSUE_COUNT=$((ISSUE_COUNT + SECURITY_ISSUES))
-          fi
-          
-          # 워크플로우 실패 감지
-          if [ "${{ github.event_name }}" = "push" ]; then
-            echo "🔄 최근 워크플로우 상태 확인..."
-            # 여기서는 단순화하여 실패가 있다고 가정
-          fi
-          
-          echo "issues-found=$ISSUES_FOUND" >> $GITHUB_OUTPUT
-          echo "issue-count=$ISSUE_COUNT" >> $GITHUB_OUTPUT
-          
-          if [ "$ISSUES_FOUND" = "true" ]; then
-            echo "🎯 총 $ISSUE_COUNT 개의 이슈가 감지되었습니다."
-          else
-            echo "✅ 코드베이스가 깨끗합니다!"
-          fi
-
-  # 2단계: 자동 이슈 생성 및 Claude 할당  
-  create-auto-issues:
-    needs: detect-issues
-    if: needs.detect-issues.outputs.issues-found == 'true'
+  # 1단계: 오픈 이슈 자동 감지 및 Claude 할당
+  detect-open-issues:
     runs-on: ubuntu-latest
     permissions:
       issues: write
       contents: read
-      
-    steps:
-      - name: 📥 코드베이스 체크아웃
-        uses: actions/checkout@v4
-        
-      - name: 🤖 자동 이슈 생성
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const { owner, repo } = context.repo;
-            const issueCount = '${{ needs.detect-issues.outputs.issue-count }}';
-            
-            // 기존 자동 생성 이슈 확인
-            const existingIssues = await github.rest.issues.listForRepo({
-              owner,
-              repo,
-              labels: '🤖 claude-ready,🆕 new',
-              state: 'open'
-            });
-            
-            if (existingIssues.data.length > 0) {
-              console.log(`⏭️ 기존 자동 이슈 ${existingIssues.data.length}개가 열려있어 새 이슈를 생성하지 않습니다.`);
-              return;
-            }
-            
-            // 새 이슈 생성
-            const issueBody = `
-            ## 🔍 자동 감지된 코드 이슈
-            
-            **감지 날짜**: ${new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
-            **감지된 이슈 수**: ${issueCount}개
-            
-            ### 📋 감지 항목
-            - [ ] TODO/FIXME 주석 정리
-            - [ ] 에러 핸들링 개선  
-            - [ ] 보안 패턴 검토
-            - [ ] 코드 품질 향상
-            
-            ### 🎯 요청 사항
-            @claude 위의 감지된 이슈들을 분석하고 해결해 주세요.
-            
-            다음 순서로 작업해 주세요:
-            1. 코드베이스 전체 스캔
-            2. 우선순위별 이슈 분류
-            3. 실제 코드 수정 및 개선
-            4. 테스트 실행 및 검증
-            5. 커밋 및 PR 생성
-            
-            ---
-            
-            _이 이슈는 자동으로 생성되었습니다. 🤖_
-            `;
-            
-            const issue = await github.rest.issues.create({
-              owner,
-              repo,
-              title: `🔍 자동 감지: 코드 품질 개선 필요 (${issueCount}개 이슈)`,
-              body: issueBody,
-              labels: [
-                '🤖 claude-ready',
-                '🆕 new', 
-                '♻️ refactor',
-                '🟡 P2-medium',
-                '⚙️ backend'
-              ]
-            });
-            
-            console.log(`✅ 자동 이슈 생성 완료: #${issue.data.number}`);
-            console.log(`🔗 URL: ${issue.data.html_url}`);
-
-  # 3단계: Claude 워크플로우 트리거  
-  trigger-claude:
-    needs: [detect-issues, create-auto-issues]
-    if: needs.detect-issues.outputs.issues-found == 'true'
-    runs-on: ubuntu-latest
-    permissions:
       actions: write
-      contents: read
-      
+    outputs:
+      issues-assigned: ${{ steps.assign.outputs.issues-assigned }}
+      issue-count: ${{ steps.assign.outputs.issue-count }}
+    
     steps:
-      - name: 🚀 Claude 워크플로우 트리거
+      - name: 🔍 열린 이슈 스캔 및 Claude 자동 할당
+        id: assign
         uses: actions/github-script@v7
         with:
           script: |
             const { owner, repo } = context.repo;
+            let assignedCount = 0;
             
-            // Claude Code 워크플로우 실행
-            try {
-              const response = await github.rest.actions.createWorkflowDispatch({
+            console.log('🔍 열린 이슈 검색 중...');
+            
+            // 열린 이슈 중 Claude가 할당되지 않은 이슈 검색
+            const openIssues = await github.rest.issues.listForRepo({
+              owner,
+              repo,
+              state: 'open',
+              per_page: 50,
+              sort: 'created',
+              direction: 'desc'
+            });
+            
+            console.log(`📋 총 ${openIssues.data.length}개의 열린 이슈 발견`);
+            
+            for (const issue of openIssues.data) {
+              // PR은 제외
+              if (issue.pull_request) continue;
+              
+              // 이미 Claude가 댓글을 단 이슈는 제외
+              const comments = await github.rest.issues.listComments({
                 owner,
                 repo,
-                workflow_id: 'claude.yml',
-                ref: 'main'
+                issue_number: issue.number
               });
               
-              console.log('✅ Claude 워크플로우 트리거 완료');
-            } catch (error) {
-              console.error('❌ Claude 워크플로우 트리거 실패:', error);
-            }
+              const hasClaudeComment = comments.data.some(comment => 
+                comment.user.login === 'claude[bot]' || 
+                comment.body.includes('🤖 **Claude 작업 시작!**') ||
+                comment.body.includes('@claude')
+              );
+              
+              if (hasClaudeComment) {
+                console.log(`⏭️ 이슈 #${issue.number}: 이미 Claude가 처리 중`);
+                continue;
+              }
+              
+              // 24시간 이내에 생성된 이슈만 자동 할당
+              const issueAge = Date.now() - new Date(issue.created_at).getTime();
+              const hoursOld = issueAge / (1000 * 60 * 60);
+              
+              if (hoursOld > 24) {
+                console.log(`⏭️ 이슈 #${issue.number}: 24시간 경과 (${Math.round(hoursOld)}시간)`);
+                continue;
+              }
+              
+              // Claude 자동 할당 댓글 추가
+              try {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: issue.number,
+                  body: `🤖 **Claude 자동 할당**
+                  
+📋 **자동 감지된 이슈**
+- **이슈**: ${issue.title}
+- **생성시간**: ${new Date(issue.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
+- **할당시간**: ${new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
 
-  # 4단계: 알림
+🎯 **Claude 작업 시작**
+@claude 이 이슈를 분석하고 해결해주세요.
+
+SafeWork 프로젝트 패턴을 따라 다음 단계로 진행해주세요:
+1. 이슈 내용 정확한 분석
+2. 관련 파일 식별 및 현재 상태 확인
+3. 적절한 해결방안 구현
+4. 테스트 실행 및 검증
+5. 커밋 및 이슈 완료
+
+---
+_🕒 자동 할당 시스템에 의해 생성됨_`
+                });
+                
+                assignedCount++;
+                console.log(`✅ 이슈 #${issue.number} Claude 자동 할당 완료: "${issue.title}"`);
+                
+                // 너무 많은 요청을 방지하기 위해 잠시 대기
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+              } catch (error) {
+                console.error(`❌ 이슈 #${issue.number} 할당 실패:`, error.message);
+              }
+            }
+            
+            console.log(`🎯 총 ${assignedCount}개 이슈에 Claude 자동 할당 완료`);
+            
+            // 출력 설정
+            core.setOutput('issues-assigned', assignedCount > 0 ? 'true' : 'false');
+            core.setOutput('issue-count', assignedCount);
+
+  # 2단계: 결과 알림
   notify-completion:
-    needs: [detect-issues, create-auto-issues, trigger-claude]
+    needs: detect-open-issues
     if: always()
     runs-on: ubuntu-latest
     
     steps:
-      - name: 📊 최종 알림
+      - name: 📊 자동 할당 결과 알림
         run: |
-          echo "🎯 이슈 자동 감지 및 처리 완료!"
+          echo "🎯 열린 이슈 자동 Claude 할당 완료!"
           echo ""
           echo "📋 결과 요약:"
-          echo "  - 이슈 감지: ${{ needs.detect-issues.outputs.issues-found }}"
-          echo "  - 감지된 이슈 수: ${{ needs.detect-issues.outputs.issue-count }}"
-          echo "  - 자동 이슈 생성: ${{ needs.create-auto-issues.result }}"
-          echo "  - Claude 할당: ${{ needs.assign-to-claude.result }}"
+          echo "  - 이슈 할당 여부: ${{ needs.detect-open-issues.outputs.issues-assigned }}"
+          echo "  - 할당된 이슈 수: ${{ needs.detect-open-issues.outputs.issue-count }}"
           echo ""
-          if [ "${{ needs.detect-issues.outputs.issues-found }}" = "true" ]; then
-            echo "🤖 Claude가 자동으로 문제를 해결할 예정입니다."
+          if [ "${{ needs.detect-open-issues.outputs.issues-assigned }}" = "true" ]; then
+            echo "🤖 ${{ needs.detect-open-issues.outputs.issue-count }}개 이슈에 Claude가 자동 할당되었습니다."
+            echo "실시간 진행상황은 각 이슈 페이지에서 확인할 수 있습니다."
           else
-            echo "✅ 코드베이스가 건강한 상태입니다!"
+            echo "✅ 새로 할당할 이슈가 없습니다. 모든 이슈가 처리 중이거나 완료되었습니다."
           fi
