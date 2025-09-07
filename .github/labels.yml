@@ -1,0 +1,95 @@
+# GitHub 라벨 설정 파일
+# 사용: gh label import .github/labels.yml
+
+# 타입 (Type) - 하나만 선택
+- name: "🐛 bug"
+  color: "d73a4a"
+  description: "버그 수정이 필요한 이슈"
+
+- name: "✨ enhancement"
+  color: "a2eeef"
+  description: "새로운 기능 추가"
+
+- name: "♻️ refactor"
+  color: "1d76db"
+  description: "코드 리팩토링"
+
+- name: "📝 documentation"
+  color: "0075ca"
+  description: "문서 작업"
+
+- name: "🧪 test"
+  color: "795548"
+  description: "테스트 관련"
+
+- name: "📋 task"
+  color: "0052cc"
+  description: "일반 작업"
+
+# 우선순위 (Priority) - 하나만 선택
+- name: "🔴 P0-urgent"
+  color: "b60205"
+  description: "긴급 처리 필요"
+
+- name: "🟠 P1-high"
+  color: "ff9800"
+  description: "높은 우선순위"
+
+- name: "🟡 P2-medium"
+  color: "fbca04"
+  description: "보통 우선순위"
+
+- name: "🟢 P3-low"
+  color: "0e8a16"
+  description: "낮은 우선순위"
+
+# 영역 (Area) - 복수 선택 가능
+- name: "🎨 frontend"
+  color: "c5def5"
+  description: "프론트엔드 관련"
+
+- name: "⚙️ backend"
+  color: "1d76db"
+  description: "백엔드 관련"
+
+- name: "🔒 security"
+  color: "ee0701"
+  description: "보안 관련"
+
+- name: "⚡ performance"
+  color: "ffd93d"
+  description: "성능 관련"
+
+- name: "🐳 devops"
+  color: "0052cc"
+  description: "DevOps/인프라 관련"
+
+# 상태 (Status)
+- name: "🆕 new"
+  color: "7057ff"
+  description: "새로운 이슈"
+
+- name: "🚧 in-progress"
+  color: "ffa500"
+  description: "진행 중"
+
+- name: "✅ resolved"
+  color: "008672"
+  description: "해결됨"
+
+- name: "⏰ stale"
+  color: "cfd3d7"
+  description: "오래된 이슈"
+
+- name: "❌ wontfix"
+  color: "ffffff"
+  description: "수정하지 않음"
+
+# 자동화
+- name: "🤖 claude-ready"
+  color: "5319e7"
+  description: "Claude 자동 처리 대상"
+
+- name: "🔄 auto-merged"
+  color: "0e8a16"
+  description: "자동 머지됨"

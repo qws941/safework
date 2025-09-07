@@ -180,17 +180,6 @@ jobs:
           use_sticky_comment: true
           create_pr: true
           branch_prefix: claude/
-          max_turns: 20
-          allowed_tools: |
-            mcp__shrimp-task-manager__*
-            mcp__serena__*
-            mcp__sequential-thinking__*
-            mcp__brave-search__*
-            mcp__exa__*
-            mcp__memory__*
-            mcp__code-runner__*
-            mcp__eslint__*
-            mcp__playwright__*
           custom_instructions: |
             ## MCP 도구 활용해서 최대한 지능적으로 처리
             

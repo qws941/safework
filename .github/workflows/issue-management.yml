@@ -1,0 +1,250 @@
+name: 이슈 관리 고도화 시스템
+
+on:
+  issues:
+    types: [opened, edited]
+  workflow_dispatch:
+    inputs:
+      action:
+        description: '수행할 작업'
+        required: true
+        type: choice
+        options:
+          - cleanup-comments
+          - relabel-all
+          - analyze-all
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  # 새 이슈 자동 라벨링
+  auto-label:
+    if: github.event_name == 'issues'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 체계적 라벨 적용
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issue = context.payload.issue;
+            const title = issue.title.toLowerCase();
+            const body = (issue.body || '').toLowerCase();
+            const content = title + ' ' + body;
+            
+            // 기존 라벨 모두 제거
+            const currentLabels = issue.labels.map(l => l.name);
+            if (currentLabels.length > 0) {
+              await github.rest.issues.removeAllLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number
+              }).catch(() => {}); // 라벨이 없을 수도 있음
+            }
+            
+            // 새로운 라벨 체계
+            const labels = [];
+            
+            // 1. 타입 (하나만)
+            if (content.includes('버그') || content.includes('bug') || content.includes('오류') || content.includes('에러') || content.includes('error') || content.includes('안됨') || content.includes('안돼')) {
+              labels.push('🐛 bug');
+            } else if (content.includes('기능') || content.includes('feature') || content.includes('추가') || content.includes('구현')) {
+              labels.push('✨ enhancement');
+            } else if (content.includes('리팩토링') || content.includes('refactor') || content.includes('개선')) {
+              labels.push('♻️ refactor');
+            } else if (content.includes('문서') || content.includes('doc') || content.includes('readme')) {
+              labels.push('📝 documentation');
+            } else if (content.includes('테스트') || content.includes('test')) {
+              labels.push('🧪 test');
+            } else {
+              labels.push('📋 task');
+            }
+            
+            // 2. 우선순위 (하나만)
+            if (content.includes('긴급') || content.includes('urgent') || content.includes('asap') || content.includes('즉시') || content.includes('크리티컬')) {
+              labels.push('🔴 P0-urgent');
+            } else if (content.includes('중요') || content.includes('important') || content.includes('높음')) {
+              labels.push('🟠 P1-high');
+            } else if (content.includes('보통') || content.includes('normal')) {
+              labels.push('🟡 P2-medium');
+            } else {
+              labels.push('🟢 P3-low');
+            }
+            
+            // 3. 영역 (복수 가능)
+            if (content.includes('ui') || content.includes('화면') || content.includes('템플릿') || content.includes('프론트')) {
+              labels.push('🎨 frontend');
+            }
+            if (content.includes('api') || content.includes('백엔드') || content.includes('서버') || content.includes('db') || content.includes('데이터베이스')) {
+              labels.push('⚙️ backend');
+            }
+            if (content.includes('보안') || content.includes('security') || content.includes('인증') || content.includes('권한')) {
+              labels.push('🔒 security');
+            }
+            if (content.includes('성능') || content.includes('performance') || content.includes('최적화') || content.includes('속도')) {
+              labels.push('⚡ performance');
+            }
+            if (content.includes('docker') || content.includes('도커') || content.includes('컨테이너') || content.includes('배포')) {
+              labels.push('🐳 devops');
+            }
+            
+            // 4. 상태
+            labels.push('🆕 new');
+            
+            // 5. Claude 처리 대상
+            labels.push('🤖 claude-ready');
+            
+            // 라벨 적용
+            await github.rest.issues.setLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              labels: labels
+            });
+            
+            // 깔끔한 단일 코멘트
+            const typeLabel = labels.find(l => l.includes('bug') || l.includes('enhancement') || l.includes('refactor') || l.includes('documentation') || l.includes('test') || l.includes('task'));
+            const priorityLabel = labels.find(l => l.includes('P0') || l.includes('P1') || l.includes('P2') || l.includes('P3'));
+            const areaLabels = labels.filter(l => l.includes('frontend') || l.includes('backend') || l.includes('security') || l.includes('performance') || l.includes('devops'));
+            
+            const comment = `## 🎯 이슈 분석 완료
+
+**타입**: ${typeLabel}
+**우선순위**: ${priorityLabel}
+**영역**: ${areaLabels.length > 0 ? areaLabels.join(', ') : '일반'}
+
+이슈가 자동 분류되었습니다. \`@claude\`를 멘션하여 처리를 시작하세요.`;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: comment
+            });
+
+  # 기존 이슈 정리 및 재라벨링
+  cleanup-and-relabel:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 모든 이슈 재분석
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const action = '${{ github.event.inputs.action }}';
+            
+            // 모든 오픈 이슈 가져오기
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100
+            });
+            
+            for (const issue of issues.data) {
+              // PR은 제외
+              if (issue.pull_request) continue;
+              
+              if (action === 'cleanup-comments' || action === 'analyze-all') {
+                // 기존 봇 코멘트 삭제
+                const comments = await github.rest.issues.listComments({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number
+                });
+                
+                for (const comment of comments.data) {
+                  // 봇이나 자동화 코멘트 삭제
+                  if (comment.user.type === 'Bot' || 
+                      comment.body.includes('자동 분류') || 
+                      comment.body.includes('자동 처리') ||
+                      comment.body.includes('Claude Code') ||
+                      comment.body.includes('이슈 분석 완료')) {
+                    await github.rest.issues.deleteComment({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      comment_id: comment.id
+                    });
+                  }
+                }
+              }
+              
+              if (action === 'relabel-all' || action === 'analyze-all') {
+                const title = issue.title.toLowerCase();
+                const body = (issue.body || '').toLowerCase();
+                const content = title + ' ' + body;
+                
+                // 기존 라벨 제거
+                if (issue.labels.length > 0) {
+                  await github.rest.issues.removeAllLabels({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number
+                  }).catch(() => {});
+                }
+                
+                // 새 라벨 적용
+                const labels = [];
+                
+                // 타입
+                if (content.includes('버그') || content.includes('bug') || content.includes('오류')) {
+                  labels.push('🐛 bug');
+                } else if (content.includes('기능') || content.includes('feature')) {
+                  labels.push('✨ enhancement');
+                } else {
+                  labels.push('📋 task');
+                }
+                
+                // 우선순위
+                if (content.includes('긴급') || content.includes('urgent')) {
+                  labels.push('🔴 P0-urgent');
+                } else {
+                  labels.push('🟡 P2-medium');
+                }
+                
+                // 상태
+                const created = new Date(issue.created_at);
+                const now = new Date();
+                const days = (now - created) / (1000 * 60 * 60 * 24);
+                
+                if (days > 7) {
+                  labels.push('⏰ stale');
+                } else {
+                  labels.push('🆕 new');
+                }
+                
+                labels.push('🤖 claude-ready');
+                
+                await github.rest.issues.setLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  labels: labels
+                });
+                
+                // 단일 분석 코멘트
+                if (action === 'analyze-all') {
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    body: `## 🔄 재분석 완료\n\n이슈가 재분류되었습니다. \`@claude\`를 멘션하여 처리를 시작하세요.`
+                  });
+                }
+              }
+              
+              // 처리 간격 (API 제한 방지)
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            
+            // 완료 이슈 생성
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `✅ 이슈 정리 완료 - ${new Date().toLocaleDateString('ko-KR')}`,
+              body: `## 이슈 관리 작업 완료\n\n**수행한 작업**: ${action}\n**처리된 이슈**: ${issues.data.length}개\n\n모든 이슈가 일관된 체계로 재분류되었습니다.`,
+              labels: ['📝 documentation']
+            });
