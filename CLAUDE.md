@@ -6,12 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 SafeWork is an industrial health and safety management system built with Flask 3.0+. It manages workplace health surveys, medical checkups, and comprehensive safety administration for construction and industrial environments.
 
-**Core Features:**
-- 001 Musculoskeletal symptom surveys with conditional logic
-- 002 New employee health checkup forms  
-- 13 specialized SafeWork admin panels for comprehensive safety management
-- Document management system with version control
-- Anonymous survey submission support
+**Core Features (v3.1.0):**
+- 001 Musculoskeletal symptom surveys with conditional logic (16 body parts, pain scale rating)
+- 002 New employee health checkup forms with medical history integration
+- **13 specialized SafeWork admin panels:** Workers, Health Checks, Work History, Medications, Safety Equipment, Accident Records, Training Records, Chemical Management, Environmental Monitoring, Emergency Contacts, Insurance Claims, Compliance Reports, Safety Statistics
+- Document management system with version control and access logging
+- Anonymous survey submission support with rate limiting
+- RESTful API (v2) for external integrations
+- Real-time notifications and audit logging
 
 **Tech Stack:** 
 - Backend: Python Flask 3.0+, SQLAlchemy 2.0, Redis 5.0
@@ -50,10 +52,15 @@ python migrate.py create "Description" # Create new migration
 ### Testing
 ```bash
 cd app/
-pytest                                 # Run all tests
+pytest                                 # Run all tests (39/39 passing)
 pytest -v                             # Verbose test output
 pytest tests/test_models.py           # Run specific test file
-pytest --cov=. --cov-report=html      # Generate coverage report
+pytest --cov=. --cov-report=html      # Generate coverage report (target: 80%+)
+
+# Test categories
+pytest tests/test_routes/             # Route testing
+pytest tests/test_models.py          # Model unit tests
+pytest tests/test_api.py              # API endpoint tests
 ```
 
 ### Code Quality
@@ -61,6 +68,22 @@ pytest --cov=. --cov-report=html      # Generate coverage report
 cd app/
 black .                               # Format code
 flake8 .                             # Lint code
+python -m py_compile *.py            # Syntax check
+```
+
+### Quick Development Setup
+```bash
+# Complete setup for new developers
+docker-compose up -d                  # Start all services
+docker-compose exec app bash          # Enter container
+cd app/
+python migrate.py migrate             # Run migrations
+python app.py                         # Start development server
+
+# Access points:
+# - Main app: http://localhost:4545
+# - Admin panel: http://localhost:4545/admin
+# - API docs: http://localhost:4545/api/docs
 ```
 
 ## Application Architecture
@@ -232,6 +255,56 @@ def test_survey_submission(client, auth):
     assert Survey.query.count() == 1
 ```
 
+## Environment Variables
+
+**Essential Configuration:**
+```bash
+# Database
+DATABASE_URL=mysql+pymysql://safework:password@mysql:3306/safework
+MYSQL_ROOT_PASSWORD=rootpassword
+MYSQL_DATABASE=safework
+MYSQL_USER=safework
+MYSQL_PASSWORD=password
+
+# Application
+SECRET_KEY=your-secret-key-here
+FLASK_ENV=development
+TZ=Asia/Seoul
+
+# Redis
+REDIS_URL=redis://redis:6379/0
+
+# Email (optional)
+MAIL_SERVER=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=your-email@gmail.com
+MAIL_PASSWORD=your-app-password
+```
+
+## API Endpoints (v2)
+
+**SafeWork REST API:**
+```
+GET    /api/v2/safework/workers           # List all workers
+POST   /api/v2/safework/workers           # Create new worker
+GET    /api/v2/safework/workers/{id}      # Get worker details
+PUT    /api/v2/safework/workers/{id}      # Update worker
+DELETE /api/v2/safework/workers/{id}      # Delete worker
+
+GET    /api/v2/safework/health-checks     # List health checks
+POST   /api/v2/safework/health-checks     # Create health check
+GET    /api/v2/safework/medications       # List medications
+GET    /api/v2/safework/statistics        # Safety statistics
+```
+
+**Survey API:**
+```
+POST   /survey/001_submit                 # Submit musculoskeletal survey
+POST   /survey/002_submit                 # Submit health checkup form
+GET    /survey/001                        # Get survey form (001)
+GET    /survey/002                        # Get survey form (002)
+```
+
 ## Important Implementation Notes
 
 **Database Considerations:** 
@@ -239,15 +312,17 @@ def test_survey_submission(client, auth):
 - Include proper error handling and rollback
 - MySQL 8.0 specific syntax requirements
 - Use `kst_now()` for consistent timezone handling
+- UTF8MB4 charset for proper Korean text support
 
 **Security Requirements:**
-- CSRF protection enabled globally
+- CSRF protection enabled globally (`WTF_CSRF_ENABLED=True`)
 - Login required decorators for admin functions
-- Audit logging for sensitive operations
+- Audit logging for sensitive operations (`AuditLog` model)
 - File upload security (document management)
+- Rate limiting on anonymous survey submissions
 
 **Performance Patterns:**
 - Redis caching for frequently accessed data
 - Database indexing on foreign keys and search fields
 - Lazy loading for relationship queries
-- Pagination for large data sets in admin panels
+- Pagination for large data sets in admin panels (default: 20 items/page)

@@ -12,10 +12,10 @@ on:
 jobs:
   claude:
     if: |
+      github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'issues') ||
-      (github.event_name == 'pull_request') ||
-      github.event_name == 'workflow_dispatch'
+      (github.event_name == 'issues' && github.event.action == 'opened') ||
+      (github.event_name == 'pull_request' && contains(fromJSON('["opened", "synchronize", "reopened"]'), github.event.action))
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -24,6 +24,9 @@ jobs:
       pull-requests: write
       actions: read
       checks: read
+      statuses: read
+      deployments: read
+      packages: read
     
     steps:
       - name: Checkout code
@@ -121,12 +124,8 @@ jobs:
 
             작업을 시작하세요! 🚀
           claude_args: |
-            --max-turns 25 
+            --max-turns 30
             --use-tools
-            --mcp-config '{"mcpServers": {"sequential-thinking": {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]}}}'
-            --mcp-config '{"mcpServers": {"filesystem": {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem"]}}}'
-            --mcp-config '{"mcpServers": {"memory": {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-memory"]}}}'
-            --allowedTools mcp__sequential-thinking__sequentialthinking,mcp__filesystem__read_file,mcp__filesystem__write_file,mcp__filesystem__list_directory,mcp__memory__create_entities,mcp__memory__search_nodes
             --experimental-mcp
 
       - name: Advanced Auto PR and Merge

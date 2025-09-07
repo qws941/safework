@@ -1,0 +1,104 @@
+name: Claude Token 권한 확인
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check-permissions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Claude 토큰 존재 여부 확인
+        run: |
+          echo "🔍 Claude OAuth Token 확인 중..."
+          if [ -z "${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}" ]; then
+            echo "❌ CLAUDE_CODE_OAUTH_TOKEN이 설정되지 않았습니다!"
+            echo ""
+            echo "설정 방법:"
+            echo "1. https://claude.ai → Settings → Developer"
+            echo "2. API Key 생성"
+            echo "3. GitHub → Settings → Secrets → CLAUDE_CODE_OAUTH_TOKEN 추가"
+            exit 1
+          else
+            echo "✅ CLAUDE_CODE_OAUTH_TOKEN이 설정되어 있습니다."
+            TOKEN_LENGTH=$(echo '${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}' | wc -c)
+            echo "토큰 길이: $TOKEN_LENGTH 문자"
+            
+            if [ $TOKEN_LENGTH -lt 50 ]; then
+              echo "⚠️  토큰이 너무 짧을 수 있습니다. 올바른 Claude OAuth 토큰인지 확인하세요."
+            elif [ $TOKEN_LENGTH -gt 200 ]; then
+              echo "⚠️  토큰이 너무 길 수 있습니다. Claude OAuth 토큰인지 확인하세요."
+            else
+              echo "✅ 토큰 길이가 정상적입니다."
+            fi
+          fi
+      
+      - name: Claude Code Action 권한 테스트
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            🔍 **Claude Code 권한 테스트**
+            
+            현재 다음 권한을 테스트하고 있습니다:
+            
+            1. ✅ 저장소 읽기 권한
+            2. ✅ 이슈 읽기/쓰기 권한  
+            3. ✅ PR 읽기/쓰기 권한
+            4. ✅ 워크플로우 실행 권한
+            
+            이 메시지가 표시되면 기본 권한은 정상입니다! 🎉
+            
+            **다음으로 할 일:**
+            - 실제 이슈에서 @claude 멘션 테스트
+            - PR에서 Claude 실행 테스트
+            - 복잡한 작업 수행 테스트
+          claude_args: |
+            --max-turns 2
+            --use-tools
+      
+      - name: GitHub API 접근 권한 확인
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🔍 GitHub API 접근 권한 확인..."
+          
+          # Repository 정보 확인
+          REPO_INFO=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}")
+          
+          if echo "$REPO_INFO" | grep -q '"full_name"'; then
+            echo "✅ Repository 읽기 권한 확인"
+          else
+            echo "❌ Repository 읽기 권한 없음"
+          fi
+          
+          # Issues 권한 확인  
+          ISSUES_URL="https://api.github.com/repos/${{ github.repository }}/issues"
+          ISSUES_RESPONSE=$(curl -s -w "%{http_code}" -H "Authorization: token $GITHUB_TOKEN" "$ISSUES_URL")
+          HTTP_CODE=$(echo "$ISSUES_RESPONSE" | tail -n1)
+          
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ Issues 읽기 권한 확인"
+          else
+            echo "❌ Issues 접근 실패 (HTTP: $HTTP_CODE)"
+          fi
+          
+          # Pull Requests 권한 확인
+          PRS_URL="https://api.github.com/repos/${{ github.repository }}/pulls"
+          PRS_RESPONSE=$(curl -s -w "%{http_code}" -H "Authorization: token $GITHUB_TOKEN" "$PRS_URL")
+          HTTP_CODE=$(echo "$PRS_RESPONSE" | tail -n1)
+          
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ Pull Requests 읽기 권한 확인"
+          else
+            echo "❌ Pull Requests 접근 실패 (HTTP: $HTTP_CODE)"
+          fi
+          
+          echo ""
+          echo "🎯 권한 확인 완료!"
+          echo "Claude Code가 정상적으로 작동할 준비가 되었습니다."
