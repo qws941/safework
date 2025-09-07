@@ -1,71 +1,64 @@
-name: Claude Code - 고도화된 이슈 자동 해결 (MCP 통합)
+name: Claude Code
 
 on:
   issue_comment:
-    types: [created, edited]
-  issues:
-    types: [opened, edited, labeled, assigned]
-  pull_request:
-    types: [opened, synchronize, edited, ready_for_review, review_requested]
-  pull_request_review:
-    types: [submitted]
+    types: [created]
   pull_request_review_comment:
     types: [created]
-  workflow_dispatch:
-
-permissions:
-  contents: write
-  issues: write
-  pull-requests: write
-  actions: write
-  security-events: write
-  checks: write
+  issues:
+    types: [opened, assigned]
+  pull_request_review:
+    types: [submitted]
 
 jobs:
-  claude-intelligent-processor:
+  claude:
     if: |
-      (github.event_name == 'issues') ||
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request') ||
-      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'workflow_dispatch')
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+      id-token: write
+      actions: read # Required for Claude to read CI results on PRs
     steps:
-      - name: 📥 소스코드 체크아웃
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 전체 히스토리 가져오기 (분석용)
-          
-          
-          
-      - name: 🧠 Claude Code 고도화된 이슈 처리
-        uses: anthropics/claude-code-action@v1
+          fetch-depth: 1
+
+      - name: Run Claude Code
+        id: claude
+        uses: anthropics/claude-code-action@beta
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          claude_args: --max-turns 5 --model claude-sonnet-4-20250514
 
-          prompt: |
-            🚨 **필수**: 반드시 실제 코드를 수정하세요! 분석만 하지 마세요!
-            
-            **SafeWork 이슈 해결 단계:**
-            
-            1️⃣ **이슈 파악**: 무엇을 수정해야 하는지 정확히 파악
-            2️⃣ **파일 수정**: 해당 파일을 실제로 편집하고 변경
-            3️⃣ **코드 작성**: 새로운 코드를 작성하거나 기존 코드 개선
-            4️⃣ **커밋 생성**: git add, commit으로 변경사항 저장
-            5️⃣ **PR 생성**: 변경사항을 Pull Request로 생성
-            6️⃣ **이슈 완료**: 이슈를 닫고 완료 처리
-            
-            **기술 스택**: Flask 3.0+, SQLAlchemy, MySQL, Bootstrap 4.6, jQuery
-            
-            **예시 작업**:
-            - HTML 템플릿 수정 → app/templates/ 파일 편집
-            - 라우트 추가 → app/routes/ 파일 수정  
-            - 모델 변경 → app/models.py 편집
-            - CSS/JS 개선 → app/static/ 파일 수정
-            
-            ⚠️ **경고**: 코드를 실제로 변경하지 않으면 작업 실패입니다!
+          # This is an optional setting that allows Claude to read CI results on PRs
+          additional_permissions: |
+            actions: read
+          
+          # Optional: Specify model (defaults to Claude Sonnet 4, uncomment for Claude Opus 4.1)
+          # model: "claude-opus-4-1-20250805"
+          
+          # Optional: Customize the trigger phrase (default: @claude)
+          # trigger_phrase: "/claude"
+          
+          # Optional: Trigger when specific user is assigned to an issue
+          # assignee_trigger: "claude-bot"
+          
+          # Optional: Allow Claude to run specific commands
+          # allowed_tools: "Bash(npm install),Bash(npm run build),Bash(npm run test:*),Bash(npm run lint:*)"
+          
+          # Optional: Add custom instructions for Claude to customize its behavior for your project
+          # custom_instructions: |
+          #   Follow our coding standards
+          #   Ensure all new code has tests
+          #   Use TypeScript for new files
+          
+          # Optional: Custom environment variables for Claude
+          # claude_env: |
+          #   NODE_ENV: test
+
