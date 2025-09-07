@@ -42,17 +42,7 @@ jobs:
         with:
           fetch-depth: 0  # 전체 히스토리 가져오기 (분석용)
           
-      - name: 🐍 Python 환경 설정 (MCP 서버용)
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-          cache: 'pip'
           
-      - name: 📦 Node.js 환경 설정
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
           
       - name: 🧠 Claude Code 고도화된 이슈 처리
         uses: anthropics/claude-code-action@v1
