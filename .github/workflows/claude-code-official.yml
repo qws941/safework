@@ -13,6 +13,12 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
       - name: SafeWork 이슈 자동 처리
         uses: anthropics/claude-code-action@v1
         with:
