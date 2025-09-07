@@ -226,14 +226,17 @@ When developing in this repository, leverage the Claude automation system:
 
 ### Claude Workflow Triggers
 ```bash
-# Automatic triggers:
-- New issue creation → Claude auto-assigns and analyzes
+# Automatic triggers (Enhanced System):
+- New issue creation → Claude auto-assigns and analyzes immediately
 - @claude mentions in issue comments → Claude responds and acts
+- Every 30 minutes → Automatic scan for unassigned open issues
 - Pull request events → Claude reviews and processes
+- Push to master → Triggers deployment pipeline
 
 # Manual triggers:
-- GitHub Actions → "Claude Code" workflow → "Run workflow"
-- Bulk issue processing via "대량 이슈 자동 해결기" workflow
+- GitHub Actions → "Claude Code" workflow → "Run workflow"  
+- GitHub Actions → "이슈 자동 감지 및 처리" → "Run workflow" (every 30 min)
+- GitHub Actions → "Claude Token 권한 확인" → Test authentication
 ```
 
 ### Real-time Progress Tracking
