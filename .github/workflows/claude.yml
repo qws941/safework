@@ -126,8 +126,6 @@ jobs:
             작업을 시작하세요! 🚀
           claude_args: |
             --max-turns 30
-            --use-tools
-            --experimental-mcp
 
       - name: Advanced Auto PR and Merge
         if: success()
