@@ -1,7 +1,7 @@
-name: 🐛 버그 리포트
-description: 버그를 발견하셨나요? 상세히 알려주세요.
-title: "[BUG] "
-labels: ["bug", "triage"]
+name: 🐛 문제 신고하기
+description: 시스템이 이상하게 작동할 때 알려주세요
+title: "[문제] "
+labels: ["bug", "new", "claude-ready"]
 assignees:
   - qws941
 
@@ -9,95 +9,62 @@ body:
   - type: markdown
     attributes:
       value: |
-        버그 리포트를 작성해 주셔서 감사합니다!
-        아래 내용을 가능한 자세히 작성해주세요.
-
-  - type: textarea
-    id: description
-    attributes:
-      label: 버그 설명
-      description: 어떤 문제가 발생했는지 명확하고 간결하게 설명해주세요.
-      placeholder: 예) 설문조사 제출 시 500 에러가 발생합니다.
-    validations:
-      required: true
-
-  - type: textarea
-    id: steps
-    attributes:
-      label: 재현 방법
-      description: 버그를 재현하는 단계를 순서대로 작성해주세요.
-      placeholder: |
-        1. '...' 페이지로 이동
-        2. '...' 버튼 클릭
-        3. '...' 입력
-        4. 에러 발생
-    validations:
-      required: true
-
-  - type: textarea
-    id: expected
-    attributes:
-      label: 예상 동작
-      description: 정상적으로 동작했다면 어떤 결과를 기대했나요?
-    validations:
-      required: true
-
-  - type: textarea
-    id: actual
-    attributes:
-      label: 실제 동작
-      description: 실제로 어떤 일이 발생했나요?
-    validations:
-      required: true
+        ## 🤖 Claude가 자동으로 해결해드립니다!
+        문제를 알려주시면 즉시 분석하고 수정합니다.
 
   - type: dropdown
-    id: browsers
+    id: area
     attributes:
-      label: 브라우저
-      description: 어떤 브라우저에서 문제가 발생했나요?
-      multiple: true
+      label: 📍 어디가 문제인가요?
+      description: 문제가 생긴 곳을 선택해주세요
       options:
-        - Chrome
-        - Firefox
-        - Safari
-        - Edge
+        - 001 근골격계 설문조사
+        - 002 신규직원 건강검진
+        - 관리자 페이지
+        - 로그인 화면
+        - 데이터 저장/조회
+        - 엑셀 다운로드
         - 기타
     validations:
       required: true
 
-  - type: dropdown
-    id: severity
+  - type: textarea
+    id: problem
     attributes:
-      label: 심각도
-      description: 이 버그가 업무에 미치는 영향은 어느 정도인가요?
+      label: 💬 무슨 문제가 있나요?
+      description: 편하게 말씀해주세요. 기술 용어 몰라도 됩니다!
+      placeholder: |
+        예시:
+        - "제출 버튼 눌러도 반응이 없어요"
+        - "데이터가 저장이 안 되는 것 같아요"
+        - "화면이 깨져서 보여요"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: urgency
+    attributes:
+      label: ⏰ 얼마나 급한가요?
       options:
-        - 치명적 (시스템 사용 불가)
-        - 높음 (주요 기능 사용 불가)
-        - 중간 (기능 일부 제한)
-        - 낮음 (사소한 불편)
+        - 🔴 지금 당장! (업무 못함)
+        - 🟠 오늘 안에 (중요 기능)
+        - 🟡 이번 주 안에 (불편함)
+        - 🟢 천천히 (개선 사항)
+      default: 2
     validations:
       required: true
 
   - type: textarea
-    id: screenshots
+    id: screenshot
     attributes:
-      label: 스크린샷 / 에러 메시지
-      description: 스크린샷이나 에러 메시지가 있다면 첨부해주세요.
-      placeholder: 이미지를 드래그하거나 붙여넣기 하세요.
-
-  - type: textarea
-    id: additional
-    attributes:
-      label: 추가 정보
-      description: 버그 해결에 도움이 될 만한 추가 정보가 있다면 작성해주세요.
+      label: 📸 화면 캡처
+      description: 문제 화면을 캡처해서 붙여넣기(Ctrl+V) 해주세요
+      placeholder: 이미지를 여기에 드래그하거나 붙여넣기
 
   - type: checkboxes
-    id: terms
+    id: auto-fix
     attributes:
-      label: 체크리스트
-      description: 제출하기 전에 아래 항목을 확인해주세요.
+      label: 자동 처리 동의
       options:
-        - label: 이미 등록된 이슈가 아님을 확인했습니다
-          required: true
-        - label: 최신 버전에서 발생하는 문제입니다
+        - label: Claude가 자동으로 수정해도 됩니다
           required: false

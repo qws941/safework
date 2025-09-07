@@ -1,11 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: 📖 문서
+  - name: 💬 빠른 문의
+    url: mailto:qws941@gmail.com
+    about: 급한 문의는 이메일로 연락주세요
+  - name: 📚 사용 설명서
     url: https://github.com/qws941/safework/wiki
-    about: 사용 방법과 가이드를 확인하세요
-  - name: 💬 토론
-    url: https://github.com/qws941/safework/discussions
-    about: 아이디어를 공유하고 토론하세요
-  - name: 🔒 보안 이슈
-    url: mailto:security@safework.local
-    about: 보안 관련 이슈는 비공개로 보고해주세요
+    about: 시스템 사용법을 확인하세요

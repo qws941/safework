@@ -1,7 +1,7 @@
-name: ✨ 기능 요청
-description: 새로운 기능이나 개선사항을 제안해주세요.
-title: "[FEATURE] "
-labels: ["enhancement", "needs-review"]
+name: ✨ 새 기능 요청
+description: 이런 기능이 있으면 좋겠어요
+title: "[요청] "
+labels: ["enhancement", "new", "claude-ready"]
 assignees:
   - qws941
 
@@ -9,76 +9,74 @@ body:
   - type: markdown
     attributes:
       value: |
-        새로운 기능 제안을 환영합니다!
-        SafeWork를 더 좋게 만들 수 있는 아이디어를 공유해주세요.
-
-  - type: textarea
-    id: problem
-    attributes:
-      label: 해결하고자 하는 문제
-      description: 어떤 문제나 불편함을 해결하고 싶으신가요?
-      placeholder: 예) 여러 부서의 설문 결과를 한 번에 비교하기 어렵습니다.
-    validations:
-      required: true
-
-  - type: textarea
-    id: solution
-    attributes:
-      label: 제안하는 해결책
-      description: 어떤 기능이나 개선이 필요하다고 생각하시나요?
-      placeholder: 예) 부서별 비교 대시보드를 추가하면 좋겠습니다.
-    validations:
-      required: true
-
-  - type: textarea
-    id: alternatives
-    attributes:
-      label: 대안
-      description: 다른 방법으로 해결할 수 있는 방안이 있나요?
-      placeholder: 현재는 엑셀로 수동으로 비교하고 있습니다.
-
-  - type: dropdown
-    id: priority
-    attributes:
-      label: 우선순위
-      description: 이 기능이 얼마나 중요한가요?
-      options:
-        - 필수 (없으면 사용 불가)
-        - 중요 (있으면 매우 유용)
-        - 보통 (있으면 좋음)
-        - 낮음 (nice to have)
-    validations:
-      required: true
+        ## 🚀 Claude가 바로 만들어드립니다!
+        원하시는 기능을 말씀해주시면 자동으로 구현합니다.
 
   - type: dropdown
     id: area
     attributes:
-      label: 관련 영역
-      description: 어떤 부분과 관련이 있나요?
-      multiple: true
+      label: 🎯 어디에 필요한가요?
+      description: 기능이 필요한 곳을 선택해주세요
       options:
-        - 설문조사
-        - 대시보드
+        - 001 근골격계 설문조사
+        - 002 신규직원 건강검진
+        - 관리자 대시보드
         - 통계/리포트
         - 사용자 관리
-        - 보안/인증
-        - UI/UX
-        - 성능
-        - 기타
+        - 데이터 입출력
+        - 전체 시스템
+    validations:
+      required: true
 
   - type: textarea
-    id: mockup
+    id: feature
     attributes:
-      label: 목업 / 예시
-      description: 화면 설계나 예시가 있다면 첨부해주세요.
-      placeholder: 이미지나 다이어그램을 첨부하거나 설명을 작성해주세요.
+      label: 💡 어떤 기능인가요?
+      description: 원하는 대로 편하게 설명해주세요
+      placeholder: |
+        예시:
+        - "설문 결과를 그래프로 보고 싶어요"
+        - "엑셀에서 데이터 한번에 올리고 싶어요"
+        - "관리자 페이지에서 직원 검색 기능이 필요해요"
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: 🤔 왜 필요한가요?
+      description: 이 기능이 있으면 뭐가 좋아지나요?
+      placeholder: |
+        예시:
+        - "매번 하나씩 입력하기 너무 번거로워요"
+        - "한눈에 볼 수 있으면 업무가 빨라질 것 같아요"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: ⚡ 우선순위
+      options:
+        - 🔴 매우 중요 (없으면 큰일)
+        - 🟠 중요 (빨리 필요)
+        - 🟡 보통 (있으면 좋음)
+        - 🟢 낮음 (언젠가)
+      default: 2
+    validations:
+      required: true
+
+  - type: textarea
+    id: example
+    attributes:
+      label: 📝 참고 화면이나 예시
+      description: 비슷한 기능이나 참고할 만한 것이 있나요?
+      placeholder: 이미지나 링크를 붙여넣어주세요
 
   - type: checkboxes
-    id: terms
+    id: auto-implement
     attributes:
-      label: 체크리스트
+      label: 자동 구현 동의
       options:
-        - label: 이미 요청된 기능이 아님을 확인했습니다
-          required: true
-        - label: 기능 구현에 참여할 의사가 있습니다
+        - label: Claude가 자동으로 구현해도 됩니다
           required: false
