@@ -5,6 +5,8 @@ on:
     types: [created]
   issues:
     types: [opened]
+  pull_request:
+    types: [opened, synchronize]
 
 permissions:
   contents: write
@@ -18,7 +20,8 @@ jobs:
   claude-intelligent-processor:
     if: |
       (github.event_name == 'issues' && github.event.action == 'opened') ||
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude'))
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request' && contains(github.event.pull_request.body, '@claude'))
     runs-on: ubuntu-latest
     timeout-minutes: 30
     
