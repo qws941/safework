@@ -28,14 +28,40 @@ def musculoskeletal_symptom_survey():
         if current_user.is_authenticated:
             user_id = current_user.id
 
-        # JSON 증상 데이터 처리
-        symptoms_json_data = request.form.get("symptoms_json_data")
-        symptom_data_dict = {}
-        if symptoms_json_data:
+        # 새로운 구조의 근골격계 증상 데이터 처리
+        musculo_details_json = request.form.get("musculo_details_json")
+        musculo_details = []
+        if musculo_details_json:
             try:
-                symptom_data_dict = json.loads(symptoms_json_data)
+                musculo_details = json.loads(musculo_details_json)
             except json.JSONDecodeError:
-                current_app.logger.warning("Invalid JSON symptom data received")
+                current_app.logger.warning("Invalid JSON musculo details data received")
+        
+        # 기존 호환성을 위한 부위별 데이터 딕셔너리 생성
+        symptom_data_dict = {}
+        for detail in musculo_details:
+            part_name = detail.get('part', '')
+            # 영어 부위명을 한글로 변환
+            part_map = {
+                'neck': '목',
+                'shoulder': '어깨',
+                'arm': '팔/팔꿈치', 
+                'hand': '손/손목/손가락',
+                'waist': '허리',
+                'leg': '다리/발'
+            }
+            korean_part = part_map.get(part_name, part_name)
+            
+            # 기존 구조에 맞춰 데이터 변환
+            symptom_data_dict[korean_part] = {
+                'side': detail.get('side'),
+                'duration': detail.get('duration'),
+                'severity': detail.get('severity'), 
+                'frequency': detail.get('frequency'),
+                'last_week': detail.get('last_week'),
+                'consequences': detail.get('consequences', []),
+                'consequence_other': detail.get('consequence_other')
+            }
 
         survey = Survey(
             user_id=user_id,
