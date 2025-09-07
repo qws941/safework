@@ -26,69 +26,54 @@ jobs:
     steps:
       - name: 🔍 열린 이슈 스캔 및 Claude 자동 할당
         id: assign
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const { owner, repo } = context.repo;
-            let assignedCount = 0;
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🔍 열린 이슈 자동 Claude 할당 시작..."
+          
+          # 임시 파일로 카운터 관리
+          echo "0" > /tmp/assigned_count
+          echo "false" > /tmp/issues_assigned
+          
+          # 열린 이슈 목록 가져오기
+          ISSUE_COUNT=$(gh issue list --state open --limit 50 --json number | jq length)
+          
+          if [ "$ISSUE_COUNT" -eq 0 ]; then
+            echo "📋 열린 이슈가 없습니다."
+          else
+            echo "📋 $ISSUE_COUNT 개의 열린 이슈 발견"
             
-            console.log('🔍 열린 이슈 검색 중...');
-            
-            // 열린 이슈 중 Claude가 할당되지 않은 이슈 검색
-            const openIssues = await github.rest.issues.listForRepo({
-              owner,
-              repo,
-              state: 'open',
-              per_page: 50,
-              sort: 'created',
-              direction: 'desc'
-            });
-            
-            console.log(`📋 총 ${openIssues.data.length}개의 열린 이슈 발견`);
-            
-            for (const issue of openIssues.data) {
-              // PR은 제외
-              if (issue.pull_request) continue;
+            # 각 이슈 번호 가져와서 처리
+            gh issue list --state open --limit 10 --json number,title,createdAt | jq -r '.[] | [.number, .title, .createdAt] | @tsv' | while IFS=$'\t' read -r number title created_at; do
+              echo "🔍 이슈 #$number 검토: $title"
               
-              // 이미 Claude가 댓글을 단 이슈는 제외
-              const comments = await github.rest.issues.listComments({
-                owner,
-                repo,
-                issue_number: issue.number
-              });
+              # 이슈 생성 시간 확인 (24시간 이내)
+              created_timestamp=$(date -d "$created_at" +%s 2>/dev/null || date -d "$(echo "$created_at" | cut -c1-19)" +%s)
+              current_timestamp=$(date +%s)
+              hours_old=$(( (current_timestamp - created_timestamp) / 3600 ))
               
-              const hasClaudeComment = comments.data.some(comment => 
-                comment.user.login === 'claude[bot]' || 
-                comment.body.includes('🤖 **Claude 작업 시작!**') ||
-                comment.body.includes('@claude')
-              );
+              if [ "$hours_old" -gt 24 ]; then
+                echo "⏭️ 이슈 #$number: 24시간 경과 ($hours_old 시간)"
+                continue
+              fi
               
-              if (hasClaudeComment) {
-                console.log(`⏭️ 이슈 #${issue.number}: 이미 Claude가 처리 중`);
-                continue;
-              }
+              # Claude 댓글 확인
+              claude_mentions=$(gh issue view $number | grep -c "@claude\|Claude 작업 시작\|claude\[bot\]" || echo "0")
               
-              // 24시간 이내에 생성된 이슈만 자동 할당
-              const issueAge = Date.now() - new Date(issue.created_at).getTime();
-              const hoursOld = issueAge / (1000 * 60 * 60);
+              if [ "$claude_mentions" -gt 0 ]; then
+                echo "⏭️ 이슈 #$number: 이미 Claude가 처리 중"
+                continue
+              fi
               
-              if (hoursOld > 24) {
-                console.log(`⏭️ 이슈 #${issue.number}: 24시간 경과 (${Math.round(hoursOld)}시간)`);
-                continue;
-              }
+              # Claude 자동 할당 댓글 추가
+              echo "✅ 이슈 #$number Claude 자동 할당 중..."
               
-              // Claude 자동 할당 댓글 추가
-              try {
-                await github.rest.issues.createComment({
-                  owner,
-                  repo,
-                  issue_number: issue.number,
-                  body: `🤖 **Claude 자동 할당**
-                  
-📋 **자동 감지된 이슈**
-- **이슈**: ${issue.title}
-- **생성시간**: ${new Date(issue.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
-- **할당시간**: ${new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
+              gh issue comment $number --body "🤖 **Claude 자동 할당**
+
+📋 **자동 감지된 이슈**  
+- **이슈**: $title
+- **생성시간**: $(date -d "$created_at" '+%Y-%m-%d %H:%M:%S KST' 2>/dev/null || echo "$created_at")
+- **할당시간**: $(date '+%Y-%m-%d %H:%M:%S KST')
 
 🎯 **Claude 작업 시작**
 @claude 이 이슈를 분석하고 해결해주세요.
@@ -96,30 +81,35 @@ jobs:
 SafeWork 프로젝트 패턴을 따라 다음 단계로 진행해주세요:
 1. 이슈 내용 정확한 분석
 2. 관련 파일 식별 및 현재 상태 확인
-3. 적절한 해결방안 구현
+3. 적절한 해결방안 구현  
 4. 테스트 실행 및 검증
 5. 커밋 및 이슈 완료
 
 ---
-_🕒 자동 할당 시스템에 의해 생성됨_`
-                });
-                
-                assignedCount++;
-                console.log(`✅ 이슈 #${issue.number} Claude 자동 할당 완료: "${issue.title}"`);
-                
-                // 너무 많은 요청을 방지하기 위해 잠시 대기
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                
-              } catch (error) {
-                console.error(`❌ 이슈 #${issue.number} 할당 실패:`, error.message);
-              }
-            }
-            
-            console.log(`🎯 총 ${assignedCount}개 이슈에 Claude 자동 할당 완료`);
-            
-            // 출력 설정
-            core.setOutput('issues-assigned', assignedCount > 0 ? 'true' : 'false');
-            core.setOutput('issue-count', assignedCount);
+_🕒 자동 할당 시스템에 의해 생성됨_"
+              
+              # 카운터 업데이트
+              current_count=$(cat /tmp/assigned_count)
+              echo $((current_count + 1)) > /tmp/assigned_count
+              echo "true" > /tmp/issues_assigned
+              
+              echo "✅ 이슈 #$number Claude 자동 할당 완료"
+              
+              # API 제한을 위한 대기
+              sleep 3
+              
+            done
+          fi
+          
+          # 최종 결과 읽기
+          ASSIGNED_COUNT=$(cat /tmp/assigned_count)
+          ISSUES_ASSIGNED=$(cat /tmp/issues_assigned)
+          
+          echo "🎯 총 $ASSIGNED_COUNT 개 이슈에 Claude 자동 할당 완료"
+          
+          # 출력 설정
+          echo "issues-assigned=$ISSUES_ASSIGNED" >> $GITHUB_OUTPUT
+          echo "issue-count=$ASSIGNED_COUNT" >> $GITHUB_OUTPUT
 
   # 2단계: 결과 알림
   notify-completion:
