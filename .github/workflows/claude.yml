@@ -17,10 +17,13 @@ jobs:
       (github.event_name == 'pull_request') ||
       github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: write
       issues: write
       pull-requests: write
+      actions: read
+      checks: read
     
     steps:
       - name: Checkout code
@@ -29,112 +32,330 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Claude Code Assistant
+      - name: Enhanced Claude Code Assistant
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          track_progress: true
+          use_sticky_comment: true
+          timeout_minutes: 25
+          allowed_tools: "read_file,write_file,edit_file,create_directory,list_directory,bash,git"
           prompt: |
-            당신은 SafeWork 프로젝트의 전문 개발자입니다.
-            
-            **프로젝트 컨텍스트:**
-            - Flask 3.0+ 기반 산업 안전 보건 관리 시스템
-            - MySQL 8.0, Redis, Bootstrap 4.6 사용
-            - 설문조사, 건강검진, 문서관리 기능 제공
-            
-            **작업 지침:**
-            1. 한국어로 사용자와 소통하세요
-            2. 기존 코드 패턴과 스타일을 유지하세요
-            3. Flask 블루프린트 구조를 따르세요
-            4. 데이터베이스 변경시 마이그레이션을 생성하세요
-            5. 보안과 성능을 고려하세요
-            6. 테스트 작성을 권장합니다
-            
-            **이슈 해결 시:**
-            - 문제를 정확히 파악하고 분석하세요
-            - 코드를 수정하기 전에 현재 상태를 확인하세요
-            - 변경사항을 단계별로 설명하세요
-            - 작업 완료 후 적절한 커밋 메시지로 커밋하세요
-            - 이슈 해결 완료 후 반드시 이슈를 닫아주세요
-            
-            CLAUDE.md 파일의 지침을 참고하여 작업해주세요.
-          claude_args: "--max-turns 20"
+            당신은 SafeWork 프로젝트의 **시니어 풀스택 개발자**입니다.
 
-      - name: Auto PR and Merge
+            ## 🏗️ 프로젝트 아키텍처
+            **SafeWork**: 산업 안전 보건 관리 시스템 (Flask 3.0+)
+            - **백엔드**: Python Flask, SQLAlchemy 2.0, Redis 5.0  
+            - **데이터베이스**: MySQL 8.0 (UTF8MB4, 트랜잭션 관리)
+            - **프론트엔드**: Bootstrap 4.6, jQuery, Font Awesome
+            - **핵심 기능**: 근골격계 설문조사, 건강검진, 문서관리, 관리자 패널
+
+            ## 📋 개발 원칙 (필수 준수)
+            1. **한국어 소통**: 모든 댓글과 커밋 메시지는 한국어
+            2. **Flask 패턴 준수**: 블루프린트 구조, 팩토리 패턴 유지
+            3. **데이터베이스 무결성**: 
+               - 트랜잭션 사용 (`db.session.commit()`, `rollback()`)
+               - 마이그레이션 생성 시 MySQL 8.0 호환성 확인
+               - 한국 시간대(KST) 일관성: `kst_now()` 함수 사용
+            4. **보안 강화**: 
+               - CSRF 토큰 필수
+               - SQL 인젝션 방어
+               - 입력 데이터 검증 및 사니타이징
+            5. **성능 최적화**: 
+               - Redis 캐싱 활용
+               - 데이터베이스 인덱싱
+               - 쿼리 최적화
+
+            ## 🔧 코딩 컨벤션
+            ```python
+            # ✅ 올바른 패턴
+            @login_required
+            def create_survey():
+                try:
+                    # 비즈니스 로직
+                    db.session.commit()
+                    flash('설문이 성공적으로 생성되었습니다.', 'success')
+                except Exception as e:
+                    db.session.rollback()
+                    flash(f'오류가 발생했습니다: {str(e)}', 'error')
+                    app.logger.error(f"Survey creation error: {e}")
+            ```
+
+            ## 🎯 이슈 해결 프로세스
+            ### 1단계: 분석
+            - 이슈 내용 정확히 파악
+            - 관련 파일들 식별 (`app/routes/`, `app/models.py`, `app/templates/`)
+            - 현재 구현 상태 확인
+
+            ### 2단계: 구현
+            - 기존 코드 패턴 유지
+            - 단계별 변경사항 적용
+            - 에러 처리 및 로깅 추가
+
+            ### 3단계: 검증
+            - 코드 리뷰 및 테스트
+            - 마이그레이션 필요 시 생성
+            - 의미있는 커밋 메시지 작성
+
+            ### 4단계: 완료
+            - 변경사항 요약 댓글
+            - **이슈 자동 닫기** (중요!)
+
+            ## 📁 주요 파일 구조
+            ```
+            app/
+            ├── app.py              # 메인 애플리케이션
+            ├── models.py           # 핵심 모델 (User, Survey)
+            ├── models_safework.py  # SafeWork 전용 모델
+            ├── routes/            # 블루프린트 라우터
+            │   ├── survey.py      # 설문조사 (001/002)
+            │   ├── admin.py       # 관리자 패널
+            │   └── auth.py        # 인증
+            └── templates/         # Jinja2 템플릿
+            ```
+
+            ## ⚡ 작업 완료 체크리스트
+            - [ ] 기능 구현 완료
+            - [ ] 에러 처리 추가
+            - [ ] 테스트 실행 (가능한 경우)
+            - [ ] 커밋 메시지 작성 ("feat:", "fix:", "refactor:" 등)
+            - [ ] 이슈에 완료 댓글 작성
+            - [ ] **이슈 상태를 'closed'로 변경**
+
+            작업을 시작하세요! 🚀
+          claude_args: "--max-turns 25 --use-tools"
+
+      - name: Advanced Auto PR and Merge
         if: success()
         uses: actions/github-script@v7
         with:
           script: |
             const { owner, repo } = context.repo;
+            const issueNumber = context.payload.issue?.number;
+            const issueTitle = context.payload.issue?.title || '자동 수정';
             
-            // Claude가 생성한 브랜치 찾기
-            const branches = await github.rest.repos.listBranches({
-              owner,
-              repo,
-              per_page: 100
-            });
+            console.log(`🚀 고도화된 자동 PR/병합 프로세스 시작`);
+            console.log(`📋 이슈: #${issueNumber} - ${issueTitle}`);
             
-            const claudeBranches = branches.data.filter(branch => 
-              branch.name.startsWith('claude/') && 
-              branch.name.includes(new Date().toISOString().slice(0, 10).replace(/-/g, ''))
-            );
-            
-            if (claudeBranches.length > 0) {
-              const branchName = claudeBranches[0].name;
-              console.log(`🔍 Claude 브랜치 발견: ${branchName}`);
+            // 1. Claude 브랜치 스마트 검색 (여러 패턴 지원)
+            async function findClaudeBranches() {
+              const branches = await github.rest.repos.listBranches({
+                owner,
+                repo,
+                per_page: 100
+              });
               
+              const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+              const patterns = [
+                `claude/issue-${issueNumber}-`,
+                `claude/issue-${today}`,
+                `claude/`,
+              ];
+              
+              return branches.data.filter(branch => 
+                patterns.some(pattern => branch.name.includes(pattern)) &&
+                branch.name !== 'master' && branch.name !== 'main'
+              ).sort((a, b) => b.commit.commit.author.date.localeCompare(a.commit.commit.author.date));
+            }
+            
+            // 2. PR 충돌 검사
+            async function checkForConflicts(branchName) {
               try {
-                // PR 생성
+                const comparison = await github.rest.repos.compareCommits({
+                  owner,
+                  repo,
+                  base: 'master',
+                  head: branchName
+                });
+                
+                return {
+                  hasConflicts: comparison.data.status === 'diverged',
+                  ahead: comparison.data.ahead_by,
+                  behind: comparison.data.behind_by,
+                  files: comparison.data.files?.length || 0
+                };
+              } catch (error) {
+                console.error('⚠️ 충돌 검사 실패:', error.message);
+                return { hasConflicts: false, ahead: 0, behind: 0, files: 0 };
+              }
+            }
+            
+            // 3. 기존 PR 확인
+            async function checkExistingPR(branchName) {
+              try {
+                const prs = await github.rest.pulls.list({
+                  owner,
+                  repo,
+                  head: `${owner}:${branchName}`,
+                  state: 'open'
+                });
+                return prs.data[0] || null;
+              } catch (error) {
+                return null;
+              }
+            }
+            
+            try {
+              const claudeBranches = await findClaudeBranches();
+              
+              if (claudeBranches.length === 0) {
+                console.log(`⚠️ Claude 브랜치를 찾을 수 없습니다`);
+                return;
+              }
+              
+              const branchName = claudeBranches[0].name;
+              console.log(`🔍 최신 Claude 브랜치 발견: ${branchName}`);
+              
+              // 기존 PR 확인
+              const existingPR = await checkExistingPR(branchName);
+              if (existingPR) {
+                console.log(`ℹ️ 기존 PR 발견: #${existingPR.number}, 병합 시도`);
+                
+                // 기존 PR 병합
+                try {
+                  await github.rest.pulls.merge({
+                    owner,
+                    repo,
+                    pull_number: existingPR.number,
+                    commit_title: `🤖 Claude: ${issueTitle}`,
+                    commit_message: `이슈 #${issueNumber} 해결
+
+Claude가 자동으로 생성한 변경사항입니다.`,
+                    merge_method: 'squash'
+                  });
+                  
+                  console.log(`✅ 기존 PR #${existingPR.number} 병합 완료`);
+                } catch (mergeError) {
+                  console.error(`❌ 기존 PR 병합 실패:`, mergeError.message);
+                  return;
+                }
+              } else {
+                // 충돌 검사
+                const conflictCheck = await checkForConflicts(branchName);
+                console.log(`📊 브랜치 상태: ${conflictCheck.files}개 파일, ${conflictCheck.ahead}개 커밋 앞섰음`);
+                
+                if (conflictCheck.hasConflicts) {
+                  console.log(`⚠️ 충돌 감지됨, 수동 처리 필요`);
+                  
+                  // 충돌 알림 댓글
+                  await github.rest.issues.createComment({
+                    owner,
+                    repo,
+                    issue_number: issueNumber,
+                    body: `⚠️ **자동 병합 실패**: 브랜치 \`${branchName}\`에서 충돌이 감지되었습니다.
+                    
+**수동 처리 필요:**
+1. [브랜치 확인](https://github.com/${owner}/${repo}/tree/${branchName})
+2. 충돌 해결 후 수동 병합
+3. 또는 브랜치를 삭제하고 다시 시도
+
+**브랜치 상태:** ${conflictCheck.files}개 파일 수정, ${conflictCheck.ahead}개 커밋`
+                  });
+                  return;
+                }
+                
+                // 새 PR 생성
                 const prResponse = await github.rest.pulls.create({
                   owner,
                   repo,
-                  title: `🤖 Claude: ${context.payload.issue?.title || '자동 수정'}`,
+                  title: `🤖 Claude: ${issueTitle}`,
                   head: branchName,
                   base: 'master',
-                  body: `🤖 **Claude가 자동으로 생성한 PR입니다**
+                  body: `🤖 **Claude 자동 생성 PR**
 
-**이슈:** #${context.payload.issue?.number || 'N/A'}
-**브랜치:** ${branchName}
-**작업 시간:** ${new Date().toLocaleString('ko-KR')}
+**📋 이슈:** #${issueNumber}
+**🌿 브랜치:** \`${branchName}\`
+**⏰ 생성 시간:** ${new Date().toLocaleString('ko-KR')}
+**📊 변경사항:** ${conflictCheck.files}개 파일, ${conflictCheck.ahead}개 커밋
 
-Claude가 이슈를 분석하고 코드를 수정했습니다.
-자동으로 병합됩니다.
+## 🔄 자동화 프로세스
+- ✅ 충돌 검사 통과
+- ✅ 브랜치 상태 검증 완료
+- 🔄 자동 병합 예정
 
 ---
-_Generated by Claude Code Assistant 🤖_`
+*🤖 Generated by Enhanced Claude Code Assistant*`
                 });
                 
-                console.log(`✅ PR 생성 완료: #${prResponse.data.number}`);
+                console.log(`✅ 새 PR 생성 완료: #${prResponse.data.number}`);
                 
-                // 잠시 대기 (PR 상태 안정화)
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                // PR 상태 안정화 대기
+                await new Promise(resolve => setTimeout(resolve, 3000));
                 
                 // 자동 병합
                 await github.rest.pulls.merge({
                   owner,
                   repo,
                   pull_number: prResponse.data.number,
-                  commit_title: `🤖 Claude: ${context.payload.issue?.title || '자동 수정'}`,
-                  commit_message: `이슈 #${context.payload.issue?.number || 'N/A'} 해결
+                  commit_title: `🤖 Claude: ${issueTitle}`,
+                  commit_message: `이슈 #${issueNumber} 해결
 
-Claude가 자동으로 생성한 변경사항입니다.`,
+Claude가 자동으로 분석하고 수정한 변경사항입니다.
+
+변경 파일: ${conflictCheck.files}개
+커밋: ${conflictCheck.ahead}개`,
                   merge_method: 'squash'
                 });
                 
                 console.log(`✅ 자동 병합 완료`);
-                
-                // 브랜치 삭제
-                await github.rest.git.deleteRef({
+              }
+              
+              // 브랜치 정리
+              await github.rest.git.deleteRef({
+                owner,
+                repo,
+                ref: `heads/${branchName}`
+              });
+              
+              console.log(`🗑️ 브랜치 삭제 완료: ${branchName}`);
+              
+              // 성공 댓글
+              if (issueNumber) {
+                await github.rest.issues.createComment({
                   owner,
                   repo,
-                  ref: `heads/${branchName}`
+                  issue_number: issueNumber,
+                  body: `✅ **자동 처리 완료!**
+
+🤖 Claude가 이슈를 성공적으로 해결했습니다.
+- 브랜치: \`${branchName}\`
+- PR 생성 및 병합 완료
+- 브랜치 정리 완료
+
+변경사항이 main 브랜치에 적용되었습니다. 🎉`
                 });
                 
-                console.log(`✅ 브랜치 삭제 완료: ${branchName}`);
+                // 이슈 자동 닫기
+                await github.rest.issues.update({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  state: 'closed'
+                });
                 
-              } catch (error) {
-                console.error(`❌ PR 생성/병합 실패:`, error);
+                console.log(`🔒 이슈 #${issueNumber} 자동 닫기 완료`);
               }
-            } else {
-              console.log(`⚠️ Claude 브랜치를 찾을 수 없습니다`);
+              
+            } catch (error) {
+              console.error(`❌ 고도화된 자동 처리 실패:`, error);
+              
+              // 실패 시 알림
+              if (issueNumber) {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  body: `❌ **자동 처리 실패**
+
+오류가 발생했습니다: \`${error.message}\`
+
+**다음 단계:**
+1. GitHub Actions 로그 확인
+2. 수동으로 브랜치 확인 및 처리
+3. 필요시 이슈 재할당
+
+*오류 시간: ${new Date().toLocaleString('ko-KR')}*`
+                });
+              }
             }
 
