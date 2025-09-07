@@ -1,19 +1,10 @@
 name: Claude Code - 이슈 자동 해결
 
 on:
-  # 이슈 생성시 자동 처리
-  issues:
-    types: [opened]
-  # @claude 멘션시 즉시 처리  
   issue_comment:
     types: [created]
-  # 수동 실행 가능
-  workflow_dispatch:
-    inputs:
-      issue_number:
-        description: '처리할 이슈 번호'
-        required: false
-        type: string
+  issues:
+    types: [opened]
 
 permissions:
   contents: write
@@ -22,84 +13,34 @@ permissions:
   actions: write
 
 jobs:
-  # 이슈 자동 라벨링 및 처리
   claude-auto-fix:
     if: |
       (github.event_name == 'issues' && github.event.action == 'opened') ||
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'workflow_dispatch')
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude'))
     runs-on: ubuntu-latest
     
     steps:
       - uses: actions/checkout@v4
       
-      - name: 이슈 자동 분류 (신규 이슈만)
-        if: github.event_name == 'issues' && github.event.action == 'opened'
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const issue = context.payload.issue;
-            const content = (issue.title + ' ' + (issue.body || '')).toLowerCase();
-            
-            // 라벨 결정
-            const labels = [];
-            
-            if (content.includes('버그') || content.includes('bug') || content.includes('오류')) {
-              labels.push('bug');
-            } else if (content.includes('기능') || content.includes('feature')) {
-              labels.push('enhancement');
-            } else {
-              labels.push('task');
-            }
-            
-            if (content.includes('긴급') || content.includes('urgent')) {
-              labels.push('P0-urgent');
-            } else {
-              labels.push('P2-medium');
-            }
-            
-            labels.push('claude-processing');
-            
-            // 라벨 적용
-            await github.rest.issues.setLabels({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issue.number,
-              labels: labels
-            });
-      
       - name: Claude Code 이슈 해결
         uses: anthropics/claude-code-action@v1
         with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          anthropic_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          custom_instructions: |
-            # SafeWork 프로젝트 이슈 자동 해결
-
-            ## 🎯 목표
-            이슈를 완전히 해결하고 운영 환경에 배포까지 완료하기
-
-            ## 📋 필수 처리 단계
-            1. **이슈 분석**: 문제점과 요구사항 파악
-            2. **코드 수정**: 실제 문제 해결을 위한 코드 변경
-            3. **테스트 추가**: 수정사항에 대한 테스트 작성
-            4. **커밋 & PR**: 변경사항을 PR로 생성
-            5. **배포 확인**: main 브랜치 병합 시 자동 배포됨
-            6. **이슈 클로즈**: 운영 환경 반영 확인 후 이슈 완전 종료
-
-            ## 🛠 기술 스택
-            - **Backend**: Flask 3.0+, SQLAlchemy, MySQL 8.0
-            - **Frontend**: Bootstrap 4.6, jQuery, Jinja2
-            - **Testing**: pytest, coverage
-            - **Style**: PEP 8, Black 포매터
-            - **Deployment**: Docker, GitHub Actions → registry.jclee.me
-
-            ## ✅ 성공 기준
-            - 실제 코드 변경으로 이슈 해결
-            - 테스트 통과
-            - PR 생성 완료
-            - 운영 환경(safework.jclee.me) 반영 확인
-            - 이슈 클로즈까지 완료
-
+          prompt: |
+            SafeWork 프로젝트의 이슈를 실제로 해결하고 PR을 생성해주세요.
+            
+            🎯 목표: 이슈를 완전히 해결하고 운영 환경에 배포까지 완료하기
+            
+            📋 필수 처리 단계:
+            1. 이슈 분석 및 요구사항 파악
+            2. 실제 코드 수정으로 문제 해결
+            3. 테스트 추가 (필요시)
+            4. 커밋 & PR 생성
+            5. 이슈 클로즈까지 완료
+            
+            🛠 기술 스택: Flask 3.0+, SQLAlchemy, MySQL 8.0, Bootstrap 4.6, jQuery, Jinja2
+            
+            ✅ 성공 기준: 실제 코드 변경으로 이슈 해결, PR 생성 완료, 운영 환경 반영 확인
+            
             **중요**: 분석만 하지 말고 실제 문제를 해결하고 배포까지 완료하세요!
