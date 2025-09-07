@@ -36,10 +36,7 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          track_progress: true
           use_sticky_comment: true
-          timeout_minutes: 25
-          allowed_tools: "read_file,write_file,edit_file,create_directory,list_directory,bash,git"
           prompt: |
             당신은 SafeWork 프로젝트의 **시니어 풀스택 개발자**입니다.
 
