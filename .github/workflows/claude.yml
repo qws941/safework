@@ -123,7 +123,14 @@ jobs:
             - [ ] **이슈 상태를 'closed'로 변경**
 
             작업을 시작하세요! 🚀
-          claude_args: "--max-turns 25 --use-tools"
+          claude_args: |
+            --max-turns 25 
+            --use-tools
+            --mcp-config '{"mcpServers": {"sequential-thinking": {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]}}}'
+            --mcp-config '{"mcpServers": {"filesystem": {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem"]}}}'
+            --mcp-config '{"mcpServers": {"memory": {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-memory"]}}}'
+            --allowedTools mcp__sequential-thinking__sequentialthinking,mcp__filesystem__read_file,mcp__filesystem__write_file,mcp__filesystem__list_directory,mcp__memory__create_entities,mcp__memory__search_nodes
+            --experimental-mcp
 
       - name: Advanced Auto PR and Merge
         if: success()
