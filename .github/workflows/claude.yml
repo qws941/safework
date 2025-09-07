@@ -57,7 +57,7 @@ jobs:
               **🔄 실시간 업데이트가 이 댓글에서 진행됩니다.**
               
               ---
-              ⏰ 시작 시간: ${new Date().toLocaleString('ko-KR')} | 🚀 GitHub Actions 실행: [#${context.runId}](${process.env.GITHUB_SERVER_URL}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`
+              ⏰ 시작 시간: \\${new Date().toLocaleString('ko-KR')} | 🚀 GitHub Actions 실행: [#\\${context.runId}](\\${process.env.GITHUB_SERVER_URL}/\\${context.repo.owner}/\\${context.repo.repo}/actions/runs/\\${context.runId})`
             });
 
       - name: Enhanced Claude Code Assistant  
@@ -184,7 +184,7 @@ jobs:
             const issueTitle = context.payload.issue?.title || '자동 수정';
             
             console.log(`🚀 고도화된 자동 PR/병합 프로세스 시작`);
-            console.log(`📋 이슈: #${issueNumber} - ${issueTitle}`);
+            console.log(`📋 이슈: #\\${issueNumber} - \\${issueTitle}`);
             
             // 1. Claude 브랜치 스마트 검색 (여러 패턴 지원)
             async function findClaudeBranches() {
@@ -196,8 +196,8 @@ jobs:
               
               const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
               const patterns = [
-                `claude/issue-${issueNumber}-`,
-                `claude/issue-${today}`,
+                `claude/issue-\\${issueNumber}-`,
+                `claude/issue-\\${today}`,
                 `claude/`,
               ];
               
@@ -235,7 +235,7 @@ jobs:
                 const prs = await github.rest.pulls.list({
                   owner,
                   repo,
-                  head: `${owner}:${branchName}`,
+                  head: `\\${owner}:\\${branchName}`,
                   state: 'open'
                 });
                 return prs.data[0] || null;
@@ -253,12 +253,12 @@ jobs:
               }
               
               const branchName = claudeBranches[0].name;
-              console.log(`🔍 최신 Claude 브랜치 발견: ${branchName}`);
+              console.log(`🔍 최신 Claude 브랜치 발견: \\${branchName}`);
               
               // 기존 PR 확인
               const existingPR = await checkExistingPR(branchName);
               if (existingPR) {
-                console.log(`ℹ️ 기존 PR 발견: #${existingPR.number}, 병합 시도`);
+                console.log(`ℹ️ 기존 PR 발견: #\\${existingPR.number}, 병합 시도`);
                 
                 // 기존 PR 병합
                 try {
@@ -266,12 +266,12 @@ jobs:
                     owner,
                     repo,
                     pull_number: existingPR.number,
-                    commit_title: `🤖 Claude: ${issueTitle}`,
-                    commit_message: `이슈 #${issueNumber} 해결\n\nClaude가 자동으로 생성한 변경사항입니다.`,
+                    commit_title: `🤖 Claude: \\${issueTitle}`,
+                    commit_message: `이슈 #\\${issueNumber} 해결\n\nClaude가 자동으로 생성한 변경사항입니다.`,
                     merge_method: 'squash'
                   });
                   
-                  console.log(`✅ 기존 PR #${existingPR.number} 병합 완료`);
+                  console.log(`✅ 기존 PR #\\${existingPR.number} 병합 완료`);
                 } catch (mergeError) {
                   console.error(`❌ 기존 PR 병합 실패:`, mergeError.message);
                   return;
@@ -279,7 +279,7 @@ jobs:
               } else {
                 // 충돌 검사
                 const conflictCheck = await checkForConflicts(branchName);
-                console.log(`📊 브랜치 상태: ${conflictCheck.files}개 파일, ${conflictCheck.ahead}개 커밋 앞섰음`);
+                console.log(`📊 브랜치 상태: \\${conflictCheck.files}개 파일, \\${conflictCheck.ahead}개 커밋 앞섰음`);
                 
                 if (conflictCheck.hasConflicts) {
                   console.log(`⚠️ 충돌 감지됨, 수동 처리 필요`);
@@ -289,7 +289,7 @@ jobs:
                     owner,
                     repo,
                     issue_number: issueNumber,
-                    body: `⚠️ **자동 병합 실패**: 브랜치 \\`${branchName}\\`에서 충돌이 감지되었습니다.\\n\\n**수동 처리 필요:**\\n1. [브랜치 확인](https://github.com/${owner}/${repo}/tree/${branchName})\\n2. 충돌 해결 후 수동 병합\\n3. 또는 브랜치를 삭제하고 다시 시도\\n\\n**브랜치 상태:** ${conflictCheck.files}개 파일 수정, ${conflictCheck.ahead}개 커밋`
+                    body: `⚠️ **자동 병합 실패**: 브랜치 \\`\${branchName}\\`에서 충돌이 감지되었습니다.\\n\\n**수동 처리 필요:**\\n1. [브랜치 확인](https://github.com/\${owner}/\${repo}/tree/\${branchName})\\n2. 충돌 해결 후 수동 병합\\n3. 또는 브랜치를 삭제하고 다시 시도\\n\\n**브랜치 상태:** \${conflictCheck.files}개 파일 수정, \${conflictCheck.ahead}개 커밋`
                   });
                   return;
                 }
@@ -298,13 +298,13 @@ jobs:
                 const prResponse = await github.rest.pulls.create({
                   owner,
                   repo,
-                  title: `🤖 Claude: ${issueTitle}`,
+                  title: `🤖 Claude: \${issueTitle}`,
                   head: branchName,
                   base: 'master',
-                  body: `🤖 **Claude 자동 생성 PR**\\n\\n**📋 이슈:** #${issueNumber}\\n**🌿 브랜치:** \\`${branchName}\\`\\n**⏰ 생성 시간:** ${new Date().toLocaleString('ko-KR')}\\n**📊 변경사항:** ${conflictCheck.files}개 파일, ${conflictCheck.ahead}개 커밋\\n\\n## 🔄 자동화 프로세스\\n- ✅ 충돌 검사 통과\\n- ✅ 브랜치 상태 검증 완료\\n- 🔄 자동 병합 예정\\n\\n---\\n*🤖 Generated by Enhanced Claude Code Assistant*`
+                  body: `🤖 **Claude 자동 생성 PR**\\n\\n**📋 이슈:** #\${issueNumber}\\n**🌿 브랜치:** \\`\${branchName}\\`\\n**⏰ 생성 시간:** \${new Date().toLocaleString('ko-KR')}\\n**📊 변경사항:** \${conflictCheck.files}개 파일, \${conflictCheck.ahead}개 커밋\\n\\n## 🔄 자동화 프로세스\\n- ✅ 충돌 검사 통과\\n- ✅ 브랜치 상태 검증 완료\\n- 🔄 자동 병합 예정\\n\\n---\\n*🤖 Generated by Enhanced Claude Code Assistant*`
                 });
                 
-                console.log(`✅ 새 PR 생성 완료: #${prResponse.data.number}`);
+                console.log(`✅ 새 PR 생성 완료: #\${prResponse.data.number}`);
                 
                 // PR 상태 안정화 대기
                 await new Promise(resolve => setTimeout(resolve, 3000));
@@ -314,8 +314,8 @@ jobs:
                   owner,
                   repo,
                   pull_number: prResponse.data.number,
-                  commit_title: `🤖 Claude: ${issueTitle}`,
-                  commit_message: `이슈 #${issueNumber} 해결\n\nClaude가 자동으로 분석하고 수정한 변경사항입니다.\n\n변경 파일: ${conflictCheck.files}개\n커밋: ${conflictCheck.ahead}개`,
+                  commit_title: `🤖 Claude: \${issueTitle}`,
+                  commit_message: `이슈 #\${issueNumber} 해결\n\nClaude가 자동으로 분석하고 수정한 변경사항입니다.\n\n변경 파일: \${conflictCheck.files}개\n커밋: \${conflictCheck.ahead}개`,
                   merge_method: 'squash'
                 });
                 
@@ -326,10 +326,10 @@ jobs:
               await github.rest.git.deleteRef({
                 owner,
                 repo,
-                ref: `heads/${branchName}`
+                ref: `heads/\${branchName}`
               });
               
-              console.log(`🗑️ 브랜치 삭제 완료: ${branchName}`);
+              console.log(`🗑️ 브랜치 삭제 완료: \${branchName}`);
               
               // 성공 댓글 - 배포 진행 상황까지 표시
               if (issueNumber) {
@@ -349,13 +349,13 @@ jobs:
               **🚀 변경사항이 master 브랜치에 적용되었습니다!**
               
               **📊 작업 세부사항:**
-              - **브랜치**: \\`${branchName}\\`
-              - **처리 시간**: ${new Date().toLocaleString('ko-KR')}
+              - **브랜치**: \\`\\${branchName}\\`
+              - **처리 시간**: \\${new Date().toLocaleString('ko-KR')}
               - **자동 배포**: Docker 빌드 및 레지스트리 푸시 중
               - **예상 완료**: 약 5-10분 후
               
               **🔗 참고 링크:**
-              - [GitHub Actions 로그](${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/actions)
+              - [GitHub Actions 로그](\\${process.env.GITHUB_SERVER_URL}/\\${owner}/\\${repo}/actions)
               - [Docker Registry](https://registry.jclee.me)
               
               ---
@@ -370,7 +370,7 @@ jobs:
                   state: 'closed'
                 });
                 
-                console.log(`🔒 이슈 #${issueNumber} 자동 닫기 완료`);
+                console.log(`🔒 이슈 #\${issueNumber} 자동 닫기 완료`);
               }
               
             } catch (error) {
@@ -382,7 +382,7 @@ jobs:
                   owner,
                   repo,
                   issue_number: issueNumber,
-                  body: `❌ **자동 처리 실패**\\n\\n오류가 발생했습니다: \\`${error.message}\\`\\n\\n**다음 단계:**\\n1. GitHub Actions 로그 확인\\n2. 수동으로 브랜치 확인 및 처리\\n3. 필요시 이슈 재할당\\n\\n*오류 시간: ${new Date().toLocaleString('ko-KR')}*`
+                  body: `❌ **자동 처리 실패**\\n\\n오류가 발생했습니다: \\`\\${error.message}\\`\\n\\n**다음 단계:**\\n1. GitHub Actions 로그 확인\\n2. 수동으로 브랜치 확인 및 처리\\n3. 필요시 이슈 재할당\\n\\n*오류 시간: \\${new Date().toLocaleString('ko-KR')}*`
                 });
               }
             }
