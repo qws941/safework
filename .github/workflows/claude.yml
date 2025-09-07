@@ -66,7 +66,7 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           use_sticky_comment: true
-          track_progress: true
+          track_progress: ${{ github.event_name == 'issues' || github.event_name == 'pull_request' }}
           prompt: |
             당신은 SafeWork 프로젝트의 **시니어 풀스택 개발자**입니다.
 
