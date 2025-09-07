@@ -27,6 +27,7 @@ jobs:
       statuses: read
       deployments: read
       packages: read
+      id-token: write
     
     steps:
       - name: Checkout code
