@@ -180,18 +180,16 @@ jobs:
           use_sticky_comment: true
           create_pr: true
           branch_prefix: claude/
+          auto_merge: true
           custom_instructions: |
-            ## MCP 도구 활용해서 최대한 지능적으로 처리
+            이슈를 완전히 해결하고 PR을 만들어주세요.
             
-            필요하면 다음 MCP 도구들 적극 활용:
-            - Shrimp Task Manager: 복잡한 작업 계획/실행
-            - Serena: 심볼 기반 정밀 코드 분석/수정
-            - Sequential Thinking: 어려운 문제 단계별 해결
-            - Memory: 프로젝트 지식 저장/활용
-            - Web Search: 최신 정보 검색
-            - Code Runner: 코드 실행 테스트
+            1. 코드를 직접 수정
+            2. 변경사항 커밋
+            3. PR 생성
+            4. 자동 머지 가능하도록 설정
             
-            이슈 내용 보고 알아서 최적의 방법으로 해결하기
+            MCP 도구 필요시 활용하되, 반드시 코드 수정과 PR 생성까지 완료하기!
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
