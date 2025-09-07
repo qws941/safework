@@ -2,11 +2,18 @@ name: Claude Code - 고도화된 이슈 자동 해결 (MCP 통합)
 
 on:
   issue_comment:
-    types: [created]
+    types: [created, edited]
   issues:
-    types: [opened]
+    types: [opened, edited, labeled, assigned]
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, synchronize, edited, ready_for_review, review_requested]
+  pull_request_review:
+    types: [submitted]
+  pull_request_review_comment:
+    types: [created]
+  push:
+    branches: [master, main]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -19,9 +26,13 @@ permissions:
 jobs:
   claude-intelligent-processor:
     if: |
-      (github.event_name == 'issues' && github.event.action == 'opened') ||
+      (github.event_name == 'issues') ||
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request' && contains(github.event.pull_request.body, '@claude'))
+      (github.event_name == 'pull_request') ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'push') ||
+      (github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     
