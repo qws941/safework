@@ -5,21 +5,52 @@ on:
     types: [created]
   issues:
     types: [opened]
+  pull_request:
+    types: [opened, synchronize]
+  pull_request_review:
+    types: [submitted]
+
+# 동시성 제어: 중복 실행 방지
+concurrency:
+  group: claude-${{ github.event.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   claude:
-    if: contains(github.event.comment.body, '@claude') || contains(github.event.issue.body, '@claude')
+    if: |
+      contains(github.event.comment.body, '@claude') || 
+      contains(github.event.issue.body, '@claude') ||
+      contains(github.event.review.body, '@claude') ||
+      github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 15  # 타임아웃 설정
     permissions:
       contents: write
       issues: write
       pull-requests: write
+      actions: read
+    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 전체 히스토리 가져오기
 
       - name: Run Claude Code
-        uses: anthropics/claude-code-action@beta
+        uses: anthropics/claude-code-action@v1  # 안정 버전 사용
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          
+          # 성능 최적화: 최대 턴 제한
+          claude_args: --max-turns 3 --model claude-sonnet-4-20250514
+          
+          # SafeWork 프로젝트 특화 지침
+          custom_instructions: |
+            SafeWork 산업안전보건 관리시스템 개발 지침:
+            - Flask 3.0+ 패턴 준수
+            - MySQL 8.0 호환성 유지  
+            - 실제 코드 수정 필수 (분석만 금지)
+            - 한국어 사용자를 위한 KST 시간대 적용
+            - Bootstrap 4.6 UI 컴포넌트 사용
+            - 변경사항 커밋 및 PR 생성 필수
 
