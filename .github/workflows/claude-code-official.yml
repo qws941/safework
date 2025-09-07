@@ -1,10 +1,38 @@
-name: Claude Code - SafeWork 자동화
+name: Claude Code - SafeWork 고도화 자동화 v2.0
 
 on:
+  # 이슈 관련 트리거
+  issues:
+    types: [opened, edited, labeled]
   issue_comment:
     types: [created]
+  
+  # PR 관련 트리거
+  pull_request:
+    types: [opened, edited, ready_for_review]
   pull_request_review_comment:
     types: [created]
+  
+  # 스케줄 트리거 (매일 오전 9시 KST)
+  schedule:
+    - cron: '0 0 * * *'  # UTC 00:00 = KST 09:00
+  
+  # 수동 트리거
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: '처리할 이슈 번호 (선택사항)'
+        required: false
+        type: string
+      action:
+        description: '수행할 작업'
+        required: true
+        type: choice
+        options:
+          - auto-fix-all
+          - security-audit
+          - performance-optimize
+          - code-cleanup
 
 permissions:
   actions: write
@@ -22,8 +50,73 @@ permissions:
   statuses: write
 
 jobs:
-  claude:
+  # 이슈 자동 분류 및 라벨링
+  auto-label:
+    if: github.event_name == 'issues' && github.event.action == 'opened'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 이슈 자동 분류
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issue = context.payload.issue;
+            const labels = [];
+            
+            // 제목/본문 기반 자동 라벨링
+            const content = (issue.title + ' ' + issue.body).toLowerCase();
+            
+            if (content.includes('버그') || content.includes('bug') || content.includes('오류') || content.includes('error')) {
+              labels.push('bug');
+            }
+            if (content.includes('기능') || content.includes('feature') || content.includes('추가')) {
+              labels.push('enhancement');
+            }
+            if (content.includes('긴급') || content.includes('urgent') || content.includes('asap')) {
+              labels.push('P0-urgent');
+            }
+            if (content.includes('보안') || content.includes('security')) {
+              labels.push('security');
+            }
+            if (content.includes('성능') || content.includes('performance')) {
+              labels.push('performance');
+            }
+            if (content.includes('문서') || content.includes('documentation')) {
+              labels.push('documentation');
+            }
+            
+            // 기본 라벨 추가
+            if (labels.length === 0) {
+              labels.push('needs-triage');
+            }
+            
+            // Claude 처리 대상 라벨 추가
+            labels.push('claude-ready');
+            
+            // 라벨 적용
+            if (labels.length > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: labels
+              });
+            }
+            
+            // 자동 코멘트
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: `🤖 **자동 분류 완료**\n\n적용된 라벨: ${labels.map(l => '`' + l + '`').join(', ')}\n\n이 이슈는 Claude Code에 의해 자동으로 처리될 예정입니다.\n우선순위가 높은 경우 \`@claude\`를 멘션하여 즉시 처리를 요청하세요.`
+            });
+
+  # Claude Code 메인 처리
+  claude-processor:
     if: |
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'schedule' ||
+      (github.event_name == 'issues' && contains(github.event.issue.labels.*.name, 'claude-ready')) ||
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude'))
     runs-on: ubuntu-latest
@@ -36,14 +129,49 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Debug Event Information
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Install dependencies
         run: |
-          echo "Event Name: ${{ github.event_name }}"
-          echo "Comment Body: ${{ github.event.comment.body }}"
-          echo "Issue Number: ${{ github.event.issue.number }}"
-          echo "Repository: ${{ github.repository }}"
+          pip install pytest pytest-cov black flake8
+          if [ -f app/requirements.txt ]; then
+            pip install -r app/requirements.txt
+          fi
 
-      - name: SafeWork 이슈 자동 처리
+      - name: 이슈 컨텍스트 수집
+        id: context
+        run: |
+          echo "timestamp=$(date +'%Y%m%d_%H%M%S')" >> $GITHUB_OUTPUT
+          echo "branch_name=claude/auto-fix-$(date +'%Y%m%d_%H%M%S')" >> $GITHUB_OUTPUT
+          
+          # 이슈 정보 수집
+          if [[ "${{ github.event_name }}" == "issues" ]] || [[ "${{ github.event_name }}" == "issue_comment" ]]; then
+            echo "issue_number=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
+            echo "issue_title=${{ github.event.issue.title }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 코드 품질 사전 검사
+        id: quality-check
+        continue-on-error: true
+        run: |
+          echo "=== 코드 품질 검사 시작 ==="
+          
+          # Black 포맷팅 체크
+          echo "## Black 포맷팅 검사"
+          black --check --diff app/ || echo "formatting_needed=true" >> $GITHUB_OUTPUT
+          
+          # Flake8 린팅
+          echo "## Flake8 린팅"
+          flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics || echo "linting_errors=true" >> $GITHUB_OUTPUT
+          
+          # 테스트 실행
+          echo "## 테스트 실행"
+          cd app && python -m pytest tests/ -v --tb=short || echo "test_failures=true" >> $GITHUB_OUTPUT
+
+      - name: Claude Code 고도화 처리
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -52,13 +180,238 @@ jobs:
           use_sticky_comment: true
           create_pr: true
           branch_prefix: claude/
+          max_turns: 10
+          custom_instructions: |
+            ## 🚀 SafeWork 고도화 자동화 지침
+            
+            ### 처리 우선순위
+            1. **P0-urgent 라벨**: 즉시 처리 (보안, 크리티컬 버그)
+            2. **bug 라벨**: 버그 수정 우선
+            3. **enhancement 라벨**: 기능 개선
+            4. **performance 라벨**: 성능 최적화
+            5. **documentation 라벨**: 문서 업데이트
+            
+            ### 자동 처리 규칙
+            
+            #### 1. 코드 품질 자동 개선
+            - Black 포맷팅 자동 적용
+            - Flake8 오류 자동 수정
+            - 불필요한 import 제거
+            - 중복 코드 리팩토링
+            
+            #### 2. 보안 강화
+            - SQL Injection 방지 코드 검증
+            - XSS 방지 처리 확인
+            - 민감 정보 노출 방지
+            - CSRF 토큰 검증 강화
+            
+            #### 3. 성능 최적화
+            - 데이터베이스 쿼리 최적화 (N+1 문제 해결)
+            - 캐싱 전략 구현 (Redis 활용)
+            - 비동기 처리 가능 부분 식별
+            - 정적 파일 최적화
+            
+            #### 4. 테스트 자동화
+            - 수정된 코드에 대한 단위 테스트 작성
+            - 통합 테스트 추가
+            - 테스트 커버리지 80% 이상 유지
+            
+            #### 5. 문서화
+            - 코드 변경사항 README 업데이트
+            - API 엔드포인트 문서화
+            - 마이그레이션 가이드 작성
+            
+            ### 구현 체크리스트
+            - [ ] 기존 코드 스타일 준수
+            - [ ] 테스트 작성 및 통과
+            - [ ] 보안 검증 완료
+            - [ ] 성능 영향 분석
+            - [ ] 문서 업데이트
+            - [ ] Docker 환경 테스트
+            
+            ### PR 설명 템플릿
+            ```
+            ## 📋 변경사항
+            - 
+            
+            ## 🔍 해결된 이슈
+            - Fixes #
+            
+            ## ✅ 테스트
+            - [ ] 단위 테스트 통과
+            - [ ] 통합 테스트 통과
+            - [ ] Docker 환경 테스트
+            
+            ## 📈 성능 영향
+            - 
+            
+            ## 🔒 보안 고려사항
+            - 
+            ```
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 이슈 처리 결과 알림
-        if: always()
+      - name: 테스트 자동 실행
+        if: success()
+        continue-on-error: true
         run: |
-          echo "🤖 Claude Code 자동 처리 완료"
-          echo "📋 이슈: ${{ github.event.issue.title || '댓글 이슈' }}"
-          echo "⏰ 처리 시간: $(date)"
-          echo "🔗 상세 로그: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "=== 변경사항 테스트 ==="
+          cd app
+          python -m pytest tests/ -v --cov=. --cov-report=term-missing
+          
+          # 테스트 결과를 PR 코멘트로 추가
+          echo "test_completed=true" >> $GITHUB_ENV
+
+      - name: Docker 빌드 테스트
+        if: success()
+        continue-on-error: true
+        run: |
+          echo "=== Docker 빌드 검증 ==="
+          docker-compose build --no-cache app
+          echo "docker_build_completed=true" >> $GITHUB_ENV
+
+      - name: 보안 스캔
+        if: success()
+        continue-on-error: true
+        run: |
+          echo "=== 보안 취약점 스캔 ==="
+          pip install safety
+          safety check --json || true
+          echo "security_scan_completed=true" >> $GITHUB_ENV
+
+      - name: 처리 결과 종합 리포트
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issueNumber = '${{ steps.context.outputs.issue_number }}';
+            if (!issueNumber) return;
+            
+            let report = `## 🤖 Claude Code 자동화 처리 결과\n\n`;
+            report += `### 📊 처리 상태\n`;
+            report += `- ⏰ 처리 시간: ${new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}\n`;
+            report += `- 🔗 [워크플로우 로그](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})\n\n`;
+            
+            report += `### ✅ 수행된 작업\n`;
+            
+            // 각 단계 결과 체크
+            const steps = [
+              { env: 'test_completed', icon: '🧪', text: '테스트 실행' },
+              { env: 'docker_build_completed', icon: '🐳', text: 'Docker 빌드 검증' },
+              { env: 'security_scan_completed', icon: '🔒', text: '보안 스캔' }
+            ];
+            
+            steps.forEach(step => {
+              if (process.env[step.env] === 'true') {
+                report += `- ${step.icon} ${step.text} 완료\n`;
+              }
+            });
+            
+            report += `\n### 🎯 다음 단계\n`;
+            report += `- PR이 생성된 경우 리뷰 후 머지\n`;
+            report += `- 추가 수정이 필요한 경우 \`@claude\` 멘션\n`;
+            report += `- 긴급 처리가 필요한 경우 \`P0-urgent\` 라벨 추가\n`;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: parseInt(issueNumber),
+              body: report
+            });
+
+  # PR 자동 머지 (조건 충족 시)
+  auto-merge:
+    if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'claude/')
+    runs-on: ubuntu-latest
+    needs: claude-processor
+    
+    steps:
+      - name: 자동 머지 체크
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            
+            // 체크 조건
+            const checks = await github.rest.checks.listForRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: pr.head.sha
+            });
+            
+            const allChecksPassed = checks.data.check_runs.every(
+              check => check.conclusion === 'success' || check.conclusion === 'neutral'
+            );
+            
+            if (allChecksPassed) {
+              // 자동 머지
+              await github.rest.pulls.merge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+                merge_method: 'squash'
+              });
+              
+              console.log(`PR #${pr.number} 자동 머지 완료`);
+            }
+
+  # 일일 정기 점검 (스케줄)
+  daily-maintenance:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: 오픈 이슈 자동 처리
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // 오래된 이슈 찾기
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              sort: 'created',
+              direction: 'asc'
+            });
+            
+            let report = `## 📅 일일 자동 점검 리포트\n\n`;
+            report += `- 검사 시간: ${new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}\n`;
+            report += `- 오픈 이슈: ${issues.data.length}개\n\n`;
+            
+            // 7일 이상 된 이슈 자동 처리
+            const oldIssues = issues.data.filter(issue => {
+              const created = new Date(issue.created_at);
+              const now = new Date();
+              const days = (now - created) / (1000 * 60 * 60 * 24);
+              return days > 7;
+            });
+            
+            if (oldIssues.length > 0) {
+              report += `### ⚠️ 7일 이상 된 이슈 (${oldIssues.length}개)\n`;
+              for (const issue of oldIssues) {
+                report += `- #${issue.number}: ${issue.title}\n`;
+                
+                // Claude 처리 트리거
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  body: `@claude 이 이슈는 7일 이상 처리되지 않았습니다. 자동 분석 및 해결을 시작합니다.`
+                });
+              }
+            }
+            
+            // 일일 리포트 이슈 생성
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `📊 일일 자동화 리포트 - ${new Date().toLocaleDateString('ko-KR')}`,
+              body: report,
+              labels: ['auto-report', 'documentation']
+            });
