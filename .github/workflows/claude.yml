@@ -25,7 +25,7 @@ jobs:
       - name: Claude Code 이슈 해결
         uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: |
             SafeWork 프로젝트의 이슈를 실제로 해결하고 PR을 생성해주세요.
