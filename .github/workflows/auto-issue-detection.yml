@@ -24,62 +24,77 @@ jobs:
     permissions:
       issues: write
       contents: read
-      actions: write
-    outputs:
-      issues-assigned: ${{ steps.assign.outputs.issues-assigned }}
-      issue-count: ${{ steps.assign.outputs.issue-count }}
     
     steps:
       - name: 🔍 열린 이슈 스캔 및 Claude 자동 할당
-        id: assign
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "🔍 열린 이슈 자동 Claude 할당 시작..."
-          
-          # 임시 파일로 카운터 관리
-          echo "0" > /tmp/assigned_count
-          echo "false" > /tmp/issues_assigned
-          
-          # 열린 이슈 목록 가져오기
-          ISSUE_COUNT=$(gh issue list --state open --limit 50 --json number | jq length)
-          
-          if [ "$ISSUE_COUNT" -eq 0 ]; then
-            echo "📋 열린 이슈가 없습니다."
-          else
-            echo "📋 $ISSUE_COUNT 개의 열린 이슈 발견"
+        uses: actions/github-script@v7
+        with:
+          script: |
+            console.log('🔍 열린 이슈 자동 Claude 할당 시작...');
             
-            # 각 이슈 번호 가져와서 처리
-            gh issue list --state open --limit 10 --json number,title,createdAt | jq -r '.[] | [.number, .title, .createdAt] | @tsv' | while IFS=$'\t' read -r number title created_at; do
-              echo "🔍 이슈 #$number 검토: $title"
+            const { owner, repo } = context.repo;
+            let assignedCount = 0;
+            
+            try {
+              // 열린 이슈 목록 가져오기 (최근 10개)
+              const { data: issues } = await github.rest.issues.listForRepo({
+                owner,
+                repo,
+                state: 'open',
+                per_page: 10,
+                sort: 'created',
+                direction: 'desc'
+              });
               
-              # 이슈 생성 시간 확인 (24시간 이내)
-              created_timestamp=$(date -d "$created_at" +%s 2>/dev/null || date -d "$(echo "$created_at" | cut -c1-19)" +%s)
-              current_timestamp=$(date +%s)
-              hours_old=$(( (current_timestamp - created_timestamp) / 3600 ))
+              console.log(`📋 ${issues.length}개의 열린 이슈 발견`);
               
-              if [ "$hours_old" -gt 24 ]; then
-                echo "⏭️ 이슈 #$number: 24시간 경과 ($hours_old 시간)"
-                continue
-              fi
-              
-              # Claude 댓글 확인
-              claude_mentions=$(gh issue view $number | grep -c "@claude\|Claude 작업 시작\|claude\[bot\]" || echo "0")
-              
-              if [ "$claude_mentions" -gt 0 ]; then
-                echo "⏭️ 이슈 #$number: 이미 Claude가 처리 중"
-                continue
-              fi
-              
-              # Claude 자동 할당 댓글 추가
-              echo "✅ 이슈 #$number Claude 자동 할당 중..."
-              
-              gh issue comment $number --body "🤖 **Claude 자동 할당**
+              for (const issue of issues) {
+                // PR은 제외
+                if (issue.pull_request) {
+                  console.log(`⏭️ 이슈 #${issue.number}: PR이므로 제외`);
+                  continue;
+                }
+                
+                console.log(`🔍 이슈 #${issue.number} 검토: ${issue.title}`);
+                
+                // 24시간 이내 생성된 이슈만 처리
+                const created = new Date(issue.created_at);
+                const now = new Date();
+                const hoursOld = (now - created) / (1000 * 60 * 60);
+                
+                if (hoursOld > 24) {
+                  console.log(`⏭️ 이슈 #${issue.number}: 24시간 경과 (${Math.round(hoursOld)}시간)`);
+                  continue;
+                }
+                
+                // 기존 댓글에서 Claude 멘션 확인
+                const { data: comments } = await github.rest.issues.listComments({
+                  owner,
+                  repo,
+                  issue_number: issue.number
+                });
+                
+                const hasClaudeComment = comments.some(comment => 
+                  comment.user.login === 'claude[bot]' ||
+                  comment.body.includes('@claude') ||
+                  comment.body.includes('Claude 작업 시작') ||
+                  comment.body.includes('Claude 자동 할당')
+                );
+                
+                if (hasClaudeComment) {
+                  console.log(`⏭️ 이슈 #${issue.number}: 이미 Claude가 처리 중`);
+                  continue;
+                }
+                
+                // Claude 자동 할당 댓글 추가
+                console.log(`✅ 이슈 #${issue.number} Claude 자동 할당 중...`);
+                
+                const commentBody = `🤖 **Claude 자동 할당**
 
-📋 **자동 감지된 이슈**  
-- **이슈**: $title
-- **생성시간**: $(date -d "$created_at" '+%Y-%m-%d %H:%M:%S KST' 2>/dev/null || echo "$created_at")
-- **할당시간**: $(date '+%Y-%m-%d %H:%M:%S KST')
+📋 **자동 감지된 이슈**
+- **이슈**: ${issue.title}
+- **생성시간**: ${created.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
+- **할당시간**: ${new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
 
 🎯 **Claude 작업 시작**
 @claude 이 이슈를 분석하고 해결해주세요.
@@ -87,35 +102,32 @@ jobs:
 SafeWork 프로젝트 패턴을 따라 다음 단계로 진행해주세요:
 1. 이슈 내용 정확한 분석
 2. 관련 파일 식별 및 현재 상태 확인
-3. 적절한 해결방안 구현  
+3. 적절한 해결방안 구현
 4. 테스트 실행 및 검증
 5. 커밋 및 이슈 완료
 
 ---
-_🕒 자동 할당 시스템에 의해 생성됨_"
+_🕒 자동 할당 시스템에 의해 생성됨_`;
+                
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: issue.number,
+                  body: commentBody
+                });
+                
+                assignedCount++;
+                console.log(`✅ 이슈 #${issue.number} Claude 자동 할당 완료`);
+                
+                // API 제한을 위한 대기
+                await new Promise(resolve => setTimeout(resolve, 2000));
+              }
               
-              # 카운터 업데이트
-              current_count=$(cat /tmp/assigned_count)
-              echo $((current_count + 1)) > /tmp/assigned_count
-              echo "true" > /tmp/issues_assigned
+              console.log(`🎯 총 ${assignedCount}개 이슈에 Claude 자동 할당 완료`);
               
-              echo "✅ 이슈 #$number Claude 자동 할당 완료"
-              
-              # API 제한을 위한 대기
-              sleep 3
-              
-            done
-          fi
-          
-          # 최종 결과 읽기
-          ASSIGNED_COUNT=$(cat /tmp/assigned_count)
-          ISSUES_ASSIGNED=$(cat /tmp/issues_assigned)
-          
-          echo "🎯 총 $ASSIGNED_COUNT 개 이슈에 Claude 자동 할당 완료"
-          
-          # 출력 설정
-          echo "issues-assigned=$ISSUES_ASSIGNED" >> $GITHUB_OUTPUT
-          echo "issue-count=$ASSIGNED_COUNT" >> $GITHUB_OUTPUT
+            } catch (error) {
+              console.error('❌ 이슈 할당 중 오류 발생:', error);
+            }
 
   # 2단계: 결과 알림
   notify-completion:
@@ -127,14 +139,5 @@ _🕒 자동 할당 시스템에 의해 생성됨_"
       - name: 📊 자동 할당 결과 알림
         run: |
           echo "🎯 열린 이슈 자동 Claude 할당 완료!"
-          echo ""
-          echo "📋 결과 요약:"
-          echo "  - 이슈 할당 여부: ${{ needs.detect-open-issues.outputs.issues-assigned }}"
-          echo "  - 할당된 이슈 수: ${{ needs.detect-open-issues.outputs.issue-count }}"
-          echo ""
-          if [ "${{ needs.detect-open-issues.outputs.issues-assigned }}" = "true" ]; then
-            echo "🤖 ${{ needs.detect-open-issues.outputs.issue-count }}개 이슈에 Claude가 자동 할당되었습니다."
-            echo "실시간 진행상황은 각 이슈 페이지에서 확인할 수 있습니다."
-          else
-            echo "✅ 새로 할당할 이슈가 없습니다. 모든 이슈가 처리 중이거나 완료되었습니다."
-          fi
+          echo "✅ 워크플로우가 성공적으로 실행되었습니다."
+          echo "💡 새로운 이슈가 있으면 자동으로 Claude에게 할당됩니다."
