@@ -36,7 +36,16 @@ jobs:
       - name: 📥 Checkout
         uses: actions/checkout@v4
         
-      - name: 🤖 Claude Code Action
-        uses: anthropics/claude-code-action@beta
+      - name: 🤖 Claude Code Action (공식 문서 방식)
+        uses: anthropics/claude-code-action@v1
         with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_args: "--max-turns 3"
+          prompt: |
+            SafeWork 산업안전보건 관리시스템의 이슈를 해결해 주세요.
+            
+            개발 가이드라인:
+            - Flask 3.0+ 패턴 준수
+            - MySQL 8.0 호환성 유지
+            - 실제 코드 수정 필수 (분석만 금지)
+            - 변경사항 커밋 및 PR 생성 필수

@@ -51,21 +51,31 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 🤖 Claude Code 실행
-        uses: anthropics/claude-code-action@beta  # 베타 버전 (더 안정적)
+      - name: 🤖 Claude Code Action
+        uses: anthropics/claude-code-action@v1
         with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          
-          # 성능 최적화 및 모델 지정
-          claude_args: --max-turns 5 --model claude-sonnet-4-20250514
-          
-          # SafeWork 프로젝트 특화 지침
-          custom_instructions: |
-            SafeWork 산업안전보건 관리시스템 개발 지침:
-            - Flask 3.0+ 패턴 준수
-            - MySQL 8.0 호환성 유지  
-            - 실제 코드 수정 필수 (분석만 금지)
-            - 한국어 사용자를 위한 KST 시간대 적용
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_args: "--max-turns 5 --model claude-sonnet-4-20250514"
+          prompt: |
+            SafeWork 산업안전보건 관리시스템의 이슈를 분석하고 해결해 주세요.
+            
+            ## 📋 프로젝트 컨텍스트
+            - Flask 3.0+ 기반 산업안전보건 관리시스템
+            - MySQL 8.0 데이터베이스 사용
+            - Bootstrap 4.6 + jQuery 프론트엔드
+            - Docker 기반 배포 시스템
+            
+            ## 🎯 개발 가이드라인
+            - **실제 코드 수정 필수** (분석만 하지 말고!)
+            - Flask 3.0+ 패턴 및 모범사례 준수
+            - MySQL 8.0 호환 쿼리 작성
+            - KST 시간대 적용 (한국 사용자)
             - Bootstrap 4.6 UI 컴포넌트 사용
             - 변경사항 커밋 및 PR 생성 필수
+            - 테스트 실행 및 검증
+            
+            ## ⚠️ 중요사항
+            - 분석만 하지 말고 반드시 실제 파일을 수정하세요
+            - 커밋 메시지는 한국어로 작성해 주세요
+            - 작업 완료 후 이슈를 자동으로 닫아주세요
 
