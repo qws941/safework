@@ -1,0 +1,137 @@
+name: SafeWork 통합 빌드 & 배포 파이프라인
+
+on:
+  push:
+    branches: [master, main]
+  workflow_run:
+    workflows: ["Claude Code - 고도화된 이슈 자동 해결 (MCP 통합)"]
+    types: [completed]
+    branches: [master, main]
+  workflow_dispatch:
+    inputs:
+      force_deploy:
+        description: '강제 배포 실행'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  REGISTRY: registry.jclee.me
+  PROJECT_NAME: safework
+
+jobs:
+  # Claude 작업 완료 후 자동 배포 트리거
+  post-claude-deployment:
+    if: |
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+      (github.event_name == 'push') ||
+      (github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    
+    steps:
+      - name: 📥 소스코드 체크아웃
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: 🏷️ 버전 생성 (Git SHA 기반)
+        id: version
+        run: |
+          TIMESTAMP=$(date +'%Y%m%d-%H%M')
+          COMMIT_SHA=$(git rev-parse --short HEAD)
+          VERSION="v3.0.${TIMESTAMP}-${COMMIT_SHA}"
+          
+          echo "Generated version: $VERSION (Git SHA based)"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "commit_sha=$COMMIT_SHA" >> $GITHUB_OUTPUT
+          echo "timestamp=$TIMESTAMP" >> $GITHUB_OUTPUT
+
+      - name: 🔍 Claude 작업 결과 확인
+        if: github.event_name == 'workflow_run'
+        run: |
+          echo "🤖 Claude 작업 완료됨!"
+          echo "워크플로우: ${{ github.event.workflow_run.name }}"
+          echo "결과: ${{ github.event.workflow_run.conclusion }}"
+          echo "브랜치: ${{ github.event.workflow_run.head_branch }}"
+          echo "커밋: ${{ github.event.workflow_run.head_sha }}"
+          
+      - name: 🛠️ Docker Buildx 설정
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🔐 Docker Registry 로그인
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: admin
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      # 멀티 서비스 병렬 빌드 & 푸시
+      - name: 🚀 SafeWork App 이미지 빌드 & 푸시
+        uses: docker/build-push-action@v5
+        with:
+          context: ./app
+          push: true
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.PROJECT_NAME }}/app:${{ steps.version.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.PROJECT_NAME }}/app:latest
+          labels: |
+            org.opencontainers.image.title=SafeWork Application
+            org.opencontainers.image.description=Flask 3.0+ 산업안전보건 관리시스템
+            org.opencontainers.image.version=${{ steps.version.outputs.version }}
+            org.opencontainers.image.created=${{ steps.version.outputs.timestamp }}
+            org.opencontainers.image.revision=${{ steps.version.outputs.commit_sha }}
+
+      - name: 🗄️ SafeWork MySQL 이미지 빌드 & 푸시
+        uses: docker/build-push-action@v5
+        with:
+          context: ./mysql
+          push: true
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.PROJECT_NAME }}/mysql:${{ steps.version.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.PROJECT_NAME }}/mysql:latest
+
+      - name: 🔴 SafeWork Redis 이미지 빌드 & 푸시
+        uses: docker/build-push-action@v5
+        with:
+          context: ./redis
+          push: true
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.PROJECT_NAME }}/redis:${{ steps.version.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.PROJECT_NAME }}/redis:latest
+
+      - name: 🎯 GitHub Pages 빌드 (문서 배포)
+        if: hashFiles('docs/**') != ''
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+          destination_dir: safework-docs
+          enable_jekyll: false
+          
+      - name: 📊 배포 완료 알림
+        run: |
+          echo "🎉 SafeWork 통합 배포 완료!"
+          echo ""
+          echo "📋 배포 정보:"
+          echo "  버전: ${{ steps.version.outputs.version }}"
+          echo "  커밋: ${{ steps.version.outputs.commit_sha }}"
+          echo "  시각: $(date '+%Y-%m-%d %H:%M:%S KST')"
+          echo "  레지스트리: ${{ env.REGISTRY }}/${{ env.PROJECT_NAME }}"
+          echo ""
+          echo "🚀 배포된 서비스:"
+          echo "  - SafeWork App (Flask 3.0+)"
+          echo "  - MySQL 8.0 (커스텀 스키마)"
+          echo "  - Redis (세션 저장소)"
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            echo "  - Claude MCP 작업 후 자동 배포"
+          fi
