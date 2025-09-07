@@ -1,0 +1,153 @@
+{
+  "description": "SafeWork 프로젝트 고도화된 MCP 서버 설정",
+  "version": "1.0.0",
+  "mcpServers": {
+    "sequential-thinking": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
+      "description": "복잡한 문제 분석과 단계별 사고 프로세스",
+      "priority": "high",
+      "capabilities": ["thinking", "analysis", "problem_solving"]
+    },
+    "brave-search": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+      "env": {
+        "BRAVE_API_KEY": "${{ secrets.BRAVE_API_KEY }}"
+      },
+      "description": "최신 기술 정보 및 베스트 프랙티스 검색",
+      "priority": "high",
+      "capabilities": ["web_search", "research", "best_practices"]
+    },
+    "exa": {
+      "command": "npx", 
+      "args": ["-y", "@modelcontextprotocol/server-exa"],
+      "env": {
+        "EXA_API_KEY": "${{ secrets.EXA_API_KEY }}"
+      },
+      "description": "관련 기술 문서 및 예시 코드 검색",
+      "priority": "high",
+      "capabilities": ["semantic_search", "code_examples", "documentation"]
+    },
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"],
+      "description": "프로젝트 패턴과 이전 해결책 학습 및 기억",
+      "priority": "medium",
+      "capabilities": ["learning", "pattern_recognition", "history"]
+    },
+    "serena": {
+      "command": "python",
+      "args": ["-m", "serena"],
+      "description": "코드 구조 분석, 심볼 탐색, 의존성 파악",
+      "priority": "critical",
+      "capabilities": ["code_analysis", "symbol_navigation", "dependency_mapping"],
+      "requirements": ["python>=3.11", "serena>=1.0.0"]
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp/safework-workspace"],
+      "description": "프로젝트 구조 탐색 및 파일 관리",
+      "priority": "critical",
+      "capabilities": ["file_operations", "directory_traversal", "file_search"]
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${{ secrets.GITHUB_TOKEN }}"
+      },
+      "description": "PR 히스토리, 이슈 패턴, 코드 리뷰 분석",
+      "priority": "high", 
+      "capabilities": ["github_api", "issue_analysis", "pr_management"]
+    },
+    "eslint": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-eslint"],
+      "description": "JavaScript/TypeScript 코드 품질 검사",
+      "priority": "medium",
+      "capabilities": ["code_linting", "style_checking", "quality_assurance"]
+    },
+    "code-runner": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-code-runner"],
+      "description": "코드 스니펫 테스트 및 검증",
+      "priority": "high",
+      "capabilities": ["code_execution", "testing", "verification"]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-playwright"],
+      "description": "UI 자동화 테스트 및 웹 인터랙션",
+      "priority": "low",
+      "capabilities": ["ui_testing", "automation", "browser_control"]
+    },
+    "puppeteer": {
+      "command": "npx", 
+      "args": ["-y", "@modelcontextprotocol/server-puppeteer"],
+      "description": "웹 스크래핑 및 브라우저 자동화",
+      "priority": "low",
+      "capabilities": ["web_scraping", "browser_automation", "data_extraction"]
+    },
+    "shrimp-task-manager": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-shrimp-task-manager"],
+      "description": "복잡한 작업 계획 및 관리",
+      "priority": "medium",
+      "capabilities": ["task_planning", "project_management", "workflow_orchestration"]
+    }
+  },
+  "safework_context": {
+    "project_type": "flask_web_application",
+    "tech_stack": {
+      "backend": ["Flask 3.0+", "SQLAlchemy 2.0", "MySQL 8.0", "Redis", "Gunicorn"],
+      "frontend": ["Bootstrap 4.6", "jQuery", "Jinja2"],
+      "infrastructure": ["Docker Compose", "Multi-service Architecture"],
+      "testing": ["pytest", "coverage", "Black", "Flake8"]
+    },
+    "architecture_patterns": {
+      "application_factory": "Environment-based configuration management",
+      "blueprint_architecture": "8 functional module structure",
+      "multi_model_system": "users, surveys, documents, 13 safework tables",
+      "anonymous_survey": "Login-free survey submission system"
+    },
+    "core_modules": {
+      "surveys": {
+        "001_musculoskeletal": "6 body areas with conditional logic",
+        "002_new_employee": "29 fields covering medical history"
+      },
+      "safework_management": {
+        "areas": 13,
+        "functions": ["workers", "health_checks", "medical_visits", "medications", "consultations", "programs", "special_management", "environment", "risk_assessment", "msds", "protective_equipment", "education", "certifications"]
+      },
+      "document_system": "Multi-category with version control",
+      "admin_interface": "Comprehensive management dashboard"
+    }
+  },
+  "quality_standards": {
+    "code_quality": {
+      "formatter": "Black",
+      "linter": "Flake8", 
+      "type_hints": "Python 3.11+",
+      "documentation": "Docstrings required"
+    },
+    "testing": {
+      "unit_test_coverage": "90%",
+      "integration_tests": "Main workflows covered",
+      "error_handling": "All edge cases",
+      "performance": "Load testing for critical paths"
+    },
+    "security": {
+      "sql_injection": "Prevented",
+      "csrf_protection": "Enabled",
+      "input_validation": "Comprehensive",
+      "output_sanitization": "Applied"
+    },
+    "ux_standards": {
+      "responsive_design": "Bootstrap 4.6",
+      "accessibility": "WCAG 2.1",
+      "i18n": "Korean localization",
+      "navigation": "Intuitive user flows"
+    }
+  }
+}
