@@ -1,60 +1,78 @@
-# ⚠️ 이 워크플로우는 master-issue-orchestrator.yml로 통합되었습니다.
-# Claude Code 리뷰는 code-quality-reviewer Sub-agent가 처리합니다.
-
-name: "🤖 Claude Code Review (DEPRECATED)"
+name: Claude Code Review
 
 on:
-  # 기본적으로 비활성화 - 마스터 오케스트레이터의 Sub-agents가 처리
-  workflow_dispatch:
-    inputs:
-      migration_info:
-        description: '통합 정보 확인'
-        required: false
-        default: true
-        type: boolean
+  pull_request:
+    types: [opened, synchronize]
+    # Optional: Only run on specific file changes
+    # paths:
+    #   - "src/**/*.ts"
+    #   - "src/**/*.tsx"
+    #   - "src/**/*.js"
+    #   - "src/**/*.jsx"
 
 jobs:
-  code-review-migration-notice:
+  claude-review:
+    # Optional: Filter by PR author
+    # if: |
+    #   github.event.pull_request.user.login == 'external-contributor' ||
+    #   github.event.pull_request.user.login == 'new-developer' ||
+    #   github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
+    
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+      id-token: write
+    
     steps:
-      - name: 📢 Claude Code 리뷰 시스템 통합 안내
-        run: |
-          echo "⚠️ Claude Code 자동 리뷰 시스템이 Sub-agents로 통합되었습니다"
-          echo ""
-          echo "🤖 새로운 코드 리뷰 시스템:"
-          echo "  - code-quality-reviewer: 전문 코드 품질 검토 에이전트"
-          echo "  - 실시간 PR 분석 및 피드백"
-          echo "  - 자동 코드 품질 점수 산출"
-          echo "  - 보안 취약점 자동 탐지"
-          echo "  - 성능 최적화 제안"
-          echo ""
-          echo "🚀 개선된 기능:"
-          echo "  - 컨텍스트 기반 지능형 리뷰"
-          echo "  - 프로젝트별 코딩 스타일 학습"
-          echo "  - 자동 수정 제안 및 적용"
-          echo "  - 리뷰 품질 지속적 개선"
-          echo ""
-          echo "🔄 자동 실행 조건:"
-          echo "  - PR 생성/업데이트 시 자동 트리거"
-          echo "  - 이슈 우선순위에 따른 리뷰 강도 조절"
-          echo "  - 긴급 이슈(P0/P1)는 즉시 상세 리뷰"
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude Code Review
+        id: claude-review
+        uses: anthropics/claude-code-action@beta
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+          # Optional: Specify model (defaults to Claude Sonnet 4, uncomment for Claude Opus 4.1)
+          # model: "claude-opus-4-1-20250805"
+
+          # Direct prompt for automated review (no @claude mention needed)
+          direct_prompt: |
+            Please review this pull request and provide feedback on:
+            - Code quality and best practices
+            - Potential bugs or issues
+            - Performance considerations
+            - Security concerns
+            - Test coverage
+            
+            Be constructive and helpful in your feedback.
+
+          # Optional: Use sticky comments to make Claude reuse the same comment on subsequent pushes to the same PR
+          # use_sticky_comment: true
           
-      - name: 🔄 새 시스템 사용법 안내
-        if: inputs.migration_info == 'true'
-        run: |
-          echo "📍 새로운 사용법:"
-          echo ""
-          echo "🎯 자동 리뷰 (권장):"
-          echo "  1. PR 생성 → 자동으로 code-quality-reviewer 활성화"
-          echo "  2. 이슈 생성 → 우선순위에 따른 리뷰 강도 자동 조절"
-          echo "  3. 코드 변경 → 실시간 품질 분석 및 피드백"
-          echo ""
-          echo "🔧 수동 트리거 (필요시):"
-          echo "  - GitHub 이슈에 'code-review' 라벨 추가"
-          echo "  - PR에 '@claude-reviewer 리뷰 요청' 코멘트"
-          echo ""
-          echo "📊 통합 후 장점:"
-          echo "  - 이슈-PR-배포 전체 생명주기 통합 관리"
-          echo "  - 중복 리뷰 제거로 효율성 증대"
-          echo "  - 일관된 코드 품질 표준 유지"
-          echo "  - 자동 배포 전 품질 검증"
+          # Optional: Customize review based on file types
+          # direct_prompt: |
+          #   Review this PR focusing on:
+          #   - For TypeScript files: Type safety and proper interface usage
+          #   - For API endpoints: Security, input validation, and error handling
+          #   - For React components: Performance, accessibility, and best practices
+          #   - For tests: Coverage, edge cases, and test quality
+          
+          # Optional: Different prompts for different authors
+          # direct_prompt: |
+          #   ${{ github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR' && 
+          #   'Welcome! Please review this PR from a first-time contributor. Be encouraging and provide detailed explanations for any suggestions.' ||
+          #   'Please provide a thorough code review focusing on our coding standards and best practices.' }}
+          
+          # Optional: Add specific tools for running tests or linting
+          # allowed_tools: "Bash(npm run test),Bash(npm run lint),Bash(npm run typecheck)"
+          
+          # Optional: Skip review for certain conditions
+          # if: |
+          #   !contains(github.event.pull_request.title, '[skip-review]') &&
+          #   !contains(github.event.pull_request.title, '[WIP]')
+
