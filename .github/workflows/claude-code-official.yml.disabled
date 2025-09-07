@@ -35,9 +35,7 @@ jobs:
       - name: SafeWork 이슈 자동 처리
         uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          claude_args: "--verbose"
           prompt: |
             SafeWork 프로젝트의 GitHub 이슈를 자동으로 처리해주세요.
             

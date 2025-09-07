@@ -287,19 +287,35 @@ Complete workplace health and safety management system:
 ## CI/CD Pipeline
 
 ### GitHub Actions Workflows
+
+**Main Deployment Pipeline (`main-deploy.yml`):**
 ```yaml
-# .github/workflows/main-deploy.yml
-- Automated versioning: Git SHA + timestamp based
-- Multi-platform Docker builds: App, MySQL, Redis images
-- Registry deployment: registry.jclee.me/safework/*
-- Automatic deployment: Push to main/master triggers build and deploy
+# Triggered by: push to main/master branch
+- Automated versioning: Git SHA + timestamp format (v3.0.YYYYMMDD-HHMM-{git-sha})
+- Multi-service Docker builds: App, MySQL, Redis custom images
+- Registry deployment: registry.jclee.me/safework/* (admin/bingogo1)
+- Automatic health verification and deployment completion
 ```
 
+**Claude Code Integration Workflows:**
+- `claude-code-official.yml` - Primary @claude mention handler for GitHub issues
+- `master-issue-orchestrator.yml` - Master orchestrator for issue processing
+- `parallel-issue-processor.yml` - Parallel issue resolution system
+- `issue-resolution-verification.yml` - Automated verification of issue fixes
+
+**Claude Code Automation Features:**
+- **@claude Mention System**: Responds to @claude mentions in GitHub issue comments
+- **Automated Code Analysis**: Reviews and implements solutions for reported issues
+- **MCP Screenshot Evidence**: Visual documentation of implementation process
+- **User Approval Required**: Always requests user confirmation before code changes
+- **Comprehensive Reporting**: Detailed change reports with file modifications
+
 ### Deployment Strategy
-- **Production**: Push to `main`/`master` branch → Automatic deployment
-- **Container Registry**: `registry.jclee.me/safework/` (app, mysql, redis)
-- **Version Tagging**: `v3.0.YYYYMMDD-HHMM-{git-sha}` format
-- **Health Checks**: Automated container health verification
+- **Production**: Push to `main`/`master` branch → Automatic deployment via GitHub Actions
+- **Container Registry**: `registry.jclee.me/safework/` (admin/bingogo1 credentials)
+- **Version Tagging**: `v3.0.YYYYMMDD-HHMM-{git-sha}` format with automatic Git tagging
+- **Health Checks**: Automated container health verification at port 4545
+- **Zero-Downtime Deployment**: Docker Compose service replacement with health checks
 
 ## Testing Strategy
 
