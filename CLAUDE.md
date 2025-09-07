@@ -180,9 +180,27 @@ Follow the established document workflow:
 - Access logs for compliance
 - Public/private/admin-only permissions
 
+### Development with Claude Integration
+When developing in this repository, leverage the Claude automation system:
+
+**For Bug Fixes:**
+1. Create issue with `[BUG]` prefix
+2. Claude auto-analyzes and creates PR
+3. Review PR and approve deployment
+
+**For New Features:**
+1. Create issue with detailed requirements
+2. Add `@claude` mention for immediate processing
+3. Claude follows SafeWork patterns automatically
+
+**For Bulk Operations:**
+1. Use "대량 이슈 자동 해결기" workflow
+2. Filter by issue type (feature/bug/test)
+3. Claude processes multiple issues sequentially
+
 ## GitOps Deployment System
 
-**Automated Deployment:** Push to `main` branch triggers full CI/CD pipeline:
+**Automated Deployment:** Push to `master` branch triggers full CI/CD pipeline:
 
 1. **Security Scanning:** Trivy, Bandit, Safety for vulnerability detection
 2. **Code Quality:** Black, Flake8, Pylint automated checks
@@ -191,7 +209,7 @@ Follow the established document workflow:
 5. **Deployment:** Automatic staging deployment, manual production approval
 
 **Branch Strategy:**
-- `main`: Production deployments (manual approval required)
+- `master`: Production deployments (automatic after Claude workflow)
 - `staging`: Automatic staging deployments
 - `develop`: Development environment deployments
 
@@ -201,6 +219,58 @@ Follow the established document workflow:
   - `safework/app:latest` (Flask application)
   - `safework/mysql:latest` (MySQL with init scripts)
   - `safework/redis:latest` (Redis cache)
+
+## Claude Code Integration & Automation
+
+**Advanced Claude Automation System:** This repository features a sophisticated AI-powered development workflow using Claude Code integration.
+
+### Claude Workflow Triggers
+```bash
+# Automatic triggers:
+- New issue creation → Claude auto-assigns and analyzes
+- @claude mentions in issue comments → Claude responds and acts
+- Pull request events → Claude reviews and processes
+
+# Manual triggers:
+- GitHub Actions → "Claude Code" workflow → "Run workflow"
+- Bulk issue processing via "대량 이슈 자동 해결기" workflow
+```
+
+### Real-time Progress Tracking
+When Claude is triggered, users see real-time progress updates in the issue:
+
+1. **🤖 Claude 작업 시작!** - Initial analysis begins
+2. **✅ Claude 분석 완료!** - Code modifications completed
+3. **🎉 Claude 작업 완료!** - PR created and merged
+4. **🚀 배포 완료!** - Production deployment finished
+
+### Claude Capabilities in This Repository
+- **Issue Analysis:** Automatically understands Korean issue descriptions
+- **Code Generation:** Follows SafeWork architecture patterns and Korean timezone handling
+- **Database Operations:** Uses proper MySQL 8.0 syntax with transaction management
+- **Testing Integration:** Runs pytest suite and maintains 80%+ coverage
+- **Deployment Integration:** Triggers automatic Docker builds and deployment
+- **Progress Reporting:** Updates issues with detailed status and links
+
+### Claude Configuration
+- **Max Turns:** 30 (configurable in `.github/workflows/claude.yml`)
+- **Sticky Comments:** Progress updates in same comment thread
+- **Progress Tracking:** Real-time status updates with timestamps
+- **Auto-merge:** Automatic PR creation and merging after successful testing
+- **Deployment Trigger:** Successful merges trigger production deployment
+
+### Working with Claude
+```bash
+# Create issue with automatic Claude assignment:
+title: "[BUG] 로그인 실패 문제 수정 필요"
+body: "설명..." + 자동으로 Claude 할당됨
+
+# Manual Claude trigger in existing issue:
+댓글: "@claude 이 문제를 분석하고 수정해주세요"
+
+# Bulk processing:
+GitHub Actions → "대량 이슈 자동 해결기" → Run workflow
+```
 
 ## Code Patterns and Standards
 
@@ -326,3 +396,45 @@ GET    /survey/002                        # Get survey form (002)
 - Database indexing on foreign keys and search fields
 - Lazy loading for relationship queries
 - Pagination for large data sets in admin panels (default: 20 items/page)
+
+## Troubleshooting
+
+### Common Claude Workflow Issues
+
+**"Bad credentials" Error:**
+```bash
+# Check if CLAUDE_CODE_OAUTH_TOKEN is properly set:
+# GitHub → Settings → Secrets and variables → Actions
+# Verify the token has proper permissions in Claude.ai
+```
+
+**Workflow Not Triggering:**
+```bash
+# Verify trigger conditions in .github/workflows/claude.yml:
+- Issue must contain @claude mention
+- New issues auto-trigger Claude
+- Manual workflow dispatch available in GitHub Actions
+```
+
+**Deployment Pipeline Issues:**
+```bash
+# Check docker-compose status:
+docker-compose ps
+
+# Verify database connectivity:
+docker-compose exec app python -c "from models import db; db.create_all()"
+
+# Check Redis connection:
+docker-compose exec app python -c "import redis; r=redis.from_url('redis://redis:6379/0'); print(r.ping())"
+```
+
+### MySQL 8.0 Specific Issues
+- Use `mysql+pymysql://` connection string (not `mysql://`)
+- Ensure UTF8MB4 charset for Korean text support
+- Migration files must use proper MySQL 8.0 syntax (avoid PostgreSQL patterns)
+
+### SafeWork Domain-Specific Notes
+- All timestamps use Korean timezone (`kst_now()` function)
+- Survey forms require JavaScript validation for conditional fields
+- Admin panels expect specific permission levels (`@login_required` decorators)
+- Anonymous survey submissions use special user account (ID=1)
