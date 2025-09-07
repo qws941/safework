@@ -98,6 +98,200 @@
     
     .form-group.half {
         flex: 0 0 calc(50% - 10px);
+    }
+    
+    /* 새로운 카드 기반 UI 스타일 */
+    .body-part-grid {
+        background: var(--sw-gray-50);
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        border: 2px dashed var(--sw-primary);
+        animation: fadeInSlide 0.4s ease-out;
+    }
+    
+    @keyframes fadeInSlide {
+        0% {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        100% {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .body-part-card {
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .body-part-card:hover:not(.disabled) .card {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(99, 102, 241, 0.2);
+        border-color: var(--sw-primary);
+    }
+    
+    .body-part-card .card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 2px solid var(--sw-gray-200);
+        background: var(--sw-white);
+        cursor: pointer;
+    }
+    
+    .body-part-card.disabled .card {
+        background: var(--sw-success);
+        border-color: var(--sw-success);
+        color: white;
+        cursor: default;
+    }
+    
+    .body-part-icon {
+        font-size: 3rem;
+        color: var(--sw-primary);
+        margin-bottom: 0.5rem;
+    }
+    
+    .body-part-card.disabled .body-part-icon {
+        color: white;
+    }
+    
+    .body-part-card .card-title {
+        font-weight: 600;
+        color: var(--sw-gray-900);
+        margin-bottom: 0.25rem;
+    }
+    
+    .body-part-card.disabled .card-title {
+        color: white;
+    }
+    
+    /* 선택된 부위별 증상평가 블록 */
+    .selected-parts-container {
+        margin-top: 24px;
+    }
+    
+    .symptom-evaluation-block {
+        border: 2px solid var(--sw-primary);
+        border-radius: 12px;
+        animation: slideInUp 0.5s ease-out;
+        box-shadow: 0 4px 16px rgba(99, 102, 241, 0.1);
+    }
+    
+    @keyframes slideInUp {
+        0% {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        100% {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .symptom-evaluation-block .card-header {
+        background: linear-gradient(135deg, var(--sw-primary) 0%, var(--sw-primary-dark) 100%);
+        color: white;
+        border-bottom: none;
+        border-radius: 10px 10px 0 0;
+        padding: 16px 20px;
+        font-weight: 600;
+    }
+    
+    .symptom-evaluation-block .card-body {
+        padding: 24px;
+        background: var(--sw-white);
+    }
+    
+    .symptom-evaluation-block .form-label {
+        color: var(--sw-gray-900);
+        font-weight: 600;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .symptom-evaluation-block .text-danger {
+        color: var(--sw-danger) !important;
+    }
+    
+    /* 라디오/체크박스 그룹 개선 */
+    .radio-group-vertical {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .radio-group-vertical label {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 12px;
+        border-radius: 8px;
+        background: var(--sw-gray-50);
+        border: 1px solid var(--sw-gray-200);
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    
+    .radio-group-vertical label:hover {
+        background: var(--sw-primary-light);
+        border-color: var(--sw-primary);
+    }
+    
+    .radio-group-vertical input[type="radio"]:checked + span,
+    .radio-group-vertical input[type="radio"]:checked ~ span {
+        color: var(--sw-primary-dark);
+        font-weight: 600;
+    }
+    
+    .checkbox-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    
+    .checkbox-group label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        background: var(--sw-gray-50);
+        border: 1px solid var(--sw-gray-200);
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-size: 0.9rem;
+    }
+    
+    .checkbox-group label:hover {
+        background: var(--sw-primary-light);
+        border-color: var(--sw-primary);
+    }
+    
+    .checkbox-group input[type="checkbox"]:checked + span {
+        color: var(--sw-primary-dark);
+        font-weight: 600;
+    }
+    
+    /* 통증 정도 옵션 스타일 */
+    .pain-level-option {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .pain-level-option strong {
+        color: var(--sw-gray-900);
+        margin-bottom: 4px;
+    }
+    
+    .pain-level-option small {
+        color: var(--sw-gray-600);
+        font-size: 0.8rem;
+        line-height: 1.3;
+    }
         min-width: 220px;
     }
     
@@ -1172,104 +1366,39 @@
                     아래 표의 통증부위에 해당사항에 체크(✓)하고, 해당 통증부위의 세로줄로 내려가며 해당사항에 체크(✓)해 주십시오.
                 </div>
                 
-                <!-- 부위별 아코디언 UI -->
-                <div class="accordion" id="symptomAccordion">
-                    {% for part in [('목', 'neck'), ('어깨', 'shoulder'), ('팔/팔꿈치', 'arm'), ('손/손목/손가락', 'hand'), ('허리', 'waist'), ('다리/발', 'leg')] %}
-                    <div class="accordion-item">
-                        <h2 class="accordion-header" id="heading{{ part[1] }}">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ part[1] }}" aria-expanded="false" aria-controls="collapse{{ part[1] }}">
-                                <i class="bi bi-person"></i> {{ part[0] }} 부위 증상 평가
-                            </button>
-                        </h2>
-                        <div id="collapse{{ part[1] }}" class="accordion-collapse collapse" aria-labelledby="heading{{ part[1] }}" data-bs-parent="#symptomAccordion">
-                            <div class="accordion-body">
-                                <div class="row">
-                                    <!-- 1. 통증의 구체적 부위 -->
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label"><strong>1. 통증의 구체적 부위는?</strong></label>
-                                        <div class="radio-group-vertical">
-                                            <label><input type="radio" name="{{ part[0] }}_side" value="오른쪽"> 오른쪽</label>
-                                            <label><input type="radio" name="{{ part[0] }}_side" value="왼쪽"> 왼쪽</label>
-                                            <label><input type="radio" name="{{ part[0] }}_side" value="양쪽모두"> 양쪽 모두</label>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- 2. 통증 지속 기간 -->
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label"><strong>2. 한번 아프기 시작하면 통증기간은 얼마동안 지속됩니까?</strong></label>
-                                        <div class="radio-group-vertical">
-                                            <label><input type="radio" name="{{ part[0] }}_duration" value="1일미만"> 1일 미만</label>
-                                            <label><input type="radio" name="{{ part[0] }}_duration" value="1일-1주일미만"> 1일-1주일 미만</label>
-                                            <label><input type="radio" name="{{ part[0] }}_duration" value="1주일-1달미만"> 1주일-1달 미만</label>
-                                            <label><input type="radio" name="{{ part[0] }}_duration" value="1달-6개월미만"> 1달-6개월 미만</label>
-                                            <label><input type="radio" name="{{ part[0] }}_duration" value="6개월이상"> 6개월 이상</label>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- 3. 아픈 정도 -->
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label"><strong>3. 그때의 아픈 정도는 어느 정도입니까?</strong></label>
-                                        <div class="radio-group-vertical">
-                                            <label><input type="radio" name="{{ part[0] }}_severity" value="약간아픔"> 
-                                                <span class="pain-level-option">
-                                                    <strong>약한 통증</strong><br>
-                                                    <small class="text-muted">약간 불편한 정도이나 작업에 열중할 때는 못 느낀다</small>
-                                                </span>
-                                            </label>
-                                            <label><input type="radio" name="{{ part[0] }}_severity" value="보통아픔"> 
-                                                <span class="pain-level-option">
-                                                    <strong>중간 통증</strong><br>
-                                                    <small class="text-muted">작업 중 통증이 있으나 귀가 후 휴식을 취하면 괜찮다</small>
-                                                </span>
-                                            </label>
-                                            <label><input type="radio" name="{{ part[0] }}_severity" value="심하게아픔"> 
-                                                <span class="pain-level-option">
-                                                    <strong>심한 통증</strong><br>
-                                                    <small class="text-muted">작업 중 통증이 비교적 심하고 귀가 후에도 통증이 계속된다</small>
-                                                </span>
-                                            </label>
-                                            <label><input type="radio" name="{{ part[0] }}_severity" value="매우심하게아픔"> 
-                                                <span class="pain-level-option">
-                                                    <strong>매우 심한 통증</strong><br>
-                                                    <small class="text-muted">통증 때문에 작업은 물론 일상생활을 하기가 어렵다</small>
-                                                </span>
-                                            </label>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- 4. 통증 빈도 -->
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label"><strong>4. 이러한 통증은 얼마나 자주 발생합니까?</strong></label>
-                                        <div class="radio-group-vertical">
-                                            <label><input type="radio" name="{{ part[0] }}_frequency" value="매일"> 매일</label>
-                                            <label><input type="radio" name="{{ part[0] }}_frequency" value="일주일에몇번"> 일주일에 몇 번</label>
-                                            <label><input type="radio" name="{{ part[0] }}_frequency" value="한달에몇번"> 한 달에 몇 번</label>
-                                            <label><input type="radio" name="{{ part[0] }}_frequency" value="일년에몇번"> 일년에 몇 번</label>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- 5. 지난주 통증 -->
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label"><strong>5. 지난 한 주 동안에도 이런 통증을 경험하셨습니까?</strong></label>
-                                        <div class="radio-group-vertical">
-                                            <label><input type="radio" name="{{ part[0] }}_lastweek" value="예"> 예</label>
-                                            <label><input type="radio" name="{{ part[0] }}_lastweek" value="아니오"> 아니오</label>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- 6. 치료 여부 -->
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label"><strong>6. 이 통증 때문에 의사의 치료를 받으신 적이 있습니까?</strong></label>
-                                        <div class="radio-group-vertical">
-                                            <label><input type="radio" name="{{ part[0] }}_treatment" value="예"> 예</label>
-                                            <label><input type="radio" name="{{ part[0] }}_treatment" value="아니오"> 아니오</label>
-                                        </div>
+                <!-- 부위 선택 그리드 UI -->
+                <div id="body-part-grid" class="body-part-grid mb-4" style="display: none;">
+                    <h5 class="mb-3"><i class="bi bi-hand-index"></i> 통증이 있는 부위를 선택해주세요</h5>
+                    <div class="row g-3">
+                        {% for part_info in [('목', 'neck', 'bi-person-circle'), ('어깨', 'shoulder', 'bi-person-arms-up'), ('팔/팔꿈치', 'arm', 'bi-person-raised-hand'), ('손/손목/손가락', 'hand', 'bi-hand-index'), ('허리', 'waist', 'bi-person-standing'), ('다리/발', 'leg', 'bi-person-walking')] %}
+                        <div class="col-md-4 col-sm-6">
+                            <div class="body-part-card" 
+                                 data-part="{{ part_info[0] }}" 
+                                 data-part-en="{{ part_info[1] }}"
+                                 onclick="selectBodyPart('{{ part_info[0] }}', '{{ part_info[1] }}')">
+                                <div class="card h-100">
+                                    <div class="card-body text-center">
+                                        <i class="bi {{ part_info[2] }} body-part-icon"></i>
+                                        <h6 class="card-title mt-2">{{ part_info[0] }}</h6>
+                                        <small class="text-muted">클릭하여 선택</small>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
+                    
+                    <!-- 부위 추가 버튼 -->
+                    <div class="text-center mt-4">
+                        <button type="button" class="btn btn-outline-primary" id="add-more-parts" onclick="showBodyPartGrid()">
+                            <i class="bi bi-plus-circle"></i> + 다른 부위 추가
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 선택된 부위별 증상평가 블록 -->
+                <div id="selected-parts-container" class="selected-parts-container">
+                    <!-- 동적으로 생성되는 증상평가 블록들 -->
                 </div>
                 </div>
         </div>
@@ -1285,6 +1414,9 @@
 </div>
 
 <script>
+// 선택된 부위 추적
+let selectedBodyParts = [];
+
 // 폼 검증 및 제출 처리
 document.getElementById('surveyForm').addEventListener('submit', function(e) {
     const hasSymptoms = document.querySelector('input[name="has_symptoms"]:checked');
@@ -1294,21 +1426,58 @@ document.getElementById('surveyForm').addEventListener('submit', function(e) {
         return false;
     }
     
-    // "예"를 선택한 경우 최소 하나의 부위는 응답이 있어야 함
+    // "예"를 선택한 경우 최소 하나의 부위는 선택되어야 함
     if (hasSymptoms.value === '예') {
-        const bodyParts = ['목', '어깨', '팔/팔꿈치', '손/손목/손가락', '허리', '다리/발'];
-        let hasAnyResponse = false;
+        if (selectedBodyParts.length === 0) {
+            e.preventDefault();
+            alert('통증 부위를 하나 이상 선택해 주세요.');
+            return false;
+        }
         
-        bodyParts.forEach(part => {
-            const sideInputs = document.querySelectorAll('input[name="' + part + '_side"]:checked');
-            if (sideInputs.length > 0) {
-                hasAnyResponse = true;
+        // 각 선택된 부위의 필수 문항 검증
+        let validationErrors = [];
+        selectedBodyParts.forEach(part => {
+            const requiredFields = ['duration', 'severity', 'frequency', 'last_week', 'consequences'];
+            
+            // 목과 허리가 아닌 경우에만 side 필드 체크
+            if (part !== '목' && part !== '허리') {
+                requiredFields.unshift('side');
+            }
+            
+            requiredFields.forEach(field => {
+                if (field === 'consequences') {
+                    // 다중선택 필드 검증
+                    const consequences = document.querySelectorAll(`input[name="${part}_${field}"]:checked`);
+                    if (consequences.length === 0) {
+                        validationErrors.push(`${part} 부위의 통증으로 인한 결과를 선택해주세요.`);
+                    }
+                } else {
+                    // 라디오 버튼 필드 검증
+                    const fieldInput = document.querySelector(`input[name="${part}_${field}"]:checked`);
+                    if (!fieldInput) {
+                        const fieldNames = {
+                            'side': '통증의 구체적 부위',
+                            'duration': '통증 지속기간',
+                            'severity': '통증 정도',
+                            'frequency': '지난 1년 빈도',
+                            'last_week': '지난 1주 증상'
+                        };
+                        validationErrors.push(`${part} 부위의 ${fieldNames[field]}을 선택해주세요.`);
+                    }
+                }
+            });
+            
+            // 기타 선택 시 텍스트 입력 검증
+            const otherInput = document.querySelector(`input[name="${part}_consequence_other"]`);
+            const hasOtherSelected = document.querySelector(`input[name="${part}_consequences"][value="기타"]`);
+            if (hasOtherSelected && hasOtherSelected.checked && (!otherInput || !otherInput.value.trim())) {
+                validationErrors.push(`${part} 부위의 기타 사항을 입력해주세요.`);
             }
         });
         
-        if (!hasAnyResponse) {
+        if (validationErrors.length > 0) {
             e.preventDefault();
-            alert('통증 부위를 하나 이상 선택해 주세요.');
+            alert(validationErrors.join('\n'));
             return false;
         }
         
@@ -1386,47 +1555,292 @@ leisureCheckboxes.forEach(checkbox => {
     });
 });
 
-// 증상 데이터 수집 함수
-function collectSymptomData() {
-    const bodyParts = ['목', '어깨', '팔/팔꿈치', '손/손목/손가락', '허리', '다리/발'];
-    const symptomData = {};
-    
-    bodyParts.forEach(part => {
-        const sideInput = document.querySelector('input[name="' + part + '_side"]:checked');
-        if (sideInput) {
-            const durationInput = document.querySelector('input[name="' + part + '_duration"]:checked');
-            const severityInput = document.querySelector('input[name="' + part + '_severity"]:checked');
-            const frequencyInput = document.querySelector('input[name="' + part + '_frequency"]:checked');
-            const lastWeekInput = document.querySelector('input[name="' + part + '_last_week"]:checked');
-            
-            const treatmentInputs = document.querySelectorAll('input[name="' + part + '_treatment"]:checked');
-            const treatmentOther = document.querySelector('input[name="' + part + '_treatment_other"]');
-            
-            let treatments = Array.from(treatmentInputs).map(input => input.value);
-            if (treatmentOther && treatmentOther.value) {
-                treatments.push(treatmentOther.value);
-            }
-            
-            symptomData[part] = {
-                side: sideInput.value,
-                duration: durationInput?.value || '',
-                severity: severityInput?.value || '',
-                frequency: frequencyInput?.value || '',
-                last_week: lastWeekInput?.value || '',
-                treatments: treatments
-            };
+// 부위 선택 그리드 표시/숨김
+function showBodyPartGrid() {
+    const grid = document.getElementById('body-part-grid');
+    grid.style.display = 'block';
+    grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    updateBodyPartCards();
+}
+
+function hideBodyPartGrid() {
+    document.getElementById('body-part-grid').style.display = 'none';
+}
+
+// 부위 카드 상태 업데이트 (선택된 부위는 비활성화)
+function updateBodyPartCards() {
+    document.querySelectorAll('.body-part-card').forEach(card => {
+        const part = card.dataset.part;
+        if (selectedBodyParts.includes(part)) {
+            card.classList.add('disabled');
+            card.style.pointerEvents = 'none';
+            card.querySelector('.card').classList.add('border-success');
+            card.querySelector('.card-body').innerHTML = `
+                <i class="bi bi-check-circle-fill text-success" style="font-size: 2rem;"></i>
+                <h6 class="card-title mt-2">${part}</h6>
+                <small class="text-success">선택됨</small>
+            `;
+        } else {
+            card.classList.remove('disabled');
+            card.style.pointerEvents = 'auto';
+            card.querySelector('.card').classList.remove('border-success');
         }
+    });
+}
+
+// 부위 선택 처리
+function selectBodyPart(partName, partEn) {
+    if (selectedBodyParts.includes(partName)) {
+        return; // 이미 선택된 부위는 무시
+    }
+    
+    selectedBodyParts.push(partName);
+    createSymptomEvaluationBlock(partName, partEn);
+    updateBodyPartCards();
+    hideBodyPartGrid();
+}
+
+// 부위별 증상평가 블록 생성
+function createSymptomEvaluationBlock(partName, partEn) {
+    const container = document.getElementById('selected-parts-container');
+    const blockId = `symptom-block-${partEn}`;
+    
+    // 목과 허리는 '통증의 구체적 부위' 문항을 숨김
+    const hideSideQuestion = (partName === '목' || partName === '허리');
+    
+    const blockHtml = `
+        <div class="card mb-4 symptom-evaluation-block" id="${blockId}" data-part="${partName}">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <i class="bi bi-person-circle text-primary"></i> 
+                    ${partName} 부위 증상평가
+                </h6>
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSymptomBlock('${partName}', '${partEn}')">
+                    <i class="bi bi-x"></i> 삭제
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    ${!hideSideQuestion ? `
+                    <!-- 1. 통증의 구체적 부위 -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label"><strong>1. 통증의 구체적 부위는?</strong> <span class="text-danger">*</span></label>
+                        <div class="radio-group-vertical">
+                            <label><input type="radio" name="${partName}_side" value="right" required> 오른쪽</label>
+                            <label><input type="radio" name="${partName}_side" value="left" required> 왼쪽</label>
+                            <label><input type="radio" name="${partName}_side" value="both" required> 양쪽 모두</label>
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    <!-- 2. 통증 지속 기간 -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label"><strong>${!hideSideQuestion ? '2' : '1'}. 한번 아프기 시작하면 통증기간은 얼마동안 지속됩니까?</strong> <span class="text-danger">*</span></label>
+                        <div class="radio-group-vertical">
+                            <label><input type="radio" name="${partName}_duration" value="under1d" required> 1일 미만</label>
+                            <label><input type="radio" name="${partName}_duration" value="1d_1w" required> 1일~1주</label>
+                            <label><input type="radio" name="${partName}_duration" value="1w_1m" required> 1주~1달</label>
+                            <label><input type="radio" name="${partName}_duration" value="1m_6m" required> 1달~6개월</label>
+                            <label><input type="radio" name="${partName}_duration" value="over6m" required> 6개월 이상</label>
+                        </div>
+                    </div>
+                    
+                    <!-- 3. 통증 정도 -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label"><strong>${!hideSideQuestion ? '3' : '2'}. 그때의 아픈 정도는 어느 정도입니까?</strong> <span class="text-danger">*</span></label>
+                        <div class="radio-group-vertical">
+                            <label><input type="radio" name="${partName}_severity" value="mild" required> 
+                                <span class="pain-level-option">
+                                    <strong>약한</strong><br>
+                                    <small class="text-muted">약간 불편한 정도</small>
+                                </span>
+                            </label>
+                            <label><input type="radio" name="${partName}_severity" value="moderate" required> 
+                                <span class="pain-level-option">
+                                    <strong>중간</strong><br>
+                                    <small class="text-muted">작업 중 통증 있음</small>
+                                </span>
+                            </label>
+                            <label><input type="radio" name="${partName}_severity" value="severe" required> 
+                                <span class="pain-level-option">
+                                    <strong>심한</strong><br>
+                                    <small class="text-muted">지속적인 통증</small>
+                                </span>
+                            </label>
+                            <label><input type="radio" name="${partName}_severity" value="verysevere" required> 
+                                <span class="pain-level-option">
+                                    <strong>매우 심한</strong><br>
+                                    <small class="text-muted">일상생활 어려움</small>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- 4. 지난 1년 빈도 -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label"><strong>${!hideSideQuestion ? '4' : '3'}. 지난 1년간 이러한 통증은 얼마나 자주 발생했습니까?</strong> <span class="text-danger">*</span></label>
+                        <div class="radio-group-vertical">
+                            <label><input type="radio" name="${partName}_frequency" value="6m1" required> 6개월에 1번</label>
+                            <label><input type="radio" name="${partName}_frequency" value="2to3m1" required> 2~3달에 1번</label>
+                            <label><input type="radio" name="${partName}_frequency" value="1m1" required> 1달에 1번</label>
+                            <label><input type="radio" name="${partName}_frequency" value="1w1" required> 1주일에 1번</label>
+                            <label><input type="radio" name="${partName}_frequency" value="daily" required> 매일</label>
+                        </div>
+                    </div>
+                    
+                    <!-- 5. 지난 1주 증상 -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label"><strong>${!hideSideQuestion ? '5' : '4'}. 지난 1주 동안에도 이런 통증을 경험하셨습니까?</strong> <span class="text-danger">*</span></label>
+                        <div class="radio-group-vertical">
+                            <label><input type="radio" name="${partName}_last_week" value="true" required> 예</label>
+                            <label><input type="radio" name="${partName}_last_week" value="false" required> 아니오</label>
+                        </div>
+                    </div>
+                    
+                    <!-- 6. 통증으로 인한 결과 -->
+                    <div class="col-12 mb-3">
+                        <label class="form-label"><strong>${!hideSideQuestion ? '6' : '5'}. 통증으로 인한 결과 (다중선택 가능)</strong> <span class="text-danger">*</span></label>
+                        <div class="checkbox-group">
+                            <label><input type="checkbox" name="${partName}_consequences" value="병원·한의원 치료"> 병원·한의원 치료</label>
+                            <label><input type="checkbox" name="${partName}_consequences" value="약국치료"> 약국치료</label>
+                            <label><input type="checkbox" name="${partName}_consequences" value="병가·산재"> 병가·산재</label>
+                            <label><input type="checkbox" name="${partName}_consequences" value="작업 전환"> 작업 전환</label>
+                            <label><input type="checkbox" name="${partName}_consequences" value="해당사항 없음"> 해당사항 없음</label>
+                            <label><input type="checkbox" name="${partName}_consequences" value="기타" onchange="toggleOtherInput('${partName}')"> 기타</label>
+                        </div>
+                        <div id="${partName}_other_container" class="mt-2" style="display: none;">
+                            <input type="text" name="${partName}_consequence_other" class="form-control" placeholder="기타 사항을 입력해주세요">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', blockHtml);
+    
+    // 생성된 블록으로 스크롤
+    document.getElementById(blockId).scrollIntoView({ behavior: 'smooth', block: 'center' });
+    
+    // 해당사항 없음 선택 시 다른 옵션 비활성화
+    setupConsequencesExclusive(partName);
+}
+
+// 기타 입력 필드 토글
+function toggleOtherInput(partName) {
+    const checkbox = document.querySelector(`input[name="${partName}_consequences"][value="기타"]`);
+    const container = document.getElementById(`${partName}_other_container`);
+    
+    if (checkbox.checked) {
+        container.style.display = 'block';
+    } else {
+        container.style.display = 'none';
+        const input = container.querySelector('input');
+        if (input) input.value = '';
+    }
+}
+
+// 결과 체크박스 exclusive 처리
+function setupConsequencesExclusive(partName) {
+    const noneCheckbox = document.querySelector(`input[name="${partName}_consequences"][value="해당사항 없음"]`);
+    const otherCheckboxes = document.querySelectorAll(`input[name="${partName}_consequences"]:not([value="해당사항 없음"])`);
+    
+    if (noneCheckbox) {
+        noneCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                otherCheckboxes.forEach(cb => {
+                    cb.checked = false;
+                });
+                // 기타 입력 필드 숨기기
+                const otherContainer = document.getElementById(`${partName}_other_container`);
+                if (otherContainer) {
+                    otherContainer.style.display = 'none';
+                    const input = otherContainer.querySelector('input');
+                    if (input) input.value = '';
+                }
+            }
+        });
+    }
+    
+    otherCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            if (this.checked && noneCheckbox) {
+                noneCheckbox.checked = false;
+            }
+        });
+    });
+}
+
+// 증상평가 블록 삭제
+function removeSymptomBlock(partName, partEn) {
+    const blockId = `symptom-block-${partEn}`;
+    const block = document.getElementById(blockId);
+    if (block) {
+        block.remove();
+    }
+    
+    // 선택된 부위 목록에서 제거
+    selectedBodyParts = selectedBodyParts.filter(part => part !== partName);
+    updateBodyPartCards();
+}
+
+// 증상 데이터 수집 함수 (새로운 구조에 맞춤)
+function collectSymptomData() {
+    const symptomDetails = [];
+    
+    selectedBodyParts.forEach(part => {
+        const sideInput = document.querySelector(`input[name="${part}_side"]:checked`);
+        const durationInput = document.querySelector(`input[name="${part}_duration"]:checked`);
+        const severityInput = document.querySelector(`input[name="${part}_severity"]:checked`);
+        const frequencyInput = document.querySelector(`input[name="${part}_frequency"]:checked`);
+        const lastWeekInput = document.querySelector(`input[name="${part}_last_week"]:checked`);
+        
+        const consequenceInputs = document.querySelectorAll(`input[name="${part}_consequences"]:checked`);
+        const otherInput = document.querySelector(`input[name="${part}_consequence_other"]`);
+        
+        let consequences = Array.from(consequenceInputs).map(input => input.value);
+        let consequenceOther = null;
+        
+        if (otherInput && otherInput.value.trim()) {
+            consequenceOther = otherInput.value.trim();
+        }
+        
+        const partData = {
+            part: getPartEnglishName(part),
+            side: sideInput ? sideInput.value : null, // 목/허리는 null
+            duration: durationInput?.value || null,
+            severity: severityInput?.value || null,
+            frequency: frequencyInput?.value || null,
+            last_week: lastWeekInput ? (lastWeekInput.value === 'true') : null,
+            consequences: consequences,
+            consequence_other: consequenceOther
+        };
+        
+        symptomDetails.push(partData);
     });
     
     // 데이터를 숨겨진 input에 저장
-    let hiddenInput = document.querySelector('input[name="symptoms_json_data"]');
+    let hiddenInput = document.querySelector('input[name="musculo_details_json"]');
     if (!hiddenInput) {
         hiddenInput = document.createElement('input');
         hiddenInput.type = 'hidden';
-        hiddenInput.name = 'symptoms_json_data';
+        hiddenInput.name = 'musculo_details_json';
         document.getElementById('surveyForm').appendChild(hiddenInput);
     }
-    hiddenInput.value = JSON.stringify(symptomData);
+    hiddenInput.value = JSON.stringify(symptomDetails);
+}
+
+// 부위명을 영어로 변환
+function getPartEnglishName(partName) {
+    const partMap = {
+        '목': 'neck',
+        '어깨': 'shoulder', 
+        '팔/팔꿈치': 'arm',
+        '손/손목/손가락': 'hand',
+        '허리': 'waist',
+        '다리/발': 'leg'
+    };
+    return partMap[partName] || partName;
 }
 
 // 초기 상태 설정 및 모든 이벤트 리스너 초기화
@@ -1435,10 +1849,19 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('input[name="has_symptoms"]').forEach(radio => {
         radio.addEventListener('change', function() {
             const symptomDetails = document.getElementById('symptom-details');
+            const bodyPartGrid = document.getElementById('body-part-grid');
+            const selectedPartsContainer = document.getElementById('selected-parts-container');
+            
             if (this.value === '예') {
                 symptomDetails.style.display = 'block';
+                // 부위 선택 그리드 표시
+                showBodyPartGrid();
             } else {
                 symptomDetails.style.display = 'none';
+                // 그리드 숨기고 모든 선택 초기화
+                bodyPartGrid.style.display = 'none';
+                selectedPartsContainer.innerHTML = '';
+                selectedBodyParts = [];
             }
         });
     });
