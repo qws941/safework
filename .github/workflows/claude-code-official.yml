@@ -7,9 +7,19 @@ on:
     types: [created]
 
 permissions:
+  actions: write
+  checks: write
   contents: write
+  deployments: write
+  id-token: write
   issues: write
+  discussions: write
+  packages: write
+  pages: write
   pull-requests: write
+  repository-projects: write
+  security-events: write
+  statuses: write
 
 jobs:
   claude:
@@ -24,6 +34,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
+          persist-credentials: true
 
       - name: Debug Event Information
         run: |
@@ -37,6 +48,8 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           prompt: |
             SafeWork 프로젝트의 GitHub 이슈를 자동으로 처리해주세요.
             
