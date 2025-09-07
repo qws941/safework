@@ -1,8 +1,6 @@
 name: SafeWork 배포 파이프라인
 
 on:
-  push:
-    branches: [master, main]
   workflow_run:
     workflows: ["Claude Code"]
     types: [completed]
@@ -16,7 +14,6 @@ env:
 jobs:
   deploy:
     if: |
-      github.event_name == 'push' || 
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
@@ -72,6 +69,8 @@ jobs:
             
             if (context.eventName === "workflow_run") {
               console.log("✅ Claude 작업 후 자동 배포 성공!");
+              console.log("워크플로우명:", context.payload.workflow_run.name);
+              console.log("워크플로우 결과:", context.payload.workflow_run.conclusion);
               
               // 최근 이슈에서 Claude 관련 이슈 찾기
               try {
@@ -123,5 +122,5 @@ jobs:
                 console.log("이슈 업데이트 중 오류:", error.message);
               }
             } else {
-              console.log("✅ 수동 푸시 후 배포 성공!");
+              console.log("✅ 수동 배포 성공!");
             }
