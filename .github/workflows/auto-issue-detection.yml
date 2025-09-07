@@ -7,6 +7,12 @@ on:
     # 매 30분마다 열린 이슈 확인 및 Claude 자동 할당
     - cron: '*/30 * * * *'  # 30분마다 실행
   workflow_dispatch:
+    inputs:
+      test_mode:
+        description: '테스트 모드 실행'
+        required: false
+        default: 'true'
+        type: boolean
 
 env:
   TZ: Asia/Seoul
