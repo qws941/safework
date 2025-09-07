@@ -41,23 +41,14 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            const currentTime = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+            const runUrl = process.env.GITHUB_SERVER_URL + '/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId;
+            
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.payload.issue.number,
-              body: `🤖 **Claude 작업 시작!**
-              
-              📋 **진행 상황 추적**
-              - ⏳ 이슈 분석 중...
-              - ⏸️ 코드 수정 대기 중
-              - ⏸️ 테스트 실행 대기 중  
-              - ⏸️ PR 생성 대기 중
-              - ⏸️ 배포 대기 중
-              
-              **🔄 실시간 업데이트가 이 댓글에서 진행됩니다.**
-              
-              ---
-              ⏰ 시작 시간: \\${new Date().toLocaleString('ko-KR')} | 🚀 GitHub Actions 실행: [#\\${context.runId}](\\${process.env.GITHUB_SERVER_URL}/\\${context.repo.owner}/\\${context.repo.repo}/actions/runs/\\${context.runId})`
+              body: '🤖 **Claude 작업 시작!**\n\n📋 **진행 상황 추적**\n- ⏳ 이슈 분석 중...\n- ⏸️ 코드 수정 대기 중\n- ⏸️ 테스트 실행 대기 중\n- ⏸️ PR 생성 대기 중\n- ⏸️ 배포 대기 중\n\n**🔄 실시간 업데이트가 이 댓글에서 진행됩니다.**\n\n---\n⏰ 시작 시간: ' + currentTime + ' | 🚀 GitHub Actions 실행: [#' + context.runId + '](' + runUrl + ')'
             });
 
       - name: Enhanced Claude Code Assistant  
@@ -162,16 +153,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.payload.issue.number,
-              body: `✅ **Claude 분석 완료!**
-              
-              📋 **진행 상황 업데이트**
-              - ✅ 이슈 분석 완료
-              - ✅ 코드 수정 완료
-              - ⏳ PR 생성 중...
-              - ⏸️ 자동 병합 대기 중
-              - ⏸️ 배포 대기 중
-              
-              **🔄 곧 PR이 자동으로 생성됩니다...**`
+              body: '✅ **Claude 분석 완료!**\n\n📋 **진행 상황 업데이트**\n- ✅ 이슈 분석 완료\n- ✅ 코드 수정 완료\n- ⏳ PR 생성 중...\n- ⏸️ 자동 병합 대기 중\n- ⏸️ 배포 대기 중\n\n**🔄 곧 PR이 자동으로 생성됩니다...**'
             });
 
       - name: Advanced Auto PR and Merge
@@ -184,11 +166,22 @@ jobs:
             console.log('이슈 제목:', context.payload.issue?.title);
             
             if (context.payload.issue?.number) {
+              const currentTime = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+              const runUrl = process.env.GITHUB_SERVER_URL + '/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId;
+              
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.payload.issue.number,
-                body: '🎉 **Claude 작업 완료!**\n\n✅ 이슈가 성공적으로 처리되었습니다.\n\n📋 **처리 완료 사항:**\n- 이슈 분석 완료\n- 코드 수정 완료\n- 자동 배포 진행 중\n\n🚀 변경사항이 운영 환경에 반영될 예정입니다!'
+                body: '🎉 **Claude 작업 완료!**\n\n📋 **최종 진행 상황**\n- ✅ 이슈 분석 완료\n- ✅ 코드 수정 완료\n- ✅ PR 생성 및 병합 완료\n- ⏳ 자동 배포 진행 중...\n- ⏸️ 운영 반영 대기 중\n\n**🚀 변경사항이 master 브랜치에 적용되었습니다!**\n\n**📊 작업 세부사항:**\n- **완료 시간**: ' + currentTime + '\n- **자동 배포**: Docker 빌드 및 레지스트리 푸시 중\n- **예상 완료**: 약 5-10분 후\n\n**🔗 참고 링크:**\n- [GitHub Actions 로그](' + runUrl + ')\n- [Docker Registry](https://registry.jclee.me)\n\n---\n🤖 *Enhanced Claude Automation System v2.0*'
+              });
+              
+              // 이슈 자동 닫기
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.issue.number,
+                state: 'closed'
               });
             }
 
