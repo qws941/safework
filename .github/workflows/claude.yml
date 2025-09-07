@@ -1,46 +1,155 @@
-name: Claude Code
+name: Claude Code - 통합 자동화
 
 on:
+  # 이슈 관련
   issues:
-    types: [opened, labeled]
+    types: [opened, edited, labeled, assigned]
   issue_comment:
-    types: [created]
+    types: [created, edited]
+  
+  # PR 관련  
   pull_request:
-    types: [opened, ready_for_review]
+    types: [opened, edited, ready_for_review]
   pull_request_review_comment:
     types: [created]
+  
+  # 스케줄 (매일 체크)
+  schedule:
+    - cron: '0 0 * * *'  # 매일 오전 9시 KST
+  
+  # 수동 실행
+  workflow_dispatch:
 
 permissions:
   contents: write
   issues: write
   pull-requests: write
+  actions: write
 
 jobs:
+  # 이슈 자동 라벨링
+  auto-label:
+    if: github.event_name == 'issues' && github.event.action == 'opened'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 이슈 자동 분류
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issue = context.payload.issue;
+            const content = (issue.title + ' ' + (issue.body || '')).toLowerCase();
+            
+            // 라벨 결정
+            const labels = [];
+            
+            if (content.includes('버그') || content.includes('bug') || content.includes('오류')) {
+              labels.push('bug');
+            } else if (content.includes('기능') || content.includes('feature')) {
+              labels.push('enhancement');
+            } else {
+              labels.push('task');
+            }
+            
+            if (content.includes('긴급') || content.includes('urgent')) {
+              labels.push('P0-urgent');
+            } else {
+              labels.push('P2-medium');
+            }
+            
+            labels.push('new', 'claude-ready');
+            
+            // 라벨 적용
+            await github.rest.issues.setLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              labels: labels
+            });
+
+  # Claude 메인 처리
   claude:
     if: |
-      (
-        github.event_name == 'issue_comment' && 
-        contains(github.event.comment.body, '@claude')
-      ) || (
-        github.event_name == 'pull_request_review_comment' && 
-        contains(github.event.comment.body, '@claude')
-      ) || (
-        github.event_name == 'issues' && 
-        github.event.action == 'opened'
-      ) || (
-        github.event_name == 'issues' && 
-        github.event.action == 'labeled' && 
-        contains(github.event.label.name, 'claude')
-      ) || (
-        github.event_name == 'pull_request' && 
-        github.event.action == 'opened'
-      )
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'issues' && github.event.action == 'opened') ||
+      (github.event_name == 'issues' && github.event.action == 'labeled' && contains(github.event.label.name, 'claude')) ||
+      (github.event_name == 'pull_request' && github.event.action == 'opened') ||
+      (github.event_name == 'schedule') ||
+      (github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     
     steps:
       - uses: actions/checkout@v4
       
-      - uses: anthropics/claude-code-action@v1
+      - name: Claude Code 자동 처리
+        uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          custom_instructions: |
+            ## SafeWork 프로젝트 자동 처리
+            
+            ### 이슈 처리 방식
+            1. **새 이슈 생성시**: 자동으로 분석하고 해결 시작
+            2. **@claude 멘션**: 즉시 처리
+            3. **스케줄 실행**: 미해결 이슈들 자동 처리
+            
+            ### 처리 순서
+            1. 이슈 분석 및 이해
+            2. 코드 직접 수정
+            3. 테스트 작성
+            4. 커밋 생성
+            5. PR 자동 생성
+            6. 완료 보고
+            
+            ### 코딩 가이드
+            - Flask 3.0+ 기반
+            - Bootstrap 4.6 UI
+            - jQuery JavaScript
+            - pytest 테스트
+            - PEP 8 스타일
+            
+            **반드시 PR까지 생성 완료하기!**
+
+  # 일일 이슈 점검
+  daily-check:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 미처리 이슈 자동 해결
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // 3일 이상 된 오픈 이슈들 찾기
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              sort: 'created'
+            });
+            
+            const oldIssues = issues.data.filter(issue => {
+              const created = new Date(issue.created_at);
+              const now = new Date();
+              const days = (now - created) / (1000 * 60 * 60 * 24);
+              return days > 3 && !issue.pull_request;
+            });
+            
+            // 각 오래된 이슈에 @claude 트리거
+            for (const issue of oldIssues.slice(0, 5)) { // 최대 5개씩
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `@claude 
+
+이 이슈가 3일 이상 미해결 상태입니다. 자동으로 처리를 시작합니다.
+
+**자동 처리 승인됨**`
+              });
+              
+              // 처리 간격
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            }
