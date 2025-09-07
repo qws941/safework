@@ -152,77 +152,39 @@ jobs:
             console.log(`✅ 자동 이슈 생성 완료: #${issue.data.number}`);
             console.log(`🔗 URL: ${issue.data.html_url}`);
 
-  # 3단계: Claude 자동 할당
-  assign-to-claude:
+  # 3단계: Claude 워크플로우 트리거  
+  trigger-claude:
     needs: [detect-issues, create-auto-issues]
     if: needs.detect-issues.outputs.issues-found == 'true'
     runs-on: ubuntu-latest
     permissions:
-      issues: write
+      actions: write
+      contents: read
       
     steps:
-      - name: 🤖 Claude 자동 할당
+      - name: 🚀 Claude 워크플로우 트리거
         uses: actions/github-script@v7
         with:
           script: |
             const { owner, repo } = context.repo;
             
-            // 최근 생성된 claude-ready 이슈 찾기
-            const issues = await github.rest.issues.listForRepo({
-              owner,
-              repo,
-              labels: '🤖 claude-ready,🆕 new',
-              state: 'open',
-              sort: 'created',
-              direction: 'desc',
-              per_page: 1
-            });
-            
-            if (issues.data.length === 0) {
-              console.log('❌ 할당할 이슈를 찾을 수 없습니다.');
-              return;
+            // Claude Code 워크플로우 실행
+            try {
+              const response = await github.rest.actions.createWorkflowDispatch({
+                owner,
+                repo,
+                workflow_id: 'claude.yml',
+                ref: 'main'
+              });
+              
+              console.log('✅ Claude 워크플로우 트리거 완료');
+            } catch (error) {
+              console.error('❌ Claude 워크플로우 트리거 실패:', error);
             }
-            
-            const issue = issues.data[0];
-            
-            // 이슈에 댓글 추가 (Claude 트리거)
-            await github.rest.issues.createComment({
-              owner,
-              repo,
-              issue_number: issue.number,
-              body: `🚀 **자동 할당 완료**
-              
-              @claude 이 이슈를 자동으로 할당받았습니다. 
-              SafeWork 시스템의 코드 품질을 개선해 주세요!
-              
-              **작업 가이드라인:**
-              - Flask 3.0+ 패턴 준수
-              - MySQL 8.0 호환성 유지
-              - 실제 코드 수정 필수 (분석만 하지 말고!)
-              - 변경사항 커밋 및 PR 생성
-              
-              작업을 시작해 주세요! 🔧`
-            });
-            
-            // 라벨 업데이트  
-            await github.rest.issues.setLabels({
-              owner,
-              repo,
-              issue_number: issue.number,
-              labels: [
-                '🤖 claude-ready',
-                '🚧 in-progress',
-                '♻️ refactor', 
-                '🟡 P2-medium',
-                '⚙️ backend'
-              ]
-            });
-            
-            console.log(`✅ Claude 자동 할당 완료: #${issue.number}`);
 
   # 4단계: 알림
   notify-completion:
-    needs: [detect-issues, create-auto-issues, assign-to-claude]
+    needs: [detect-issues, create-auto-issues, trigger-claude]
     if: always()
     runs-on: ubuntu-latest
     

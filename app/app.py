@@ -167,7 +167,7 @@ def create_app(config_name=None):
                     }
                 else:
                     raise Exception("Git command failed")
-        except:
+        except Exception:
             # Git 명령 실패시 fallback
             app_version = app.config["APP_VERSION"]
             version_info = {

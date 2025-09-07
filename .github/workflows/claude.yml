@@ -4,18 +4,17 @@ on:
   issue_comment:
     types: [created]
   issues:
-    types: [opened, labeled]
-  schedule:
-    # 매 30분마다 열린 이슈 자동 감지
-    - cron: '*/30 * * * *'
+    types: [opened]
+  pull_request:
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
 
 jobs:
   claude:
     if: |
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || !contains(github.event.issue.body, '@claude'))) ||
-      github.event_name == 'schedule' ||
+      (github.event_name == 'issues') ||
+      (github.event_name == 'pull_request') ||
       github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
@@ -24,60 +23,38 @@ jobs:
       pull-requests: write
     
     steps:
-      - name: 🔍 열린 이슈 자동 감지 및 Claude 할당
-        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-        uses: actions/github-script@v7
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
-          script: |
-            const { owner, repo } = context.repo;
-            
-            // 열린 이슈 중 @claude 없는 것 찾기
-            const openIssues = await github.rest.issues.listForRepo({
-              owner,
-              repo,
-              state: 'open',
-              per_page: 10
-            });
-            
-            for (const issue of openIssues.data) {
-              // PR은 제외
-              if (issue.pull_request) continue;
-              
-              // 이미 @claude가 있는지 확인
-              const comments = await github.rest.issues.listComments({
-                owner,
-                repo,
-                issue_number: issue.number
-              });
-              
-              const hasClaudeComment = comments.data.some(comment => 
-                comment.body.includes('@claude')
-              );
-              
-              const hasClaudeInBody = issue.body && issue.body.includes('@claude');
-              
-              // @claude가 없다면 댓글 추가
-              if (!hasClaudeComment && !hasClaudeInBody) {
-                await github.rest.issues.createComment({
-                  owner,
-                  repo,
-                  issue_number: issue.number,
-                  body: `🤖 **자동 감지**: 이 이슈를 @claude가 분석하고 해결하겠습니다.
-                  
-**SafeWork 시스템 개선 요청**
-- 이슈를 분석하고 실제 코드를 수정해 주세요
-- Flask 패턴과 기존 스타일을 유지해 주세요  
-- 작업 완료 후 커밋하고 이슈를 닫아주세요
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-@claude 지금 바로 이 이슈를 해결해 주세요! 🚀`
-                });
-                
-                console.log(`✅ 이슈 #${issue.number}에 Claude 자동 할당`);
-              }
-            }
-
-      - uses: anthropics/claude-code-action@v1
+      - name: Claude Code Assistant
+        uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          claude_args: "--max-turns 0"
+          prompt: |
+            당신은 SafeWork 프로젝트의 전문 개발자입니다.
+            
+            **프로젝트 컨텍스트:**
+            - Flask 3.0+ 기반 산업 안전 보건 관리 시스템
+            - MySQL 8.0, Redis, Bootstrap 4.6 사용
+            - 설문조사, 건강검진, 문서관리 기능 제공
+            
+            **작업 지침:**
+            1. 한국어로 사용자와 소통하세요
+            2. 기존 코드 패턴과 스타일을 유지하세요
+            3. Flask 블루프린트 구조를 따르세요
+            4. 데이터베이스 변경시 마이그레이션을 생성하세요
+            5. 보안과 성능을 고려하세요
+            6. 테스트 작성을 권장합니다
+            
+            **이슈 해결 시:**
+            - 문제를 정확히 파악하고 분석하세요
+            - 코드를 수정하기 전에 현재 상태를 확인하세요
+            - 변경사항을 단계별로 설명하세요
+            - 작업 완료 후 적절한 커밋 메시지로 커밋하세요
+            
+            CLAUDE.md 파일의 지침을 참고하여 작업해주세요.
+          claude_args: "--max-turns 20"
 

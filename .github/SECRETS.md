@@ -10,6 +10,7 @@ SafeWork 프로젝트의 GitHub Actions가 정상 작동하려면 다음 Secrets
 
 | Secret Name | Description | Example Value |
 |-------------|-------------|---------------|
+| `CLAUDE_CODE_OAUTH_TOKEN` | Claude Code OAuth 토큰 ⭐️ | `cc_oauth_...` |
 | `REGISTRY_PASSWORD` | Docker 레지스트리 비밀번호 | `bingogo1` |
 | `REGISTRY_URL` | Docker 레지스트리 URL (선택사항) | `registry.jclee.me` |
 | `REGISTRY_USER` | Docker 레지스트리 사용자명 (선택사항) | `admin` |
@@ -31,12 +32,28 @@ SafeWork 프로젝트의 GitHub Actions가 정상 작동하려면 다음 Secrets
 
 ### GitHub CLI 사용:
 ```bash
-# 필수 패스워드만 설정 (나머지는 기본값 사용)
+# 1. Claude OAuth 토큰 설정 (필수!)
+gh secret set CLAUDE_CODE_OAUTH_TOKEN -b "cc_oauth-your-token-here"
+
+# 2. Docker 레지스트리 설정
 gh secret set REGISTRY_PASSWORD -b "bingogo1"
 
 # 선택사항: 다른 레지스트리 사용 시
 gh secret set REGISTRY_URL -b "your-registry.com"
 gh secret set REGISTRY_USER -b "your-username"
+```
+
+### Claude Code 설정 방법:
+```bash
+# ✅ 이미 OAuth 토큰이 설정되어 있습니다!
+# 추가 설정 불필요 - 워크플로우가 자동으로 작동합니다
+
+# OAuth 토큰 확인 방법:
+gh secret list | grep CLAUDE_CODE_OAUTH_TOKEN
+
+# OAuth 토큰 재설정이 필요한 경우:
+# 1. Claude Code 터미널에서 /install-github-app 실행
+# 2. 또는 GitHub Settings에서 직접 토큰 업데이트
 ```
 
 ## 🔍 Secrets 검증
