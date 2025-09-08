@@ -1,8 +1,8 @@
-name: SafeWork Advanced Deployment Pipeline
+name: SafeWork Deployment Pipeline
 
 on:
   workflow_run:
-    workflows: ["SafeWork Claude AI Advanced"]
+    workflows: ["SafeWork Claude AI"]
     types: [completed]
     branches: [master, main]
   workflow_dispatch:

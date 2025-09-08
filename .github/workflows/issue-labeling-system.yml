@@ -1,4 +1,4 @@
-name: SafeWork Issue Labeling System
+name: SafeWork Issue Labeling
 
 on:
   issues:

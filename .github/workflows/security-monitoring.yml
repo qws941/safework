@@ -1,4 +1,4 @@
-name: SafeWork Security Monitoring & PHI Protection
+name: SafeWork Security Monitoring
 
 on:
   push:

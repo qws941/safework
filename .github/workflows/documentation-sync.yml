@@ -1,4 +1,4 @@
-name: SafeWork Documentation Sync & API Docs Generation
+name: SafeWork Documentation Sync
 
 on:
   push:
