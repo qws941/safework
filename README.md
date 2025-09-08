@@ -850,12 +850,35 @@ docker-compose up -d
 - 헬스체크 엔드포인트 추가 (/health)
 - GitHub Actions CI/CD 파이프라인 구축
 
+## 🔧 환경 설정
+
+### GitHub Secrets 설정 (필수)
+자동 배포를 위해 다음 Secrets을 GitHub 저장소에 설정하세요:
+
+```bash
+# Docker Registry 인증
+REGISTRY_PASSWORD=bingogo1
+
+# Watchtower HTTP API 토큰
+WATCHTOWER_HTTP_API_TOKEN=wt_k8Jm4nX9pL2vQ7rB5sT6yH3fG1dA0
+```
+
+**설정 방법:**
+1. GitHub 저장소 → Settings → Secrets and variables → Actions
+2. "New repository secret" 클릭
+3. 위의 변수명과 값을 입력하여 생성
+
+### Watchtower 설정
+- **호스트:** watchtower.jclee.me
+- **API 엔드포인트:** https://watchtower.jclee.me/v1/update
+- **자동 배포:** Docker 이미지 푸시 후 즉시 배포 트리거
+
 ## 📞 지원
 
 - 📧 이메일: admin@safework.com
 - 🐛 버그 리포트: GitHub Issues
 - 📖 문서: [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md), [WORKFLOW.md](WORKFLOW.md)
-- 🔧 기술 지원: Docker, Flask, MySQL 전문 지원
+- 🔧 기술 지원: Docker, Flask, MySQL, Watchtower 전문 지원
 
 ## 📝 라이센스
 

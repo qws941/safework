@@ -214,12 +214,18 @@ When developing in this repository, leverage the Claude automation system:
 - `staging`: Automatic staging deployments
 - `develop`: Development environment deployments
 
-### Registry Information
+### Registry & Watchtower Information
 - **Registry:** registry.jclee.me
+- **Watchtower Host:** watchtower.jclee.me
 - **Images:** 
   - `safework/app:latest` (Flask application)
   - `safework/mysql:latest` (MySQL with init scripts)
   - `safework/redis:latest` (Redis cache)
+
+### Required GitHub Secrets
+- **REGISTRY_PASSWORD:** Docker registry authentication
+- **WATCHTOWER_HTTP_API_TOKEN:** Watchtower HTTP API token for immediate deployments
+  - Value: `wt_k8Jm4nX9pL2vQ7rB5sT6yH3fG1dA0`
 
 ## Claude Code Integration & Automation
 
