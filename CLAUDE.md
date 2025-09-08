@@ -6,20 +6,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 SafeWork is an industrial health and safety management system built with Flask 3.0+. It manages workplace health surveys, medical checkups, and comprehensive safety administration for construction and industrial environments.
 
-**Core Features (v3.1.0):**
+**Core Features:**
 - 001 Musculoskeletal symptom surveys with conditional logic (16 body parts, pain scale rating)
 - 002 New employee health checkup forms with medical history integration
-- **13 specialized SafeWork admin panels:** Workers, Health Checks, Work History, Medications, Safety Equipment, Accident Records, Training Records, Chemical Management, Environmental Monitoring, Emergency Contacts, Insurance Claims, Compliance Reports, Safety Statistics
+- **13 specialized SafeWork admin panels:** Workers, Health Checks, Medical Visits, Medications, Consultations, Health Programs, Special Management, Environment Measurements, Risk Assessment, MSDS, Protective Equipment, Education, Certifications
 - Document management system with version control and access logging
 - Anonymous survey submission support with rate limiting
 - RESTful API (v2) for external integrations
-- Real-time notifications and audit logging
+- **Advanced AI-powered automation** with Claude Code integration
 
 **Tech Stack:** 
 - Backend: Python Flask 3.0+, SQLAlchemy 2.0, Redis 5.0
 - Database: MySQL 8.0 with UTF8MB4 charset
 - Frontend: Bootstrap 4.6, jQuery, Font Awesome icons
 - Infrastructure: Docker, GitHub Actions, Private Registry (registry.jclee.me)
+- **Automation**: 5 specialized GitHub Actions workflows with Claude AI integration
 
 ## Development Commands
 
@@ -222,21 +223,30 @@ When developing in this repository, leverage the Claude automation system:
 
 ## Claude Code Integration & Automation
 
-**Advanced Claude Automation System:** This repository features a sophisticated AI-powered development workflow using Claude Code integration.
+**Advanced AI-Powered Workflow System:** This repository features 5 specialized GitHub Actions workflows that provide comprehensive automation:
+
+1. **claude-code-action.yml** - Main AI automation engine with advanced features:
+   - `track_progress: true` - Preserves GitHub context across conversations
+   - `use_sticky_comment: true` - Consolidates updates in single comment thread
+   - `use_commit_signing: true` - Enhanced security with commit signing
+   - Claude 3.5 Sonnet model with 15-turn limit and 900-second timeout
+
+2. **claude-security-audit.yml** - Personal health information (PHI) specialized security scanning
+3. **claude-performance-monitor.yml** - Real-world performance testing with MySQL/Redis services
+4. **claude-documentation-sync.yml** - Automatic API documentation generation and user guide updates
+5. **main_deploy.yml** - Production deployment with health checks and multi-platform builds
 
 ### Claude Workflow Triggers
 ```bash
-# Automatic triggers (Enhanced System):
-- New issue creation → Claude auto-assigns and analyzes immediately
-- @claude mentions in issue comments → Claude responds and acts
-- Every 30 minutes → Automatic scan for unassigned open issues
-- Pull request events → Claude reviews and processes
-- Push to master → Triggers deployment pipeline
+# Automatic triggers:
+- New issues/PRs → claude-code-action.yml processes immediately
+- Code changes → Security audit, performance testing, documentation sync
+- Successful Claude workflows → Automatic deployment pipeline
+- Daily/weekly schedules → Health monitoring and maintenance
 
 # Manual triggers:
-- GitHub Actions → "Claude Code" workflow → "Run workflow"  
-- GitHub Actions → "이슈 자동 감지 및 처리" → "Run workflow" (every 30 min)
-- GitHub Actions → "Claude Token 권한 확인" → Test authentication
+- GitHub Actions → "SafeWork Claude Automation" → Run workflow
+- Issue comments with @claude mention → Immediate processing
 ```
 
 ### Real-time Progress Tracking
