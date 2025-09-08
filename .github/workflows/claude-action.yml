@@ -1,24 +1,66 @@
 name: Claude
 on:
   issues:
-    types: [opened]
+    types: [opened, edited, reopened]
   issue_comment:
-    types: [created]
+    types: [created, edited]
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to process'
+        required: false
+        type: string
+      pr_number:
+        description: 'PR number to process'
+        required: false
+        type: string
 
 permissions:
   contents: write
   issues: write
   pull-requests: write
   id-token: write
+  actions: read
 
 jobs:
   claude:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: anthropics/claude-code-action@v1
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Claude Code Action
+        uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          claude_args: |
-            --model ${{ vars.CLAUDE_MODEL }}
-            --max-turns 10
+          track_progress: ${{ github.event_name != 'workflow_dispatch' }}
+          use_sticky_comment: true
+          use_commit_signing: false
+          prompt: |
+            You are Claude, specialized in SafeWork industrial safety management system.
+            
+            SafeWork Context:
+            - Flask 3.0+ application with MySQL 8.0 database
+            - 13 specialized admin panels for safety management
+            - Survey system (001 musculoskeletal, 002 health checkup)
+            - Korean localization and KST timezone
+            - Docker deployment with Watchtower auto-updates
+            
+            Response Guidelines:
+            - Respond in Korean for Korean issues/comments
+            - Focus on SafeWork domain expertise 
+            - Provide practical, actionable solutions
+            - Include code examples when helpful
+            - Consider safety compliance requirements
+            
+            Priority Keywords Detection:
+            - 긴급/urgent/critical → High priority response
+            - 버그/bug/오류/error → Technical debugging focus  
+            - 설문/survey → Survey system expertise
+            - 관리자/admin → Admin panel guidance
+            - 배포/deploy → Deployment pipeline help
