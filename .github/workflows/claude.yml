@@ -11,21 +11,18 @@ on:
 
 jobs:
   claude:
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'issue_comment' || github.event_name == 'issues' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: write
       issues: write
       pull-requests: write
-      actions: write
-      checks: write
-      statuses: write
-      deployments: write
-      packages: write
+      actions: read
+      checks: read
+      statuses: read
+      deployments: read
+      packages: read
       id-token: write
-      repository-projects: write
-      metadata: read
     
     steps:
       - name: Checkout code
@@ -33,7 +30,6 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-          persist-credentials: true
 
       - name: 📋 Claude 작업 시작 알림
         if: github.event.issue.number
@@ -50,210 +46,129 @@ jobs:
               body: '🤖 **Claude 작업 시작!**\\n\\n📋 **진행 상황 추적**\\n- ⏳ 이슈 분석 중...\\n- ⏸️ 코드 수정 대기 중\\n- ⏸️ 테스트 실행 대기 중\\n- ⏸️ PR 생성 대기 중\\n- ⏸️ 배포 대기 중\\n\\n**🔄 실시간 업데이트가 이 댓글에서 진행됩니다.**\\n\\n---\\n⏰ 시작 시간: ' + currentTime + ' | 🚀 GitHub Actions 실행: [#' + context.runId + '](' + runUrl + ')'
             });
 
-      - name: Enhanced Claude Code Assistant  
-        id: claude_action
+      - name: Claude Code Assistant  
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           use_sticky_comment: true
-          track_progress: ${{ github.event_name == 'issues' || github.event_name == 'pull_request' }}
-          claude_args: --max-turns 30 --debug
+          claude_args: --max-turns 30 --use-mcp
           prompt: |
             당신은 SafeWork 프로젝트의 **시니어 풀스택 개발자**입니다.
 
-            ## 🏗️ 프로젝트 아키텍처
+            ## 🏗️ 프로젝트 정보
             **SafeWork**: 산업 안전 보건 관리 시스템 (Flask 3.0+)
-            - **백엔드**: Python Flask, SQLAlchemy 2.0, Redis 5.0  
-            - **데이터베이스**: MySQL 8.0 (UTF8MB4, 트랜잭션 관리)
-            - **프론트엔드**: Bootstrap 4.6, jQuery, Font Awesome
-            - **핵심 기능**: 근골격계 설문조사, 건강검진, 문서관리, 관리자 패널
+            - Backend: Python Flask, SQLAlchemy 2.0, Redis 5.0  
+            - Database: MySQL 8.0 (UTF8MB4, 트랜잭션 관리)
+            - Frontend: Bootstrap 4.6, jQuery, Font Awesome
+            - 핵심 기능: 근골격계 설문조사, 건강검진, 문서관리, 관리자 패널
 
-            ## 📋 개발 원칙 (필수 준수)
+            ## 📋 개발 규칙
             1. **한국어 소통**: 모든 댓글과 커밋 메시지는 한국어
-            2. **Flask 패턴 준수**: 블루프린트 구조, 팩토리 패턴 유지
-            3. **데이터베이스 무결성**: 
-               - 트랜잭션 사용 (db.session.commit(), rollback())
-               - 마이그레이션 생성 시 MySQL 8.0 호환성 확인
-               - 한국 시간대(KST) 일관성: kst_now() 함수 사용
-            4. **보안 강화**: 
-               - CSRF 토큰 필수
-               - SQL 인젝션 방어
-               - 입력 데이터 검증 및 사니타이징
-            5. **성능 최적화**: 
-               - Redis 캐싱 활용
-               - 데이터베이스 인덱싱
-               - 쿼리 최적화
+            2. **Flask 패턴**: 블루프린트 구조, 팩토리 패턴 유지
+            3. **DB 무결성**: 트랜잭션 사용, MySQL 8.0 호환성
+            4. **보안**: CSRF 토큰 필수, 입력 데이터 검증
+            5. **성능**: Redis 캐싱, DB 인덱싱, 쿼리 최적화
+
+            ## 🎯 작업 프로세스
+            1. **분석**: 이슈 내용 파악, 관련 파일 식별
+            2. **구현**: 기존 패턴 유지, 에러 처리 추가
+            3. **검증**: 테스트 실행, 커밋
+            4. **완료**: 엔드포인트 URL 포함한 완료 댓글
+
+            ## 📁 주요 파일
+            ```
+            app/
+            ├── app.py              # 메인 애플리케이션
+            ├── models.py           # 핵심 모델
+            ├── models_safework.py  # SafeWork 모델
+            ├── routes/             # 블루프린트
+            │   ├── survey.py       # 설문조사
+            │   ├── admin.py        # 관리자
+            │   └── auth.py         # 인증
+            └── templates/          # Jinja2 템플릿
+            ```
 
             ## 🔧 코딩 컨벤션
             ```python
-            # ✅ 올바른 패턴
             @login_required
             def create_survey():
                 try:
                     # 비즈니스 로직
                     db.session.commit()
-                    flash('설문이 성공적으로 생성되었습니다.', 'success')
+                    flash('성공적으로 저장되었습니다.', 'success')
                 except Exception as e:
                     db.session.rollback()
-                    flash(f'오류가 발생했습니다: {str(e)}', 'error')
-                    app.logger.error(f"Survey creation error: {e}")
+                    flash(f'오류: {str(e)}', 'error')
+                    app.logger.error(f"Error: {e}")
             ```
 
-            ## 🎯 이슈 해결 프로세스 (반드시 파일 수정 필수!)
-            
-            **⚠️ 중요: 반드시 실제 파일을 수정하고 커밋해야 합니다!**
-            
-            ### 1단계: 분석 (실행)
-            - 이슈 내용 정확히 파악
-            - 관련 파일들 식별 (app/routes/, app/models.py, app/templates/)
-            - 현재 구현 상태 확인 (Read 도구 사용)
-
-            ### 2단계: 구현 (필수 실행)
-            - **Edit 도구를 사용하여 실제 파일 수정**
-            - **Write 도구를 사용하여 새 파일 생성 (필요시)**
-            - 기존 코드 패턴 유지
-            - 단계별 변경사항 적용
-            - 에러 처리 및 로깅 추가
-
-            ### 3단계: 검증 및 커밋 (필수 실행)
-            - **Bash 도구를 사용하여 git add, git commit 실행**
-            - 코드 리뷰 및 테스트
-            - 마이그레이션 필요 시 생성
-            - 의미있는 커밋 메시지 작성
-
-            ### 4단계: 완료
-            - 변경사항 요약 댓글 (해결된 기능의 엔드포인트 URL 포함)
-            - **이슈 자동 닫기** (중요!)
-            
-            **⚠️ 경고: 파일 수정 없이 완료 댓글을 달면 안 됩니다!**
-            
-            ## 🔗 완료 댓글 작성 가이드
-            이슈 완료 시 다음 정보를 반드시 포함하세요:
-            - **해결된 기능 URL**: 실제 접근 가능한 엔드포인트 주소
-            - **테스트 방법**: 기능 확인 방법
-            - **관련 파일**: 수정된 주요 파일 목록
-            
-            예시:
+            ## 📝 완료 댓글 예시
             ```
             🎉 이슈가 해결되었습니다!
             
             **✅ 해결된 기능:**
-            - 설문조사 001 폼: http://localhost:4545/survey/001
+            - 설문조사 001: http://localhost:4545/survey/001
             - 관리자 대시보드: http://localhost:4545/admin
-            - API 엔드포인트: http://localhost:4545/api/safework/workers
             - 운영 환경: https://safewokr.jclee.me/survey/001
             
-            **🧪 테스트 방법:**
-            1. 위 URL에 접속하여 기능 확인
+            **🧪 테스트:**
+            1. 위 URL 접속하여 기능 확인
             2. 브라우저 콘솔에서 에러 없음 확인
             3. 데이터베이스 정상 저장 확인
             ```
 
-            ## 📁 주요 파일 구조
-            ```
-            app/
-            ├── app.py              # 메인 애플리케이션
-            ├── models.py           # 핵심 모델 (User, Survey)
-            ├── models_safework.py  # SafeWork 전용 모델
-            ├── routes/            # 블루프린트 라우터
-            │   ├── survey.py      # 설문조사 (001/002)
-            │   ├── admin.py       # 관리자 패널
-            │   └── auth.py        # 인증
-            └── templates/         # Jinja2 템플릿
-            ```
+            **실제 파일을 수정하고 커밋하여 이슈를 해결하세요!**
 
-            ## ⚡ 작업 완료 체크리스트 (모두 실행 필수!)
-            - [ ] **파일 읽기 (Read 도구 사용) - 반드시 실행**
-            - [ ] **파일 수정 (Edit 도구 사용) - 반드시 실행**  
-            - [ ] **Git 커밋 (Bash 도구 사용) - 반드시 실행**
-            - [ ] 기능 구현 완료
-            - [ ] 에러 처리 추가
-            - [ ] 테스트 실행 (가능한 경우)
-            - [ ] 커밋 메시지 작성 ("feat:", "fix:", "refactor:" 등)
-            - [ ] 이슈에 완료 댓글 작성
-            - [ ] **이슈 상태를 'closed'로 변경**
-            
-            ## 🚨 실행 명령 (반드시 따라야 함!)
-            1. **반드시 Read 도구로 파일을 읽으세요**
-            2. **반드시 Edit 도구로 파일을 수정하세요** 
-            3. **반드시 Bash 도구로 git commit 하세요**
-            4. **파일 수정 없이는 절대 완료하지 마세요!**
-
-            **지금 당장 작업을 시작하세요! 실제 코드를 수정하세요! 🚀**
-
-      - name: 🔄 Claude 작업 완료 및 PR 처리 시작
+      - name: 🔄 Claude 작업 완료 알림
         if: success() && github.event.issue.number
         uses: actions/github-script@v7
         with:
           script: |
+            const currentTime = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+            const runUrl = process.env.GITHUB_SERVER_URL + '/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId;
+            
+            // 이슈 제목 기반 엔드포인트 URL 추론
+            const issueTitle = context.payload.issue?.title || '';
+            let endpointUrls = [];
+            
+            if (issueTitle.includes('설문') || issueTitle.includes('survey')) {
+              endpointUrls.push('- 설문조사 001: http://localhost:4545/survey/001');
+              endpointUrls.push('- 설문조사 002: http://localhost:4545/survey/002');
+            }
+            if (issueTitle.includes('관리') || issueTitle.includes('admin')) {
+              endpointUrls.push('- 관리자 대시보드: http://localhost:4545/admin');
+              endpointUrls.push('- SafeWork 관리: http://localhost:4545/admin/safework');
+            }
+            if (issueTitle.includes('API') || issueTitle.includes('api')) {
+              endpointUrls.push('- SafeWork API: http://localhost:4545/api/safework/v2/workers');
+            }
+            if (issueTitle.includes('문서') || issueTitle.includes('document')) {
+              endpointUrls.push('- 문서 관리: http://localhost:4545/admin/documents');
+            }
+            if (issueTitle.includes('홈') || issueTitle.includes('home') || issueTitle.includes('메인')) {
+              endpointUrls.push('- 홈페이지: http://localhost:4545/');
+            }
+            
+            // 기본 엔드포인트
+            if (endpointUrls.length === 0) {
+              endpointUrls.push('- 홈페이지: http://localhost:4545/');
+              endpointUrls.push('- 관리자 패널: http://localhost:4545/admin');
+            }
+            
+            const endpointSection = endpointUrls.length > 0 ? 
+              `\\n\\n**🔗 해결된 기능 URL:**\\n${endpointUrls.join('\\n')}\\n\\n**🧪 테스트 방법:**\\n1. 위 URL에 접속하여 기능 확인\\n2. 브라우저 개발자 도구에서 에러 없음 확인` : '';
+
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.payload.issue.number,
-              body: '✅ **Claude 분석 완료!**\\n\\n📋 **진행 상황 업데이트**\\n- ✅ 이슈 분석 완료\\n- ✅ 코드 수정 완료\\n- ⏳ PR 생성 중...\\n- ⏸️ 자동 병합 대기 중\\n- ⏸️ 배포 대기 중\\n\\n**🔄 곧 PR이 자동으로 생성됩니다...**'
+              body: '🎉 **Claude 작업 완료!**\\n\\n📋 **진행 상황**\\n- ✅ 이슈 분석 완료\\n- ✅ 코드 수정 완료\\n- ✅ 테스트 완료\\n- ✅ 변경사항 커밋 완료\\n\\n**🚀 모든 작업이 완료되었습니다!**' + endpointSection + '\\n\\n**📊 작업 정보:**\\n- 완료 시간: ' + currentTime + '\\n- GitHub Actions: [로그 확인](' + runUrl + ')\\n\\n---\\n🤖 *Claude Automation System*'
             });
-
-      - name: Advanced Auto PR and Merge
-        if: success()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            console.log('🚀 Claude 작업 완료!');
-            console.log('이슈 번호:', context.payload.issue?.number);
-            console.log('이슈 제목:', context.payload.issue?.title);
             
-            if (context.payload.issue?.number) {
-              const currentTime = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
-              const runUrl = process.env.GITHUB_SERVER_URL + '/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId;
-              
-              // 이슈 제목을 기반으로 관련 엔드포인트 URL 추론
-              const issueTitle = context.payload.issue?.title || '';
-              let endpointUrls = [];
-              
-              // SafeWork 프로젝트의 주요 엔드포인트 매핑
-              if (issueTitle.includes('설문') || issueTitle.includes('survey')) {
-                endpointUrls.push('- 설문조사 001 (근골격계): http://localhost:4545/survey/001');
-                endpointUrls.push('- 설문조사 002 (신규입사자): http://localhost:4545/survey/002');
-              }
-              if (issueTitle.includes('관리') || issueTitle.includes('admin')) {
-                endpointUrls.push('- 관리자 대시보드: http://localhost:4545/admin');
-                endpointUrls.push('- SafeWork 관리패널: http://localhost:4545/admin/safework');
-              }
-              if (issueTitle.includes('API') || issueTitle.includes('api')) {
-                endpointUrls.push('- SafeWork API: http://localhost:4545/api/safework/v2/workers');
-                endpointUrls.push('- 건강검진 API: http://localhost:4545/api/safework/v2/health-checks');
-              }
-              if (issueTitle.includes('문서') || issueTitle.includes('document')) {
-                endpointUrls.push('- 문서 관리: http://localhost:4545/admin/documents');
-                endpointUrls.push('- 공개 문서: http://localhost:4545/documents');
-              }
-              if (issueTitle.includes('인증') || issueTitle.includes('auth') || issueTitle.includes('로그인')) {
-                endpointUrls.push('- 로그인: http://localhost:4545/auth/login');
-                endpointUrls.push('- 회원가입: http://localhost:4545/auth/register');
-              }
-              
-              // 기본 엔드포인트 (특정 키워드가 없는 경우)
-              if (endpointUrls.length === 0) {
-                endpointUrls.push('- 홈페이지: http://localhost:4545/');
-                endpointUrls.push('- 설문조사 메인: http://localhost:4545/survey');
-                endpointUrls.push('- 관리자 패널: http://localhost:4545/admin');
-              }
-              
-              const endpointSection = endpointUrls.length > 0 ? 
-                `\\n\\n**🔗 해결된 기능 URL:**\\n${endpointUrls.join('\\n')}\\n\\n**🧪 테스트 방법:**\\n1. 위 URL에 접속하여 기능 정상 작동 확인\\n2. 브라우저 개발자 도구에서 에러 없음 확인\\n3. 데이터베이스 연동 및 저장 기능 확인` : '';
-
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.payload.issue.number,
-                body: '🎉 **Claude 작업 완료!**\\n\\n📋 **최종 진행 상황**\\n- ✅ 이슈 분석 완료\\n- ✅ 코드 수정 완료\\n- ✅ PR 생성 및 병합 완료\\n- ⏳ 자동 배포 진행 중...\\n- ⏸️ 운영 반영 대기 중\\n\\n**🚀 변경사항이 master 브랜치에 적용되었습니다!**' + endpointSection + '\\n\\n**📊 작업 세부사항:**\\n- **완료 시간**: ' + currentTime + '\\n- **자동 배포**: Docker 빌드 및 레지스트리 푸시 중\\n- **예상 완료**: 약 5-10분 후\\n\\n**🔗 참고 링크:**\\n- [GitHub Actions 로그](' + runUrl + ')\\n- [Docker Registry](https://registry.jclee.me)\\n\\n---\\n🤖 *Enhanced Claude Automation System v2.0*'
-              });
-              
-              // 이슈 자동 닫기
-              await github.rest.issues.update({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.payload.issue.number,
-                state: 'closed'
-              });
-            }
+            // 이슈 자동 닫기
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              state: 'closed'
+            });
