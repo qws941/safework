@@ -181,24 +181,6 @@ Follow the established document workflow:
 - Access logs for compliance
 - Public/private/admin-only permissions
 
-### Development with Claude Integration
-When developing in this repository, leverage the Claude automation system:
-
-**For Bug Fixes:**
-1. Create issue with `[BUG]` prefix
-2. Claude auto-analyzes and creates PR
-3. Review PR and approve deployment
-
-**For New Features:**
-1. Create issue with detailed requirements
-2. Add `@claude` mention for immediate processing
-3. Claude follows SafeWork patterns automatically
-
-**For Bulk Operations:**
-1. Use "대량 이슈 자동 해결기" workflow
-2. Filter by issue type (feature/bug/test)
-3. Claude processes multiple issues sequentially
-
 ## Watchtower Deployment System
 
 **Automated Deployment:** Push to `master` branch triggers full CI/CD pipeline:
@@ -208,6 +190,7 @@ When developing in this repository, leverage the Claude automation system:
 3. **Testing:** Full pytest suite with coverage reporting
 4. **Docker Build:** Multi-platform images pushed to registry.jclee.me
 5. **Deployment:** Watchtower automatically pulls and deploys new images
+6. **API Trigger:** Immediate deployment via Watchtower HTTP API
 
 **Branch Strategy:**
 - `master`: Production deployments (automatic after Claude workflow)
@@ -217,30 +200,31 @@ When developing in this repository, leverage the Claude automation system:
 ### Registry & Watchtower Information
 - **Registry:** registry.jclee.me
 - **Watchtower Host:** watchtower.jclee.me
+- **Production Site:** https://safework.jclee.me
 - **Images:** 
   - `safework/app:latest` (Flask application)
   - `safework/mysql:latest` (MySQL with init scripts)
   - `safework/redis:latest` (Redis cache)
 
 ### Required GitHub Secrets
-- **REGISTRY_PASSWORD:** Docker registry authentication
-- **WATCHTOWER_HTTP_API_TOKEN:** Watchtower HTTP API token for immediate deployments
-  - Value: `wt_k8Jm4nX9pL2vQ7rB5sT6yH3fG1dA0`
+- **REGISTRY_PASSWORD:** Docker registry authentication (`bingogo1`)
+- **WATCHTOWER_HTTP_API_TOKEN:** Watchtower HTTP API token for immediate deployments (`wt_k8Jm4nX9pL2vQ7rB5sT6yH3fG1dA0`)
+- **CLAUDE_CODE_OAUTH_TOKEN:** Claude AI automation token
 
 ## Claude Code Integration & Automation
 
 **Advanced AI-Powered Workflow System:** This repository features 5 specialized GitHub Actions workflows that provide comprehensive automation:
 
-1. **claude-code-action.yml** - Main AI automation engine with advanced features:
+1. **claude-code-action.yml** - Main AI automation engine:
    - `track_progress: true` - Preserves GitHub context across conversations
    - `use_sticky_comment: true` - Consolidates updates in single comment thread
    - `use_commit_signing: true` - Enhanced security with commit signing
-   - Claude 3.5 Sonnet model with 15-turn limit and 900-second timeout
+   - Simplified options: `--max-turns 15` (v1.0.5 compatible)
 
 2. **claude-security-audit.yml** - Personal health information (PHI) specialized security scanning
 3. **claude-performance-monitor.yml** - Real-world performance testing with MySQL/Redis services
 4. **claude-documentation-sync.yml** - Automatic API documentation generation and user guide updates
-5. **main_deploy.yml** - Production deployment with health checks and multi-platform builds
+5. **main_deploy.yml** - Production deployment with Watchtower API integration
 
 ### Claude Workflow Triggers
 ```bash
@@ -254,29 +238,6 @@ When developing in this repository, leverage the Claude automation system:
 - GitHub Actions → "SafeWork Claude Automation" → Run workflow
 - Issue comments with @claude mention → Immediate processing
 ```
-
-### Real-time Progress Tracking
-When Claude is triggered, users see real-time progress updates in the issue:
-
-1. **🤖 Claude 작업 시작!** - Initial analysis begins
-2. **✅ Claude 분석 완료!** - Code modifications completed
-3. **🎉 Claude 작업 완료!** - PR created and merged
-4. **🚀 배포 완료!** - Production deployment finished
-
-### Claude Capabilities in This Repository
-- **Issue Analysis:** Automatically understands Korean issue descriptions
-- **Code Generation:** Follows SafeWork architecture patterns and Korean timezone handling
-- **Database Operations:** Uses proper MySQL 8.0 syntax with transaction management
-- **Testing Integration:** Runs pytest suite and maintains 80%+ coverage
-- **Deployment Integration:** Triggers automatic Docker builds and deployment
-- **Progress Reporting:** Updates issues with detailed status and links
-
-### Claude Configuration
-- **Max Turns:** 30 (configurable in `.github/workflows/claude.yml`)
-- **Sticky Comments:** Progress updates in same comment thread
-- **Progress Tracking:** Real-time status updates with timestamps
-- **Auto-merge:** Automatic PR creation and merging after successful testing
-- **Deployment Trigger:** Successful merges trigger production deployment
 
 ### Working with Claude
 ```bash
@@ -349,41 +310,41 @@ def test_survey_submission(client, auth):
 **Essential Configuration:**
 ```bash
 # Database
-DATABASE_URL=mysql+pymysql://safework:password@mysql:3306/safework
-MYSQL_ROOT_PASSWORD=rootpassword
-MYSQL_DATABASE=safework
+DATABASE_URL=mysql+pymysql://safework:safework2024@mysql:3306/safework_db
+MYSQL_ROOT_PASSWORD=safework2024root
+MYSQL_DATABASE=safework_db
 MYSQL_USER=safework
-MYSQL_PASSWORD=password
+MYSQL_PASSWORD=safework2024
 
 # Application
-SECRET_KEY=your-secret-key-here
-FLASK_ENV=development
+SECRET_KEY=safework-production-secret-key-2024
+FLASK_CONFIG=production
 TZ=Asia/Seoul
 
 # Redis
-REDIS_URL=redis://redis:6379/0
+REDIS_HOST=safework-redis
+REDIS_PORT=6379
+REDIS_DB=0
 
-# Email (optional)
-MAIL_SERVER=smtp.gmail.com
-MAIL_PORT=587
-MAIL_USERNAME=your-email@gmail.com
-MAIL_PASSWORD=your-app-password
+# Admin
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=safework2024
 ```
 
 ## API Endpoints (v2)
 
 **SafeWork REST API:**
 ```
-GET    /api/v2/safework/workers           # List all workers
-POST   /api/v2/safework/workers           # Create new worker
-GET    /api/v2/safework/workers/{id}      # Get worker details
-PUT    /api/v2/safework/workers/{id}      # Update worker
-DELETE /api/v2/safework/workers/{id}      # Delete worker
+GET    /api/safework/v2/workers           # List all workers
+POST   /api/safework/v2/workers           # Create new worker
+GET    /api/safework/v2/workers/{id}      # Get worker details
+PUT    /api/safework/v2/workers/{id}      # Update worker
+DELETE /api/safework/v2/workers/{id}      # Delete worker
 
-GET    /api/v2/safework/health-checks     # List health checks
-POST   /api/v2/safework/health-checks     # Create health check
-GET    /api/v2/safework/medications       # List medications
-GET    /api/v2/safework/statistics        # Safety statistics
+GET    /api/safework/v2/health-checks     # List health checks
+POST   /api/safework/v2/health-checks     # Create health check
+GET    /api/safework/v2/medications       # List medications
+GET    /api/safework/v2/statistics        # Safety statistics
 ```
 
 **Survey API:**
@@ -418,21 +379,15 @@ GET    /survey/002                        # Get survey form (002)
 
 ## Troubleshooting
 
-### Common Claude Workflow Issues
+### Common Workflow Issues
 
-**"Bad credentials" Error:**
+**Claude Code Action Errors:**
 ```bash
-# Check if CLAUDE_CODE_OAUTH_TOKEN is properly set:
-# GitHub → Settings → Secrets and variables → Actions
-# Verify the token has proper permissions in Claude.ai
-```
+# Error: unknown option '--experimental-allowed-domains'
+# Solution: Only use supported options: --max-turns N
 
-**Workflow Not Triggering:**
-```bash
-# Verify trigger conditions in .github/workflows/claude.yml:
-- Issue must contain @claude mention
-- New issues auto-trigger Claude
-- Manual workflow dispatch available in GitHub Actions
+# Error: deprecated version of 'actions/upload-artifact: v3'
+# Solution: Updated to v4 in all workflows
 ```
 
 **Deployment Pipeline Issues:**
@@ -445,6 +400,10 @@ docker-compose exec app python -c "from models import db; db.create_all()"
 
 # Check Redis connection:
 docker-compose exec app python -c "import redis; r=redis.from_url('redis://redis:6379/0'); print(r.ping())"
+
+# Test Watchtower API:
+curl -H "Authorization: Bearer wt_k8Jm4nX9pL2vQ7rB5sT6yH3fG1dA0" \
+     -X POST https://watchtower.jclee.me/v1/update
 ```
 
 ### MySQL 8.0 Specific Issues
@@ -457,3 +416,4 @@ docker-compose exec app python -c "import redis; r=redis.from_url('redis://redis
 - Survey forms require JavaScript validation for conditional fields
 - Admin panels expect specific permission levels (`@login_required` decorators)
 - Anonymous survey submissions use special user account (ID=1)
+- Watchtower labels enable automatic container updates: `com.centurylinklabs.watchtower.enable=true`
