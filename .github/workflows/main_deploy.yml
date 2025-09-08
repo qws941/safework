@@ -1,4 +1,4 @@
-name: SafeWork 배포 파이프라인
+name: SafeWork 고도화 배포 파이프라인
 
 on:
   workflow_run:
@@ -20,24 +20,50 @@ jobs:
     timeout-minutes: 10
     
     steps:
-      - name: 🔍 배포 트리거 확인
+      - name: 🔍 고도화 배포 트리거 디버깅
         run: |
-          echo "🚀 배포 워크플로우 시작!"
-          echo "트리거 이벤트: ${{ github.event_name }}"
+          echo "🚀 SafeWork 고도화 배포 파이프라인 시작!"
+          echo "⏰ 배포 시작 시각: $(TZ='Asia/Seoul' date '+%Y-%m-%d %H:%M:%S KST')"
+          echo "🎯 트리거 이벤트: ${{ github.event_name }}"
+          echo "🔗 저장소: ${{ env.REGISTRY }}/${{ env.PROJECT_NAME }}"
+          
           if [ "${{ github.event_name }}" = "workflow_run" ]; then
-            echo "Claude 워크플로우 결과: ${{ github.event.workflow_run.conclusion }}"
-            echo "Claude 워크플로우명: ${{ github.event.workflow_run.name }}"
+            echo "🤖 Claude 워크플로우 결과: ${{ github.event.workflow_run.conclusion }}"
+            echo "📄 Claude 워크플로우명: ${{ github.event.workflow_run.name }}"
+            echo "🔄 자돐 배포 모드: Claude 성공 후 자동 트리거"
+          else
+            echo "👤 수동 배포 모드: 워크플로우 디스패치"
           fi
           
-      - name: 📥 소스코드 체크아웃
+      - name: 📥 소스코드 체크아웃 및 검증
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # 배포 비교를 위한 두 개 커밋 취득
           
-      - name: 🏷️ 버전 생성
+      - name: 🔍 코드 변경사항 분석
+        run: |
+          echo "📈 커밋 변경사항 분석:"
+          git diff --name-only HEAD~1 HEAD | head -20
+          echo "📊 총 변경 파일 수: $(git diff --name-only HEAD~1 HEAD | wc -l)"
+          
+      - name: 🏷️ 지능적 버전 생성
         id: version
         run: |
           COMMIT_SHA=$(git rev-parse --short HEAD)
-          VERSION="v3.1-${COMMIT_SHA}"
+          TIMESTAMP=$(TZ='Asia/Seoul' date '+%Y%m%d-%H%M')
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+          
+          # 브랜치별 버전 전략
+          if [ "$BRANCH_NAME" = "main" ] || [ "$BRANCH_NAME" = "master" ]; then
+            VERSION="v3.2-prod-${COMMIT_SHA}"
+          else
+            VERSION="v3.2-${BRANCH_NAME}-${COMMIT_SHA}"
+          fi
+          
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 생성된 버전: $VERSION"
+          echo "🔸 브랜치: $BRANCH_NAME"
+          echo "⏰ 타임스탬프: $TIMESTAMP"
           
       - name: 🛠️ Docker Buildx 설정
         uses: docker/setup-buildx-action@v3
@@ -49,17 +75,36 @@ jobs:
           username: admin
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
-      - name: 🚀 SafeWork App 빌드 & 푸시
+      - name: 🚀 SafeWork 고성능 빌드 & 푸시
         uses: docker/build-push-action@v5
         with:
           context: ./app
           push: true
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64  # 멀티 플랫폼 지원
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+            BUILD_DATE=$(TZ='Asia/Seoul' date -u +%Y-%m-%dT%H:%M:%SZ)
+            VCS_REF=${{ github.sha }}
+            VERSION=${{ steps.version.outputs.version }}
           tags: |
             ${{ env.REGISTRY }}/${{ env.PROJECT_NAME }}/app:${{ steps.version.outputs.version }}
             ${{ env.REGISTRY }}/${{ env.PROJECT_NAME }}/app:latest
+            ${{ env.REGISTRY }}/${{ env.PROJECT_NAME }}/app:stable
           
-      - name: 🎉 배포 완료 및 이슈 업데이트
+      - name: 🩺 배포 후 건강상태 검사
+        run: |
+          echo "🔍 배포된 이미지 검증 시작..."
+          
+          # 레지스트리에서 이미지 메타데이터 확인
+          docker manifest inspect ${{ env.REGISTRY }}/${{ env.PROJECT_NAME }}/app:${{ steps.version.outputs.version }} && \
+          echo "✅ 이미지 메타데이터 검증 성공" || \
+          echo "⚠️ 이미지 검증 실패"
+          
+          echo "📈 배포 완료 시간: $(TZ='Asia/Seoul' date '+%Y-%m-%d %H:%M:%S KST')"
+          
+      - name: 🎉 고도화 배포 완료 및 이슈 자동 업데이트
         uses: actions/github-script@v7
         with:
           script: |
