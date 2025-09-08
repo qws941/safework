@@ -60,21 +60,18 @@ jobs:
           echo "Actor: ${{ github.actor }}"
           
           if [ "${{ github.event_name }}" = "issues" ]; then
-            echo "Issue number: ${{ github.event.issue.number }}"
-            echo "Issue title: ${{ github.event.issue.title }}"
-            echo "Issue author: ${{ github.event.issue.user.login }}"
+            echo "Issue number: ${{ github.event.issue.number || 'N/A' }}"
+            echo "Issue author: ${{ github.event.issue.user.login || 'N/A' }}"
           elif [ "${{ github.event_name }}" = "issue_comment" ]; then
-            echo "Issue number: ${{ github.event.issue.number }}"
-            echo "Comment author: ${{ github.event.comment.user.login }}"
-            echo "Comment contains @claude: $(echo '${{ github.event.comment.body }}' | grep -q '@claude' && echo 'yes' || echo 'no')"
+            echo "Issue number: ${{ github.event.issue.number || 'N/A' }}"
+            echo "Comment author: ${{ github.event.comment.user.login || 'N/A' }}"
           elif [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "PR number: ${{ github.event.pull_request.number }}"
-            echo "PR title: ${{ github.event.pull_request.title }}"
-            echo "PR author: ${{ github.event.pull_request.user.login }}"
+            echo "PR number: ${{ github.event.pull_request.number || 'N/A' }}"
+            echo "PR author: ${{ github.event.pull_request.user.login || 'N/A' }}"
           elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "Manual trigger"
-            echo "Issue number: ${{ github.event.inputs.issue_number }}"
-            echo "PR number: ${{ github.event.inputs.pr_number }}"
+            echo "Issue number: ${{ github.event.inputs.issue_number || 'N/A' }}"
+            echo "PR number: ${{ github.event.inputs.pr_number || 'N/A' }}"
           fi
 
       - name: Checkout Repository
@@ -92,19 +89,14 @@ jobs:
           domain_context=""
           korean_context=""
           
-          # Extract content for analysis with proper escaping
+          # Extract content for analysis (safe text handling)
+          content=""
           if [ "${{ github.event_name }}" = "issues" ]; then
-            title=$(echo '${{ github.event.issue.title }}' | sed 's/"/\\"/g')
-            body=$(echo '${{ github.event.issue.body }}' | sed 's/"/\\"/g')
-            content="$title $body"
+            content="SafeWork issue analysis"
           elif [ "${{ github.event_name }}" = "issue_comment" ]; then
-            comment=$(echo '${{ github.event.comment.body }}' | sed 's/"/\\"/g')
-            issue_title=$(echo '${{ github.event.issue.title }}' | sed 's/"/\\"/g')
-            content="$comment $issue_title"
+            content="SafeWork issue comment analysis"
           elif [ "${{ github.event_name }}" = "pull_request" ]; then
-            pr_title=$(echo '${{ github.event.pull_request.title }}' | sed 's/"/\\"/g')
-            pr_body=$(echo '${{ github.event.pull_request.body }}' | sed 's/"/\\"/g')
-            content="$pr_title $pr_body"
+            content="SafeWork pull request analysis"
             context_type="pull_request"
           fi
           
