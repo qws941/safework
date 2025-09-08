@@ -116,8 +116,29 @@ jobs:
             - 의미있는 커밋 메시지 작성
 
             ### 4단계: 완료
-            - 변경사항 요약 댓글
+            - 변경사항 요약 댓글 (해결된 기능의 엔드포인트 URL 포함)
             - **이슈 자동 닫기** (중요!)
+            
+            ## 🔗 완료 댓글 작성 가이드
+            이슈 완료 시 다음 정보를 반드시 포함하세요:
+            - **해결된 기능 URL**: 실제 접근 가능한 엔드포인트 주소
+            - **테스트 방법**: 기능 확인 방법
+            - **관련 파일**: 수정된 주요 파일 목록
+            
+            예시:
+            ```
+            🎉 이슈가 해결되었습니다!
+            
+            **✅ 해결된 기능:**
+            - 설문조사 001 폼: http://localhost:4545/survey/001
+            - 관리자 대시보드: http://localhost:4545/admin
+            - API 엔드포인트: http://localhost:4545/api/safework/workers
+            
+            **🧪 테스트 방법:**
+            1. 위 URL에 접속하여 기능 확인
+            2. 브라우저 콘솔에서 에러 없음 확인
+            3. 데이터베이스 정상 저장 확인
+            ```
 
             ## 📁 주요 파일 구조
             ```
@@ -169,11 +190,47 @@ jobs:
               const currentTime = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
               const runUrl = process.env.GITHUB_SERVER_URL + '/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId;
               
+              // 이슈 제목을 기반으로 관련 엔드포인트 URL 추론
+              const issueTitle = context.payload.issue?.title || '';
+              let endpointUrls = [];
+              
+              // SafeWork 프로젝트의 주요 엔드포인트 매핑
+              if (issueTitle.includes('설문') || issueTitle.includes('survey')) {
+                endpointUrls.push('- 설문조사 001 (근골격계): http://localhost:4545/survey/001');
+                endpointUrls.push('- 설문조사 002 (신규입사자): http://localhost:4545/survey/002');
+              }
+              if (issueTitle.includes('관리') || issueTitle.includes('admin')) {
+                endpointUrls.push('- 관리자 대시보드: http://localhost:4545/admin');
+                endpointUrls.push('- SafeWork 관리패널: http://localhost:4545/admin/safework');
+              }
+              if (issueTitle.includes('API') || issueTitle.includes('api')) {
+                endpointUrls.push('- SafeWork API: http://localhost:4545/api/safework/v2/workers');
+                endpointUrls.push('- 건강검진 API: http://localhost:4545/api/safework/v2/health-checks');
+              }
+              if (issueTitle.includes('문서') || issueTitle.includes('document')) {
+                endpointUrls.push('- 문서 관리: http://localhost:4545/admin/documents');
+                endpointUrls.push('- 공개 문서: http://localhost:4545/documents');
+              }
+              if (issueTitle.includes('인증') || issueTitle.includes('auth') || issueTitle.includes('로그인')) {
+                endpointUrls.push('- 로그인: http://localhost:4545/auth/login');
+                endpointUrls.push('- 회원가입: http://localhost:4545/auth/register');
+              }
+              
+              // 기본 엔드포인트 (특정 키워드가 없는 경우)
+              if (endpointUrls.length === 0) {
+                endpointUrls.push('- 홈페이지: http://localhost:4545/');
+                endpointUrls.push('- 설문조사 메인: http://localhost:4545/survey');
+                endpointUrls.push('- 관리자 패널: http://localhost:4545/admin');
+              }
+              
+              const endpointSection = endpointUrls.length > 0 ? 
+                `\n\n**🔗 해결된 기능 URL:**\n${endpointUrls.join('\n')}\n\n**🧪 테스트 방법:**\n1. 위 URL에 접속하여 기능 정상 작동 확인\n2. 브라우저 개발자 도구에서 에러 없음 확인\n3. 데이터베이스 연동 및 저장 기능 확인` : '';
+
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.payload.issue.number,
-                body: '🎉 **Claude 작업 완료!**\n\n📋 **최종 진행 상황**\n- ✅ 이슈 분석 완료\n- ✅ 코드 수정 완료\n- ✅ PR 생성 및 병합 완료\n- ⏳ 자동 배포 진행 중...\n- ⏸️ 운영 반영 대기 중\n\n**🚀 변경사항이 master 브랜치에 적용되었습니다!**\n\n**📊 작업 세부사항:**\n- **완료 시간**: ' + currentTime + '\n- **자동 배포**: Docker 빌드 및 레지스트리 푸시 중\n- **예상 완료**: 약 5-10분 후\n\n**🔗 참고 링크:**\n- [GitHub Actions 로그](' + runUrl + ')\n- [Docker Registry](https://registry.jclee.me)\n\n---\n🤖 *Enhanced Claude Automation System v2.0*'
+                body: '🎉 **Claude 작업 완료!**\n\n📋 **최종 진행 상황**\n- ✅ 이슈 분석 완료\n- ✅ 코드 수정 완료\n- ✅ PR 생성 및 병합 완료\n- ⏳ 자동 배포 진행 중...\n- ⏸️ 운영 반영 대기 중\n\n**🚀 변경사항이 master 브랜치에 적용되었습니다!**' + endpointSection + '\n\n**📊 작업 세부사항:**\n- **완료 시간**: ' + currentTime + '\n- **자동 배포**: Docker 빌드 및 레지스트리 푸시 중\n- **예상 완료**: 약 5-10분 후\n\n**🔗 참고 링크:**\n- [GitHub Actions 로그](' + runUrl + ')\n- [Docker Registry](https://registry.jclee.me)\n\n---\n🤖 *Enhanced Claude Automation System v2.0*'
               });
               
               // 이슈 자동 닫기

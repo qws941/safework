@@ -89,12 +89,39 @@ jobs:
                 // Claude 자동 할당 댓글 추가
                 console.log(`✅ 이슈 #${issue.number} Claude 자동 할당 중...`);
                 
+                // 이슈 제목을 기반으로 관련 엔드포인트 URL 힌트 생성
+                const issueTitle = issue.title || '';
+                let endpointHints = [];
+                
+                if (issueTitle.includes('설문') || issueTitle.includes('survey')) {
+                  endpointHints.push('- 설문조사 001: /survey/001');
+                  endpointHints.push('- 설문조사 002: /survey/002');
+                }
+                if (issueTitle.includes('관리') || issueTitle.includes('admin')) {
+                  endpointHints.push('- 관리자 대시보드: /admin');
+                  endpointHints.push('- SafeWork 패널: /admin/safework');
+                }
+                if (issueTitle.includes('API') || issueTitle.includes('api')) {
+                  endpointHints.push('- SafeWork API: /api/safework/v2/*');
+                }
+                if (issueTitle.includes('문서') || issueTitle.includes('document')) {
+                  endpointHints.push('- 문서 관리: /admin/documents');
+                  endpointHints.push('- 공개 문서: /documents');
+                }
+                if (issueTitle.includes('인증') || issueTitle.includes('auth')) {
+                  endpointHints.push('- 로그인: /auth/login');
+                  endpointHints.push('- 회원가입: /auth/register');
+                }
+                
+                const endpointHintSection = endpointHints.length > 0 ? 
+                  `\n\n**🔗 관련 엔드포인트 힌트:**\n${endpointHints.join('\n')}\n_(해결 완료 시 실제 URL을 댓글에 포함해주세요)_` : '';
+
                 const commentBody = `🤖 **Claude 자동 할당**
 
 📋 **자동 감지된 이슈**
 - **이슈**: ${issue.title}
 - **생성시간**: ${created.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
-- **할당시간**: ${new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
+- **할당시간**: ${new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}${endpointHintSection}
 
 🎯 **Claude 작업 시작**
 @claude 이 이슈를 분석하고 해결해주세요.
@@ -104,7 +131,7 @@ SafeWork 프로젝트 패턴을 따라 다음 단계로 진행해주세요:
 2. 관련 파일 식별 및 현재 상태 확인
 3. 적절한 해결방안 구현
 4. 테스트 실행 및 검증
-5. 커밋 및 이슈 완료
+5. 커밋 및 이슈 완료 (엔드포인트 URL 포함)
 
 ---
 _🕒 자동 할당 시스템에 의해 생성됨_`;

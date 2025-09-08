@@ -93,6 +93,42 @@ jobs:
                 );
                 
                 if (recentClaudeIssue) {
+                  // 이슈 제목을 기반으로 관련 엔드포인트 URL 추론
+                  const issueTitle = recentClaudeIssue.title || '';
+                  let endpointUrls = [];
+                  
+                  // SafeWork 프로젝트의 운영 환경 엔드포인트 매핑
+                  if (issueTitle.includes('설문') || issueTitle.includes('survey')) {
+                    endpointUrls.push('- 설문조사 001 (근골격계): https://safework.jclee.me/survey/001');
+                    endpointUrls.push('- 설문조사 002 (신규입사자): https://safework.jclee.me/survey/002');
+                  }
+                  if (issueTitle.includes('관리') || issueTitle.includes('admin')) {
+                    endpointUrls.push('- 관리자 대시보드: https://safework.jclee.me/admin');
+                    endpointUrls.push('- SafeWork 관리패널: https://safework.jclee.me/admin/safework');
+                  }
+                  if (issueTitle.includes('API') || issueTitle.includes('api')) {
+                    endpointUrls.push('- SafeWork API: https://safework.jclee.me/api/safework/v2/workers');
+                    endpointUrls.push('- 건강검진 API: https://safework.jclee.me/api/safework/v2/health-checks');
+                  }
+                  if (issueTitle.includes('문서') || issueTitle.includes('document')) {
+                    endpointUrls.push('- 문서 관리: https://safework.jclee.me/admin/documents');
+                    endpointUrls.push('- 공개 문서: https://safework.jclee.me/documents');
+                  }
+                  if (issueTitle.includes('인증') || issueTitle.includes('auth') || issueTitle.includes('로그인')) {
+                    endpointUrls.push('- 로그인: https://safework.jclee.me/auth/login');
+                    endpointUrls.push('- 회원가입: https://safework.jclee.me/auth/register');
+                  }
+                  
+                  // 기본 운영 환경 엔드포인트
+                  if (endpointUrls.length === 0) {
+                    endpointUrls.push('- SafeWork 홈페이지: https://safework.jclee.me/');
+                    endpointUrls.push('- 설문조사 메인: https://safework.jclee.me/survey');
+                    endpointUrls.push('- 관리자 패널: https://safework.jclee.me/admin');
+                  }
+                  
+                  const endpointSection = endpointUrls.length > 0 ? 
+                    `\n\n**🔗 운영 환경 URL:**\n${endpointUrls.join('\n')}\n\n**✅ 운영 환경에서 직접 확인 가능합니다!**` : '';
+                  
                   await github.rest.issues.createComment({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
@@ -104,7 +140,7 @@ jobs:
                 - ✅ 코드 수정 완료
                 - ✅ PR 생성 및 병합 완료
                 - ✅ 자동 배포 완료
-                - ✅ **운영 환경 반영 완료** 🎉
+                - ✅ **운영 환경 반영 완료** 🎉${endpointSection}
                 
                 **🎯 배포 정보:**
                 - **버전**: \`${{ steps.version.outputs.version }}\`
