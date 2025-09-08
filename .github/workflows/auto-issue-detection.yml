@@ -114,27 +114,9 @@ jobs:
                 }
                 
                 const endpointHintSection = endpointHints.length > 0 ? 
-                  `\n\n**🔗 관련 엔드포인트 힌트:**\n${endpointHints.join('\n')}\n_(해결 완료 시 실제 URL을 댓글에 포함해주세요)_` : '';
+                  '\\n\\n**🔗 관련 엔드포인트 힌트:**\\n' + endpointHints.join('\\n') + '\\n_(해결 완료 시 실제 URL을 댓글에 포함해주세요)_' : '';
 
-                const commentBody = `🤖 **Claude 자동 할당**
-
-📋 **자동 감지된 이슈**
-- **이슈**: ${issue.title}
-- **생성시간**: ${created.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
-- **할당시간**: ${new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}${endpointHintSection}
-
-🎯 **Claude 작업 시작**
-@claude 이 이슈를 분석하고 해결해주세요.
-
-SafeWork 프로젝트 패턴을 따라 다음 단계로 진행해주세요:
-1. 이슈 내용 정확한 분석
-2. 관련 파일 식별 및 현재 상태 확인
-3. 적절한 해결방안 구현
-4. 테스트 실행 및 검증
-5. 커밋 및 이슈 완료 (엔드포인트 URL 포함)
-
----
-_🕒 자동 할당 시스템에 의해 생성됨_`;
+                const commentBody = '🤖 **Claude 자동 할당**\\n\\n📋 **자동 감지된 이슈**\\n- **이슈**: ' + issue.title + '\\n- **생성시간**: ' + created.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) + '\\n- **할당시간**: ' + new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) + endpointHintSection + '\\n\\n🎯 **Claude 작업 시작**\\n@claude 이 이슈를 분석하고 해결해주세요.\\n\\nSafeWork 프로젝트 패턴을 따라 다음 단계로 진행해주세요:\\n1. 이슈 내용 정확한 분석\\n2. 관련 파일 식별 및 현재 상태 확인\\n3. 적절한 해결방안 구현\\n4. 테스트 실행 및 검증\\n5. 커밋 및 이슈 완료 (엔드포인트 URL 포함)\\n\\n---\\n_🕒 자동 할당 시스템에 의해 생성됨_';
                 
                 await github.rest.issues.createComment({
                   owner,
