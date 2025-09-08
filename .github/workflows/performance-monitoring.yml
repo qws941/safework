@@ -499,3 +499,39 @@ jobs:
           echo "🏆 성능 등급: ${{ steps.report.outputs.performance_grade }}"
           echo "✅ 모든 성능 지표가 정상 범위입니다."
           echo "⏰ 다음 모니터링: 4시간 후"
+
+      - name: 🔔 SafeWork 성능 모니터링 Slack 알림
+        if: always()
+        run: |
+          # 성능 상태 결정
+          if [ "${{ env.PERFORMANCE_ALERT }}" = "true" ]; then
+            STATUS="PERFORMANCE ISSUE DETECTED"
+            COLOR="danger"
+            EMOJI="📉"
+          else
+            STATUS="PERFORMANCE OK"
+            COLOR="good" 
+            EMOJI="📊"
+          fi
+          
+          # Slack 성능 알림 전송
+          curl -X POST \
+            -H "Authorization: Bearer xoxb-9456976950066-9491938773873-UE79hj1fLat2dyqeIptwGLbj" \
+            -H "Content-type: application/json" \
+            --data "{
+              \"channel\": \"#safework-alerts\",
+              \"text\": \"$EMOJI SafeWork 성능 모니터링 $STATUS\",
+              \"attachments\": [{
+                \"color\": \"$COLOR\",
+                \"title\": \"SafeWork Performance Monitoring\", 
+                \"fields\": [
+                  {\"title\": \"Status\", \"value\": \"$STATUS\", \"short\": true},
+                  {\"title\": \"Performance Score\", \"value\": \"${{ steps.report.outputs.total_score }}/100\", \"short\": true},
+                  {\"title\": \"Grade\", \"value\": \"${{ steps.report.outputs.performance_grade }}\", \"short\": true},
+                  {\"title\": \"Next Check\", \"value\": \"4시간 후\", \"short\": true}
+                ],
+                \"footer\": \"SafeWork Performance\",
+                \"ts\": $(date +%s)
+              }]
+            }" \
+            https://slack.com/api/chat.postMessage

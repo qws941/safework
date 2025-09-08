@@ -28,6 +28,7 @@ permissions:
   checks: read
   discussions: read
   repository-projects: read
+  id-token: write
 
 jobs:
   claude-ai-automation:
@@ -147,6 +148,7 @@ jobs:
         with:
           # Authentication using OAuth token
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           
           # Advanced configuration
           track_progress: ${{ github.event_name != 'workflow_dispatch' }}
@@ -226,7 +228,7 @@ jobs:
             ## Current Task Analysis
             Please analyze the current GitHub event and provide appropriate assistance based on the SafeWork domain context detected above.
 
-      - name: Post-Processing & Status Update
+      - name: Post-Processing & Slack Notification
         if: always()
         run: |
           echo "🎯 Claude Code Action completed"
@@ -234,11 +236,56 @@ jobs:
           echo "Context: ${{ steps.context.outputs.domain_context }}"
           echo "Status: ${{ job.status }}"
           
+          # Slack notification
           if [ "${{ job.status }}" = "success" ]; then
+            STATUS_EMOJI="✅"
+            STATUS_TEXT="successful"
+            COLOR="good"
             echo "✅ SafeWork AI automation successful"
           else
+            STATUS_EMOJI="⚠️"
+            STATUS_TEXT="completed with issues"
+            COLOR="warning"
             echo "⚠️ SafeWork AI automation completed with issues"
           fi
+          
+          # Prepare Slack message
+          SLACK_MESSAGE="{
+            \"attachments\": [{
+              \"color\": \"$COLOR\",
+              \"title\": \"$STATUS_EMOJI SafeWork Claude AI - $STATUS_TEXT\",
+              \"fields\": [
+                {\"title\": \"Event\", \"value\": \"${{ github.event_name }}\", \"short\": true},
+                {\"title\": \"Context\", \"value\": \"${{ steps.context.outputs.domain_context }}\", \"short\": true},
+                {\"title\": \"Repository\", \"value\": \"${{ github.repository }}\", \"short\": true},
+                {\"title\": \"Actor\", \"value\": \"${{ github.actor }}\", \"short\": true}
+              ],
+              \"footer\": \"SafeWork Automation\",
+              \"ts\": $(date +%s)
+            }]
+          }"
+          
+          # Send to Slack using OAuth Token
+          curl -X POST \
+            -H "Authorization: Bearer xoxb-9456976950066-9491938773873-UE79hj1fLat2dyqeIptwGLbj" \
+            -H "Content-type: application/json" \
+            --data "{
+              \"channel\": \"#safework-alerts\",
+              \"text\": \"$STATUS_EMOJI SafeWork Claude AI - $STATUS_TEXT\",
+              \"attachments\": [{
+                \"color\": \"$COLOR\",
+                \"title\": \"SafeWork Automation Report\",
+                \"fields\": [
+                  {\"title\": \"Event\", \"value\": \"${{ github.event_name }}\", \"short\": true},
+                  {\"title\": \"Context\", \"value\": \"${{ steps.context.outputs.domain_context }}\", \"short\": true},
+                  {\"title\": \"Repository\", \"value\": \"${{ github.repository }}\", \"short\": true},
+                  {\"title\": \"Actor\", \"value\": \"${{ github.actor }}\", \"short\": true}
+                ],
+                \"footer\": \"SafeWork Automation\",
+                \"ts\": $(date +%s)
+              }]
+            }" \
+https://slack.com/api/chat.postMessage
           
           # Trigger deployment workflow if changes were made
           if [ "${{ job.status }}" = "success" ] && [ "${{ github.event_name }}" != "pull_request" ]; then
@@ -259,7 +306,7 @@ jobs:
        contains(github.event.issue.body, '작동 안'))
     
     steps:
-      - name: Urgent Issue Alert
+      - name: Urgent Issue Alert & Slack Notification
         uses: actions/github-script@v7
         with:
           script: |
@@ -290,4 +337,43 @@ jobs:
               
               ---
               🤖 *SafeWork Urgent Issue Handler*`
+            });
+            
+            // Send Slack notification for urgent issues
+            const slackMessage = {
+                "color": "danger",
+                "title": "🚨 URGENT: SafeWork Issue Detected",
+                "text": `*Issue #${issue.number}*: ${issue.title}`,
+                "fields": [
+                  {"title": "Priority", "value": "P0-CRITICAL", "short": true},
+                  {"title": "Author", "value": issue.user.login, "short": true},
+                  {"title": "URL", "value": issue.html_url, "short": false}
+                ],
+                "footer": "SafeWork Urgent Alert System",
+                "ts": Math.floor(Date.now() / 1000)
+              }]
+            };
+            
+            await fetch('https://slack.com/api/chat.postMessage', {
+              method: 'POST',
+              headers: {
+                'Authorization': 'Bearer xoxb-9456976950066-9491938773873-UE79hj1fLat2dyqeIptwGLbj',
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                channel: "#safework-alerts",
+                text: `🚨 URGENT: SafeWork Issue #${issue.number}`,
+                attachments: [{
+                  color: "danger",
+                  title: "🚨 URGENT: SafeWork Issue Detected",
+                  text: `*Issue #${issue.number}*: ${issue.title}`,
+                  fields: [
+                    {"title": "Priority", "value": "P0-CRITICAL", "short": true},
+                    {"title": "Author", "value": issue.user.login, "short": true},
+                    {"title": "URL", "value": issue.html_url, "short": false}
+                  ],
+                  footer: "SafeWork Urgent Alert System",
+                  ts: Math.floor(Date.now() / 1000)
+                }]
+              })
             });

@@ -388,3 +388,44 @@ jobs:
             } else {
               console.log("✅ 수동 배포 성공!");
             }
+
+  # Slack 알림 Job 추가
+  deployment-notification:
+    runs-on: ubuntu-latest
+    needs: [pre-validation, build-and-push, deploy, watchtower-trigger, health-check]
+    if: always()  # 성공/실패 관계없이 항상 실행
+    steps:
+      - name: 🔔 SafeWork 배포 파이프라인 Slack 알림
+        run: |
+          # 배포 상태 결정
+          if [ "${{ needs.health-check.result }}" = "success" ]; then
+            STATUS="SUCCESS"
+            COLOR="good"
+            EMOJI="✅"
+          else
+            STATUS="FAILED" 
+            COLOR="danger"
+            EMOJI="❌"
+          fi
+          
+          # Slack 메시지 전송
+          curl -X POST \
+            -H "Authorization: Bearer xoxb-9456976950066-9491938773873-UE79hj1fLat2dyqeIptwGLbj" \
+            -H "Content-type: application/json" \
+            --data "{
+              \"channel\": \"#safework-alerts\",
+              \"text\": \"$EMOJI SafeWork 배포 파이프라인 $STATUS\",
+              \"attachments\": [{
+                \"color\": \"$COLOR\",
+                \"title\": \"SafeWork Deployment Pipeline\",
+                \"fields\": [
+                  {\"title\": \"Status\", \"value\": \"$STATUS\", \"short\": true},
+                  {\"title\": \"Environment\", \"value\": \"Production\", \"short\": true},
+                  {\"title\": \"Repository\", \"value\": \"${{ github.repository }}\", \"short\": true},
+                  {\"title\": \"Trigger\", \"value\": \"${{ github.event_name }}\", \"short\": true}
+                ],
+                \"footer\": \"SafeWork Deployment\",
+                \"ts\": $(date +%s)
+              }]
+            }" \
+            https://slack.com/api/chat.postMessage

@@ -388,3 +388,44 @@ jobs:
               issue_number: issueNumber,
               body: '@claude 이 중요한 보안 위험을 즉시 분석하고 구체적인 해결 방안을 제시해주세요. 우선순위: P0-CRITICAL'
             });
+
+  # Slack 보안 알림 Job 추가
+  security-notification:
+    runs-on: ubuntu-latest
+    needs: [dependency-check, code-security-scan, phi-compliance-check, generate-security-report]
+    if: always()
+    steps:
+      - name: 🔔 SafeWork 보안 모니터링 Slack 알림
+        run: |
+          # 보안 상태 결정
+          if [ "${{ needs.phi-compliance-check.result }}" = "success" ] && [ "${{ needs.code-security-scan.result }}" = "success" ]; then
+            STATUS="PASSED"
+            COLOR="good"
+            EMOJI="🛡️"
+          else
+            STATUS="SECURITY ISSUES DETECTED"
+            COLOR="danger" 
+            EMOJI="🚨"
+          fi
+          
+          # Slack 보안 알림 전송
+          curl -X POST \
+            -H "Authorization: Bearer xoxb-9456976950066-9491938773873-UE79hj1fLat2dyqeIptwGLbj" \
+            -H "Content-type: application/json" \
+            --data "{
+              \"channel\": \"#safework-alerts\",
+              \"text\": \"$EMOJI SafeWork 보안 모니터링 $STATUS\",
+              \"attachments\": [{
+                \"color\": \"$COLOR\",
+                \"title\": \"SafeWork Security Monitoring\",
+                \"fields\": [
+                  {\"title\": \"Status\", \"value\": \"$STATUS\", \"short\": true},
+                  {\"title\": \"PHI Compliance\", \"value\": \"${{ needs.phi-compliance-check.result }}\", \"short\": true},
+                  {\"title\": \"Code Security\", \"value\": \"${{ needs.code-security-scan.result }}\", \"short\": true},
+                  {\"title\": \"Dependencies\", \"value\": \"${{ needs.dependency-check.result }}\", \"short\": true}
+                ],
+                \"footer\": \"SafeWork Security\",
+                \"ts\": $(date +%s)
+              }]
+            }" \
+            https://slack.com/api/chat.postMessage
