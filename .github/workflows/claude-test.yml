@@ -1,0 +1,24 @@
+name: Claude Test Simple
+
+on:
+  workflow_dispatch:
+  issues:
+    types: [opened]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    
+    steps:
+      - name: Simple Test
+        run: echo "Claude workflow test successful"
+        
+      - name: Check Issue
+        if: github.event.issue.number
+        run: |
+          echo "Issue #${{ github.event.issue.number }} detected"
+          echo "Title: ${{ github.event.issue.title }}"
