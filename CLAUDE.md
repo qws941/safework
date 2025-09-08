@@ -1,4 +1,4 @@
-# CLAUDE.md v1.5
+# CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -13,72 +13,70 @@ SafeWork is an industrial health and safety management system built with Flask 3
 - Document management system with version control and access logging
 - Anonymous survey submission support with rate limiting
 - RESTful API (v2) for external integrations
+- **Advanced AI-powered automation** with Claude Code integration
 
 **Tech Stack:** 
 - Backend: Python Flask 3.0+, SQLAlchemy 2.0, Redis 5.0
 - Database: MySQL 8.0 with UTF8MB4 charset
 - Frontend: Bootstrap 4.6, jQuery, Font Awesome icons
 - Infrastructure: Docker, GitHub Actions, Private Registry (registry.jclee.me), Watchtower
+- **Automation**: 4 specialized GitHub Actions workflows with Claude AI integration
 
-## Development Commands
+## Quick Start Commands
 
-### Docker Environment (Recommended)
+### Development Environment
 ```bash
-# Start all services
-docker-compose up -d
+# Docker (Recommended)
+docker-compose up -d                    # Start all services
+docker-compose exec app bash            # Enter container
+python migrate.py migrate              # Run migrations
+python app.py                          # Start development server (port 4545)
 
-# View logs 
-docker-compose logs -f app
+# Local Development
+cd app/ && pip install -r requirements.txt && python app.py
 
-# Access container
-docker-compose exec app bash
-
-# Stop services
-docker-compose down
+# Access Points
+# - Main app: http://localhost:4545
+# - Admin panel: http://localhost:4545/admin  
+# - Health check: http://localhost:4545/health
 ```
 
-### Local Development
+### Common Development Tasks
 ```bash
-# Install dependencies
-cd app/ && pip install -r requirements.txt
+# Testing
+pytest                                 # Run all tests (target: 39/39 passing)
+pytest --cov=. --cov-report=html      # Coverage report (target: 80%+)
 
-# Run development server
-python app.py                          # Starts on port 4545
+# Code Quality (handled by CI/CD pipeline)
+# Note: Formatting and linting automatically enforced on push
 
-# Database operations
+# Database
 python migrate.py status              # Check migration status
-python migrate.py migrate            # Run migrations
 python migrate.py create "Description" # Create new migration
-```
+# Web interface: /admin/migrations
 
-### Testing
-```bash
-# Run all tests
-pytest                                # Target: 39/39 passing
-
-# Run with coverage
-pytest --cov=. --cov-report=html     # Target: 80%+
+# Containers
+docker-compose logs -f app            # View logs
+docker-compose down                   # Stop services
 ```
 
 ## Architecture Overview
 
-### Flask Application Factory Pattern
-The application uses a factory pattern in `app/app.py`:
-
+### Core Application Structure
 ```python
+# Flask Factory Pattern (app/app.py)
 def create_app(config_name=None):
     app = Flask(__name__)
     # Auto-initialization: DB, Redis, Login, CSRF, Migrations
     # Blueprint registration: 8 modular route handlers
 ```
 
-### Core Application Structure
-- **Entry Point:** `app/app.py` - Application factory with health monitoring
-- **Models:** 
-  - `models.py` - Core models (User, Survey, AuditLog)
-  - `models_safework.py` - 13 SafeWork domain models  
-  - `models_document.py` - Document management system
-- **Migration System:** `migration_manager.py` - Custom MySQL 8.0 migration system
+**Key Files:**
+- `app.py`: Application factory with health monitoring
+- `models.py`: Core models (User, Survey, AuditLog) 
+- `models_safework.py`: 13 SafeWork domain models
+- `models_document.py`: Document management system
+- `migration_manager.py`: Custom MySQL 8.0 migration system
 
 ### Route Organization (8 Blueprints)
 ```
@@ -131,9 +129,18 @@ from models import kst_now  # Consistent KST timezone
 
 **Advanced Survey UI Patterns:**
 - **Dynamic Selection Cards:** Disease and accident part selection with status tracking
-- **Multi-part Selection:** Construction industry-specific options with custom input support  
+- **Multi-part Selection:** Construction industry-specific options with custom input support
 - **Structured JSON Storage:** Complex form data stored as JSON with validation
 - **Conditional Logic:** JavaScript ID-based form sections with real-time updates
+
+**Form Enhancement Features:**
+```javascript
+// Recent improvements (2024):
+// - Advanced body part selection UI with status (완치/치료·관찰 중)
+// - Construction industry customization (company/process/role dropdowns + custom input)
+// - Disease selection with guided examples and status tracking
+// - Multi-selection prevention and dynamic card management
+```
 
 ## Development Workflows
 
@@ -175,44 +182,68 @@ $.ajaxSetup({
 });
 ```
 
-## CI/CD and Automation
+## Watchtower Deployment System
 
-### Current GitHub Workflows
-The project uses a streamlined CI/CD pipeline with 4 optimized workflows:
+**Automated Deployment:** Push to `master` branch triggers full CI/CD pipeline:
 
-1. **`claude-action.yml` → "Claude"**
-   - Main Claude Code Action integration
-   - Responds to issues, PRs, and @claude mentions
-   - Uses `anthropics/claude-code-action@v1`
+1. **Security Scanning:** Trivy, Bandit, Safety for vulnerability detection
+2. **Code Quality:** Black, Flake8, Pylint automated checks
+3. **Testing:** Full pytest suite with coverage reporting
+4. **Docker Build:** Multi-platform images pushed to registry.jclee.me
+5. **Deployment:** Watchtower automatically pulls and deploys new images
+6. **API Trigger:** Immediate deployment via Watchtower HTTP API
 
-2. **`deploy.yml` → "Deploy"**
-   - Production deployment pipeline
-   - Triggers on successful Claude workflows or direct pushes
-   - Docker build, registry push, Watchtower integration
+**Branch Strategy:**
+- `master`: Production deployments (automatic after Claude workflow)
+- `staging`: Automatic staging deployments
+- `develop`: Development environment deployments
 
-3. **`claude-code-review.yml`**
-   - Automated code review system
-   - Claude-powered PR analysis
+### Registry & Watchtower Information
+- **Registry:** registry.jclee.me
+- **Watchtower Host:** watchtower.jclee.me
+- **Production Site:** https://safework.jclee.me
+- **Images:** 
+  - `safework/app:latest` (Flask application)
+  - `safework/mysql:latest` (MySQL with init scripts)
+  - `safework/redis:latest` (Redis cache)
 
-4. **`documentation-sync.yml`**
-   - API documentation auto-generation
-   - Keeps docs synchronized with code
+### Required GitHub Secrets
 
+**Critical for Claude Code Action v1:**
+- `CLAUDE_CODE_OAUTH_TOKEN`: Claude Code OAuth token for AI automation
+  - **Setup**: Run `/install-github-app` in Claude Code terminal
+  - **Format**: `claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}`
+  - **Required for**: Issue processing, PR reviews, automated responses
 
-### Claude Code Action Integration
+**Deployment & Infrastructure:**
+- `REGISTRY_PASSWORD`: Docker registry authentication (`bingogo1`)
+- `WATCHTOWER_HTTP_API_TOKEN`: Watchtower HTTP API token (`wt_k8Jm4nX9pL2vQ7rB5sT6yH3fG1dA0`)
 
-**Core Configuration:**
+## Claude Code Automation System
+
+### Workflow Architecture (4 Specialized Pipelines)
+
+**Core AI Engine:**
 ```yaml
+# claude-action.yml - Claude Code Action v1
 uses: anthropics/claude-code-action@v1
 with:
   claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-  track_progress: ${{ github.event_name != 'workflow_dispatch' }}
+  track_progress: ${{ github.event_name != 'workflow_dispatch' }}  # Conditional
   use_sticky_comment: true
   use_commit_signing: false
 ```
 
+**Supporting Workflows:**
+- `deploy.yml` - Production deployment + Watchtower API
+- `claude-code-review.yml` - Automated code reviews
+- `documentation-sync.yml` - API docs auto-generation  
+
+### Context-Aware Processing
+
 **Smart Trigger Detection:**
 ```yaml
+# Multi-event triggers with context analysis
 on:
   issues: [opened, edited, reopened]
   issue_comment: [created]  # @claude mentions
@@ -220,29 +251,36 @@ on:
   workflow_dispatch:        # Manual execution
 ```
 
-### Watchtower Deployment System
+**Domain-Specific Context Analysis:**
+- **Survey System**: Keywords → `설문`, `survey`, `001`, `002`
+- **Admin System**: Keywords → `관리자`, `admin`, `safework`  
+- **Medical System**: Keywords → `의료`, `health`, `검진`
+- **API System**: Keywords → `api`, `연동`, `integration`
+- **Korean Detection**: Auto-Korean responses for Korean content
 
-**Automated Deployment:** Push to `master` branch triggers:
+### Flexible Usage Patterns
 
-1. **Docker Build:** Multi-platform images pushed to registry.jclee.me
-2. **Watchtower Trigger:** Immediate deployment via HTTP API
-3. **Health Verification:** Automatic service health checks
+**Scenario 1: Issue Auto-Processing**
+```bash
+# Keywords trigger automatic Claude processing
+Title: "[BUG] 설문조사 001 오류 수정" → Auto-detects survey system
+Body: "@claude 이 문제 분석해주세요" → Immediate processing
+Result: Korean response + SafeWork domain expertise
+```
 
-**Registry & Infrastructure:**
-- **Registry:** registry.jclee.me
-- **Watchtower Host:** watchtower.jclee.me
-- **Production Site:** https://safework.jclee.me
+**Scenario 2: PR Review Automation**  
+```bash
+# PR with SafeWork-related changes triggers domain-specific review
+Files: app/routes/admin.py, templates/admin/safework/
+Result: SafeWork admin panel expertise + deployment considerations
+```
 
-### Required GitHub Secrets
-
-**Critical for Claude Code Action:**
-- `CLAUDE_CODE_OAUTH_TOKEN`: Claude Code OAuth token
-  - **Setup**: Run `/install-github-app` in Claude Code terminal
-  - **Required for**: Issue processing, PR reviews, automated responses
-
-**Deployment & Infrastructure:**
-- `REGISTRY_PASSWORD`: Docker registry authentication
-- `WATCHTOWER_HTTP_API_TOKEN`: Watchtower HTTP API token
+**Scenario 3: Manual Workflow Execution**
+```bash
+# GitHub Actions → "SafeWork Claude AI" → Run workflow
+Input: issue_number=123 or pr_number=456
+Result: Targeted processing with full context
+```
 
 ## Code Patterns and Standards
 
@@ -280,32 +318,37 @@ $.ajaxSetup({
 {% endblock %}
 ```
 
-## Environment Configuration
+## Testing Approach
 
-### Docker Compose Environment Variables
-SafeWork uses environment-variable based configuration:
+**Pytest Configuration:** 
+- Test files in `app/tests/`
+- Fixtures in `conftest.py` for database setup
+- Separate test classes for models, routes, and API endpoints
+- Coverage target: 80%+ (currently 39/39 tests passing)
 
-```bash
-# Database (MySQL 8.0)
-MYSQL_ROOT_PASSWORD=SafeWork[random]Root@
-MYSQL_PASSWORD=SafeWork[random]User@
-
-# Cache (Redis)
-REDIS_PASSWORD=SafeWork[random]Redis@
-
-# Application Security
-SECRET_KEY=SafeWork-Production-Secret-[random]-2024
-ADMIN_PASSWORD=SafeWork[random]Admin@
-
-# Infrastructure
-REGISTRY_PASSWORD=SafeWork[random]Registry@
-WATCHTOWER_HTTP_API_TOKEN=wt_[random32]
+**Test Patterns:**
+```python
+def test_survey_submission(client, auth):
+    auth.login()  # Use fixture for authentication
+    response = client.post('/survey/001_submit', data=form_data)
+    assert response.status_code == 302  # Redirect after success
+    assert Survey.query.count() == 1
 ```
 
-**Security Setup Script:**
+## Configuration & API Reference
+
+### Environment Variables
 ```bash
-# Automated security hardening
-./scripts/security-setup.sh
+# Core Services
+DATABASE_URL=mysql+pymysql://safework:safework2024@mysql:3306/safework_db
+REDIS_HOST=safework-redis
+SECRET_KEY=safework-production-secret-key-2024
+FLASK_CONFIG=production
+TZ=Asia/Seoul
+
+# Authentication  
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=safework2024
 ```
 
 ### Key API Endpoints
@@ -319,77 +362,103 @@ WATCHTOWER_HTTP_API_TOKEN=wt_[random32]
 # Survey Forms
 /survey/001_submit                 # Musculoskeletal survey
 /survey/002_submit                 # Health checkup form
-
-# System Health
-/health                            # Health check endpoint
 ```
-
-## Testing and Quality
-
-**Pytest Configuration:** 
-- Test files in `app/tests/`
-- Fixtures in `conftest.py` for database setup
-- Coverage target: 80%+ (currently 39/39 tests passing)
-
-**Test Patterns:**
-```python
-def test_survey_submission(client, auth):
-    auth.login()  # Use fixture for authentication
-    response = client.post('/survey/001_submit', data=form_data)
-    assert response.status_code == 302  # Redirect after success
-    assert Survey.query.count() == 1
-```
-
-## Database Migration System
-
-**CLI Usage:**
-```bash
-# Check migration status
-python app/migrate.py status
-
-# Run migrations
-python app/migrate.py migrate
-
-# Create new migration
-python app/migrate.py create "Add new feature"
-
-# Rollback
-python app/migrate.py rollback --version 002
-```
-
-**Web Interface:**
-- URL: `http://localhost:4545/admin/migrations`
-- Visual migration status and execution
-- Real-time progress monitoring
-
-## Monitoring and Scripts
-
-**Scripts Location:** `scripts/`
-- `issue-tracker.sh` - System monitoring (Docker, CI/CD, App, DB, Redis)
-- `scheduler.sh` - Automated monitoring setup
-- `security-setup.sh` - Security hardening automation
-- `cicd-auto-fix.sh` - Automated CI/CD failure detection and correction
-
-**Monitoring Coverage:**
-- Docker containers and resource usage
-- GitHub Actions workflow failures  
-- Application logs and database performance
-- Redis cache status and system resources
 
 ## Production Guidelines
 
 ### Core Requirements
 **Database:** MySQL 8.0, UTF8MB4, transactions + rollback, `kst_now()` timezone  
-**Security:** CSRF protection, `@login_required`, audit logging, rate limiting  
+**Security:** CSRF global, `@login_required`, audit logging, rate limiting  
 **Performance:** Redis caching, DB indexing, lazy loading, pagination (20/page)
 
-### Account Information
-- **Admin Account**: admin / safework2024
-- **Test Account**: test / test123
-- **Registry**: registry.jclee.me (admin/bingogo1)
+## Troubleshooting
 
-### Essential Access Points
-- **Main Application**: http://localhost:4545
-- **Admin Panel**: http://localhost:4545/admin  
-- **Health Check**: http://localhost:4545/health
-- **Production Site**: https://safework.jclee.me
+### Claude Code Action Issues
+
+**Common Errors & Solutions:**
+```bash
+# Error: 'max_turns' unexpected input
+# Solution: Remove unsupported parameter (v1 doesn't support max_turns)
+# Fixed in: claude-action.yml
+
+# Error: track_progress only supported for pull_request and issue events
+# Solution: Use conditional track_progress
+track_progress: ${{ github.event_name != 'workflow_dispatch' }}
+
+# Error: Missing CLAUDE_CODE_OAUTH_TOKEN
+# Solution: Set up OAuth token via Claude Code terminal
+/install-github-app  # Run this in Claude Code
+
+# Error: Invalid token format
+# Solution: Use correct parameter name
+claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+```
+
+**Authentication Issues:**
+```bash
+# Check Claude Code Action authentication
+# 1. Verify secret exists in GitHub Settings → Secrets
+# 2. Ensure correct parameter name (claude_code_oauth_token)
+# 3. Run /install-github-app in Claude Code if token missing
+
+# Test authentication in workflow
+- name: Debug Claude Authentication
+  run: |
+    echo "Token present: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}"
+```
+
+**Workflow Configuration:**
+```yaml
+# Correct Claude Code Action v1 configuration
+- name: Claude Code Action
+  uses: anthropics/claude-code-action@v1
+  with:
+    claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+    track_progress: ${{ github.event_name != 'workflow_dispatch' }}
+    use_sticky_comment: true
+    use_commit_signing: false
+    prompt: |
+      You are Claude, specialized in SafeWork industrial safety system...
+```
+
+### Deployment Pipeline Issues
+
+**Docker & Watchtower:**
+```bash
+# Check container status
+docker-compose ps
+
+# Verify Watchtower API
+curl -H "Authorization: Bearer $WATCHTOWER_TOKEN" \
+     -X POST https://watchtower.jclee.me/v1/update
+
+# Test registry connectivity  
+docker pull registry.jclee.me/safework/app:latest
+
+# Database connection test
+docker-compose exec app python -c "from models import db; print(db.engine.execute('SELECT 1'))"
+```
+
+**Common Deployment Failures:**
+```bash
+# Registry authentication failed
+# Solution: Verify REGISTRY_PASSWORD secret
+
+# Watchtower update failed  
+# Solution: Check WATCHTOWER_HTTP_API_TOKEN format
+
+# Health check timeout
+# Solution: Increase timeout in deploy.yml
+HEALTH_CHECK_TIMEOUT: 30
+```
+
+### Quick Fixes
+
+**Application Issues:**
+```bash
+# Survey form JS errors → Check HTML ID matching
+# Korean timezone → Use kst_now() consistently  
+# Anonymous surveys → Verify user_id=1 exists
+# Redis connection → docker-compose exec redis redis-cli ping
+# MySQL slow queries → Enable slow_query_log
+```

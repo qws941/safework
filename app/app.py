@@ -11,6 +11,7 @@ from flask_wtf.csrf import CSRFProtect
 from config import config
 from migration_manager import MigrationManager
 from models import AuditLog, Survey, SurveyStatistics, User, db
+from error_monitor import ErrorMonitor
 
 
 def create_app(config_name=None):
@@ -30,6 +31,10 @@ def create_app(config_name=None):
 
     # Initialize CSRF Protection
     csrf = CSRFProtect(app)
+
+    # Initialize Error Monitor (에러 모니터링 시스템)
+    error_monitor = ErrorMonitor(app)
+    app.error_monitor = error_monitor
 
     # Initialize migration manager
     migration_manager = MigrationManager(app)

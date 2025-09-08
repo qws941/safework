@@ -5,12 +5,25 @@ services:
   mysql:
     image: registry.jclee.me/safework/mysql:latest
     container_name: safework-mysql
-    restart: unless-stopped
+    restart: on-failure:3
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-safework2024root}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-safework_db}
@@ -28,20 +41,34 @@ services:
       - safework-net
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-safework2024root}"]
-      interval: 30s
-      timeout: 3s
-      retries: 3
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   # Redis 캐시 (커스텀 이미지 v1.3.1)
   redis:
     image: registry.jclee.me/safework/redis:latest
     container_name: safework-redis
-    restart: unless-stopped
+    restart: on-failure:3
     logging:
       driver: "json-file"
       options:
         max-size: "5m"
         max-file: "2"
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.25'
+        reservations:
+          memory: 64M
+          cpus: '0.1'
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
     environment:
       REDIS_REPLICATION_MODE: master
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
@@ -54,20 +81,34 @@ services:
       - safework-net
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
-      timeout: 3s
-      retries: 3
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   # SafeWork 애플리케이션 (커스텀 이미지 v1.3.1)
   app:
     image: registry.jclee.me/safework/app:latest
     container_name: safework-app
-    restart: unless-stopped
+    restart: on-failure:5
     logging:
       driver: "json-file"
       options:
         max-size: "20m"
         max-file: "5"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 5
+        window: 300s
     depends_on:
       mysql:
         condition: service_healthy
@@ -93,19 +134,62 @@ services:
       UPLOAD_FOLDER: ${UPLOAD_FOLDER:-/app/uploads}
       APP_PORT: ${APP_PORT:-4545}
       TZ: ${TZ:-Asia/Seoul}
+      # Error monitoring and GitHub integration
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GITHUB_REPO: ${GITHUB_REPO:-qws941/safework}
+      ERROR_MONITORING_ENABLED: ${ERROR_MONITORING_ENABLED:-true}
     volumes:
       - app_uploads:/app/uploads
+      - /var/run/docker.sock:/var/run/docker.sock:ro  # For container monitoring
     ports:
       - "4545:4545"
     networks:
       - safework-net
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:4545/health')"]
-      interval: 30s
-      timeout: 3s
-      retries: 3
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
+      - "safework.monitoring.enabled=true"
+
+  # 에러 모니터링 서비스
+  error-monitor:
+    image: registry.jclee.me/safework/app:latest
+    container_name: safework-error-monitor
+    restart: on-failure:3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.1'
+        reservations:
+          memory: 64M
+          cpus: '0.05'
+    environment:
+      PYTHONUNBUFFERED: 1
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GITHUB_REPO: ${GITHUB_REPO:-qws941/safework}
+      ERROR_MONITORING_ENABLED: ${ERROR_MONITORING_ENABLED:-true}
+      TZ: ${TZ:-Asia/Seoul}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./logs:/app/logs
+    networks:
+      - safework-net
+    depends_on:
+      - app
+    command: ["python", "/app/scripts/error-monitor.py"]
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+      - "safework.monitoring.error-monitor=true"
 
 
 volumes:
