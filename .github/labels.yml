@@ -93,3 +93,19 @@
 - name: "🔄 auto-merged"
   color: "0e8a16"
   description: "자동 머지됨"
+
+- name: "🚀 deployment-verified"
+  color: "28a745"
+  description: "배포 검증 완료"
+
+- name: "🔒 auto-closed"
+  color: "6f42c1"
+  description: "자동으로 닫힌 이슈"
+
+- name: "⚠️ deployment-failed"
+  color: "dc3545"
+  description: "배포 검증 실패"
+
+- name: "🔧 needs-attention"
+  color: "ffc107"
+  description: "수동 확인 필요"

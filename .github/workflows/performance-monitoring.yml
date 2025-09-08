@@ -1,4 +1,4 @@
-name: SafeWork Performance Monitoring
+name: Performance Check
 
 on:
   schedule:

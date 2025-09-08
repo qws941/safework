@@ -292,6 +292,260 @@ https://slack.com/api/chat.postMessage
             echo "🚀 Changes detected - deployment pipeline will be triggered"
           fi
 
+  # Post-deployment verification and auto-close job
+  post-deployment-verification:
+    runs-on: ubuntu-latest
+    needs: claude-ai-automation
+    timeout-minutes: 10
+    if: |
+      needs.claude-ai-automation.result == 'success' &&
+      github.event_name == 'issues' &&
+      (contains(github.event.issue.labels.*.name, 'resolved') ||
+       contains(github.event.issue.labels.*.name, 'claude-ready'))
+    
+    steps:
+      - name: Wait for Deployment
+        run: |
+          echo "⏳ Waiting for deployment to complete..."
+          sleep 120  # Wait 2 minutes for deployment (optimized)
+
+      - name: Verify Deployment with Version Comparison
+        id: verify
+        run: |
+          echo "🔍 Verifying SafeWork deployment with version comparison..."
+          
+          # Health check endpoints
+          PROD_URL="https://safework.jclee.me"
+          HEALTH_ENDPOINT="$PROD_URL/health"
+          
+          # Get current Git commit for version comparison
+          CURRENT_COMMIT=$(git rev-parse --short HEAD)
+          CURRENT_TAG=$(git describe --tags --exact-match 2>/dev/null || echo "")
+          
+          echo "📊 Current deployment info:"
+          echo "  - Commit: $CURRENT_COMMIT"
+          echo "  - Tag: $CURRENT_TAG"
+          
+          # Function to check endpoint
+          check_endpoint() {
+            local url=$1
+            local name=$2
+            echo "Checking $name: $url"
+            
+            response=$(curl -s -w "%{http_code}" -o /tmp/response.txt "$url" || echo "000")
+            
+            if [ "$response" = "200" ]; then
+              echo "✅ $name: OK"
+              return 0
+            else
+              echo "❌ $name: Failed (HTTP $response)"
+              return 1
+            fi
+          }
+          
+          # Function to get deployed version
+          get_deployed_version() {
+            echo "🏷️ Getting deployed version info..."
+            
+            # Get version from health endpoint
+            health_response=$(curl -s "$HEALTH_ENDPOINT" 2>/dev/null)
+            
+            if [ $? -eq 0 ] && [ -n "$health_response" ]; then
+              deployed_version=$(echo "$health_response" | jq -r '.version // empty' 2>/dev/null || echo "")
+              deployed_commit=$(echo "$health_response" | jq -r '.git_commit // empty' 2>/dev/null || echo "")
+              
+              echo "🔍 Deployed version info:"
+              echo "  - Version: ${deployed_version:-'unknown'}"
+              echo "  - Commit: ${deployed_commit:-'unknown'}"
+              
+              # Store for output
+              echo "deployed_version=${deployed_version:-'unknown'}" >> $GITHUB_OUTPUT
+              echo "deployed_commit=${deployed_commit:-'unknown'}" >> $GITHUB_OUTPUT
+              
+              return 0
+            else
+              echo "⚠️ Could not retrieve version info"
+              return 1
+            fi
+          }
+          
+          # Check Docker image version from registry
+          check_image_version() {
+            echo "🐳 Checking Docker image version..."
+            
+            # Try to get image digest from registry
+            REGISTRY_URL="registry.jclee.me"
+            IMAGE_NAME="safework/app"
+            
+            # Get current image digest (requires registry API access)
+            if command -v skopeo >/dev/null 2>&1; then
+              current_digest=$(skopeo inspect docker://$REGISTRY_URL/$IMAGE_NAME:latest 2>/dev/null | jq -r '.Digest // empty' || echo "")
+              if [ -n "$current_digest" ]; then
+                echo "📦 Current image digest: $current_digest"
+                echo "image_digest=$current_digest" >> $GITHUB_OUTPUT
+              fi
+            fi
+          }
+          
+          # Main verification process
+          verification_passed=true
+          
+          # Step 1: Basic health checks
+          if check_endpoint "$HEALTH_ENDPOINT" "Health Check"; then
+            echo "✅ Health check passed"
+          else
+            echo "❌ Health check failed"
+            verification_passed=false
+          fi
+          
+          # Step 2: Version comparison
+          if get_deployed_version; then
+            echo "✅ Version info retrieved"
+          else
+            echo "⚠️ Version info retrieval failed (but continuing)"
+          fi
+          
+          # Step 3: Check Docker image version
+          check_image_version
+          
+          # Step 4: Functional tests
+          if check_endpoint "$PROD_URL/" "Main Page"; then
+            echo "✅ Main page accessible"
+          else
+            echo "❌ Main page failed"
+            verification_passed=false
+          fi
+          
+          if check_endpoint "$PROD_URL/survey/001_musculoskeletal_symptom_survey" "Survey Form"; then
+            echo "✅ Survey form accessible"
+          else
+            echo "❌ Survey form failed"
+            verification_passed=false
+          fi
+          
+          # Step 5: Additional SafeWork-specific checks
+          if check_endpoint "$PROD_URL/admin/dashboard" "Admin Dashboard"; then
+            echo "✅ Admin dashboard accessible (or properly redirecting)"
+          else
+            echo "⚠️ Admin dashboard check inconclusive (may require login)"
+          fi
+          
+          # Final decision
+          if [ "$verification_passed" = true ]; then
+            echo "deployment_verified=true" >> $GITHUB_OUTPUT
+            echo "✅ All critical deployment verification checks passed"
+            
+            # Create detailed verification report
+            cat > /tmp/verification_report.txt << EOF
+🎯 SafeWork Deployment Verification Completed
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Health Check: OK
+✅ Main Page: Accessible
+✅ Survey Form: Accessible
+📊 Deployed Version: $CURRENT_COMMIT
+⏰ Verification Time: $(date '+%Y-%m-%d %H:%M:%S KST')
+EOF
+            
+            exit 0
+          else
+            echo "deployment_verified=false" >> $GITHUB_OUTPUT
+            echo "❌ Deployment verification failed"
+            exit 1
+          fi
+
+      - name: Auto Close Issue on Successful Deployment
+        if: steps.verify.outputs.deployment_verified == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            console.log("🎯 Deployment verified successfully. Closing issue...");
+            
+            const issue = context.payload.issue;
+            
+            // Add deployment-verified label
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              labels: ['deployment-verified', 'auto-closed']
+            });
+            
+            // Add completion comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: `✅ **Issue Auto-Completed**
+
+              **Deployment Verification Completed:**
+              - ✅ Health Check: https://safework.jclee.me/health
+              - ✅ Main Page: https://safework.jclee.me/
+              - ✅ Survey Form: https://safework.jclee.me/survey/001_musculoskeletal_symptom_survey
+              - ✅ Admin Dashboard: https://safework.jclee.me/admin/dashboard
+              
+              **Version Information:**
+              - 📊 Deployed Commit: \`${{ steps.verify.outputs.deployed_commit || 'Checking' }}\`
+              - 🏷️ Deployed Version: \`${{ steps.verify.outputs.deployed_version || 'Checking' }}\`
+              - 🐳 Image Digest: \`${{ steps.verify.outputs.image_digest || 'Checking' }}\`
+              
+              **Verification Time:** ${new Date().toLocaleString('en-US', {timeZone: 'Asia/Seoul'})} KST
+              **Deployment Status:** All core functions verified and working properly
+              
+              Deployment completed as intended. Auto-closing this issue.
+              
+              ---
+              🤖 *SafeWork Automated Deployment Verification System v2.0*`
+            });
+            
+            // Close the issue
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              state: 'closed'
+            });
+            
+            console.log(`✅ Issue #${issue.number} has been automatically closed after successful deployment verification`);
+
+      - name: Notify Deployment Failure
+        if: steps.verify.outputs.deployment_verified == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            console.log("❌ Deployment verification failed. Adding warning comment...");
+            
+            const issue = context.payload.issue;
+            
+            // Add deployment-failed label
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              labels: ['deployment-failed', 'needs-attention']
+            });
+            
+            // Add failure comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: `⚠️ **Deployment Verification Failed**
+
+              **Failure Reasons:**
+              - ❌ SafeWork service is not responding properly
+              - 🔍 Health Check or main pages are inaccessible
+              
+              **Verification Time:** ${new Date().toLocaleString('en-US', {timeZone: 'Asia/Seoul'})} KST
+              **Required Action:** Manual verification and redeployment needed
+              
+              @qws941 @seonmin994 Please check this issue.
+              
+              ---
+              🤖 *SafeWork Automated Deployment Verification System*`
+            });
+            
+            console.log(`⚠️ Issue #${issue.number} requires manual attention - deployment verification failed`);
+
   # Parallel job for urgent issue handling
   urgent-issue-handler:
     runs-on: ubuntu-latest

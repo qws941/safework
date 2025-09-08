@@ -1267,6 +1267,7 @@
             <div id="disease_grid_section" style="display: none; margin-top: 20px;">
                 <div class="alert alert-info">
                     <i class="bi bi-info-circle"></i> 진단받은 질병을 선택하고 현재 상태를 지정해주세요.
+                    <br><small class="text-muted mt-1"><strong>보기:</strong> 류머티스 관절염, 당뇨병, 루프스병, 통풍, 알코올중독, 기타</small>
                 </div>
                 
                 <div id="selected_diseases_container">
@@ -1337,35 +1338,61 @@
                 </div>
             </div>
             
-            <div id="accident_parts_section" style="display: none; margin-top: 15px;">
-                <label class="form-label">상해 부위는? (복수 선택 가능)</label>
-                <div class="checkbox-group">
-                    <div class="checkbox-item">
-                        <input type="checkbox" id="accident_hand" name="accident_hand">
-                        <label for="accident_hand">손/손가락/손목</label>
-                    </div>
-                    <div class="checkbox-item">
-                        <input type="checkbox" id="accident_arm" name="accident_arm">
-                        <label for="accident_arm">팔/팔꿈치</label>
-                    </div>
-                    <div class="checkbox-item">
-                        <input type="checkbox" id="accident_shoulder" name="accident_shoulder">
-                        <label for="accident_shoulder">어깨</label>
-                    </div>
-                    <div class="checkbox-item">
-                        <input type="checkbox" id="accident_neck" name="accident_neck">
-                        <label for="accident_neck">목</label>
-                    </div>
-                    <div class="checkbox-item">
-                        <input type="checkbox" id="accident_waist" name="accident_waist">
-                        <label for="accident_waist">허리</label>
-                    </div>
-                    <div class="checkbox-item">
-                        <input type="checkbox" id="accident_leg" name="accident_leg">
-                        <label for="accident_leg">다리/발</label>
+            <!-- Step 2: 사고 부위 선택 그리드 (예 선택 시에만 표시) -->
+            <div id="accident_parts_section" style="display: none; margin-top: 20px;">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> 다친 부위를 선택하고 현재 상태를 지정해주세요.
+                    <br><small class="text-muted mt-1"><strong>보기:</strong> 손/손가락/손목, 팔/팔꿈치, 어깨, 목, 허리, 다리/발</small>
+                </div>
+                
+                <div id="selected_accidents_container">
+                    <!-- 선택된 부위 카드들이 여기에 동적으로 추가됩니다 -->
+                </div>
+                
+                <!-- 부위 선택 그리드 -->
+                <div class="accident-selection-grid">
+                    <label class="form-label">부위 선택:</label>
+                    <div class="row g-2">
+                        <div class="col-md-4 col-6">
+                            <button type="button" class="btn btn-outline-primary w-100 accident-option" data-part="손/손가락/손목">
+                                <i class="bi bi-plus"></i> 손/손가락/손목
+                            </button>
+                        </div>
+                        <div class="col-md-4 col-6">
+                            <button type="button" class="btn btn-outline-primary w-100 accident-option" data-part="팔/팔꿈치">
+                                <i class="bi bi-plus"></i> 팔/팔꿈치
+                            </button>
+                        </div>
+                        <div class="col-md-4 col-6">
+                            <button type="button" class="btn btn-outline-primary w-100 accident-option" data-part="어깨">
+                                <i class="bi bi-plus"></i> 어깨
+                            </button>
+                        </div>
+                        <div class="col-md-4 col-6">
+                            <button type="button" class="btn btn-outline-primary w-100 accident-option" data-part="목">
+                                <i class="bi bi-plus"></i> 목
+                            </button>
+                        </div>
+                        <div class="col-md-4 col-6">
+                            <button type="button" class="btn btn-outline-primary w-100 accident-option" data-part="허리">
+                                <i class="bi bi-plus"></i> 허리
+                            </button>
+                        </div>
+                        <div class="col-md-4 col-6">
+                            <button type="button" class="btn btn-outline-primary w-100 accident-option" data-part="다리/발">
+                                <i class="bi bi-plus"></i> 다리/발
+                            </button>
+                        </div>
                     </div>
                 </div>
+                
+                <div class="text-center mt-3">
+                    <small class="text-muted">부위를 선택하면 상태 지정 카드가 나타납니다</small>
+                </div>
             </div>
+            
+            <!-- 숨겨진 input 필드들 (서버 전송용) -->
+            <input type="hidden" id="accidents_data" name="accidents_data">
         </div>
 
         <!-- 5. 육체적 부담 정도 -->
@@ -2309,6 +2336,12 @@ document.addEventListener('DOMContentLoaded', function() {
         diseasesDataInput.value = JSON.stringify(data);
     }
 
+    // ===== 과거 사고 부위 관리 시스템 =====
+    const accidentOptions = document.querySelectorAll('.accident-option');
+    const selectedAccidentsContainer = document.getElementById('selected_accidents_container');
+    const accidentsDataInput = document.getElementById('accidents_data');
+    let selectedAccidents = [];
+
     // 과거 사고 조건부 표시
     document.querySelectorAll('input[name="past_accident"]').forEach(radio => {
         radio.addEventListener('change', function() {
@@ -2318,10 +2351,164 @@ document.addEventListener('DOMContentLoaded', function() {
                     accidentDetails.style.display = 'block';
                 } else {
                     accidentDetails.style.display = 'none';
+                    // 아니오 선택 시 모든 선택값 초기화
+                    selectedAccidents = [];
+                    selectedAccidentsContainer.innerHTML = '';
+                    resetAccidentOptions();
+                    updateAccidentsData();
                 }
             }
         });
     });
+
+    // 부위 선택 버튼 클릭 이벤트
+    accidentOptions.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const partName = this.dataset.part;
+            
+            // 이미 선택된 부위인지 확인
+            if (selectedAccidents.some(accident => accident.part === partName)) {
+                alert('이미 선택된 부위입니다.');
+                return;
+            }
+
+            // 새 사고 부위 추가
+            const newAccident = {
+                part: partName,
+                status: '' // 초기에는 빈 값
+            };
+            
+            selectedAccidents.push(newAccident);
+            createAccidentCard(newAccident, selectedAccidents.length - 1);
+            
+            // 버튼 상태 변경
+            this.classList.remove('btn-outline-primary');
+            this.classList.add('btn-success');
+            this.innerHTML = '<i class="bi bi-check"></i> ' + partName;
+            this.disabled = true;
+            
+            updateAccidentsData();
+        });
+    });
+
+    // 사고 부위 카드 생성
+    function createAccidentCard(accident, index) {
+        const cardHtml = `
+            <div class="card mb-3 accident-card" data-index="${index}">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <h6 class="card-title mb-0">
+                            <i class="bi bi-bandaid"></i> ${accident.part}
+                        </h6>
+                        <button type="button" class="btn btn-sm btn-outline-danger remove-accident" data-part="${accident.part}">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="status-selection">
+                        <label class="form-label">현재 상태:</label>
+                        <div class="radio-group">
+                            <div class="radio-item">
+                                <input type="radio" id="accident_${index}_cured" name="accident_${index}_status" value="완치" ${accident.status === '완치' ? 'checked' : ''}>
+                                <label for="accident_${index}_cured">완치</label>
+                            </div>
+                            <div class="radio-item">
+                                <input type="radio" id="accident_${index}_treating" name="accident_${index}_status" value="치료·관찰 중" ${accident.status === '치료·관찰 중' ? 'checked' : ''}>
+                                <label for="accident_${index}_treating">치료·관찰 중</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        
+        selectedAccidentsContainer.insertAdjacentHTML('beforeend', cardHtml);
+        
+        // 새로 추가된 카드의 상태 라디오 이벤트 리스너 추가
+        const newCard = selectedAccidentsContainer.lastElementChild;
+        const statusRadios = newCard.querySelectorAll('input[type="radio"]');
+        statusRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                const cardIndex = parseInt(this.closest('.accident-card').dataset.index);
+                selectedAccidents[cardIndex].status = this.value;
+                updateAccidentsData();
+            });
+        });
+        
+        // 삭제 버튼 이벤트 리스너 추가
+        const removeBtn = newCard.querySelector('.remove-accident');
+        removeBtn.addEventListener('click', function() {
+            removeAccident(this.dataset.part);
+        });
+    }
+
+    // 사고 부위 제거
+    function removeAccident(partName) {
+        // 배열에서 제거
+        selectedAccidents = selectedAccidents.filter(accident => accident.part !== partName);
+        
+        // DOM에서 해당 카드 제거
+        const cards = selectedAccidentsContainer.querySelectorAll('.accident-card');
+        cards.forEach((card, index) => {
+            if (card.querySelector('h6').textContent.includes(partName)) {
+                card.remove();
+            }
+        });
+        
+        // 모든 카드의 인덱스 업데이트
+        updateAccidentCards();
+        
+        // 버튼 상태 복원
+        const accidentBtn = document.querySelector(`.accident-option[data-part="${partName}"]`);
+        if (accidentBtn) {
+            accidentBtn.classList.add('btn-outline-primary');
+            accidentBtn.classList.remove('btn-success');
+            accidentBtn.innerHTML = '<i class="bi bi-plus"></i> ' + partName;
+            accidentBtn.disabled = false;
+        }
+        
+        updateAccidentsData();
+    }
+
+    // 사고 부위 카드들 인덱스 업데이트
+    function updateAccidentCards() {
+        const cards = selectedAccidentsContainer.querySelectorAll('.accident-card');
+        cards.forEach((card, index) => {
+            card.dataset.index = index;
+            
+            // 라디오 버튼 name 속성 업데이트
+            const radios = card.querySelectorAll('input[type="radio"]');
+            radios.forEach(radio => {
+                const oldName = radio.name;
+                radio.name = `accident_${index}_status`;
+                radio.id = radio.id.replace(/accident_\d+_/, `accident_${index}_`);
+                
+                // 라벨의 for 속성도 업데이트
+                const label = card.querySelector(`label[for="${radio.id.replace(/accident_\d+_/, `accident_${oldName.split('_')[1]}_`)}"]`);
+                if (label) {
+                    label.setAttribute('for', radio.id);
+                }
+            });
+        });
+    }
+
+    // 사고 부위 선택 버튼 상태 초기화
+    function resetAccidentOptions() {
+        accidentOptions.forEach(btn => {
+            btn.classList.add('btn-outline-primary');
+            btn.classList.remove('btn-success');
+            btn.innerHTML = '<i class="bi bi-plus"></i> ' + btn.dataset.part;
+            btn.disabled = false;
+        });
+    }
+
+    // 숨겨진 input 필드 업데이트
+    function updateAccidentsData() {
+        const data = {
+            past_accident: selectedAccidents.length > 0,
+            past_accident_details: selectedAccidents
+        };
+        accidentsDataInput.value = JSON.stringify(data);
+    }
 
     // 여가활동 exclusive 처리
     const leisureNone = document.querySelector('input[name="leisure_none"]');

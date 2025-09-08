@@ -72,9 +72,9 @@ def musculoskeletal_symptom_survey():
             gender=request.form.get("gender"),
             work_years=request.form.get("work_years", type=int),
             work_months=request.form.get("work_months", type=int),
-            company=request.form.get("company"),
-            process=request.form.get("process"),
-            role=request.form.get("role"),
+            company=request.form.get("company_custom") if request.form.get("company") == "__custom__" else request.form.get("company"),
+            process=request.form.get("process_custom") if request.form.get("process") == "__custom__" else request.form.get("process"),
+            role=request.form.get("role_custom") if request.form.get("role") == "__custom__" else request.form.get("role"),
             marriage_status=request.form.get("marriage_status"),
             # 현재하고 있는 작업
             current_work_details=request.form.get("current_work_details"),
@@ -104,14 +104,17 @@ def musculoskeletal_symptom_survey():
             disease_gout=request.form.get("disease_gout") == "on",
             disease_alcoholism=request.form.get("disease_alcoholism") == "on",
             disease_status=request.form.get("disease_status"),
-            # 4. 과거 사고
+            # 4. 과거 사고 (새로운 구조화된 데이터)
             past_accident=request.form.get("past_accident") == "예",
-            accident_hand=request.form.get("accident_hand") == "on",
-            accident_arm=request.form.get("accident_arm") == "on", 
-            accident_shoulder=request.form.get("accident_shoulder") == "on",
-            accident_neck=request.form.get("accident_neck") == "on",
-            accident_waist=request.form.get("accident_waist") == "on",
-            accident_leg=request.form.get("accident_leg") == "on",
+            # 새로운 구조화된 사고 데이터 처리
+            accidents_data=request.form.get("accidents_data", "{}"),
+            # 기존 필드들은 호환성을 위해 유지 (기본값 false)
+            accident_hand=False,
+            accident_arm=False, 
+            accident_shoulder=False,
+            accident_neck=False,
+            accident_waist=False,
+            accident_leg=False,
             # 5. 육체적 부담 정도
             physical_burden=request.form.get("physical_burden"),
             # II. 근골격계 증상 - 새로운 JSON 구조
