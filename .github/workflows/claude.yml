@@ -133,6 +133,7 @@ jobs:
             - 설문조사 001 폼: http://localhost:4545/survey/001
             - 관리자 대시보드: http://localhost:4545/admin
             - API 엔드포인트: http://localhost:4545/api/safework/workers
+            - 운영 환경: https://safewokr.jclee.me/survey/001
             
             **🧪 테스트 방법:**
             1. 위 URL에 접속하여 기능 확인
