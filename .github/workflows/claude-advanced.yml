@@ -1,0 +1,377 @@
+name: SafeWork Advanced Claude Automation
+
+on:
+  issues:
+    types: [opened, edited, labeled, unlabeled]
+  issue_comment:
+    types: [created]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_run:
+    workflows: ["*"]
+    types: [completed]
+    branches: [master, main]
+  schedule:
+    # 매일 09:00 KST (00:00 UTC) - 능동적 이슈 스캔
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+    inputs:
+      scan_mode:
+        description: '스캔 모드'
+        required: false
+        default: 'auto'
+        type: choice
+        options:
+          - 'auto'
+          - 'issues-only'
+          - 'pr-review'
+          - 'ci-fix'
+          - 'full-analysis'
+
+env:
+  TIMEZONE: 'Asia/Seoul'
+  SAFEWORK_VERSION: 'v3.2'
+  REGISTRY_URL: 'registry.jclee.me'
+
+jobs:
+  # Job 1: 지능형 이슈 분류 및 우선순위 할당
+  intelligent_issue_triage:
+    name: 🎯 지능형 이슈 분류
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: |
+      github.event_name == 'issues' || 
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && (inputs.scan_mode == 'auto' || inputs.scan_mode == 'issues-only'))
+    
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+    
+    outputs:
+      priority: ${{ steps.analysis.outputs.priority }}
+      category: ${{ steps.analysis.outputs.category }}
+      needs_review: ${{ steps.analysis.outputs.needs_review }}
+      
+    steps:
+      - name: 🔍 SafeWork 이슈 지능 분석
+        id: analysis
+        uses: anthropics/claude-code-action@v1.0
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            # SafeWork 산업안전 관리 시스템 이슈 분류 전문가
+            
+            당신은 SafeWork 프로젝트의 **이슈 분류 및 우선순위 할당 전문가**입니다.
+            
+            ## 🏗️ SafeWork 시스템 이해
+            - **Flask 3.0 기반**: 산업안전보건 관리 시스템
+            - **핵심 기능**: 근골격계 설문(001), 신입사원 건강검진(002), 13개 관리자 패널
+            - **기술 스택**: Python Flask, SQLAlchemy, MySQL 8.0, Redis, Bootstrap
+            - **운영환경**: registry.jclee.me, 한국 시간대(KST), 한국어 지원
+            
+            ## 📋 이슈 분류 기준
+            
+            ### 우선순위 (Priority)
+            - **P0-CRITICAL**: 시스템 다운, 데이터 손실, 보안 취약점
+            - **P1-HIGH**: 설문 제출 실패, 관리자 기능 오류, 성능 이슈
+            - **P2-MEDIUM**: UI/UX 개선, 새 기능 추가
+            - **P3-LOW**: 문서화, 코드 정리, 마이너 개선
+            
+            ### 카테고리 (Category)
+            - **survey**: 설문조사 시스템 (001/002 폼)
+            - **admin**: SafeWork 관리자 패널들
+            - **database**: MySQL/Redis 관련
+            - **auth**: 인증/권한 시스템
+            - **api**: RESTful API (v2.0)
+            - **ui**: 프론트엔드/템플릿
+            - **infra**: Docker/배포 관련
+            - **security**: 보안 관련
+            - **docs**: 문서화
+            
+            ## 🎯 작업 지시
+            1. 현재 이슈를 분석하여 적절한 우선순위와 카테고리 할당
+            2. SafeWork 특화 라벨 자동 적용
+            3. 한국어 이슈인 경우 'ko' 라벨 추가
+            4. 긴급 이슈인 경우 관련 담당자 태깅
+            5. 관련 endpoint URL 정보 제공
+            
+            ## 📊 출력 형식
+            다음 GitHub Actions outputs을 설정해주세요:
+            - priority: P0-CRITICAL, P1-HIGH, P2-MEDIUM, P3-LOW 중 하나
+            - category: 위 카테고리 중 하나
+            - needs_review: true/false (코드 리뷰 필요 여부)
+            
+            Korean 시간대(KST)로 현재 시각을 표시하고 이슈 분석을 진행해주세요.
+
+  # Job 2: SafeWork 특화 PR 종합 리뷰
+  comprehensive_pr_review:
+    name: 🔍 SafeWork PR 종합 리뷰
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: |
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'workflow_dispatch' && (inputs.scan_mode == 'auto' || inputs.scan_mode == 'pr-review'))
+    
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
+    
+    steps:
+      - name: 📊 SafeWork PR 다차원 분석
+        uses: anthropics/claude-code-action@v1.0
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            # SafeWork 코드 리뷰 전문가
+            
+            당신은 SafeWork 산업안전 관리 시스템의 **코드 리뷰 전문가**입니다.
+            
+            ## 🎯 SafeWork 특화 리뷰 기준
+            
+            ### 1. 🔒 보안 & 컴플라이언스 (최우선)
+            - [ ] 개인건강정보(PHI) 처리 보안 검증
+            - [ ] CSRF 토큰 적용 확인
+            - [ ] SQL Injection 방지 (SQLAlchemy ORM 사용)
+            - [ ] 로그인 필수 decorator 적용
+            - [ ] 산업안전보건법 데이터 처리 규정 준수
+            
+            ### 2. 🗄️ 데이터베이스 무결성
+            - [ ] MySQL 8.0 트랜잭션 적용
+            - [ ] 롤백 로직 구현
+            - [ ] 인덱스 성능 고려
+            - [ ] UTF8MB4 charset 호환성
+            - [ ] Redis 캐싱 전략 검토
+            
+            ### 3. 🎨 SafeWork UX/UI
+            - [ ] Bootstrap 4.6 스타일 가이드 준수
+            - [ ] 반응형 디자인 (모바일/태블릿)
+            - [ ] 한국어 텍스트 및 KST 시간 표시
+            - [ ] Font Awesome 아이콘 일관성
+            - [ ] 접근성 표준 (WCAG 2.1) 고려
+            
+            ### 4. ⚡ 성능 & 확장성
+            - [ ] 데이터베이스 쿼리 최적화
+            - [ ] Redis 캐싱 효율성
+            - [ ] 페이지네이션 구현
+            - [ ] 설문 폼 로딩 속도
+            - [ ] Docker 이미지 크기 최적화
+            
+            ### 5. 🧪 테스트 & 품질
+            - [ ] Pytest 테스트 케이스 추가
+            - [ ] Flask Blueprint 패턴 준수
+            - [ ] Error handler 및 로깅
+            - [ ] 한국어 오류 메시지
+            - [ ] 코드 커버리지 유지
+            
+            ## 📋 리뷰 프로세스
+            1. 변경된 파일들을 SafeWork 아키텍처 관점에서 분석
+            2. 각 리뷰 기준별로 체크리스트 완성
+            3. 발견된 이슈에 대한 구체적인 개선 방안 제시
+            4. SafeWork endpoint URL 검증 및 테스트 방법 안내
+            5. 배포 전 확인사항 체크리스트 제공
+            
+            ## 🔗 관련 URL 정보
+            개발환경: http://localhost:4545
+            운영환경: https://safewokr.jclee.me
+            
+            Korean 시간대(KST)로 리뷰를 진행하고 한국어로 피드백을 제공해주세요.
+
+  # Job 3: CI 실패 자동 수정 (SafeWork 특화)
+  safework_ci_auto_fix:
+    name: 🔧 SafeWork CI 자동 수정
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    if: |
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'failure') ||
+      (github.event_name == 'workflow_dispatch' && inputs.scan_mode == 'ci-fix')
+    
+    permissions:
+      contents: write
+      actions: read
+      checks: read
+      pull-requests: write
+    
+    steps:
+      - name: 🚨 SafeWork CI 실패 자동 진단 및 수정
+        uses: anthropics/claude-code-action@v1.0
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            # SafeWork CI/CD 자동 수정 엔지니어
+            
+            당신은 SafeWork 프로젝트의 **CI/CD 자동 수정 전문가**입니다.
+            
+            ## 🏗️ SafeWork CI 환경 이해
+            - **Flask 3.0**: Python 웹 애플리케이션
+            - **테스트**: Pytest 기반 테스트 스위트
+            - **린터**: Black, Flake8, Bandit (보안)
+            - **데이터베이스**: MySQL 8.0 + Redis
+            - **배포**: Docker → registry.jclee.me
+            - **보안 스캔**: Trivy, Safety
+            
+            ## 🔧 일반적인 SafeWork CI 실패 패턴
+            
+            ### Python/Flask 관련
+            - requirements.txt 의존성 충돌
+            - SQLAlchemy 모델 마이그레이션 오류  
+            - Flask Blueprint import 오류
+            - Jinja2 템플릿 문법 오류
+            - Korean charset (UTF-8) 인코딩 문제
+            
+            ### 테스트 관련
+            - MySQL 테스트 DB 연결 실패
+            - Redis 캐시 테스트 환경 오류
+            - Flask app context 문제
+            - 한국시간(KST) timezone 테스트 실패
+            
+            ### 보안/린팅 관련
+            - Bandit 보안 스캔 알림
+            - Black 코드 포맷팅
+            - Flake8 PEP8 스타일 가이드
+            - 하드코딩된 시크릿 감지
+            
+            ### Docker/배포 관련
+            - Docker 이미지 빌드 실패
+            - registry.jclee.me 인증 오류
+            - 멀티스테이지 빌드 최적화
+            
+            ## 🎯 자동 수정 전략
+            1. CI 실패 로그 분석 및 근본 원인 파악
+            2. SafeWork 코딩 패턴에 맞는 수정 방안 적용
+            3. 새로운 브랜치 생성 (hotfix/ci-auto-fix-{timestamp})
+            4. 한국어 커밋 메시지로 수정 내역 기록
+            5. PR 생성 및 자동 테스트 재실행
+            
+            ## 📋 수정 후 검증 절차
+            1. 전체 pytest 스위트 통과 확인
+            2. 보안 스캔 통과 확인
+            3. Docker 이미지 빌드 성공 확인
+            4. SafeWork 핵심 기능 smoke test
+            
+            현재 실패한 워크플로우를 분석하고 자동 수정을 진행해주세요.
+            모든 작업은 Korean 시간대(KST)를 기준으로 진행하고 한국어로 결과를 보고해주세요.
+
+  # Job 4: 능동적 프로젝트 건강도 체크
+  proactive_health_check:
+    name: 🏥 SafeWork 프로젝트 건강도 체크
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: |
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && inputs.scan_mode == 'full-analysis')
+    
+    permissions:
+      contents: read
+      issues: write
+      actions: read
+    
+    steps:
+      - name: 📊 SafeWork 프로젝트 종합 건강도 분석
+        uses: anthropics/claude-code-action@v1.0
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            # SafeWork 프로젝트 헬스 체크 전문가
+            
+            당신은 SafeWork 프로젝트의 **종합 건강도 분석가**입니다.
+            
+            ## 🎯 일일 건강도 체크 항목
+            
+            ### 1. 📋 이슈 관리 상태
+            - 열린 이슈 수 및 평균 해결 시간
+            - P0/P1 긴급 이슈 장기 미해결 건
+            - 중복 이슈 발생 패턴
+            - 이슈 분류 정확도
+            
+            ### 2. 🔄 CI/CD 파이프라인 건강도  
+            - 최근 7일 빌드 성공률
+            - 평균 빌드 시간 변화
+            - 테스트 커버리지 추이
+            - 배포 빈도 및 실패율
+            
+            ### 3. 📊 코드 품질 지표
+            - 기술 부채 누적도
+            - 코드 복잡도 증가 추이
+            - 보안 취약점 스캔 결과
+            - 의존성 업데이트 필요 현황
+            
+            ### 4. 🗄️ 데이터베이스 성능
+            - MySQL 슬로우 쿼리 발생 패턴
+            - Redis 캐시 히트율
+            - 마이그레이션 미적용 건
+            - 데이터 무결성 체크
+            
+            ### 5. 🌐 운영환경 모니터링
+            - safewokr.jclee.me 응답 시간
+            - Docker 레지스트리 용량
+            - 설문조사 시스템 가용성
+            - 사용자 피드백 및 오류 보고
+            
+            ## 📈 건강도 리포트 생성
+            1. 각 항목별 점수 (A/B/C/D/F)
+            2. 주요 개선 권장 사항
+            3. 긴급 조치 필요 항목
+            4. 다음 주 개선 계획 제안
+            5. 성과 지표 트렌드 분석
+            
+            ## 🚨 자동 알림 기준
+            - 빌드 성공률 80% 미만
+            - P0 이슈 24시간 이상 미해결
+            - 보안 취약점 감지
+            - 운영환경 응답시간 5초 이상
+            
+            Korean 시간대(KST)로 현재 시각을 표시하고 종합적인 프로젝트 건강도 분석을 실시해주세요.
+            발견된 문제점에 대해서는 구체적인 해결방안을 한국어로 제시해주세요.
+
+  # Job 5: 통합 리포팅 및 알림
+  integrated_reporting:
+    name: 📤 통합 리포팅
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [intelligent_issue_triage, comprehensive_pr_review, safework_ci_auto_fix, proactive_health_check]
+    if: always()
+    
+    permissions:
+      contents: read
+      issues: write
+      actions: read
+    
+    steps:
+      - name: 📊 SafeWork 자동화 통합 리포트 생성
+        uses: anthropics/claude-code-action@v1.0
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            # SafeWork 통합 리포팅 시스템
+            
+            ## 📋 작업 완료 상태 요약
+            - **이슈 분류**: ${{ needs.intelligent_issue_triage.result }}
+            - **PR 리뷰**: ${{ needs.comprehensive_pr_review.result }}  
+            - **CI 자동 수정**: ${{ needs.safework_ci_auto_fix.result }}
+            - **건강도 체크**: ${{ needs.proactive_health_check.result }}
+            
+            ## 🎯 리포팅 지시사항
+            1. 완료된 작업들의 결과를 종합하여 한국어로 리포트 생성
+            2. SafeWork 관련 endpoint URL 정보 포함
+            3. 다음 권장 액션 아이템 제시
+            4. Korean 시간대(KST)로 작업 완료 시간 표시
+            5. 이슈나 PR에 결과 코멘트 자동 작성
+            
+            ## 🔗 SafeWork Endpoint URLs
+            - **개발환경**: http://localhost:4545
+            - **운영환경**: https://safewokr.jclee.me
+            - **설문조사 001**: https://safewokr.jclee.me/survey/001  
+            - **설문조사 002**: https://safewokr.jclee.me/survey/002
+            - **관리자 대시보드**: https://safewokr.jclee.me/admin
+            - **SafeWork 관리**: https://safewokr.jclee.me/admin/safework
+            - **API v2**: https://safewokr.jclee.me/api/safework/v2
+            
+            Korean 시간대와 한국어로 최종 통합 리포트를 작성해주세요.
