@@ -2072,12 +2072,15 @@ function setupCustomInput() {
                 input.style.display = 'block';
                 input.required = true;
                 input.focus();
-                // 기존 옵션 선택 해제
+                // 드롭다운 required 해제하고 직접입력 필드에 required 설정
+                this.required = false;
                 this.selectedIndex = 0;
             } else {
                 input.style.display = 'none';
                 input.required = false;
                 input.value = '';
+                // 드롭다운 required 복원
+                this.required = true;
                 hideError(field.errorId);
             }
         });
