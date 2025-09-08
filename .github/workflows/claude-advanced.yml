@@ -57,7 +57,7 @@ jobs:
     steps:
       - name: 🔍 SafeWork 이슈 지능 분석
         id: analysis
-        uses: anthropics/claude-code-action@v1.0
+        uses: anthropics/claude-code-action@latest
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -122,7 +122,7 @@ jobs:
     
     steps:
       - name: 📊 SafeWork PR 다차원 분석
-        uses: anthropics/claude-code-action@v1.0
+        uses: anthropics/claude-code-action@latest
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -198,7 +198,7 @@ jobs:
     
     steps:
       - name: 🚨 SafeWork CI 실패 자동 진단 및 수정
-        uses: anthropics/claude-code-action@v1.0
+        uses: anthropics/claude-code-action@latest
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -273,7 +273,7 @@ jobs:
     
     steps:
       - name: 📊 SafeWork 프로젝트 종합 건강도 분석
-        uses: anthropics/claude-code-action@v1.0
+        uses: anthropics/claude-code-action@latest
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -345,7 +345,7 @@ jobs:
     
     steps:
       - name: 📊 SafeWork 자동화 통합 리포트 생성
-        uses: anthropics/claude-code-action@v1.0
+        uses: anthropics/claude-code-action@latest
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
