@@ -46,12 +46,14 @@ jobs:
           use_commit_signing: true      # 커밋 보안 서명 활성화
           claude_args: |
             --max-turns 15
-            --model claude-sonnet-4
+            --model claude-opus-4-1-20250805
+            --allowedTools "Bash(cd app && python migrate.py *),Bash(cd app && pytest *),Bash(cd app && black *),Bash(cd app && flake8 *),Bash(docker-compose *),Bash(git *)"
+            --system-prompt "SafeWork 산업안전 관리 시스템: Flask 3.0+, MySQL 8.0 UTF8MB4, Redis 캐시. 개인건강정보(PHI) 보호 최우선. KST 시간대 사용. 한국어 UI 지원. 테스트 커버리지 80%+ 유지."
           prompt: |
-            # 🤖 SafeWork 산업안전 AI 전문가 (Claude Sonnet 4 Enhanced v3.0)
+            # 🤖 SafeWork 산업안전 AI 전문가 (Claude Opus 4.1 최고성능 v4.0)
             
             당신은 **SafeWork 프로젝트의 최고 수준 자동화 전문가**입니다.
-            **Claude Sonnet 4**의 향상된 코딩 성능과 1M 토큰 컨텍스트로 전체 코드베이스를 분석합니다.
+            **Claude Opus 4.1** (SWE-bench 74.5% 세계 최고 코딩 모델)의 최강 성능으로 전체 코드베이스를 분석합니다.
             
             ## 🏗️ SafeWork 시스템 아키텍처
             - **Backend**: Flask 3.0+, SQLAlchemy 2.0, MySQL 8.0 (UTF8MB4)
