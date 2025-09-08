@@ -8,6 +8,9 @@ on:
     types: [opened, edited, synchronize, reopened, ready_for_review]
   pull_request_review:
     types: [submitted]
+  workflow_run:
+    workflows: ["Deploy", "Documentation"]
+    types: [completed]
   workflow_dispatch:
     inputs:
       issue_number:
@@ -23,6 +26,17 @@ on:
         required: false
         type: string
         default: 'Analyze and provide assistance'
+      analysis_mode:
+        description: 'Analysis mode selection'
+        required: false
+        type: choice
+        options:
+        - 'auto'
+        - 'issue_triage'
+        - 'ci_fix'
+        - 'code_review'
+        - 'documentation'
+        default: 'auto'
 
 # Enhanced permissions for full GitHub integration
 permissions:
@@ -76,6 +90,19 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: CI Failure Detection
+        id: ci-failure
+        if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'failure'
+        run: |
+          echo "🚨 CI 실패 감지: ${{ github.event.workflow_run.name }}"
+          echo "workflow_name=${{ github.event.workflow_run.name }}" >> $GITHUB_OUTPUT
+          echo "workflow_status=${{ github.event.workflow_run.conclusion }}" >> $GITHUB_OUTPUT
+          echo "ci_failure_detected=true" >> $GITHUB_OUTPUT
+          
+          # CI 실패 로그 분석을 위한 정보 수집
+          echo "head_sha=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_OUTPUT
+          echo "run_id=${{ github.event.workflow_run.id }}" >> $GITHUB_OUTPUT
+
       - name: SafeWork Context Detection
         id: context
         run: |
@@ -87,28 +114,52 @@ jobs:
           DOMAIN_CONTEXT="general"
           KOREAN_DETECTED="false"
           PRIORITY_LEVEL="normal"
+          CI_FAILURE="${{ steps.ci-failure.outputs.ci_failure_detected || 'false' }}"
+          ANALYSIS_MODE="${{ github.event.inputs.analysis_mode || 'auto' }}"
           
-          # Content analysis based on event type
+          # Content analysis based on event type and analysis mode
           case "$EVENT_TYPE" in
             "issues")
-              CONTEXT_TYPE="issue_analysis"
-              echo "📋 Issue 분석 모드 활성화"
+              if [ "$ANALYSIS_MODE" = "issue_triage" ]; then
+                CONTEXT_TYPE="issue_triage"
+                echo "🏷️ 이슈 분류 모드 활성화"
+              else
+                CONTEXT_TYPE="issue_analysis"
+                echo "📋 Issue 분석 모드 활성화"
+              fi
               ;;
             "issue_comment")
               CONTEXT_TYPE="issue_interaction"
               echo "💬 Issue 상호작용 모드 활성화"
               ;;
             "pull_request")
-              CONTEXT_TYPE="code_review"
-              echo "🔍 코드 리뷰 모드 활성화"
+              if [ "$ANALYSIS_MODE" = "code_review" ]; then
+                CONTEXT_TYPE="comprehensive_review"
+                echo "🔬 종합 코드 리뷰 모드 활성화"
+              else
+                CONTEXT_TYPE="code_review"
+                echo "🔍 코드 리뷰 모드 활성화"
+              fi
               ;;
             "pull_request_review")
               CONTEXT_TYPE="review_response"
               echo "📝 리뷰 응답 모드 활성화"
               ;;
+            "workflow_run")
+              if [ "$CI_FAILURE" = "true" ]; then
+                CONTEXT_TYPE="ci_auto_fix"
+                PRIORITY_LEVEL="high"
+                echo "🔧 CI 자동 수정 모드 활성화"
+              fi
+              ;;
             "workflow_dispatch")
-              CONTEXT_TYPE="manual_execution"
-              echo "🎯 수동 실행 모드 활성화"
+              if [ "$ANALYSIS_MODE" = "documentation" ]; then
+                CONTEXT_TYPE="documentation_update"
+                echo "📚 문서화 모드 활성화"
+              else
+                CONTEXT_TYPE="manual_execution"
+                echo "🎯 수동 실행 모드 활성화"
+              fi
               ;;
           esac
           
@@ -180,9 +231,45 @@ jobs:
             --timeout 1800
             --verbose
           
-          # Dynamic Prompt Based on Context
+          # Dynamic Context-Aware Prompt
           prompt: |
             You are Claude, an advanced AI assistant specialized in SafeWork industrial health & safety management system.
+            
+            ## 🚨 Special Context Analysis
+            **CI Failure Detected**: ${{ steps.ci-failure.outputs.ci_failure_detected || 'false' }}
+            **Failed Workflow**: ${{ steps.ci-failure.outputs.workflow_name || 'N/A' }}
+            **Analysis Mode**: ${{ steps.context.outputs.context_type }}
+            **Priority Level**: ${{ steps.context.outputs.priority_level }}
+            
+            ## 🎯 Mode-Specific Instructions
+            
+            ### CI Auto-Fix Mode (`ci_auto_fix`)
+            When CI failures are detected, focus on:
+            1. **Root Cause Analysis**: Analyze workflow logs and identify failure patterns
+            2. **Automated Resolution**: Fix common issues (dependency conflicts, syntax errors, test failures)
+            3. **Prevention Strategies**: Suggest improvements to prevent similar failures
+            4. **Quick Recovery**: Prioritize fast, reliable fixes over perfect solutions
+            
+            ### Issue Triage Mode (`issue_triage`)  
+            For intelligent issue classification:
+            1. **Automated Labeling**: Apply appropriate labels (bug, feature, enhancement, documentation)
+            2. **Priority Assessment**: Evaluate impact and urgency (P0-Critical, P1-High, P2-Medium, P3-Low)
+            3. **Assignment Suggestions**: Recommend appropriate team members based on expertise
+            4. **Resolution Estimates**: Provide time estimates and complexity analysis
+            
+            ### Comprehensive Review Mode (`comprehensive_review`)
+            For thorough PR analysis:
+            1. **Security Review**: Check for vulnerabilities, authentication issues, data validation
+            2. **Performance Impact**: Analyze potential performance implications
+            3. **Architecture Compliance**: Ensure adherence to SafeWork patterns and standards
+            4. **Test Coverage**: Verify adequate test coverage for changes
+            
+            ### Documentation Update Mode (`documentation_update`)
+            For comprehensive documentation maintenance:
+            1. **Code Documentation**: Update inline comments and docstrings
+            2. **README Updates**: Keep project documentation current with code changes
+            3. **API Documentation**: Generate/update API endpoint documentation
+            4. **Architecture Diagrams**: Suggest updates to system architecture docs
             
             ## 🎯 Current Context Analysis
             **Event Type**: ${{ steps.context.outputs.event_type }}
@@ -348,6 +435,48 @@ jobs:
             echo "⏭️ 배포 건너뜀: $DEPLOY_REASON"
           fi
 
+      - name: Automated Issue Labeling
+        if: steps.context.outputs.context_type == 'issue_triage' || steps.context.outputs.context_type == 'issue_analysis'
+        run: |
+          echo "🏷️ 자동 이슈 라벨링 시작..."
+          
+          ISSUE_NUMBER="${{ github.event.issue.number || github.event.inputs.issue_number }}"
+          
+          if [ ! -z "$ISSUE_NUMBER" ]; then
+            # SafeWork 도메인별 라벨링
+            DOMAIN="${{ steps.context.outputs.domain_context }}"
+            case "$DOMAIN" in
+              "survey_system")
+                gh issue edit $ISSUE_NUMBER --add-label "📋 survey" --add-label "001/002"
+                ;;
+              "admin_system")
+                gh issue edit $ISSUE_NUMBER --add-label "👨‍💼 admin" --add-label "safework-panels"
+                ;;
+              "medical_system")
+                gh issue edit $ISSUE_NUMBER --add-label "🏥 medical" --add-label "health-check"
+                ;;
+              "api_system")
+                gh issue edit $ISSUE_NUMBER --add-label "🔌 api" --add-label "v2"
+                ;;
+              "deployment_system")
+                gh issue edit $ISSUE_NUMBER --add-label "🚀 deployment" --add-label "ci-cd"
+                ;;
+            esac
+            
+            # 우선순위 라벨링
+            PRIORITY="${{ steps.context.outputs.priority_level }}"
+            case "$PRIORITY" in
+              "high")
+                gh issue edit $ISSUE_NUMBER --add-label "🔥 P1-High"
+                ;;
+              "normal")
+                gh issue edit $ISSUE_NUMBER --add-label "📝 P2-Medium" 
+                ;;
+            esac
+            
+            echo "✅ 이슈 #$ISSUE_NUMBER 자동 라벨링 완료"
+          fi
+
       - name: Post-Processing & Notification
         if: always()
         run: |
@@ -356,6 +485,12 @@ jobs:
           echo "🎪 이벤트: ${{ github.event_name }}"
           echo "🏷️ 컨텍스트: ${{ steps.context.outputs.context_type }}"
           echo "🏭 도메인: ${{ steps.context.outputs.domain_context }}"
+          
+          # CI 자동 수정 결과 보고
+          if [ "${{ steps.context.outputs.context_type }}" = "ci_auto_fix" ]; then
+            echo "🔧 CI 자동 수정 모드 실행됨"
+            echo "📋 실패한 워크플로우: ${{ steps.ci-failure.outputs.workflow_name }}"
+          fi
           
           if [[ "${{ job.status }}" == "success" ]]; then
             echo "✅ SafeWork AI 자동화 성공"
