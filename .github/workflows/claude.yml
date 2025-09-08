@@ -53,11 +53,12 @@ jobs:
 
       - name: Enhanced Claude Code Assistant  
         id: claude_action
-        uses: anthropics/claude-code-action@v1
+        uses: anthropics/claude-code-action@main
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           use_sticky_comment: true
           track_progress: ${{ github.event_name == 'issues' || github.event_name == 'pull_request' }}
+          claude_args: --max-turns 30 --debug
           prompt: |
             당신은 SafeWork 프로젝트의 **시니어 풀스택 개발자**입니다.
 
@@ -163,8 +164,6 @@ jobs:
             - [ ] **이슈 상태를 'closed'로 변경**
 
             작업을 시작하세요! 🚀
-          claude_args: |
-            --max-turns 30
 
       - name: 🔄 Claude 작업 완료 및 PR 처리 시작
         if: success() && github.event.issue.number
