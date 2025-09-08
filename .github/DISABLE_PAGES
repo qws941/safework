@@ -4,7 +4,7 @@ This repository uses private Docker registry deployment at registry.jclee.me
 GitHub Pages is not needed for this Flask application.
 
 Deployment Pipeline:
-- GitHub Actions → Docker Build → registry.jclee.me → ArgoCD → Kubernetes
+- GitHub Actions → Docker Build → registry.jclee.me → Watchtower → Docker Container
 
 GitHub Pages site: DISABLED
 Primary site: https://safework.jclee.me

@@ -9,7 +9,7 @@ SafeWork 프로젝트의 안전하고 자동화된 배포 프로세스
 ```
 
 ## Description
-SafeWork 프로젝트를 위한 GitOps 기반 자동 배포:
+SafeWork 프로젝트를 위한 Watchtower 기반 자동 배포:
 
 1. **사전 검증**: 코드 품질, 테스트, 보안 검사
 2. **Docker 빌드**: Multi-stage 빌드 최적화
@@ -69,7 +69,7 @@ curl -s http://localhost:4545/survey/001_musculoskeletal_symptom_survey | grep -
 curl -s http://localhost:4545/survey/002_new_employee_health_checkup_form | grep -q "신규 근로자"
 ```
 
-**5단계: GitOps 배포 트리거**
+**5단계: Watchtower 배포 트리거**
 
 ### Development 배포
 ```bash

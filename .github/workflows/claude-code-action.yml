@@ -56,7 +56,7 @@ jobs:
             - **Backend**: Flask 3.0+, SQLAlchemy 2.0, MySQL 8.0 (UTF8MB4)
             - **Cache**: Redis 5.0 (세션 관리, 성능 최적화)
             - **Frontend**: Bootstrap 4.6, jQuery 3.6, Font Awesome 5.15
-            - **Infrastructure**: Docker, GitHub Actions, registry.jclee.me
+            - **Infrastructure**: Docker, GitHub Actions, registry.jclee.me, Watchtower
             - **핵심 도메인**: 근골격계 설문(001), 신규입사자 건강검진(002), 13개 SafeWork 관리패널
             - **운영환경**: https://safework.jclee.me (24/7 운영)
             

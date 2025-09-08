@@ -1,7 +1,7 @@
 # Deployment Manager Agent
 
 ## Description
-SafeWork 프로젝트의 Docker 컨테이너 빌드, 레지스트리 푸시, 배포 자동화를 담당하는 전문 Sub-agent입니다. registry.jclee.me를 활용한 GitOps 워크플로우를 관리합니다.
+SafeWork 프로젝트의 Docker 컨테이너 빌드, 레지스트리 푸시, 배포 자동화를 담당하는 전문 Sub-agent입니다. registry.jclee.me를 활용한 Watchtower 워크플로우를 관리합니다.
 
 ## Tools
 - Bash

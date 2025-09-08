@@ -19,7 +19,7 @@ SafeWork is an industrial health and safety management system built with Flask 3
 - Backend: Python Flask 3.0+, SQLAlchemy 2.0, Redis 5.0
 - Database: MySQL 8.0 with UTF8MB4 charset
 - Frontend: Bootstrap 4.6, jQuery, Font Awesome icons
-- Infrastructure: Docker, GitHub Actions, Private Registry (registry.jclee.me)
+- Infrastructure: Docker, GitHub Actions, Private Registry (registry.jclee.me), Watchtower
 - **Automation**: 5 specialized GitHub Actions workflows with Claude AI integration
 
 ## Development Commands
@@ -199,7 +199,7 @@ When developing in this repository, leverage the Claude automation system:
 2. Filter by issue type (feature/bug/test)
 3. Claude processes multiple issues sequentially
 
-## GitOps Deployment System
+## Watchtower Deployment System
 
 **Automated Deployment:** Push to `master` branch triggers full CI/CD pipeline:
 
@@ -207,7 +207,7 @@ When developing in this repository, leverage the Claude automation system:
 2. **Code Quality:** Black, Flake8, Pylint automated checks
 3. **Testing:** Full pytest suite with coverage reporting
 4. **Docker Build:** Multi-platform images pushed to registry.jclee.me
-5. **Deployment:** Automatic staging deployment, manual production approval
+5. **Deployment:** Watchtower automatically pulls and deploys new images
 
 **Branch Strategy:**
 - `master`: Production deployments (automatic after Claude workflow)
