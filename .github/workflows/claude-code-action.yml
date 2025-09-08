@@ -32,6 +32,9 @@ jobs:
       checks: read
     
     steps:
+      - name: 📥 소스코드 체크아웃
+        uses: actions/checkout@v4
+        
       - name: 🚀 SafeWork Claude 고도화 자동화
         uses: anthropics/claude-code-action@v1.0.5
         with:
