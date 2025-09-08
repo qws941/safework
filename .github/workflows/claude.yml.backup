@@ -47,17 +47,18 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.payload.issue.number,
-              body: '🤖 **Claude 작업 시작!**\\n\\n📋 **진행 상황 추적**\\n- ⏳ 이슈 분석 중...\\n- ⏸️ 코드 수정 대기 중\\n- ⏸️ 테스트 실행 대기 중\\n- ⏸️ PR 생성 대기 중\\n- ⏸️ 배포 대기 중\\n\\n**🔄 실시간 업데이트가 이 댓글에서 진행됩니다.**\\n\\n---\\n⏰ 시작 시간: ' + currentTime + ' | 🚀 GitHub Actions 실행: [#' + context.runId + '](' + runUrl + ')'
+              body: '🤖 **Claude 작업 시작!**\n\n📋 **진행 상황 추적**\n- ⏳ 이슈 분석 중...\n- ⏸️ 코드 수정 대기 중\n- ⏸️ 테스트 실행 대기 중\n- ⏸️ PR 생성 대기 중\n- ⏸️ 배포 대기 중\n\n**🔄 실시간 업데이트가 이 댓글에서 진행됩니다.**\n\n---\n⏰ 시작 시간: ' + currentTime + ' | 🚀 GitHub Actions 실행: [#' + context.runId + '](' + runUrl + ')'
             });
 
       - name: Enhanced Claude Code Assistant  
         id: claude_action
-        uses: anthropics/claude-code-action@v1
+        uses: anthropics/claude-code-action@main
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           use_sticky_comment: true
           track_progress: ${{ github.event_name == 'issues' || github.event_name == 'pull_request' }}
-          claude_args: --max-turns 30 --debug
+          claude_args: --max-turns 30 --debug --enable-edit
           prompt: |
             당신은 SafeWork 프로젝트의 **시니어 풀스택 개발자**입니다.
 
@@ -72,9 +73,9 @@ jobs:
             1. **한국어 소통**: 모든 댓글과 커밋 메시지는 한국어
             2. **Flask 패턴 준수**: 블루프린트 구조, 팩토리 패턴 유지
             3. **데이터베이스 무결성**: 
-               - 트랜잭션 사용 (db.session.commit(), rollback())
+               - 트랜잭션 사용 (`db.session.commit()`, `rollback()`)
                - 마이그레이션 생성 시 MySQL 8.0 호환성 확인
-               - 한국 시간대(KST) 일관성: kst_now() 함수 사용
+               - 한국 시간대(KST) 일관성: `kst_now()` 함수 사용
             4. **보안 강화**: 
                - CSRF 토큰 필수
                - SQL 인젝션 방어
@@ -105,7 +106,7 @@ jobs:
             
             ### 1단계: 분석 (실행)
             - 이슈 내용 정확히 파악
-            - 관련 파일들 식별 (app/routes/, app/models.py, app/templates/)
+            - 관련 파일들 식별 (`app/routes/`, `app/models.py`, `app/templates/`)
             - 현재 구현 상태 확인 (Read 도구 사용)
 
             ### 2단계: 구현 (필수 실행)
@@ -190,7 +191,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.payload.issue.number,
-              body: '✅ **Claude 분석 완료!**\\n\\n📋 **진행 상황 업데이트**\\n- ✅ 이슈 분석 완료\\n- ✅ 코드 수정 완료\\n- ⏳ PR 생성 중...\\n- ⏸️ 자동 병합 대기 중\\n- ⏸️ 배포 대기 중\\n\\n**🔄 곧 PR이 자동으로 생성됩니다...**'
+              body: '✅ **Claude 분석 완료!**\n\n📋 **진행 상황 업데이트**\n- ✅ 이슈 분석 완료\n- ✅ 코드 수정 완료\n- ⏳ PR 생성 중...\n- ⏸️ 자동 병합 대기 중\n- ⏸️ 배포 대기 중\n\n**🔄 곧 PR이 자동으로 생성됩니다...**'
             });
 
       - name: Advanced Auto PR and Merge
@@ -240,13 +241,13 @@ jobs:
               }
               
               const endpointSection = endpointUrls.length > 0 ? 
-                `\\n\\n**🔗 해결된 기능 URL:**\\n${endpointUrls.join('\\n')}\\n\\n**🧪 테스트 방법:**\\n1. 위 URL에 접속하여 기능 정상 작동 확인\\n2. 브라우저 개발자 도구에서 에러 없음 확인\\n3. 데이터베이스 연동 및 저장 기능 확인` : '';
+                `\n\n**🔗 해결된 기능 URL:**\n${endpointUrls.join('\n')}\n\n**🧪 테스트 방법:**\n1. 위 URL에 접속하여 기능 정상 작동 확인\n2. 브라우저 개발자 도구에서 에러 없음 확인\n3. 데이터베이스 연동 및 저장 기능 확인` : '';
 
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.payload.issue.number,
-                body: '🎉 **Claude 작업 완료!**\\n\\n📋 **최종 진행 상황**\\n- ✅ 이슈 분석 완료\\n- ✅ 코드 수정 완료\\n- ✅ PR 생성 및 병합 완료\\n- ⏳ 자동 배포 진행 중...\\n- ⏸️ 운영 반영 대기 중\\n\\n**🚀 변경사항이 master 브랜치에 적용되었습니다!**' + endpointSection + '\\n\\n**📊 작업 세부사항:**\\n- **완료 시간**: ' + currentTime + '\\n- **자동 배포**: Docker 빌드 및 레지스트리 푸시 중\\n- **예상 완료**: 약 5-10분 후\\n\\n**🔗 참고 링크:**\\n- [GitHub Actions 로그](' + runUrl + ')\\n- [Docker Registry](https://registry.jclee.me)\\n\\n---\\n🤖 *Enhanced Claude Automation System v2.0*'
+                body: '🎉 **Claude 작업 완료!**\n\n📋 **최종 진행 상황**\n- ✅ 이슈 분석 완료\n- ✅ 코드 수정 완료\n- ✅ PR 생성 및 병합 완료\n- ⏳ 자동 배포 진행 중...\n- ⏸️ 운영 반영 대기 중\n\n**🚀 변경사항이 master 브랜치에 적용되었습니다!**' + endpointSection + '\n\n**📊 작업 세부사항:**\n- **완료 시간**: ' + currentTime + '\n- **자동 배포**: Docker 빌드 및 레지스트리 푸시 중\n- **예상 완료**: 약 5-10분 후\n\n**🔗 참고 링크:**\n- [GitHub Actions 로그](' + runUrl + ')\n- [Docker Registry](https://registry.jclee.me)\n\n---\n🤖 *Enhanced Claude Automation System v2.0*'
               });
               
               // 이슈 자동 닫기
@@ -257,3 +258,4 @@ jobs:
                 state: 'closed'
               });
             }
+
