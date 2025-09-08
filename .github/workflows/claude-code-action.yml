@@ -267,7 +267,7 @@ jobs:
           
           # Send to Slack using OAuth Token
           curl -X POST \
-            -H "Authorization: Bearer xoxb-9456976950066-9491938773873-UE79hj1fLat2dyqeIptwGLbj" \
+            -H "Authorization: Bearer ${{ secrets.SLACK_BOT_TOKEN }}" \
             -H "Content-type: application/json" \
             --data "{
               \"channel\": \"#safework-alerts\",
@@ -357,7 +357,7 @@ https://slack.com/api/chat.postMessage
             await fetch('https://slack.com/api/chat.postMessage', {
               method: 'POST',
               headers: {
-                'Authorization': 'Bearer xoxb-9456976950066-9491938773873-UE79hj1fLat2dyqeIptwGLbj',
+                'Authorization': 'Bearer ${{ secrets.SLACK_BOT_TOKEN }}',
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({

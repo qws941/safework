@@ -410,7 +410,7 @@ jobs:
           
           # Slack 메시지 전송
           curl -X POST \
-            -H "Authorization: Bearer xoxb-9456976950066-9491938773873-UE79hj1fLat2dyqeIptwGLbj" \
+            -H "Authorization: Bearer ${{ secrets.SLACK_BOT_TOKEN }}" \
             -H "Content-type: application/json" \
             --data "{
               \"channel\": \"#safework-alerts\",
