@@ -41,7 +41,7 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           # 🔧 고급 성능 최적화 설정 (이벤트별 조건부 활성화)
-          track_progress: ${{ github.event_name == 'pull_request' || github.event_name == 'issues' || github.event_name == 'issue_comment' }}
+          track_progress: ${{ github.event_name == 'pull_request' || github.event_name == 'issues' }}
           use_sticky_comment: ${{ github.event_name == 'pull_request' || github.event_name == 'issues' || github.event_name == 'issue_comment' }}
           use_commit_signing: true      # 커밋 보안 서명 활성화
           claude_args: |
