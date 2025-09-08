@@ -44,7 +44,6 @@ jobs:
           claude_args: |
             --max-turns 15
             --model claude-3-5-sonnet-20241022
-            --experimental-allowed-domains github.com,registry.jclee.me,safework.jclee.me
             --timeout 900
             --verbose
           prompt: |
