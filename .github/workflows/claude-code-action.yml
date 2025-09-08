@@ -172,15 +172,10 @@ jobs:
         with:
           claude_code_oauth_token: ${{ env.CLAUDE_CODE_OAUTH_TOKEN }}
           
-          # 고급 설정
-          track_progress: true
+          # 고급 설정 (지원되는 파라미터만 사용)
+          track_progress: ${{ github.event_name != 'workflow_dispatch' }}
           use_sticky_comment: true  
           use_commit_signing: false
-          max_turns: 15
-          
-          # 성능 최적화 
-          enable_caching: true
-          parallel_processing: true
           
           prompt: |
             REPO: ${{ github.repository }}
