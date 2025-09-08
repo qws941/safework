@@ -43,9 +43,6 @@ jobs:
           use_commit_signing: true      # 커밋 보안 서명 활성화
           claude_args: |
             --max-turns 15
-            --model claude-3-5-sonnet-20241022
-            --timeout 900
-            --verbose
           prompt: |
             # 🤖 SafeWork 산업안전 AI 전문가 (고도화 v2.0)
             
