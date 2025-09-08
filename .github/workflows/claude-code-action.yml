@@ -1,4 +1,4 @@
-name: Claude AI
+name: Claude
 
 on:
   issues:
@@ -29,7 +29,7 @@ permissions:
   id-token: write
 
 jobs:
-  claude-ai-automation:
+  claude:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     
@@ -51,7 +51,7 @@ jobs:
       github.event_name == 'workflow_dispatch'
     
     steps:
-      - name: Debug Event Information
+      - name: Event Debug
         run: |
           echo "🔍 Event debugging information:"
           echo "Event name: ${{ github.event_name }}"
@@ -82,7 +82,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: SafeWork Context Analysis & Prompt Selection
+      - name: Context Analysis
         id: context
         run: |
           echo "🧠 SafeWork context analysis..."
@@ -139,7 +139,7 @@ jobs:
           echo "  - Domain: $domain_context"
           echo "  - Korean: $korean_context"
 
-      - name: Advanced Claude Code Action with Domain Intelligence
+      - name: Claude Code Action
         uses: anthropics/claude-code-action@v1
         with:
           # Authentication using OAuth token
@@ -180,7 +180,7 @@ jobs:
             ## Current Task Analysis
             Please analyze the current GitHub event and provide appropriate assistance based on the SafeWork domain context detected above.
 
-      - name: Post-Processing Notification
+      - name: Notification
         if: always()
         run: |
           echo "🎯 Claude Code Action completed"
