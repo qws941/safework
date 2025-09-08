@@ -1,32 +1,22 @@
-name: 이슈 자동 감지 및 처리
+name: 자동 이슈 감지 및 Claude 할당
 
 on:
-  push:
-    branches: [master, main]
   schedule:
-    # 매 30분마다 열린 이슈 확인 및 Claude 자동 할당
     - cron: '*/30 * * * *'  # 30분마다 실행
   workflow_dispatch:
-    inputs:
-      test_mode:
-        description: '테스트 모드 실행'
-        required: false
-        default: 'true'
-        type: boolean
 
 env:
   TZ: Asia/Seoul
 
 jobs:
-  # 1단계: 오픈 이슈 자동 감지 및 Claude 할당
-  detect-open-issues:
+  detect-and-assign:
     runs-on: ubuntu-latest
     permissions:
       issues: write
       contents: read
     
     steps:
-      - name: 🔍 열린 이슈 스캔 및 Claude 자동 할당
+      - name: 열린 이슈 자동 Claude 할당
         uses: actions/github-script@v7
         with:
           script: |
@@ -36,7 +26,7 @@ jobs:
             let assignedCount = 0;
             
             try {
-              // 열린 이슈 목록 가져오기 (최근 10개)
+              // 열린 이슈 목록 가져오기
               const { data: issues } = await github.rest.issues.listForRepo({
                 owner,
                 repo,
@@ -49,11 +39,8 @@ jobs:
               console.log(`📋 ${issues.length}개의 열린 이슈 발견`);
               
               for (const issue of issues) {
-                // PR은 제외
-                if (issue.pull_request) {
-                  console.log(`⏭️ 이슈 #${issue.number}: PR이므로 제외`);
-                  continue;
-                }
+                // PR 제외
+                if (issue.pull_request) continue;
                 
                 console.log(`🔍 이슈 #${issue.number} 검토: ${issue.title}`);
                 
@@ -63,11 +50,11 @@ jobs:
                 const hoursOld = (now - created) / (1000 * 60 * 60);
                 
                 if (hoursOld > 24) {
-                  console.log(`⏭️ 이슈 #${issue.number}: 24시간 경과 (${Math.round(hoursOld)}시간)`);
+                  console.log(`⏭️ 이슈 #${issue.number}: 24시간 경과`);
                   continue;
                 }
                 
-                // 기존 댓글에서 Claude 멘션 확인
+                // 기존 Claude 댓글 확인
                 const { data: comments } = await github.rest.issues.listComments({
                   owner,
                   repo,
@@ -75,48 +62,38 @@ jobs:
                 });
                 
                 const hasClaudeComment = comments.some(comment => 
-                  comment.user.login === 'claude[bot]' ||
                   comment.body.includes('@claude') ||
-                  comment.body.includes('Claude 작업 시작') ||
+                  comment.body.includes('Claude 작업') ||
                   comment.body.includes('Claude 자동 할당')
                 );
                 
                 if (hasClaudeComment) {
-                  console.log(`⏭️ 이슈 #${issue.number}: 이미 Claude가 처리 중`);
+                  console.log(`⏭️ 이슈 #${issue.number}: 이미 Claude 처리 중`);
                   continue;
                 }
                 
-                // Claude 자동 할당 댓글 추가
+                // Claude 자동 할당
                 console.log(`✅ 이슈 #${issue.number} Claude 자동 할당 중...`);
                 
-                // 이슈 제목을 기반으로 관련 엔드포인트 URL 힌트 생성
-                const issueTitle = issue.title || '';
-                let endpointHints = [];
-                
-                if (issueTitle.includes('설문') || issueTitle.includes('survey')) {
-                  endpointHints.push('- 설문조사 001: /survey/001');
-                  endpointHints.push('- 설문조사 002: /survey/002');
-                }
-                if (issueTitle.includes('관리') || issueTitle.includes('admin')) {
-                  endpointHints.push('- 관리자 대시보드: /admin');
-                  endpointHints.push('- SafeWork 패널: /admin/safework');
-                }
-                if (issueTitle.includes('API') || issueTitle.includes('api')) {
-                  endpointHints.push('- SafeWork API: /api/safework/v2/*');
-                }
-                if (issueTitle.includes('문서') || issueTitle.includes('document')) {
-                  endpointHints.push('- 문서 관리: /admin/documents');
-                  endpointHints.push('- 공개 문서: /documents');
-                }
-                if (issueTitle.includes('인증') || issueTitle.includes('auth')) {
-                  endpointHints.push('- 로그인: /auth/login');
-                  endpointHints.push('- 회원가입: /auth/register');
-                }
-                
-                const endpointHintSection = endpointHints.length > 0 ? 
-                  '\\n\\n**🔗 관련 엔드포인트 힌트:**\\n' + endpointHints.join('\\n') + '\\n_(해결 완료 시 실제 URL을 댓글에 포함해주세요)_' : '';
+                const commentBody = `🤖 **Claude 자동 할당**
 
-                const commentBody = '🤖 **Claude 자동 할당**\\n\\n📋 **자동 감지된 이슈**\\n- **이슈**: ' + issue.title + '\\n- **생성시간**: ' + created.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) + '\\n- **할당시간**: ' + new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) + endpointHintSection + '\\n\\n🎯 **Claude 작업 시작**\\n@claude 이 이슈를 분석하고 해결해주세요.\\n\\nSafeWork 프로젝트 패턴을 따라 다음 단계로 진행해주세요:\\n1. 이슈 내용 정확한 분석\\n2. 관련 파일 식별 및 현재 상태 확인\\n3. 적절한 해결방안 구현\\n4. 테스트 실행 및 검증\\n5. 커밋 및 이슈 완료 (엔드포인트 URL 포함)\\n\\n---\\n_🕒 자동 할당 시스템에 의해 생성됨_';
+📋 **자동 감지된 이슈**
+- **이슈**: ${issue.title}
+- **생성시간**: ${created.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
+- **할당시간**: ${new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
+
+🎯 **Claude 작업 시작**
+@claude 이 이슈를 분석하고 해결해주세요.
+
+SafeWork 프로젝트 패턴을 따라 다음 단계로 진행해주세요:
+1. 이슈 내용 정확한 분석
+2. 관련 파일 식별 및 현재 상태 확인
+3. 적절한 해결방안 구현
+4. 테스트 실행 및 검증
+5. 커밋 및 이슈 완료 (엔드포인트 URL 포함)
+
+---
+_🕒 자동 할당 시스템에 의해 생성됨_`;
                 
                 await github.rest.issues.createComment({
                   owner,
@@ -137,16 +114,3 @@ jobs:
             } catch (error) {
               console.error('❌ 이슈 할당 중 오류 발생:', error);
             }
-
-  # 2단계: 결과 알림
-  notify-completion:
-    needs: detect-open-issues
-    if: always()
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: 📊 자동 할당 결과 알림
-        run: |
-          echo "🎯 열린 이슈 자동 Claude 할당 완료!"
-          echo "✅ 워크플로우가 성공적으로 실행되었습니다."
-          echo "💡 새로운 이슈가 있으면 자동으로 Claude에게 할당됩니다."
