@@ -134,13 +134,8 @@ services:
       UPLOAD_FOLDER: ${UPLOAD_FOLDER:-/app/uploads}
       APP_PORT: ${APP_PORT:-4545}
       TZ: ${TZ:-Asia/Seoul}
-      # Error monitoring and GitHub integration
-      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
-      GITHUB_REPO: ${GITHUB_REPO:-qws941/safework}
-      ERROR_MONITORING_ENABLED: ${ERROR_MONITORING_ENABLED:-true}
     volumes:
       - app_uploads:/app/uploads
-      - /var/run/docker.sock:/var/run/docker.sock:ro  # For container monitoring
     ports:
       - "4545:4545"
     networks:
@@ -153,43 +148,6 @@ services:
       start_period: 60s
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
-      - "safework.monitoring.enabled=true"
-
-  # 에러 모니터링 서비스
-  error-monitor:
-    image: registry.jclee.me/safework/app:latest
-    container_name: safework-error-monitor
-    restart: on-failure:3
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "5m"
-        max-file: "2"
-    deploy:
-      resources:
-        limits:
-          memory: 128M
-          cpus: '0.1'
-        reservations:
-          memory: 64M
-          cpus: '0.05'
-    environment:
-      PYTHONUNBUFFERED: 1
-      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
-      GITHUB_REPO: ${GITHUB_REPO:-qws941/safework}
-      ERROR_MONITORING_ENABLED: ${ERROR_MONITORING_ENABLED:-true}
-      TZ: ${TZ:-Asia/Seoul}
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./logs:/app/logs
-    networks:
-      - safework-net
-    depends_on:
-      - app
-    command: ["python", "/app/scripts/error-monitor.py"]
-    labels:
-      - "com.centurylinklabs.watchtower.enable=true"
-      - "safework.monitoring.error-monitor=true"
 
 
 volumes:
