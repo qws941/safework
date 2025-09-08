@@ -1,4 +1,4 @@
-name: SafeWork Claude Unified Automation
+name: SafeWork Claude Automation
 
 on:
   issues:
@@ -20,7 +20,7 @@ env:
 
 jobs:
   claude_automation:
-    name: 🤖 SafeWork Claude 통합 자동화
+    name: 🤖 SafeWork Claude 자동화
     runs-on: ubuntu-latest
     timeout-minutes: 20
     
@@ -32,15 +32,15 @@ jobs:
       checks: read
     
     steps:
-      - name: 🚀 SafeWork Claude 통합 처리
+      - name: 🚀 SafeWork Claude 자동화 처리
         uses: anthropics/claude-code-action@v1.0.5
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: |
-            # SafeWork 산업안전 관리 시스템 통합 자동화 전문가
+            # SafeWork 산업안전 관리 시스템 자동화 전문가
             
-            당신은 SafeWork 프로젝트의 **통합 자동화 전문가**입니다.
+            당신은 SafeWork 프로젝트의 **자동화 전문가**입니다.
             
             ## 🏗️ SafeWork 시스템 개요
             - **Flask 3.0**: 산업안전보건 관리 시스템
