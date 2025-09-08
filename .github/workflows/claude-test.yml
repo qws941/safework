@@ -1,0 +1,34 @@
+name: Claude Test
+
+on:
+  workflow_dispatch:
+  issue_comment:
+    types: [created]
+
+jobs:
+  test_claude:
+    name: 🧪 Claude 테스트
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+      actions: read
+    
+    steps:
+      - name: 🤖 Claude 자동화 테스트
+        uses: anthropics/claude-code-action@v1.0.5
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            안녕하세요! SafeWork 프로젝트 Claude 자동화 시스템 테스트입니다.
+            
+            현재 시각을 Korean 시간대(KST)로 표시하고, 
+            이 댓글이 달린 이슈나 워크플로우를 간단히 분석해서
+            한국어로 응답해주세요.
+            
+            테스트가 성공적으로 완료되면 "✅ Claude 자동화 테스트 성공!" 이라고 
+            답변해주세요.
