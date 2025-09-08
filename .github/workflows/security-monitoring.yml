@@ -35,8 +35,7 @@ env:
   NODE_VERSION: '18'
 
 jobs:
-  # 🔍 PHI(개인건강정보) 보호 검사
-  phi-protection-audit:
+  phi-audit:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     
