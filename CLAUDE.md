@@ -337,16 +337,54 @@ def test_survey_submission(client, auth):
     assert Survey.query.count() == 1
 ```
 
-## Monitoring and Issue Tracking
+## Security and Environment Management
 
-### Automated Issue Tracking System
-SafeWork includes a comprehensive monitoring system that automatically creates GitHub issues for system problems:
+### Docker Compose Environment Configuration
+SafeWork uses environment-variable based configuration for enhanced security and flexibility:
+
+**Configuration Files:**
+- `.env` - Production environment variables (auto-generated)
+- `.env.example` - Security-hardened template with guidelines
+- `docker-compose.yml` - Container orchestration with env var support
+
+**Security Setup Script:**
+```bash
+# Automated security hardening
+./scripts/security-setup.sh
+
+# This automatically:
+# - Generates 24+ character complex passwords
+# - Creates secure tokens with proper entropy
+# - Updates .env file with hardened credentials
+# - Generates GitHub Secrets update guide
+# - Provides 2FA setup documentation
+```
+
+**Environment Variables Structure:**
+```bash
+# Database (MySQL 8.0)
+MYSQL_ROOT_PASSWORD=SafeWork[random]Root@
+MYSQL_PASSWORD=SafeWork[random]User@
+
+# Cache (Redis)
+REDIS_PASSWORD=SafeWork[random]Redis@
+
+# Application Security
+SECRET_KEY=SafeWork-Production-Secret-[random]-2024
+ADMIN_PASSWORD=SafeWork[random]Admin@
+
+# Infrastructure
+REGISTRY_PASSWORD=SafeWork[random]Registry@
+WATCHTOWER_HTTP_API_TOKEN=wt_[random32]
+```
+
+### Automated Monitoring and Issue Tracking
 
 **Scripts Location**: `scripts/`
-- `issue-tracker.sh` - Main monitoring script (runs every 5 minutes)
-- `scheduler.sh` - Automated scheduling setup
+- `issue-tracker.sh` - Comprehensive system monitoring (runs every 5 minutes)
+- `scheduler.sh` - Automated cron/systemd scheduling setup
 - `daemon.sh` - SystemD service management
-- `install.sh` - Initial installation script
+- `security-setup.sh` - Security hardening automation
 
 **Monitoring Coverage** (8 areas):
 1. **Docker containers** - Status, memory usage, failed containers
@@ -358,7 +396,7 @@ SafeWork includes a comprehensive monitoring system that automatically creates G
 7. **Docker images** - Size monitoring (2GB+ threshold), dangling images
 8. **System resources** - CPU, memory, disk usage monitoring
 
-**Issue Priority Classification**:
+**Issue Priority Classification:**
 - **P0-CRITICAL**: Container network failures, critical system failures
 - **P1-HIGH**: Memory/CPU/disk warnings, database errors, security alerts  
 - **P2-MEDIUM**: Redis issues, application runtime errors
@@ -366,16 +404,22 @@ SafeWork includes a comprehensive monitoring system that automatically creates G
 
 All issues are tagged with `claude-ready` for automated Claude AI processing.
 
-### Manual Monitoring Commands
+### Manual Commands
 ```bash
-# Run issue tracker manually
-./scripts/issue-tracker.sh
+# Security setup (one-time)
+./scripts/security-setup.sh
 
-# Setup automated scheduling  
-./scripts/scheduler.sh
+# Monitoring
+./scripts/issue-tracker.sh     # Run monitoring manually
+./scripts/scheduler.sh         # Setup automated scheduling  
 
-# Check monitoring logs
+# Check logs
 tail -f /var/log/safework-monitor.log
+docker-compose logs -f app
+
+# Environment management
+docker-compose --env-file .env up -d
+docker-compose restart
 ```
 
 ## Production Guidelines
