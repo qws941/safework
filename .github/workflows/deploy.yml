@@ -1,0 +1,434 @@
+name: Deploy
+on:
+  workflow_run:
+    workflows: ["Claude"]
+    types: [completed]
+    branches: [master, main]
+  workflow_call:
+    inputs:
+      deployment_reason:
+        description: 'Reason for deployment'
+        required: false
+        type: string
+        default: 'Automated deployment'
+      force_deploy:
+        description: 'Force deployment even if no changes'
+        required: false
+        type: boolean
+        default: false
+  workflow_dispatch:
+    inputs:
+      deployment_reason:
+        description: 'Reason for deployment'
+        required: false
+        type: string
+        default: 'Manual deployment'
+      force_deploy:
+        description: 'Force deployment even if no changes'
+        required: false
+        type: boolean
+        default: false
+  push:
+    branches: [master, main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/ISSUE_TEMPLATE/**'
+  schedule:
+    - cron: '0 2 * * 1'  # Weekly Monday 2AM KST health check
+
+env:
+  REGISTRY: registry.jclee.me
+  PROJECT_NAME: safework
+  WATCHTOWER_HOST: watchtower.jclee.me
+  WATCHTOWER_HTTP_API_TOKEN: ${{ secrets.WATCHTOWER_HTTP_API_TOKEN }}
+  REGISTRY_USERNAME: admin
+  REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+  DEPLOYMENT_ENVIRONMENT: production
+  HEALTH_CHECK_RETRIES: 5
+  HEALTH_CHECK_TIMEOUT: 60
+  BUILD_PLATFORMS: linux/amd64,linux/arm64
+
+permissions:
+  contents: read
+  packages: write
+  actions: read
+
+jobs:
+  pre-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      should_deploy: ${{ steps.validation.outputs.should_deploy }}
+      deployment_reason: ${{ steps.validation.outputs.deployment_reason }}
+      skip_reason: ${{ steps.validation.outputs.skip_reason }}
+      image_tags: ${{ steps.validation.outputs.image_tags }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Deploy Condition Validation
+        id: validation
+        run: |
+          echo "🔍 SafeWork 배포 조건 검증 시작..."
+          
+          should_deploy="false"
+          deployment_reason=""
+          skip_reason=""
+          
+          # Get deployment reason from inputs
+          REASON="${{ inputs.deployment_reason || github.event.inputs.deployment_reason || 'Automated deployment' }}"
+          FORCE_DEPLOY="${{ inputs.force_deploy || github.event.inputs.force_deploy || 'false' }}"
+          
+          # Manual execution
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            should_deploy="true"
+            deployment_reason="Manual deployment: $REASON"
+          
+          # Workflow call from Claude
+          elif [ "${{ github.event_name }}" = "workflow_call" ]; then
+            should_deploy="true"
+            deployment_reason="Claude triggered: $REASON"
+          
+          # Auto execution after successful Claude workflow
+          elif [ "${{ github.event_name }}" = "workflow_run" ] && [ "${{ github.event.workflow_run.conclusion }}" = "success" ]; then
+            should_deploy="true"
+            deployment_reason="Auto deployment after Claude success"
+          
+          # Direct push to main (emergency deployment)
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            # Check if there are meaningful changes
+            if git diff --quiet HEAD~1 HEAD -- . ':!*.md' ':!docs/' ':!.github/ISSUE_TEMPLATE/'; then
+              if [ "$FORCE_DEPLOY" = "true" ]; then
+                should_deploy="true"
+                deployment_reason="Forced deployment on push"
+              else
+                skip_reason="No meaningful changes detected"
+              fi
+            else
+              should_deploy="true"
+              deployment_reason="Direct push with code changes"
+            fi
+          
+          # Scheduled health check
+          elif [ "${{ github.event_name }}" = "schedule" ]; then
+            skip_reason="Scheduled health check - deployment skipped"
+            deployment_reason="Weekly health check execution"
+          
+          else
+            skip_reason="Deployment condition not met"
+          fi
+          
+          # Generate image tags
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          COMMIT_SHA=$(git rev-parse --short HEAD)
+          IMAGE_TAGS="latest,${COMMIT_SHA},${TIMESTAMP}"
+          
+          echo "should_deploy=$should_deploy" >> $GITHUB_OUTPUT
+          echo "deployment_reason=$deployment_reason" >> $GITHUB_OUTPUT
+          echo "skip_reason=$skip_reason" >> $GITHUB_OUTPUT
+          echo "image_tags=$IMAGE_TAGS" >> $GITHUB_OUTPUT
+          
+          if [ "$should_deploy" = "true" ]; then
+            echo "✅ 배포 진행: $deployment_reason"
+            echo "🏷️ 이미지 태그: $IMAGE_TAGS"
+          else
+            echo "⏭️ 배포 건너뜀: $skip_reason"
+          fi
+
+  build-and-push:
+    needs: pre-validation
+    if: needs.pre-validation.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    environment:
+      name: production
+      url: https://safework.jclee.me
+    
+    strategy:
+      matrix:
+        service: [app, mysql, redis]
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: ${{ env.BUILD_PLATFORMS }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+          driver-opts: |
+            network=host
+
+      - name: Login to Private Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ env.REGISTRY_USERNAME }}
+          password: ${{ env.REGISTRY_PASSWORD }}
+
+      - name: Extract Image Metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.PROJECT_NAME }}/${{ matrix.service }}
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix={{branch}}-
+            type=raw,value={{date 'YYYYMMDD-HHmmss'}}
+          labels: |
+            org.opencontainers.image.title=SafeWork ${{ matrix.service }}
+            org.opencontainers.image.description=SafeWork industrial safety management - ${{ matrix.service }} service
+            org.opencontainers.image.vendor=SafeWork Team
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./${{ matrix.service }}/Dockerfile
+          platforms: ${{ env.BUILD_PLATFORMS }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+          build-args: |
+            BUILD_DATE={{date 'YYYY-MM-DDTHH:mm:ssZ'}}
+            VCS_REF=${{ github.sha }}
+            VERSION=${{ github.ref_name }}
+
+      - name: Image Security Scan
+        if: matrix.service == 'app'
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ env.REGISTRY }}/${{ env.PROJECT_NAME }}/${{ matrix.service }}:latest'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+        continue-on-error: true
+
+      - name: Upload Trivy Results
+        if: matrix.service == 'app'
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+        continue-on-error: true
+
+  watchtower-update:
+    needs: [pre-validation, build-and-push]
+    if: needs.pre-validation.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Trigger Watchtower Update
+        run: |
+          echo "🔄 Watchtower 업데이트 트리거 중..."
+          
+          # Watchtower HTTP API 호출
+          RESPONSE=$(curl -s -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ env.WATCHTOWER_HTTP_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -X POST \
+            https://${{ env.WATCHTOWER_HOST }}/v1/update \
+            -o /tmp/watchtower_response.json)
+          
+          HTTP_CODE="${RESPONSE: -3}"
+          
+          if [ "$HTTP_CODE" -eq 200 ] || [ "$HTTP_CODE" -eq 202 ]; then
+            echo "✅ Watchtower 업데이트 성공 (HTTP $HTTP_CODE)"
+            if [ -f /tmp/watchtower_response.json ]; then
+              echo "📋 응답:"
+              cat /tmp/watchtower_response.json | jq . 2>/dev/null || cat /tmp/watchtower_response.json
+            fi
+          else
+            echo "⚠️ Watchtower 업데이트 실패 (HTTP $HTTP_CODE)"
+            if [ -f /tmp/watchtower_response.json ]; then
+              echo "📋 오류 응답:"
+              cat /tmp/watchtower_response.json
+            fi
+            exit 1
+          fi
+          
+          echo "⏳ SafeWork 서비스 업데이트 대기 중..."
+          sleep 30
+
+      - name: Wait for Service Update
+        run: |
+          echo "⏳ SafeWork 서비스 업데이트 완료 대기 중..."
+          
+          MAX_WAIT=300  # 5 minutes
+          WAIT_INTERVAL=10
+          ELAPSED=0
+          
+          while [ $ELAPSED -lt $MAX_WAIT ]; do
+            echo "🔍 서비스 상태 확인 중... (${ELAPSED}s/${MAX_WAIT}s)"
+            
+            # Check if containers are updated
+            CONTAINER_STATUS=$(curl -s -f https://safework.jclee.me/health 2>/dev/null || echo "failed")
+            
+            if [ "$CONTAINER_STATUS" != "failed" ]; then
+              echo "✅ SafeWork 서비스 업데이트 완료"
+              echo "📊 헬스 체크 응답: $CONTAINER_STATUS"
+              break
+            fi
+            
+            sleep $WAIT_INTERVAL
+            ELAPSED=$((ELAPSED + WAIT_INTERVAL))
+          done
+          
+          if [ $ELAPSED -ge $MAX_WAIT ]; then
+            echo "⚠️ 서비스 업데이트 시간 초과"
+            exit 1
+          fi
+
+  health-verification:
+    needs: [pre-validation, build-and-push, watchtower-update]
+    if: needs.pre-validation.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Comprehensive Health Check
+        run: |
+          echo "🏥 SafeWork 시스템 종합 헬스 체크 시작..."
+          
+          BASE_URL="https://safework.jclee.me"
+          HEALTH_ENDPOINTS=(
+            "/health:시스템 상태"
+            "/:메인 페이지"
+            "/survey/001_musculoskeletal_symptom_survey:설문 001"
+            "/admin/dashboard:관리자 대시보드"
+            "/api/safework/v2/health:API v2"
+          )
+          
+          ALL_PASSED=true
+          
+          for endpoint_info in "${HEALTH_ENDPOINTS[@]}"; do
+            endpoint="${endpoint_info%:*}"
+            description="${endpoint_info#*:}"
+            
+            echo "🔍 $description 체크 중: $BASE_URL$endpoint"
+            
+            for retry in {1..3}; do
+              RESPONSE=$(curl -s -w "%{http_code}" -o /tmp/health_response.txt "$BASE_URL$endpoint" --max-time 30)
+              HTTP_CODE="${RESPONSE: -3}"
+              
+              if [ "$HTTP_CODE" -eq 200 ]; then
+                echo "✅ $description: OK (HTTP $HTTP_CODE)"
+                break
+              elif [ "$retry" -eq 3 ]; then
+                echo "❌ $description: 실패 (HTTP $HTTP_CODE)"
+                if [ -f /tmp/health_response.txt ]; then
+                  echo "📋 응답 내용:"
+                  head -10 /tmp/health_response.txt
+                fi
+                ALL_PASSED=false
+              else
+                echo "⚠️ $description: 재시도 $retry/3 (HTTP $HTTP_CODE)"
+                sleep 5
+              fi
+            done
+          done
+          
+          if [ "$ALL_PASSED" = true ]; then
+            echo "🎉 모든 헬스 체크 통과!"
+          else
+            echo "💥 일부 헬스 체크 실패"
+            exit 1
+          fi
+
+      - name: Performance Verification
+        run: |
+          echo "⚡ 성능 검증 시작..."
+          
+          BASE_URL="https://safework.jclee.me"
+          
+          # Response time check
+          RESPONSE_TIME=$(curl -s -w "%{time_total}" -o /dev/null "$BASE_URL/health" --max-time 10)
+          
+          if (( $(echo "$RESPONSE_TIME < 2.0" | bc -l) )); then
+            echo "✅ 응답 시간 양호: ${RESPONSE_TIME}s"
+          else
+            echo "⚠️ 응답 시간 느림: ${RESPONSE_TIME}s"
+          fi
+          
+          # Database connectivity check
+          DB_STATUS=$(curl -s "$BASE_URL/health" | jq -r '.database_status // "unknown"' 2>/dev/null || echo "unknown")
+          if [ "$DB_STATUS" = "connected" ] || [ "$DB_STATUS" = "healthy" ]; then
+            echo "✅ 데이터베이스 연결 정상"
+          else
+            echo "⚠️ 데이터베이스 상태 확인 필요: $DB_STATUS"
+          fi
+
+      - name: Deployment Summary
+        run: |
+          echo "📊 배포 완료 요약"
+          echo "=================================="
+          echo "🚀 배포 이유: ${{ needs.pre-validation.outputs.deployment_reason }}"
+          echo "🏷️ 이미지 태그: ${{ needs.pre-validation.outputs.image_tags }}"
+          echo "📦 빌드된 서비스: app, mysql, redis"
+          echo "🔄 Watchtower: 업데이트 완료"
+          echo "🏥 헬스 체크: 통과"
+          echo "🌐 서비스 URL: https://safework.jclee.me"
+          echo "⏰ 배포 완료: $(date '+%Y-%m-%d %H:%M:%S KST')"
+          echo "=================================="
+          
+          # Create deployment record
+          cat > /tmp/deployment_record.json << EOF
+          {
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "commit": "${{ github.sha }}",
+            "reason": "${{ needs.pre-validation.outputs.deployment_reason }}",
+            "images": ["app", "mysql", "redis"],
+            "tags": "${{ needs.pre-validation.outputs.image_tags }}",
+            "status": "success",
+            "url": "https://safework.jclee.me"
+          }
+          EOF
+          
+          echo "📋 배포 기록:"
+          cat /tmp/deployment_record.json | jq .
+
+  notification:
+    needs: [pre-validation, build-and-push, watchtower-update, health-verification]
+    if: always() && needs.pre-validation.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+      - name: Deployment Status Notification
+        run: |
+          echo "📢 배포 상태 알림 준비 중..."
+          
+          if [ "${{ needs.health-verification.result }}" = "success" ]; then
+            STATUS="✅ 성공"
+            COLOR="good"
+            MESSAGE="SafeWork 배포가 성공적으로 완료되었습니다."
+          elif [ "${{ needs.health-verification.result }}" = "failure" ]; then
+            STATUS="❌ 실패"
+            COLOR="danger"  
+            MESSAGE="SafeWork 배포 중 문제가 발생했습니다."
+          else
+            STATUS="⚠️ 부분 완료"
+            COLOR="warning"
+            MESSAGE="SafeWork 배포가 부분적으로 완료되었습니다."
+          fi
+          
+          echo "📊 최종 상태: $STATUS"
+          echo "💬 메시지: $MESSAGE"
+          echo "🎨 색상: $COLOR"
+          echo "🏷️ 이미지: ${{ needs.pre-validation.outputs.image_tags }}"
+          
+          # Future: Add Slack notification here if needed
+          echo "🔔 알림 시스템은 필요시 추가 예정"

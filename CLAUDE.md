@@ -1,4 +1,4 @@
-# CLAUDE.md
+# CLAUDE.md v1.5
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -8,12 +8,11 @@ SafeWork is an industrial health and safety management system built with Flask 3
 
 **Core Features:**
 - 001 Musculoskeletal symptom surveys with conditional logic (16 body parts, pain scale rating)
-- 002 New employee health checkup forms with medical history integration  
+- 002 New employee health checkup forms with medical history integration
 - **13 specialized SafeWork admin panels:** Workers, Health Checks, Medical Visits, Medications, Consultations, Health Programs, Special Management, Environment Measurements, Risk Assessment, MSDS, Protective Equipment, Education, Certifications
 - Document management system with version control and access logging
 - Anonymous survey submission support with rate limiting
 - RESTful API (v2) for external integrations
-- **Advanced AI-powered automation** with Claude Code integration
 
 **Tech Stack:** 
 - Backend: Python Flask 3.0+, SQLAlchemy 2.0, Redis 5.0
@@ -31,11 +30,11 @@ docker-compose up -d
 # View logs 
 docker-compose logs -f app
 
-# Stop services
-docker-compose down
-
 # Access container
 docker-compose exec app bash
+
+# Stop services
+docker-compose down
 ```
 
 ### Local Development
@@ -178,69 +177,42 @@ $.ajaxSetup({
 
 ## CI/CD and Automation
 
-### Watchtower Deployment System
-**Automated Deployment:** Push to `master` branch triggers full CI/CD pipeline:
+### Current GitHub Workflows
+The project uses a streamlined CI/CD pipeline with 4 optimized workflows:
 
-1. **Security Scanning:** Trivy, Bandit, Safety for vulnerability detection
-2. **Code Quality:** Black, Flake8, Pylint automated checks  
-3. **Testing:** Full pytest suite with coverage reporting
-4. **Docker Build:** Multi-platform images pushed to registry.jclee.me
-5. **Deployment:** Watchtower automatically pulls and deploys new images
-6. **API Trigger:** Immediate deployment via Watchtower HTTP API
+1. **`claude-action.yml` → "Claude"**
+   - Main Claude Code Action integration
+   - Responds to issues, PRs, and @claude mentions
+   - Uses `anthropics/claude-code-action@v1`
 
-**Branch Strategy:**
-- `master`: Production deployments (automatic after Claude workflow)
-- `staging`: Automatic staging deployments  
-- `develop`: Development environment deployments
+2. **`deploy.yml` → "Deploy"**
+   - Production deployment pipeline
+   - Triggers on successful Claude workflows or direct pushes
+   - Docker build, registry push, Watchtower integration
 
-### Registry & Watchtower Information
-- **Registry:** registry.jclee.me
-- **Watchtower Host:** watchtower.jclee.me
-- **Production Site:** https://safework.jclee.me
-- **Images:** 
-  - `safework/app:latest` (Flask application)
-  - `safework/mysql:latest` (MySQL with init scripts)
-  - `safework/redis:latest` (Redis cache)
+3. **`claude-code-review.yml`**
+   - Automated code review system
+   - Claude-powered PR analysis
 
-### Required GitHub Secrets
+4. **`documentation-sync.yml`**
+   - API documentation auto-generation
+   - Keeps docs synchronized with code
 
-**Critical for Claude Code Action v1:**
-- `CLAUDE_CODE_OAUTH_TOKEN`: Claude Code OAuth token for AI automation
-  - **Setup**: Run `/install-github-app` in Claude Code terminal
-  - **Format**: `claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}`
-  - **Required for**: Issue processing, PR reviews, automated responses
 
-**Deployment & Infrastructure:**
-- `REGISTRY_PASSWORD`: Docker registry authentication (`bingogo1`) 
-- `WATCHTOWER_HTTP_API_TOKEN`: Watchtower HTTP API token (`wt_k8Jm4nX9pL2vQ7rB5sT6yH3fG1dA0`)
+### Claude Code Action Integration
 
-## Claude Code Automation System
-
-### Workflow Architecture (5 Specialized Pipelines)
-
-**Core AI Engine:**
+**Core Configuration:**
 ```yaml
-# claude-code-action.yml - Claude Code Action v1
 uses: anthropics/claude-code-action@v1
 with:
   claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-  track_progress: ${{ github.event_name != 'workflow_dispatch' }}  # Conditional
+  track_progress: ${{ github.event_name != 'workflow_dispatch' }}
   use_sticky_comment: true
   use_commit_signing: false
 ```
 
-**Supporting Workflows:**
-- `main_deploy.yml` - Production deployment + Watchtower API
-- `security-monitoring.yml` → `Security Scan` - Security + PHI protection scans
-- `performance-monitoring.yml` → `Performance Check` - MySQL/Redis performance testing
-- `documentation-sync.yml` - API docs auto-generation  
-- `issue-labeling-system.yml` - Automatic issue categorization
-
-### Context-Aware Processing
-
 **Smart Trigger Detection:**
 ```yaml
-# Multi-event triggers with context analysis
 on:
   issues: [opened, edited, reopened]
   issue_comment: [created]  # @claude mentions
@@ -248,12 +220,29 @@ on:
   workflow_dispatch:        # Manual execution
 ```
 
-**Domain-Specific Context Analysis:**
-- **Survey System**: Keywords → `설문`, `survey`, `001`, `002`
-- **Admin System**: Keywords → `관리자`, `admin`, `safework`  
-- **Medical System**: Keywords → `의료`, `health`, `검진`
-- **API System**: Keywords → `api`, `연동`, `integration`
-- **Korean Detection**: Auto-Korean responses for Korean content
+### Watchtower Deployment System
+
+**Automated Deployment:** Push to `master` branch triggers:
+
+1. **Docker Build:** Multi-platform images pushed to registry.jclee.me
+2. **Watchtower Trigger:** Immediate deployment via HTTP API
+3. **Health Verification:** Automatic service health checks
+
+**Registry & Infrastructure:**
+- **Registry:** registry.jclee.me
+- **Watchtower Host:** watchtower.jclee.me
+- **Production Site:** https://safework.jclee.me
+
+### Required GitHub Secrets
+
+**Critical for Claude Code Action:**
+- `CLAUDE_CODE_OAUTH_TOKEN`: Claude Code OAuth token
+  - **Setup**: Run `/install-github-app` in Claude Code terminal
+  - **Required for**: Issue processing, PR reviews, automated responses
+
+**Deployment & Infrastructure:**
+- `REGISTRY_PASSWORD`: Docker registry authentication
+- `WATCHTOWER_HTTP_API_TOKEN`: Watchtower HTTP API token
 
 ## Code Patterns and Standards
 
@@ -291,76 +280,11 @@ $.ajaxSetup({
 {% endblock %}
 ```
 
-## Configuration & Environment
+## Environment Configuration
 
-### Environment Variables
-```bash
-# Core Services
-DATABASE_URL=mysql+pymysql://safework:safework@mysql:3306/safework_db
-REDIS_HOST=safework-redis
-SECRET_KEY=safework-production-secret-key-2024
-FLASK_CONFIG=production
-TZ=Asia/Seoul
+### Docker Compose Environment Variables
+SafeWork uses environment-variable based configuration:
 
-# Authentication  
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=safework2024
-```
-
-### Key API Endpoints
-```bash
-# SafeWork REST API (v2)
-/api/safework/v2/workers           # CRUD operations
-/api/safework/v2/health-checks     # Medical records
-/api/safework/v2/medications       # Medicine inventory
-/api/safework/v2/statistics        # Safety metrics
-
-# Survey Forms
-/survey/001_submit                 # Musculoskeletal survey
-/survey/002_submit                 # Health checkup form
-```
-
-## Testing Approach
-
-**Pytest Configuration:** 
-- Test files in `app/tests/`
-- Fixtures in `conftest.py` for database setup
-- Separate test classes for models, routes, and API endpoints
-- Coverage target: 80%+ (currently 39/39 tests passing)
-
-**Test Patterns:**
-```python
-def test_survey_submission(client, auth):
-    auth.login()  # Use fixture for authentication
-    response = client.post('/survey/001_submit', data=form_data)
-    assert response.status_code == 302  # Redirect after success
-    assert Survey.query.count() == 1
-```
-
-## Security and Environment Management
-
-### Docker Compose Environment Configuration
-SafeWork uses environment-variable based configuration for enhanced security and flexibility:
-
-**Configuration Files:**
-- `.env` - Production environment variables (auto-generated)
-- `.env.example` - Security-hardened template with guidelines
-- `docker-compose.yml` - Container orchestration with env var support
-
-**Security Setup Script:**
-```bash
-# Automated security hardening
-./scripts/security-setup.sh
-
-# This automatically:
-# - Generates 24+ character complex passwords
-# - Creates secure tokens with proper entropy
-# - Updates .env file with hardened credentials
-# - Generates GitHub Secrets update guide
-# - Provides 2FA setup documentation
-```
-
-**Environment Variables Structure:**
 ```bash
 # Database (MySQL 8.0)
 MYSQL_ROOT_PASSWORD=SafeWork[random]Root@
@@ -378,58 +302,94 @@ REGISTRY_PASSWORD=SafeWork[random]Registry@
 WATCHTOWER_HTTP_API_TOKEN=wt_[random32]
 ```
 
-### Automated Monitoring and Issue Tracking
-
-**Scripts Location**: `scripts/`
-- `issue-tracker.sh` - Comprehensive system monitoring (runs every 5 minutes)
-- `scheduler.sh` - Automated cron/systemd scheduling setup
-- `daemon.sh` - SystemD service management
-- `security-setup.sh` - Security hardening automation
-
-**Monitoring Coverage** (8 areas):
-1. **Docker containers** - Status, memory usage, failed containers
-2. **CI/CD pipelines** - GitHub Actions workflow failures  
-3. **Application logs** - Flask runtime errors and exceptions
-4. **Database** - MySQL connection errors and performance issues
-5. **Redis cache** - Connection failures and memory usage (500MB+ threshold)
-6. **Security** - Suspicious HTTP access patterns (50+ 4xx/5xx errors)
-7. **Docker images** - Size monitoring (2GB+ threshold), dangling images
-8. **System resources** - CPU, memory, disk usage monitoring
-
-**Issue Priority Classification:**
-- **P0-CRITICAL**: Container network failures, critical system failures
-- **P1-HIGH**: Memory/CPU/disk warnings, database errors, security alerts  
-- **P2-MEDIUM**: Redis issues, application runtime errors
-- **P3-LOW**: Maintenance tasks like image cleanup
-
-All issues are tagged with `claude-ready` for automated Claude AI processing.
-
-### Manual Commands
+**Security Setup Script:**
 ```bash
-# Security setup (one-time)
+# Automated security hardening
 ./scripts/security-setup.sh
-
-# Monitoring
-./scripts/issue-tracker.sh     # Run monitoring manually
-./scripts/scheduler.sh         # Setup automated scheduling  
-
-# Check logs
-tail -f /var/log/safework-monitor.log
-docker-compose logs -f app
-
-# Environment management
-docker-compose --env-file .env up -d
-docker-compose restart
 ```
+
+### Key API Endpoints
+```bash
+# SafeWork REST API (v2)
+/api/safework/v2/workers           # CRUD operations
+/api/safework/v2/health-checks     # Medical records
+/api/safework/v2/medications       # Medicine inventory
+/api/safework/v2/statistics        # Safety metrics
+
+# Survey Forms
+/survey/001_submit                 # Musculoskeletal survey
+/survey/002_submit                 # Health checkup form
+
+# System Health
+/health                            # Health check endpoint
+```
+
+## Testing and Quality
+
+**Pytest Configuration:** 
+- Test files in `app/tests/`
+- Fixtures in `conftest.py` for database setup
+- Coverage target: 80%+ (currently 39/39 tests passing)
+
+**Test Patterns:**
+```python
+def test_survey_submission(client, auth):
+    auth.login()  # Use fixture for authentication
+    response = client.post('/survey/001_submit', data=form_data)
+    assert response.status_code == 302  # Redirect after success
+    assert Survey.query.count() == 1
+```
+
+## Database Migration System
+
+**CLI Usage:**
+```bash
+# Check migration status
+python app/migrate.py status
+
+# Run migrations
+python app/migrate.py migrate
+
+# Create new migration
+python app/migrate.py create "Add new feature"
+
+# Rollback
+python app/migrate.py rollback --version 002
+```
+
+**Web Interface:**
+- URL: `http://localhost:4545/admin/migrations`
+- Visual migration status and execution
+- Real-time progress monitoring
+
+## Monitoring and Scripts
+
+**Scripts Location:** `scripts/`
+- `issue-tracker.sh` - System monitoring (Docker, CI/CD, App, DB, Redis)
+- `scheduler.sh` - Automated monitoring setup
+- `security-setup.sh` - Security hardening automation
+- `cicd-auto-fix.sh` - Automated CI/CD failure detection and correction
+
+**Monitoring Coverage:**
+- Docker containers and resource usage
+- GitHub Actions workflow failures  
+- Application logs and database performance
+- Redis cache status and system resources
 
 ## Production Guidelines
 
 ### Core Requirements
 **Database:** MySQL 8.0, UTF8MB4, transactions + rollback, `kst_now()` timezone  
-**Security:** CSRF global, `@login_required`, audit logging, rate limiting  
+**Security:** CSRF protection, `@login_required`, audit logging, rate limiting  
 **Performance:** Redis caching, DB indexing, lazy loading, pagination (20/page)
 
 ### Account Information
 - **Admin Account**: admin / safework2024
 - **Test Account**: test / test123
 - **Registry**: registry.jclee.me (admin/bingogo1)
+
+### Essential Access Points
+- **Main Application**: http://localhost:4545
+- **Admin Panel**: http://localhost:4545/admin  
+- **Health Check**: http://localhost:4545/health
+- **Production Site**: https://safework.jclee.me

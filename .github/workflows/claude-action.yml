@@ -1,0 +1,394 @@
+name: Claude
+on:
+  issues:
+    types: [opened, edited, reopened, labeled]
+  issue_comment:
+    types: [created, edited]
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+  pull_request_review:
+    types: [submitted]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to process'
+        required: false
+        type: string
+      pr_number:
+        description: 'PR number to process'
+        required: false
+        type: string
+      custom_prompt:
+        description: 'Custom prompt for Claude'
+        required: false
+        type: string
+        default: 'Analyze and provide assistance'
+
+# Enhanced permissions for full GitHub integration
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  actions: read
+  checks: write
+  discussions: read
+  repository-projects: read
+  packages: read
+  id-token: write
+
+env:
+  CLAUDE_MODEL: claude-3-5-sonnet-20241022
+  MAX_TURNS: 10
+  TRACK_PROGRESS: true
+
+jobs:
+  claude-automation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    # Enhanced condition logic for comprehensive triggering
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issues' && 
+       (github.event.action == 'opened' || 
+        github.event.action == 'edited' || 
+        github.event.action == 'reopened' ||
+        github.event.action == 'labeled')) ||
+      (github.event_name == 'issue_comment' && 
+       github.event.action == 'created' && 
+       (contains(github.event.comment.body, '@claude') || 
+        contains(github.event.comment.body, '@Claude') ||
+        contains(github.event.comment.body, 'claude') ||
+        github.actor == 'claude[bot]')) ||
+      (github.event_name == 'pull_request' && 
+       (github.event.action == 'opened' || 
+        github.event.action == 'edited' || 
+        github.event.action == 'synchronize' || 
+        github.event.action == 'reopened' ||
+        github.event.action == 'ready_for_review')) ||
+      (github.event_name == 'pull_request_review' && 
+       github.event.action == 'submitted')
+    
+    steps:
+      - name: Repository Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: SafeWork Context Detection
+        id: context
+        run: |
+          echo "🧠 SafeWork 컨텍스트 분석 시작..."
+          
+          # Event type detection
+          EVENT_TYPE="${{ github.event_name }}"
+          CONTEXT_TYPE="general"
+          DOMAIN_CONTEXT="general"
+          KOREAN_DETECTED="false"
+          PRIORITY_LEVEL="normal"
+          
+          # Content analysis based on event type
+          case "$EVENT_TYPE" in
+            "issues")
+              CONTEXT_TYPE="issue_analysis"
+              echo "📋 Issue 분석 모드 활성화"
+              ;;
+            "issue_comment")
+              CONTEXT_TYPE="issue_interaction"
+              echo "💬 Issue 상호작용 모드 활성화"
+              ;;
+            "pull_request")
+              CONTEXT_TYPE="code_review"
+              echo "🔍 코드 리뷰 모드 활성화"
+              ;;
+            "pull_request_review")
+              CONTEXT_TYPE="review_response"
+              echo "📝 리뷰 응답 모드 활성화"
+              ;;
+            "workflow_dispatch")
+              CONTEXT_TYPE="manual_execution"
+              echo "🎯 수동 실행 모드 활성화"
+              ;;
+          esac
+          
+          # SafeWork domain detection with enhanced patterns
+          DOMAIN_PATTERNS=(
+            "설문|survey|001|002|근골격|musculoskeletal:survey_system"
+            "관리자|admin|safework|dashboard:admin_system" 
+            "의료|health|medical|검진|medication:medical_system"
+            "문서|document|upload|download:document_system"
+            "api|연동|integration|v2:api_system"
+            "인증|auth|login|password|jwt:auth_system"
+            "배포|deploy|docker|watchtower|registry:deployment_system"
+            "워크플로우|workflow|github|actions|ci/cd:workflow_system"
+            "데이터베이스|database|mysql|redis|db:database_system"
+          )
+          
+          # Check for Korean content and domain context
+          for pattern in "${DOMAIN_PATTERNS[@]}"; do
+            keywords="${pattern%:*}"
+            domain="${pattern#*:}"
+            if echo "${{ github.event_name }} ${{ github.actor }}" | grep -qiE "($keywords)"; then
+              DOMAIN_CONTEXT="$domain"
+              break
+            fi
+          done
+          
+          # Priority detection
+          if echo "${{ github.event_name }}" | grep -qiE "(urgent|critical|긴급|중요|P0|high)"; then
+            PRIORITY_LEVEL="high"
+          fi
+          
+          # Korean language detection
+          if echo "${{ github.actor }} ${{ github.event_name }}" | grep -q '[가-힣]'; then
+            KOREAN_DETECTED="true"
+          fi
+          
+          # Set outputs
+          echo "context_type=$CONTEXT_TYPE" >> $GITHUB_OUTPUT
+          echo "domain_context=$DOMAIN_CONTEXT" >> $GITHUB_OUTPUT  
+          echo "korean_detected=$KOREAN_DETECTED" >> $GITHUB_OUTPUT
+          echo "priority_level=$PRIORITY_LEVEL" >> $GITHUB_OUTPUT
+          echo "event_type=$EVENT_TYPE" >> $GITHUB_OUTPUT
+          
+          echo "📊 컨텍스트 분석 완료:"
+          echo "  - 이벤트: $EVENT_TYPE"
+          echo "  - 컨텍스트: $CONTEXT_TYPE"  
+          echo "  - 도메인: $DOMAIN_CONTEXT"
+          echo "  - 한국어: $KOREAN_DETECTED"
+          echo "  - 우선순위: $PRIORITY_LEVEL"
+
+      - name: Claude Code Action Enhanced
+        uses: anthropics/claude-code-action@v1
+        with:
+          # OAuth Authentication (Enhanced Security)
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          
+          # Advanced Configuration
+          track_progress: ${{ env.TRACK_PROGRESS }}
+          trigger_phrase: "@claude"
+          use_sticky_comment: true
+          use_commit_signing: false
+          branch_prefix: "claude-safework/"
+          
+          # Enhanced Claude Arguments
+          claude_args: |
+            --model ${{ env.CLAUDE_MODEL }}
+            --max-turns ${{ env.MAX_TURNS }}
+            --timeout 1800
+            --verbose
+          
+          # Dynamic Prompt Based on Context
+          prompt: |
+            You are Claude, an advanced AI assistant specialized in SafeWork industrial health & safety management system.
+            
+            ## 🎯 Current Context Analysis
+            **Event Type**: ${{ steps.context.outputs.event_type }}
+            **Context Mode**: ${{ steps.context.outputs.context_type }}
+            **Domain Focus**: ${{ steps.context.outputs.domain_context }}
+            **Korean Language**: ${{ steps.context.outputs.korean_detected }}
+            **Priority Level**: ${{ steps.context.outputs.priority_level }}
+            
+            ## 🏭 SafeWork System Overview
+            SafeWork is a Flask 3.0+ industrial health & safety management platform with:
+            
+            ### Core Architecture
+            - **Backend**: Python Flask 3.0+, SQLAlchemy 2.0, Redis 5.0
+            - **Database**: MySQL 8.0 UTF8MB4, custom migration system
+            - **Frontend**: Bootstrap 4.6, jQuery, Font Awesome
+            - **Infrastructure**: Docker, GitHub Actions, registry.jclee.me, Watchtower
+            
+            ### Domain Systems
+            1. **Survey System** (`survey_system`):
+               - Form 001: 16-part musculoskeletal symptom surveys
+               - Form 002: New employee health checkups
+               - Anonymous submissions (user_id=1), Korean UI
+               - Conditional JavaScript logic, pain scale rating (1-5)
+            
+            2. **Admin System** (`admin_system`):
+               - 13 SafeWork panels: workers, health_checks, medical_visits, medications, consultations, health_programs, special_management, environment_measurements, risk_assessment, msds, protective_equipment, education, certifications
+               - Bootstrap 4.6 UI, jQuery AJAX, CSRF protection
+               - Pagination (20 items/page), audit logging
+            
+            3. **Medical System** (`medical_system`):
+               - PHI compliance, medication expiry tracking
+               - Health checkup workflows, dosage management
+            
+            4. **Document System** (`document_system`):
+               - Version control, access logs, category management
+               - Public/private/admin permissions, Korean filename support
+            
+            5. **API System** (`api_system`):
+               - RESTful v2: `/api/safework/v2/*`
+               - CRUD for all SafeWork entities, JSON responses
+            
+            6. **Auth System** (`auth_system`):
+               - Flask-Login, session management, @login_required
+               - Password security, rate limiting
+            
+            7. **Deployment System** (`deployment_system`):
+               - Docker multi-platform (amd64/arm64)
+               - GitHub Actions → registry.jclee.me → Watchtower
+               - Automatic updates and health monitoring
+            
+            8. **Workflow System** (`workflow_system`):
+               - 5 GitHub Actions workflows: Claude, Deploy, Documentation, Review, Code
+               - CI/CD pipeline with automated testing and deployment
+            
+            9. **Database System** (`database_system`):
+               - MySQL 8.0 with custom migrations, KST timezone
+               - Redis caching, connection pooling
+            
+            ## 🎯 Context-Specific Instructions
+            
+            ### Issue Analysis (`issue_analysis`)
+            - Analyze issue content for SafeWork domain relevance
+            - Identify specific system components affected
+            - Provide actionable solutions with code examples
+            - Create implementation plans with file paths
+            
+            ### Issue Interaction (`issue_interaction`)
+            - Respond to user questions with SafeWork expertise
+            - Provide code fixes, debugging assistance
+            - Suggest improvements and best practices
+            
+            ### Code Review (`code_review`)
+            - Review PR changes for SafeWork compatibility
+            - Check MySQL 8.0 UTF8MB4 compatibility
+            - Validate Flask patterns and security practices
+            - Ensure Korean localization support
+            
+            ### Review Response (`review_response`)
+            - Address reviewer feedback constructively
+            - Implement requested changes with proper testing
+            - Maintain SafeWork coding standards
+            
+            ### Manual Execution (`manual_execution`)
+            - Process custom prompts with full SafeWork context
+            - Execute complex automation tasks
+            - Generate reports and documentation
+            
+            ## 📋 Response Guidelines
+            
+            ### Korean Language Support
+            - Use Korean for communication when `korean_detected=true`
+            - Maintain technical terms in English with Korean explanations
+            - Provide Korean UI text for user-facing features
+            
+            ### Technical Standards
+            - Always specify exact file paths (e.g., `app/routes/admin.py:123`)
+            - Ensure MySQL 8.0 UTF8MB4 compatibility
+            - Follow Flask factory pattern and Blueprint architecture
+            - Use proper CSRF protection and @login_required decorators
+            - Implement proper error handling with db.session.rollback()
+            
+            ### Priority Handling
+            - **High Priority**: Immediate response, detailed solutions
+            - **Normal Priority**: Thorough analysis, step-by-step guidance
+            - **Low Priority**: Best practices, optimization suggestions
+            
+            ### Deployment Considerations
+            - Consider impact on production SafeWork service
+            - Suggest testing procedures for registry.jclee.me deployment
+            - Include Watchtower update considerations
+            - Validate Docker multi-platform compatibility
+            
+            ## 🚀 Advanced Capabilities
+            - File creation, modification, and deletion
+            - Multi-file operations and refactoring
+            - Database migration generation
+            - Test case creation and validation
+            - Documentation generation and updates
+            - Performance optimization recommendations
+            
+            ## 🎯 Current Task
+            Please analyze the current GitHub event and provide comprehensive assistance based on the detected SafeWork context. Focus on practical, actionable solutions that maintain system integrity and follow established patterns.
+            
+            **Custom Instructions**: ${{ github.event.inputs.custom_prompt }}
+
+      - name: Deployment Trigger Analysis
+        id: deploy-check
+        if: success()
+        run: |
+          echo "🚀 배포 트리거 분석 중..."
+          
+          SHOULD_DEPLOY="false"
+          DEPLOY_REASON=""
+          
+          # Check if Claude made code changes
+          if git diff --quiet HEAD~1 HEAD; then
+            echo "📋 코드 변경사항 없음"
+            DEPLOY_REASON="no_changes"
+          else
+            echo "✅ 코드 변경사항 감지됨"
+            SHOULD_DEPLOY="true"
+            DEPLOY_REASON="claude_code_changes"
+          fi
+          
+          # Check for specific deployment triggers
+          if [[ "${{ steps.context.outputs.domain_context }}" == "deployment_system" ]]; then
+            SHOULD_DEPLOY="true" 
+            DEPLOY_REASON="deployment_domain_detected"
+          fi
+          
+          # High priority issues should trigger deployment
+          if [[ "${{ steps.context.outputs.priority_level }}" == "high" ]]; then
+            SHOULD_DEPLOY="true"
+            DEPLOY_REASON="high_priority_fix"
+          fi
+          
+          echo "should_deploy=$SHOULD_DEPLOY" >> $GITHUB_OUTPUT
+          echo "deploy_reason=$DEPLOY_REASON" >> $GITHUB_OUTPUT
+          
+          if [[ "$SHOULD_DEPLOY" == "true" ]]; then
+            echo "🎯 배포 트리거 활성화: $DEPLOY_REASON"
+          else
+            echo "⏭️ 배포 건너뜀: $DEPLOY_REASON"
+          fi
+
+      - name: Post-Processing & Notification
+        if: always()
+        run: |
+          echo "🎯 Claude 작업 완료"
+          echo "📊 처리 상태: ${{ job.status }}"
+          echo "🎪 이벤트: ${{ github.event_name }}"
+          echo "🏷️ 컨텍스트: ${{ steps.context.outputs.context_type }}"
+          echo "🏭 도메인: ${{ steps.context.outputs.domain_context }}"
+          
+          if [[ "${{ job.status }}" == "success" ]]; then
+            echo "✅ SafeWork AI 자동화 성공"
+            
+            # Success notification for Korean users
+            if [[ "${{ steps.context.outputs.korean_detected }}" == "true" ]]; then
+              echo "🇰🇷 한국어 컨텍스트에서 성공적으로 처리되었습니다."
+            fi
+            
+            # Check if deployment should be triggered
+            if [[ "${{ steps.deploy-check.outputs.should_deploy }}" == "true" ]]; then
+              echo "🚀 배포 파이프라인이 곧 시작됩니다."
+              echo "📋 배포 이유: ${{ steps.deploy-check.outputs.deploy_reason }}"
+            fi
+          else
+            echo "⚠️ SafeWork AI 자동화 완료 (일부 문제 발생)"
+          fi
+          
+          # Generate summary for complex operations
+          if [[ "${{ steps.context.outputs.context_type }}" != "general" ]]; then
+            echo "📄 작업 요약:"
+            echo "  - 대상 시스템: SafeWork ${{ steps.context.outputs.domain_context }}"
+            echo "  - 처리 모드: ${{ steps.context.outputs.context_type }}"
+            echo "  - 우선순위: ${{ steps.context.outputs.priority_level }}"
+            echo "  - 언어 지원: ${{ steps.context.outputs.korean_detected == 'true' && '한국어' || '영어' }}"
+          fi
+
+  # Trigger deployment workflow if needed
+  trigger-deployment:
+    needs: [claude-automation]
+    if: needs.claude-automation.outputs.should_deploy == 'true' || needs.claude-automation.result == 'success'
+    uses: ./.github/workflows/main_deploy.yml
+    secrets: inherit
+    with:
+      deployment_reason: "Claude automation completed successfully"
+      force_deploy: false
