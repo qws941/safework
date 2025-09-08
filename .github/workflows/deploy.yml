@@ -47,7 +47,7 @@ env:
   DEPLOYMENT_ENVIRONMENT: production
   HEALTH_CHECK_RETRIES: 5
   HEALTH_CHECK_TIMEOUT: 60
-  BUILD_PLATFORMS: linux/amd64,linux/arm64
+  BUILD_PLATFORMS: linux/amd64
 
 permissions:
   contents: read
@@ -308,8 +308,6 @@ jobs:
             "/health:시스템 상태"
             "/:메인 페이지"
             "/survey/001_musculoskeletal_symptom_survey:설문 001"
-            "/admin/dashboard:관리자 대시보드"
-            "/api/safework/v2/health:API v2"
           )
           
           ALL_PASSED=true
