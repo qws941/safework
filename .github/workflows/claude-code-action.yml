@@ -1,4 +1,4 @@
-name: SafeWork Claude AI
+name: Claude AI
 
 on:
   issues:
