@@ -1524,7 +1524,7 @@ diseaseCheckboxes.forEach(checkbox => {
 // 과거 사고 조건부 표시
 document.querySelectorAll('input[name="past_accident"]').forEach(radio => {
     radio.addEventListener('change', function() {
-        const accidentDetails = document.getElementById('accident_details_section');
+        const accidentDetails = document.getElementById('accident_parts_section');
         if (this.value === '예') {
             accidentDetails.style.display = 'block';
         } else {
@@ -2030,7 +2030,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 과거 사고 조건부 표시
     document.querySelectorAll('input[name="past_accident"]').forEach(radio => {
         radio.addEventListener('change', function() {
-            const accidentDetails = document.getElementById('accident_details_section');
+            const accidentDetails = document.getElementById('accident_parts_section');
             if (accidentDetails) {
                 if (this.value === '예') {
                     accidentDetails.style.display = 'block';
