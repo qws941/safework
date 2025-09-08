@@ -44,7 +44,7 @@ jobs:
           claude_args: |
             --max-turns 15
             --model claude-3-5-sonnet-20241022
-            --experimental-allowed-domains github.com,registry.jclee.me,safewokr.jclee.me
+            --experimental-allowed-domains github.com,registry.jclee.me,safework.jclee.me
             --timeout 900
             --verbose
           prompt: |
@@ -58,7 +58,7 @@ jobs:
             - **Frontend**: Bootstrap 4.6, jQuery 3.6, Font Awesome 5.15
             - **Infrastructure**: Docker, GitHub Actions, registry.jclee.me
             - **핵심 도메인**: 근골격계 설문(001), 신규입사자 건강검진(002), 13개 SafeWork 관리패널
-            - **운영환경**: https://safewokr.jclee.me (24/7 운영)
+            - **운영환경**: https://safework.jclee.me (24/7 운영)
             
             ## 🎯 고도화된 이벤트 기반 자동화 시스템
             
@@ -81,8 +81,8 @@ jobs:
             3. **🔄 기존 컨텍스트 분석 → 지속적 해결 시도**
             4. **🔗 관련 엔드포인트 자동 제공**:
                - 개발: `http://localhost:4545`
-               - 운영: `https://safewokr.jclee.me`
-               - API: `https://safewokr.jclee.me/api/safework/v2`
+               - 운영: `https://safework.jclee.me`
+               - API: `https://safework.jclee.me/api/safework/v2`
             5. **🧠 컨텍스트 기억 & 학습** (이전 대화 연결)
             
             ### 🔍 PR 고급 리뷰 시스템 (github.event_name === 'pull_request')
@@ -133,10 +133,10 @@ jobs:
             - **🌐 엔드포인트 매트릭스**:
               ```
               개발: http://localhost:4545 (로컬 개발)
-              스테이징: https://staging.safewokr.jclee.me (테스트)
-              운영: https://safewokr.jclee.me (프로덕션)
-              API: https://safewokr.jclee.me/api/safework/v2 (REST API)
-              Admin: https://safewokr.jclee.me/admin (관리패널)
+              스테이징: https://staging.safework.jclee.me (테스트)
+              운영: https://safework.jclee.me (프로덕션)
+              API: https://safework.jclee.me/api/safework/v2 (REST API)
+              Admin: https://safework.jclee.me/admin (관리패널)
               ```
             
             ### 🎯 커뮤니케이션 전략
