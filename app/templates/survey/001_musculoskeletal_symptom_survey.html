@@ -922,6 +922,41 @@
         border-color: var(--sw-primary-light);
         color: var(--sw-primary-dark);
     }
+    
+    /* 직접입력 기능 스타일 */
+    .input-with-custom {
+        position: relative;
+    }
+    
+    .input-with-custom select option[value="__custom__"] {
+        background: linear-gradient(135deg, var(--sw-primary) 0%, var(--sw-primary-dark) 100%);
+        color: white;
+        font-weight: 600;
+    }
+    
+    .input-with-custom input[type="text"] {
+        border: 2px solid var(--sw-primary);
+        background: var(--sw-gray-50);
+        transition: all 0.3s ease;
+    }
+    
+    .input-with-custom input[type="text"]:focus {
+        border-color: var(--sw-primary-dark);
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+        background: white;
+    }
+    
+    .custom-input-error {
+        border-color: var(--sw-danger) !important;
+        box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.15) !important;
+    }
+    
+    .error-message {
+        color: var(--sw-danger);
+        font-size: 0.85rem;
+        margin-top: 5px;
+        display: none;
+    }
 </style>
 {% endblock %}
 
@@ -972,56 +1007,75 @@
             <div class="form-row">
                 <div class="form-group half">
                     <label class="form-label required">업체명</label>
-                    <select name="company" class="form-control" required>
-                        <option value="">-- 업체를 선택하세요 --</option>
-                        <option value="미래도시건설">미래도시건설</option>
-                        <option value="직영팀">직영팀</option>
-                        <option value="포커스이엔씨">포커스이엔씨</option>
-                        <option value="골조팀">골조팀</option>
-                        <option value="티이엔">티이엔</option>
-                    </select>
+                    <div class="input-with-custom">
+                        <select name="company" class="form-control" required id="company_select">
+                            <option value="">-- 업체를 선택하세요 --</option>
+                            <option value="미래도시건설">미래도시건설</option>
+                            <option value="직영팀">직영팀</option>
+                            <option value="포커스이엔씨">포커스이엔씨</option>
+                            <option value="골조팀">골조팀</option>
+                            <option value="티이엔">티이엔</option>
+                            <option value="__custom__">+ 직접입력</option>
+                        </select>
+                        <input type="text" name="company_custom" class="form-control mt-2" id="company_custom" 
+                               placeholder="업체명을 입력하세요 (1-30자)" maxlength="30" style="display:none;">
+                        <div class="error-message" id="company_error"></div>
+                    </div>
                 </div>
                 <div class="form-group half">
                     <label class="form-label required">공정명</label>
-                    <select name="process" class="form-control" required>
-                        <option value="">-- 공정을 선택하세요 --</option>
-                        <option value="철근">철근</option>
-                        <option value="형틀목공">형틀목공</option>
-                        <option value="콘크리트타설">콘크리트타설</option>
-                        <option value="비계">비계</option>
-                        <option value="전기">전기</option>
-                        <option value="배관">배관</option>
-                        <option value="방수">방수</option>
-                        <option value="도장">도장</option>
-                        <option value="미장">미장</option>
-                        <option value="석공">석공</option>
-                        <option value="타일">타일</option>
-                        <option value="토공">토공</option>
-                        <option value="굴삭">굴삭</option>
-                        <option value="크레인">크레인</option>
-                        <option value="신호수">신호수</option>
-                        <option value="용접">용접</option>
-                    </select>
+                    <div class="input-with-custom">
+                        <select name="process" class="form-control" required id="process_select">
+                            <option value="">-- 공정을 선택하세요 --</option>
+                            <option value="관리자">관리자</option>
+                            <option value="철근">철근</option>
+                            <option value="형틀목공">형틀목공</option>
+                            <option value="콘크리트타설">콘크리트타설</option>
+                            <option value="비계">비계</option>
+                            <option value="전기">전기</option>
+                            <option value="배관">배관</option>
+                            <option value="방수">방수</option>
+                            <option value="도장">도장</option>
+                            <option value="미장">미장</option>
+                            <option value="석공">석공</option>
+                            <option value="타일">타일</option>
+                            <option value="토공">토공</option>
+                            <option value="굴삭">굴삭</option>
+                            <option value="크레인">크레인</option>
+                            <option value="신호수">신호수</option>
+                            <option value="용접">용접</option>
+                            <option value="__custom__">+ 직접입력</option>
+                        </select>
+                        <input type="text" name="process_custom" class="form-control mt-2" id="process_custom" 
+                               placeholder="공정명을 입력하세요 (1-30자)" maxlength="30" style="display:none;">
+                        <div class="error-message" id="process_error"></div>
+                    </div>
                 </div>
             </div>
             
             <div class="form-row">
                 <div class="form-group">
                     <label class="form-label required">직위/역할</label>
-                    <select name="role" class="form-control" required>
-                        <option value="">-- 직위/역할을 선택하세요 --</option>
-                        <option value="관리자">관리자</option>
-                        <option value="보통인부">보통인부</option>
-                        <option value="장비기사">장비기사</option>
-                        <option value="신호수">신호수</option>
-                        <option value="용접공">용접공</option>
-                        <option value="전기공">전기공</option>
-                        <option value="배관공">배관공</option>
-                        <option value="타워크레인운전원">타워크레인운전원</option>
-                        <option value="굴삭기기사">굴삭기기사</option>
-                        <option value="안전관리자">안전관리자</option>
-                        <option value="보건관리자">보건관리자</option>
-                    </select>
+                    <div class="input-with-custom">
+                        <select name="role" class="form-control" required id="role_select">
+                            <option value="">-- 직위/역할을 선택하세요 --</option>
+                            <option value="관리자">관리자</option>
+                            <option value="보통인부">보통인부</option>
+                            <option value="장비기사">장비기사</option>
+                            <option value="신호수">신호수</option>
+                            <option value="용접공">용접공</option>
+                            <option value="전기공">전기공</option>
+                            <option value="배관공">배관공</option>
+                            <option value="타워크레인운전원">타워크레인운전원</option>
+                            <option value="굴삭기기사">굴삭기기사</option>
+                            <option value="안전관리자">안전관리자</option>
+                            <option value="보건관리자">보건관리자</option>
+                            <option value="__custom__">+ 직접입력</option>
+                        </select>
+                        <input type="text" name="role_custom" class="form-control mt-2" id="role_custom" 
+                               placeholder="직위/역할을 입력하세요 (1-30자)" maxlength="30" style="display:none;">
+                        <div class="error-message" id="role_error"></div>
+                    </div>
                 </div>
                 <div class="form-group half">
                     <label class="form-label">직위</label>
@@ -1368,7 +1422,10 @@
                 
                 <!-- 부위 선택 그리드 UI -->
                 <div id="body-part-grid" class="body-part-grid mb-4" style="display: none;">
-                    <h5 class="mb-3"><i class="bi bi-hand-index"></i> 통증이 있는 부위를 선택해주세요</h5>
+                    <h5 class="mb-3"><i class="bi bi-hand-index"></i> 통증이 있는 부위를 여러 개 선택할 수 있습니다</h5>
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> <strong>다중 선택 가능:</strong> 클릭하여 여러 부위를 선택하세요. 각 부위마다 개별 증상 평가가 진행됩니다.
+                    </div>
                     <div class="row g-3">
                         {% for part_info in [('목', 'neck', 'bi-person-circle'), ('어깨', 'shoulder', 'bi-person-arms-up'), ('팔/팔꿈치', 'arm', 'bi-person-raised-hand'), ('손/손목/손가락', 'hand', 'bi-hand-index'), ('허리', 'waist', 'bi-person-standing'), ('다리/발', 'leg', 'bi-person-walking')] %}
                         <div class="col-md-4 col-sm-6">
@@ -1388,11 +1445,18 @@
                         {% endfor %}
                     </div>
                     
-                    <!-- 부위 추가 버튼 -->
+                    <!-- 선택 완료 버튼 -->
                     <div class="text-center mt-4">
-                        <button type="button" class="btn btn-outline-primary" id="add-more-parts" onclick="showBodyPartGrid()">
-                            <i class="bi bi-plus-circle"></i> + 다른 부위 추가
+                        <button type="button" class="btn btn-success" onclick="completeBodyPartSelection()">
+                            <i class="bi bi-check2-circle"></i> 선택 완료 (선택된 부위: <span id="selected-count">0</span>개)
                         </button>
+                        <button type="button" class="btn btn-outline-secondary ms-2" onclick="resetBodyPartSelection()">
+                            <i class="bi bi-arrow-clockwise"></i> 다시 선택
+                        </button>
+                    </div>
+                    
+                    <div class="text-center mt-2">
+                        <small class="text-muted">하나 이상의 부위를 선택한 후 '선택 완료' 버튼을 눌러주세요</small>
                     </div>
                 </div>
                 
@@ -1419,6 +1483,47 @@ let selectedBodyParts = [];
 
 // 폼 검증 및 제출 처리
 document.getElementById('surveyForm').addEventListener('submit', function(e) {
+    // 직접입력 필드 검증
+    const customFields = [
+        { selectId: 'company_select', inputId: 'company_custom', errorId: 'company_error', name: '업체명' },
+        { selectId: 'process_select', inputId: 'process_custom', errorId: 'process_error', name: '공정명' },
+        { selectId: 'role_select', inputId: 'role_custom', errorId: 'role_error', name: '직위/역할' }
+    ];
+    
+    let customInputErrors = [];
+    
+    customFields.forEach(field => {
+        const input = document.getElementById(field.inputId);
+        const select = document.getElementById(field.selectId);
+        
+        // 직접입력 필드가 보이는 경우 검증
+        if (input.style.display !== 'none' && input.required) {
+            if (!validateCustomInput(field)) {
+                customInputErrors.push(field.name);
+            } else {
+                // 검증 통과 시 select에 임시 옵션 추가하고 선택
+                const customValue = input.value.trim();
+                const existingOption = Array.from(select.options).find(opt => opt.value === customValue);
+                
+                if (!existingOption) {
+                    const newOption = new Option(customValue, customValue);
+                    select.add(newOption);
+                }
+                select.value = customValue;
+                
+                // 입력 필드 숨기기
+                input.style.display = 'none';
+                input.required = false;
+            }
+        }
+    });
+    
+    if (customInputErrors.length > 0) {
+        e.preventDefault();
+        alert('다음 항목을 올바르게 입력해주세요:\n' + customInputErrors.join(', '));
+        return false;
+    }
+    
     const hasSymptoms = document.querySelector('input[name="has_symptoms"]:checked');
     if (!hasSymptoms) {
         e.preventDefault();
@@ -1567,37 +1672,103 @@ function hideBodyPartGrid() {
     document.getElementById('body-part-grid').style.display = 'none';
 }
 
-// 부위 카드 상태 업데이트 (선택된 부위는 비활성화)
+// 부위 카드 상태 업데이트 (선택된 부위 표시)
 function updateBodyPartCards() {
     document.querySelectorAll('.body-part-card').forEach(card => {
         const part = card.dataset.part;
+        const partInfo = getPartInfo(part);
+        
         if (selectedBodyParts.includes(part)) {
             card.classList.add('disabled');
-            card.style.pointerEvents = 'none';
             card.querySelector('.card').classList.add('border-success');
             card.querySelector('.card-body').innerHTML = `
                 <i class="bi bi-check-circle-fill text-success" style="font-size: 2rem;"></i>
                 <h6 class="card-title mt-2">${part}</h6>
-                <small class="text-success">선택됨</small>
+                <small class="text-success">✓ 선택됨 (클릭시 해제)</small>
             `;
         } else {
             card.classList.remove('disabled');
-            card.style.pointerEvents = 'auto';
             card.querySelector('.card').classList.remove('border-success');
+            card.querySelector('.card-body').innerHTML = `
+                <i class="bi ${partInfo.icon} body-part-icon"></i>
+                <h6 class="card-title mt-2">${part}</h6>
+                <small class="text-muted">클릭하여 선택</small>
+            `;
         }
     });
 }
 
-// 부위 선택 처리
-function selectBodyPart(partName, partEn) {
-    if (selectedBodyParts.includes(partName)) {
-        return; // 이미 선택된 부위는 무시
+// 부위 정보 가져오기
+function getPartInfo(partName) {
+    const partInfoMap = {
+        '목': { icon: 'bi-person-circle' },
+        '어깨': { icon: 'bi-person-arms-up' },
+        '팔/팔꿈치': { icon: 'bi-person-raised-hand' },
+        '손/손목/손가락': { icon: 'bi-hand-index' },
+        '허리': { icon: 'bi-person-standing' },
+        '다리/발': { icon: 'bi-person-walking' }
+    };
+    return partInfoMap[partName] || { icon: 'bi-person' };
+}
+
+// 선택된 부위 개수 업데이트
+function updateSelectedCount() {
+    const countSpan = document.getElementById('selected-count');
+    if (countSpan) {
+        countSpan.textContent = selectedBodyParts.length;
+    }
+}
+
+// 부위 선택 완료
+function completeBodyPartSelection() {
+    if (selectedBodyParts.length === 0) {
+        alert('하나 이상의 부위를 선택해주세요.');
+        return;
     }
     
-    selectedBodyParts.push(partName);
-    createSymptomEvaluationBlock(partName, partEn);
-    updateBodyPartCards();
+    // 선택된 각 부위에 대해 증상평가 블록 생성
+    selectedBodyParts.forEach(part => {
+        const partEn = getPartEnglishName(part);
+        createSymptomEvaluationBlock(part, partEn);
+    });
+    
     hideBodyPartGrid();
+    
+    // 완료 메시지
+    const container = document.getElementById('selected-parts-container');
+    const introMessage = document.createElement('div');
+    introMessage.className = 'alert alert-success mb-4';
+    introMessage.innerHTML = `
+        <i class="bi bi-check-circle"></i> 
+        <strong>총 ${selectedBodyParts.length}개 부위 선택 완료:</strong> ${selectedBodyParts.join(', ')}<br>
+        <small>각 부위별로 아래 증상평가를 완료해주세요.</small>
+    `;
+    container.insertBefore(introMessage, container.firstChild);
+}
+
+// 부위 선택 초기화
+function resetBodyPartSelection() {
+    selectedBodyParts = [];
+    const container = document.getElementById('selected-parts-container');
+    container.innerHTML = '';
+    updateBodyPartCards();
+    updateSelectedCount();
+    showBodyPartGrid();
+}
+
+// 부위 선택/선택해제 처리
+function selectBodyPart(partName, partEn) {
+    if (selectedBodyParts.includes(partName)) {
+        // 이미 선택된 부위 → 선택 해제
+        selectedBodyParts = selectedBodyParts.filter(part => part !== partName);
+        removeSymptomBlock(partName, partEn);
+    } else {
+        // 새로운 부위 선택
+        selectedBodyParts.push(partName);
+    }
+    
+    updateBodyPartCards();
+    updateSelectedCount();
 }
 
 // 부위별 증상평가 블록 생성
@@ -1651,26 +1822,26 @@ function createSymptomEvaluationBlock(partName, partEn) {
                         <div class="radio-group-vertical">
                             <label><input type="radio" name="${partName}_severity" value="mild" required> 
                                 <span class="pain-level-option">
-                                    <strong>약한</strong><br>
-                                    <small class="text-muted">약간 불편한 정도</small>
+                                    <strong>약한 통증</strong><br>
+                                    <small class="text-muted">약간 불편한 정도이나 작업에 열중할 때는 못 느낀다</small>
                                 </span>
                             </label>
                             <label><input type="radio" name="${partName}_severity" value="moderate" required> 
                                 <span class="pain-level-option">
-                                    <strong>중간</strong><br>
-                                    <small class="text-muted">작업 중 통증 있음</small>
+                                    <strong>중간 통증</strong><br>
+                                    <small class="text-muted">작업 중 통증이 있으나 귀가 후 휴식을 취하면 괜찮다</small>
                                 </span>
                             </label>
                             <label><input type="radio" name="${partName}_severity" value="severe" required> 
                                 <span class="pain-level-option">
-                                    <strong>심한</strong><br>
-                                    <small class="text-muted">지속적인 통증</small>
+                                    <strong>심한 통증</strong><br>
+                                    <small class="text-muted">작업 중 통증이 비교적 심하고 귀가 후에도 통증이 계속된다</small>
                                 </span>
                             </label>
                             <label><input type="radio" name="${partName}_severity" value="verysevere" required> 
                                 <span class="pain-level-option">
-                                    <strong>매우 심한</strong><br>
-                                    <small class="text-muted">일상생활 어려움</small>
+                                    <strong>매우 심한 통증</strong><br>
+                                    <small class="text-muted">통증 때문에 작업은 물론 일상생활을 하기가 어렵다</small>
                                 </span>
                             </label>
                         </div>
@@ -1700,16 +1871,28 @@ function createSymptomEvaluationBlock(partName, partEn) {
                     <!-- 6. 통증으로 인한 결과 -->
                     <div class="col-12 mb-3">
                         <label class="form-label"><strong>${!hideSideQuestion ? '6' : '5'}. 통증으로 인한 결과 (다중선택 가능)</strong> <span class="text-danger">*</span></label>
-                        <div class="checkbox-group">
-                            <label><input type="checkbox" name="${partName}_consequences" value="병원·한의원 치료"> 병원·한의원 치료</label>
-                            <label><input type="checkbox" name="${partName}_consequences" value="약국치료"> 약국치료</label>
-                            <label><input type="checkbox" name="${partName}_consequences" value="병가·산재"> 병가·산재</label>
-                            <label><input type="checkbox" name="${partName}_consequences" value="작업 전환"> 작업 전환</label>
-                            <label><input type="checkbox" name="${partName}_consequences" value="해당사항 없음"> 해당사항 없음</label>
-                            <label><input type="checkbox" name="${partName}_consequences" value="기타" onchange="toggleOtherInput('${partName}')"> 기타</label>
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <label><input type="checkbox" name="${partName}_consequences" value="병원·한의원 치료"> 병원·한의원 치료</label>
+                            </div>
+                            <div class="col-md-6">
+                                <label><input type="checkbox" name="${partName}_consequences" value="약국치료"> 약국치료</label>
+                            </div>
+                            <div class="col-md-6">
+                                <label><input type="checkbox" name="${partName}_consequences" value="병가·산재"> 병가·산재</label>
+                            </div>
+                            <div class="col-md-6">
+                                <label><input type="checkbox" name="${partName}_consequences" value="작업 전환"> 작업 전환</label>
+                            </div>
+                            <div class="col-md-6">
+                                <label><input type="checkbox" name="${partName}_consequences" value="해당사항 없음"> 해당사항 없음</label>
+                            </div>
+                            <div class="col-md-6">
+                                <label><input type="checkbox" name="${partName}_consequences" value="기타" onchange="toggleOtherInput('${partName}')"> 기타</label>
+                            </div>
                         </div>
-                        <div id="${partName}_other_container" class="mt-2" style="display: none;">
-                            <input type="text" name="${partName}_consequence_other" class="form-control" placeholder="기타 사항을 입력해주세요">
+                        <div id="${partName}_other_container" class="mt-3" style="display: none;">
+                            <input type="text" name="${partName}_consequence_other" class="form-control" placeholder="기타 사항을 구체적으로 입력해주세요" maxlength="100">
                         </div>
                     </div>
                 </div>
@@ -1843,8 +2026,107 @@ function getPartEnglishName(partName) {
     return partMap[partName] || partName;
 }
 
+// 직접입력 기능 구현
+function setupCustomInput() {
+    const customFields = [
+        { selectId: 'company_select', inputId: 'company_custom', errorId: 'company_error', name: '업체명' },
+        { selectId: 'process_select', inputId: 'process_custom', errorId: 'process_error', name: '공정명' },
+        { selectId: 'role_select', inputId: 'role_custom', errorId: 'role_error', name: '직위/역할' }
+    ];
+    
+    customFields.forEach(field => {
+        const select = document.getElementById(field.selectId);
+        const input = document.getElementById(field.inputId);
+        const errorDiv = document.getElementById(field.errorId);
+        
+        // 드롭다운 변경 이벤트
+        select.addEventListener('change', function() {
+            if (this.value === '__custom__') {
+                input.style.display = 'block';
+                input.required = true;
+                input.focus();
+                // 기존 옵션 선택 해제
+                this.selectedIndex = 0;
+            } else {
+                input.style.display = 'none';
+                input.required = false;
+                input.value = '';
+                hideError(field.errorId);
+            }
+        });
+        
+        // 직접입력 필드 검증
+        input.addEventListener('input', function() {
+            validateCustomInput(field);
+        });
+        
+        input.addEventListener('blur', function() {
+            validateCustomInput(field);
+        });
+    });
+}
+
+// 직접입력 필드 검증
+function validateCustomInput(field) {
+    const input = document.getElementById(field.inputId);
+    const errorDiv = document.getElementById(field.errorId);
+    const value = input.value.trim();
+    
+    // 특수문자 제한 (',", <, > 등)
+    const invalidChars = /['"`<>]/;
+    
+    hideError(field.errorId);
+    input.classList.remove('custom-input-error');
+    
+    if (value.length === 0) {
+        showError(field.errorId, `${field.name}을 입력해주세요.`);
+        input.classList.add('custom-input-error');
+        return false;
+    }
+    
+    if (value.length < 1 || value.length > 30) {
+        showError(field.errorId, `${field.name}은 1-30자로 입력해주세요.`);
+        input.classList.add('custom-input-error');
+        return false;
+    }
+    
+    if (invalidChars.test(value)) {
+        showError(field.errorId, `${field.name}에 특수문자(' \" \` < >)는 사용할 수 없습니다.`);
+        input.classList.add('custom-input-error');
+        return false;
+    }
+    
+    // 중복 검사 (기존 옵션과 비교)
+    const select = document.getElementById(field.selectId);
+    const existingOptions = Array.from(select.options).map(opt => opt.value.toLowerCase());
+    
+    if (existingOptions.includes(value.toLowerCase())) {
+        showError(field.errorId, `이미 존재하는 ${field.name}입니다. 목록에서 선택해주세요.`);
+        input.classList.add('custom-input-error');
+        return false;
+    }
+    
+    return true;
+}
+
+// 오류 메시지 표시
+function showError(errorId, message) {
+    const errorDiv = document.getElementById(errorId);
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+}
+
+// 오류 메시지 숨김
+function hideError(errorId) {
+    const errorDiv = document.getElementById(errorId);
+    errorDiv.style.display = 'none';
+    errorDiv.textContent = '';
+}
+
 // 초기 상태 설정 및 모든 이벤트 리스너 초기화
 document.addEventListener('DOMContentLoaded', function() {
+    // 직접입력 기능 초기화
+    setupCustomInput();
     // 증상 유무에 따른 상세 정보 표시/숨김
     document.querySelectorAll('input[name="has_symptoms"]').forEach(radio => {
         radio.addEventListener('change', function() {
