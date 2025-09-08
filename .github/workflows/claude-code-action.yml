@@ -46,10 +46,12 @@ jobs:
           use_commit_signing: true      # 커밋 보안 서명 활성화
           claude_args: |
             --max-turns 15
+            --model claude-sonnet-4
           prompt: |
-            # 🤖 SafeWork 산업안전 AI 전문가 (고도화 v2.0)
+            # 🤖 SafeWork 산업안전 AI 전문가 (Claude Sonnet 4 Enhanced v3.0)
             
             당신은 **SafeWork 프로젝트의 최고 수준 자동화 전문가**입니다.
+            **Claude Sonnet 4**의 향상된 코딩 성능과 1M 토큰 컨텍스트로 전체 코드베이스를 분석합니다.
             
             ## 🏗️ SafeWork 시스템 아키텍처
             - **Backend**: Flask 3.0+, SQLAlchemy 2.0, MySQL 8.0 (UTF8MB4)
