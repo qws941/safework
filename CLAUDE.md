@@ -20,7 +20,7 @@ SafeWork is an industrial health and safety management system built with Flask 3
 - Database: MySQL 8.0 with UTF8MB4 charset
 - Frontend: Bootstrap 4.6, jQuery, Font Awesome icons
 - Infrastructure: Docker, GitHub Actions, Private Registry (registry.jclee.me), Watchtower
-- **Automation**: 4 specialized GitHub Actions workflows with Claude AI integration
+- **Automation**: 5 specialized GitHub Actions workflows with Claude AI integration
 
 ## Quick Start Commands
 
@@ -221,11 +221,11 @@ $.ajaxSetup({
 
 ## Claude Code Automation System
 
-### Workflow Architecture (4 Specialized Pipelines)
+### Workflow Architecture (5 Specialized Pipelines)
 
 **Core AI Engine:**
 ```yaml
-# claude-action.yml - Claude Code Action v1
+# claude-code-action.yml - Claude Code Action v1
 uses: anthropics/claude-code-action@v1
 with:
   claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -235,9 +235,11 @@ with:
 ```
 
 **Supporting Workflows:**
-- `deploy.yml` - Production deployment + Watchtower API
-- `claude-code-review.yml` - Automated code reviews
+- `main_deploy.yml` - Production deployment + Watchtower API
+- `security-monitoring.yml` - Security + PHI protection scans
+- `performance-monitoring.yml` - MySQL/Redis performance testing
 - `documentation-sync.yml` - API docs auto-generation  
+- `issue-labeling.yml` - Automatic issue categorization
 
 ### Context-Aware Processing
 
@@ -280,6 +282,13 @@ Result: SafeWork admin panel expertise + deployment considerations
 # GitHub Actions → "SafeWork Claude AI" → Run workflow
 Input: issue_number=123 or pr_number=456
 Result: Targeted processing with full context
+```
+
+**Scenario 4: Emergency Issue Handling**
+```bash
+# Parallel urgent-issue-handler for P0-CRITICAL issues
+Keywords: '긴급', 'urgent', 'critical', '중단', '작동 안'
+Result: Immediate P0 escalation + auto-labeling
 ```
 
 ## Code Patterns and Standards
@@ -379,7 +388,7 @@ ADMIN_PASSWORD=safework2024
 ```bash
 # Error: 'max_turns' unexpected input
 # Solution: Remove unsupported parameter (v1 doesn't support max_turns)
-# Fixed in: claude-action.yml
+# Fixed in: claude-code-action.yml
 
 # Error: track_progress only supported for pull_request and issue events
 # Solution: Use conditional track_progress
@@ -448,7 +457,7 @@ docker-compose exec app python -c "from models import db; print(db.engine.execut
 # Solution: Check WATCHTOWER_HTTP_API_TOKEN format
 
 # Health check timeout
-# Solution: Increase timeout in deploy.yml
+# Solution: Increase timeout in main_deploy.yml
 HEALTH_CHECK_TIMEOUT: 30
 ```
 
