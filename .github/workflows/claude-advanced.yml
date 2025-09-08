@@ -55,6 +55,48 @@ jobs:
       needs_review: ${{ steps.analysis.outputs.needs_review }}
       
     steps:
+      - name: 🚀 이슈 분석 시작 알림
+        uses: actions/github-script@v7
+        if: github.event_name == 'issues' || github.event_name == 'issue_comment'
+        with:
+          script: |
+            if (context.eventName === 'issue_comment') {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.issue.number,
+                body: `🤖 **Claude 자동화 시작!**
+                
+                📊 **진행 상황**: 이슈 분석 중...
+                ⏰ **시작 시간**: ${new Date().toLocaleString('ko-KR', {timeZone: 'Asia/Seoul'})} KST
+                🎯 **분석 단계**: 
+                - 🔍 이슈 내용 분석
+                - 📋 우선순위 판정
+                - 🏷️ 자동 라벨링
+                - 🔗 관련 URL 제공
+                
+                잠시만 기다려주세요... ⚡`
+              });
+            } else if (context.eventName === 'issues') {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.issue.number,
+                body: `🎉 **새 이슈 자동 분석 시작!**
+                
+                📊 **SafeWork Claude 자동화 시스템**이 이 이슈를 분석 중입니다.
+                ⏰ **분석 시작**: ${new Date().toLocaleString('ko-KR', {timeZone: 'Asia/Seoul'})} KST
+                
+                🔄 **자동으로 수행할 작업**:
+                - 🎯 우선순위 자동 분류 (P0~P3)
+                - 🏷️ SafeWork 도메인 특화 라벨링
+                - 📍 관련 담당자 할당
+                - 🔗 테스트 가능한 endpoint URL 제공
+                
+                분석이 완료되면 상세한 결과를 알려드립니다! 🚀`
+              });
+            }
+
       - name: 🔍 SafeWork 이슈 지능 분석
         id: analysis
         uses: anthropics/claude-code-action@v1.0.5
@@ -121,6 +163,30 @@ jobs:
       checks: write
     
     steps:
+      - name: 🚀 PR 리뷰 시작 알림
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request'
+        with:
+          script: |
+            await github.rest.pulls.createReview({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              body: `🔍 **SafeWork PR 종합 리뷰 시작!**
+              
+              📊 **5차원 분석 진행 중**:
+              - 🔒 보안 & 컴플라이언스 (개인건강정보 보호)
+              - 🗄️ 데이터베이스 무결성 (MySQL 트랜잭션)
+              - 🎨 SafeWork UX/UI (한국어 지원, 반응형)
+              - ⚡ 성능 & 확장성 (Redis 캐싱)
+              - 🧪 테스트 & 품질 (Pytest, Flask 패턴)
+              
+              ⏰ **시작 시간**: ${new Date().toLocaleString('ko-KR', {timeZone: 'Asia/Seoul'})} KST
+              
+              상세한 리뷰 결과를 곧 제공해드립니다! 🚀`,
+              event: 'COMMENT'
+            });
+
       - name: 📊 SafeWork PR 다차원 분석
         uses: anthropics/claude-code-action@v1.0.5
         with:
@@ -197,6 +263,49 @@ jobs:
       pull-requests: write
     
     steps:
+      - name: 🚀 CI 자동 수정 시작 알림
+        uses: actions/github-script@v7
+        if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'failure'
+        with:
+          script: |
+            const workflowName = context.payload.workflow_run.name;
+            const workflowUrl = context.payload.workflow_run.html_url;
+            
+            // 관련 이슈나 PR 찾기 (간단한 휴리스틱)
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              sort: 'updated',
+              per_page: 5
+            });
+            
+            const recentIssue = issues.data.find(issue => 
+              issue.updated_at > new Date(Date.now() - 30 * 60 * 1000).toISOString()
+            );
+            
+            if (recentIssue) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: recentIssue.number,
+                body: `🚨 **CI 실패 자동 수정 시작!**
+                
+                **실패한 워크플로우**: [${workflowName}](${workflowUrl})
+                ⏰ **수정 시작**: ${new Date().toLocaleString('ko-KR', {timeZone: 'Asia/Seoul'})} KST
+                
+                🔧 **자동 수정 진행 단계**:
+                - 📊 실패 로그 분석 중...
+                - 🔍 근본 원인 파악
+                - ⚙️ SafeWork 특화 수정 적용
+                - 🌟 새 브랜치 생성 및 PR
+                - ✅ 자동 테스트 재실행
+                
+                **예상 소요 시간**: 5-10분
+                수정이 완료되면 결과를 알려드립니다! 🛠️`
+              });
+            }
+
       - name: 🚨 SafeWork CI 실패 자동 진단 및 수정
         uses: anthropics/claude-code-action@v1.0.5
         with:
