@@ -43,8 +43,4 @@ jobs:
           use_sticky_comment: true
           use_commit_signing: false
           
-          claude_args: |
-            --model claude-3-5-sonnet-20241022
-            --max-turns 10
-            --allowedTools Bash(pytest*),Bash(docker-compose*),Bash(python*),Bash(git*),Edit,Write,Read
-            --system-prompt "You are Claude specialized in SafeWork industrial health & safety system. Use Korean when Korean content detected. Follow Flask factory pattern, MySQL 8.0 UTF8MB4, CSRF protection, and KST timezone."
+          claude_args: "--model claude-3-5-sonnet-20241022 --max-turns 10 --allowedTools Bash(pytest*),Bash(docker-compose*),Bash(python*),Bash(git*),Edit,Write,Read --system-prompt \"You are Claude specialized in SafeWork industrial health & safety system. Use Korean when Korean content detected.\""
