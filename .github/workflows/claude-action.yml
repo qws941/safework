@@ -52,8 +52,13 @@ permissions:
 
 env:
   CLAUDE_MODEL: claude-3-5-sonnet-20241022
-  MAX_TURNS: 10
   TRACK_PROGRESS: true
+  SAFEWORK_ENVIRONMENT: production
+  ENABLE_AUTO_LABELING: true
+  ENABLE_CI_AUTO_FIX: true
+  DEBUG_MODE: false
+  KOREAN_SUPPORT: true
+  DEPLOYMENT_NOTIFICATIONS: true
 
 jobs:
   claude-automation:
@@ -224,12 +229,57 @@ jobs:
           use_commit_signing: false
           branch_prefix: "claude-safework/"
           
+          # SafeWork Specific Tool Permissions
+          allowed_tools: |
+            Bash(npm install),
+            Bash(npm run build),
+            Bash(npm run test*),
+            Bash(pytest*),
+            Bash(docker-compose*),
+            Bash(python migrate.py*),
+            Bash(python app.py),
+            Bash(flake8*),
+            Bash(black*),
+            Bash(git*),
+            Bash(gh*),
+            Bash(curl*),
+            Bash(mysql*),
+            Bash(redis-cli*)
+          
+          # Assignee-based Triggers  
+          assignee_trigger: "claude[bot]"
+          
           # Enhanced Claude Arguments
           claude_args: |
             --model ${{ env.CLAUDE_MODEL }}
-            --max-turns ${{ env.MAX_TURNS }}
             --timeout 1800
             --verbose
+          
+          # SafeWork Custom Instructions
+          custom_instructions: |
+            ## SafeWork Development Standards
+            - Always use Korean for user communication when Korean content is detected
+            - Follow Flask factory pattern and Blueprint architecture
+            - Ensure MySQL 8.0 UTF8MB4 compatibility in all database operations
+            - Use proper CSRF protection and @login_required decorators
+            - Implement proper error handling with db.session.rollback()
+            - Test all changes with pytest before committing
+            - Update CLAUDE.md when making architectural changes
+            - Use KST timezone consistently with kst_now() function
+            
+            ## SafeWork Domain Expertise
+            - 001/002 survey forms require exact HTML ID matching for JavaScript
+            - Admin panels use Bootstrap 4.6 + jQuery AJAX patterns
+            - Anonymous submissions use user_id=1
+            - All SafeWork models follow the models_safework.py patterns
+            - API endpoints follow /api/safework/v2/* convention
+            
+            ## Deployment & CI Requirements  
+            - All changes trigger registry.jclee.me deployment
+            - Docker builds must support multi-platform (amd64/arm64)
+            - Watchtower automatically updates production containers
+            - Health checks are mandatory for service updates
+            - Follow branch strategy: develop → staging → master → production
           
           # Dynamic Context-Aware Prompt
           prompt: |
@@ -436,7 +486,10 @@ jobs:
           fi
 
       - name: Automated Issue Labeling
-        if: steps.context.outputs.context_type == 'issue_triage' || steps.context.outputs.context_type == 'issue_analysis'
+        if: |
+          env.ENABLE_AUTO_LABELING == 'true' && 
+          (steps.context.outputs.context_type == 'issue_triage' || 
+           steps.context.outputs.context_type == 'issue_analysis')
         run: |
           echo "🏷️ 자동 이슈 라벨링 시작..."
           
@@ -477,6 +530,30 @@ jobs:
             echo "✅ 이슈 #$ISSUE_NUMBER 자동 라벨링 완료"
           fi
 
+      - name: Debug Information
+        if: env.DEBUG_MODE == 'true'
+        run: |
+          echo "🐛 디버그 모드 활성화"
+          echo "==========================="
+          echo "GitHub Event: ${{ github.event_name }}"
+          echo "Action: ${{ github.event.action }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Repository: ${{ github.repository }}"
+          echo "Ref: ${{ github.ref }}"
+          echo "SHA: ${{ github.sha }}"
+          echo "Environment Variables:"
+          echo "  CLAUDE_MODEL: ${{ env.CLAUDE_MODEL }}"
+          echo "  SAFEWORK_ENVIRONMENT: ${{ env.SAFEWORK_ENVIRONMENT }}"
+          echo "  ENABLE_AUTO_LABELING: ${{ env.ENABLE_AUTO_LABELING }}"
+          echo "  ENABLE_CI_AUTO_FIX: ${{ env.ENABLE_CI_AUTO_FIX }}"
+          echo "  KOREAN_SUPPORT: ${{ env.KOREAN_SUPPORT }}"
+          echo "Context Outputs:"
+          echo "  Context Type: ${{ steps.context.outputs.context_type }}"
+          echo "  Domain Context: ${{ steps.context.outputs.domain_context }}"
+          echo "  Priority Level: ${{ steps.context.outputs.priority_level }}"
+          echo "  Korean Detected: ${{ steps.context.outputs.korean_detected }}"
+          echo "==========================="
+
       - name: Post-Processing & Notification
         if: always()
         run: |
@@ -490,6 +567,18 @@ jobs:
           if [ "${{ steps.context.outputs.context_type }}" = "ci_auto_fix" ]; then
             echo "🔧 CI 자동 수정 모드 실행됨"
             echo "📋 실패한 워크플로우: ${{ steps.ci-failure.outputs.workflow_name }}"
+          fi
+          
+          # 한국어 지원 메시지
+          if [ "${{ env.KOREAN_SUPPORT }}" = "true" ] && [ "${{ steps.context.outputs.korean_detected }}" = "true" ]; then
+            echo "🇰🇷 한국어 컨텍스트에서 성공적으로 처리되었습니다."
+          fi
+          
+          # 배포 알림
+          if [ "${{ env.DEPLOYMENT_NOTIFICATIONS }}" = "true" ] && [ "${{ steps.deploy-check.outputs.should_deploy }}" = "true" ]; then
+            echo "🚀 SafeWork 배포 파이프라인이 곧 시작됩니다."
+            echo "📋 배포 환경: ${{ env.SAFEWORK_ENVIRONMENT }}"
+            echo "🎯 배포 이유: ${{ steps.deploy-check.outputs.deploy_reason }}"
           fi
           
           if [[ "${{ job.status }}" == "success" ]]; then
