@@ -1,50 +1,20 @@
 name: Claude
 on:
   issues:
-    types: [opened, edited, reopened]
+    types: [opened]
   issue_comment:
     types: [created]
-  pull_request:
-    types: [opened, edited, synchronize, reopened]
 
 permissions:
   contents: write
   issues: write
   pull-requests: write
-  actions: read
 
 jobs:
   claude:
-    if: |
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'issues') ||
-      (github.event_name == 'pull_request')
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
-      - name: Claude Code Action
-        uses: anthropics/claude-code-action@v1
+      - uses: actions/checkout@v4
+      - uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          claude_args: |
-            {
-              "model": "${{ vars.CLAUDE_MODEL }}",
-              "max_turns": 10
-            }
-          prompt: |
-            You are Claude specialized in SafeWork industrial health & safety management system.
-            
-            **Key Instructions:**
-            - Use Korean language when Korean content is detected
-            - Follow Flask factory pattern and Blueprint architecture  
-            - Ensure MySQL 8.0 UTF8MB4 compatibility
-            - Use proper CSRF protection and @login_required decorators
-            - SafeWork has 13 admin panels for workplace health & safety management
-            - Survey forms (001/002) require exact HTML ID matching for JavaScript
-            - Anonymous submissions use user_id=1
-            
-            Provide expert assistance for SafeWork development and troubleshooting.
