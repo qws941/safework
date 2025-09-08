@@ -45,9 +45,15 @@ jobs:
       (github.event_name == 'workflow_dispatch' && (inputs.scan_mode == 'auto' || inputs.scan_mode == 'issues-only'))
     
     permissions:
-      contents: read
+      contents: write
       issues: write
-      pull-requests: read
+      pull-requests: write
+      actions: write
+      checks: write
+      statuses: write
+      repository-projects: write
+      security-events: write
+      deployments: write
     
     outputs:
       priority: ${{ steps.analysis.outputs.priority }}
@@ -158,9 +164,15 @@ jobs:
       (github.event_name == 'workflow_dispatch' && (inputs.scan_mode == 'auto' || inputs.scan_mode == 'pr-review'))
     
     permissions:
-      contents: read
+      contents: write
+      issues: write
       pull-requests: write
+      actions: write
       checks: write
+      statuses: write
+      repository-projects: write
+      security-events: write
+      deployments: write
     
     steps:
       - name: 🚀 PR 리뷰 시작 알림
@@ -258,9 +270,14 @@ jobs:
     
     permissions:
       contents: write
-      actions: read
-      checks: read
+      issues: write
       pull-requests: write
+      actions: write
+      checks: write
+      statuses: write
+      repository-projects: write
+      security-events: write
+      deployments: write
     
     steps:
       - name: 🚀 CI 자동 수정 시작 알림
@@ -376,9 +393,15 @@ jobs:
       (github.event_name == 'workflow_dispatch' && inputs.scan_mode == 'full-analysis')
     
     permissions:
-      contents: read
+      contents: write
       issues: write
-      actions: read
+      pull-requests: write
+      actions: write
+      checks: write
+      statuses: write
+      repository-projects: write
+      security-events: write
+      deployments: write
     
     steps:
       - name: 📊 SafeWork 프로젝트 종합 건강도 분석
@@ -448,9 +471,15 @@ jobs:
     if: always()
     
     permissions:
-      contents: read
+      contents: write
       issues: write
-      actions: read
+      pull-requests: write
+      actions: write
+      checks: write
+      statuses: write
+      repository-projects: write
+      security-events: write
+      deployments: write
     
     steps:
       - name: 📊 SafeWork 자동화 통합 리포트 생성
