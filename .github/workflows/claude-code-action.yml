@@ -92,18 +92,18 @@ jobs:
           domain_context=""
           korean_context=""
           
-          # Extract content for analysis
+          # Extract content for analysis with proper escaping
           if [ "${{ github.event_name }}" = "issues" ]; then
-            title="${{ github.event.issue.title }}"
-            body="${{ github.event.issue.body }}"
+            title=$(echo '${{ github.event.issue.title }}' | sed 's/"/\\"/g')
+            body=$(echo '${{ github.event.issue.body }}' | sed 's/"/\\"/g')
             content="$title $body"
           elif [ "${{ github.event_name }}" = "issue_comment" ]; then
-            comment="${{ github.event.comment.body }}"
-            issue_title="${{ github.event.issue.title }}"
+            comment=$(echo '${{ github.event.comment.body }}' | sed 's/"/\\"/g')
+            issue_title=$(echo '${{ github.event.issue.title }}' | sed 's/"/\\"/g')
             content="$comment $issue_title"
           elif [ "${{ github.event_name }}" = "pull_request" ]; then
-            pr_title="${{ github.event.pull_request.title }}"
-            pr_body="${{ github.event.pull_request.body }}"
+            pr_title=$(echo '${{ github.event.pull_request.title }}' | sed 's/"/\\"/g')
+            pr_body=$(echo '${{ github.event.pull_request.body }}' | sed 's/"/\\"/g')
             content="$pr_title $pr_body"
             context_type="pull_request"
           fi
