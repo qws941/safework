@@ -1,8 +1,8 @@
-name: SafeWork 고도화 배포 파이프라인 v2.0
+name: SafeWork Advanced Deployment Pipeline
 
 on:
   workflow_run:
-    workflows: ["SafeWork Claude AI"]
+    workflows: ["SafeWork Claude AI Advanced"]
     types: [completed]
     branches: [master, main]
   workflow_dispatch:
@@ -26,7 +26,7 @@ env:
   HEALTH_CHECK_TIMEOUT: 30
 
 jobs:
-  # 🔍 사전 검증 단계 (Pre-deployment Validation)
+  # Pre-deployment Validation
   pre-validation:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -35,21 +35,21 @@ jobs:
       deployment_reason: ${{ steps.validation.outputs.deployment_reason }}
       skip_reason: ${{ steps.validation.outputs.skip_reason }}
     steps:
-      - name: 🚀 배포 조건 검증
+      - name: Deploy Condition Validation
         id: validation
         run: |
-          echo "🔍 배포 조건 검증 시작..."
+          echo "🔍 Deployment condition validation started..."
           
           should_deploy="false"
           deployment_reason=""
           skip_reason=""
           
-          # 수동 실행
+          # Manual execution
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             should_deploy="true"
             deployment_reason="Manual deployment triggered"
           
-          # Claude 워크플로우 성공 후 자동 실행
+          # Auto execution after successful Claude workflow
           elif [ "${{ github.event_name }}" = "workflow_run" ] && [ "${{ github.event.workflow_run.conclusion }}" = "success" ]; then
             should_deploy="true"
             deployment_reason="Automatic deployment after successful Claude workflow"

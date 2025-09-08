@@ -1,4 +1,4 @@
-name: 비개발자 친화적 이슈 라벨링 시스템
+name: SafeWork Issue Labeling System
 
 on:
   issues:
@@ -22,11 +22,11 @@ jobs:
       contents: read
       
     steps:
-      - name: 🏷️ SafeWork 스마트 라벨링 시스템
+      - name: SafeWork Smart Labeling System
         uses: actions/github-script@v7
         with:
           script: |
-            console.log("🏷️ SafeWork 스마트 라벨링 시스템 시작...");
+            console.log("🏷️ SafeWork Smart Labeling System starting...");
             
             const issueNumber = context.issue?.number || '${{ github.event.inputs.issue_number }}';
             
@@ -50,118 +50,118 @@ jobs:
             console.log(`📋 이슈 분석: #${issueNumber} - ${issue.title}`);
             console.log(`👤 작성자: ${author}`);
             
-            // 🎯 SafeWork 도메인별 라벨 분류 로직
+            // SafeWork domain-specific label classification logic
             const labels = [];
             
-            // 1. 우선순위 자동 분류 (비개발자가 이해하기 쉬운 기준)
+            // 1. Priority auto-classification (easy for non-developers to understand)
             if (content.includes('중단') || content.includes('작동 안') || content.includes('접속 불가') || 
                 content.includes('오류') || content.includes('에러') || content.includes('urgent') || 
                 content.includes('critical') || content.includes('문제')) {
-              labels.push('🚨 긴급');
+              labels.push('urgent');
             } else if (content.includes('느림') || content.includes('개선') || content.includes('불편') ||
                        content.includes('enhancement') || content.includes('feature')) {
-              labels.push('📈 개선요청');
+              labels.push('enhancement');
             } else if (content.includes('문의') || content.includes('질문') || content.includes('사용법') ||
                        content.includes('question') || content.includes('how to')) {
-              labels.push('❓ 문의');
+              labels.push('question');
             } else {
-              labels.push('📝 일반');
+              labels.push('general');
             }
             
-            // 2. SafeWork 기능 영역별 분류
+            // 2. SafeWork functional area classification
             if (content.includes('설문') || content.includes('survey') || content.includes('001') || content.includes('002') ||
                 content.includes('근골격') || content.includes('신규입사')) {
-              labels.push('📋 설문조사');
+              labels.push('area/survey');
             }
             
             if (content.includes('관리자') || content.includes('admin') || content.includes('관리패널') || 
                 content.includes('대시보드') || content.includes('dashboard')) {
-              labels.push('🔧 관리자');
+              labels.push('area/admin');
             }
             
             if (content.includes('건강') || content.includes('의료') || content.includes('검진') || content.includes('health') ||
                 content.includes('medical') || content.includes('의약품') || content.includes('medication')) {
-              labels.push('🏥 의료');
+              labels.push('area/medical');
             }
             
             if (content.includes('문서') || content.includes('파일') || content.includes('document') || 
                 content.includes('upload') || content.includes('다운로드') || content.includes('download')) {
-              labels.push('📄 문서관리');
+              labels.push('area/document');
             }
             
             if (content.includes('로그인') || content.includes('회원가입') || content.includes('인증') || 
                 content.includes('login') || content.includes('auth') || content.includes('password')) {
-              labels.push('🔐 로그인/인증');
+              labels.push('area/auth');
             }
             
             if (content.includes('api') || content.includes('연동') || content.includes('integration') ||
                 content.includes('외부') || content.includes('export') || content.includes('import')) {
-              labels.push('🔗 API/연동');
+              labels.push('area/api');
             }
             
-            // 3. 기술적 분류 (개발자용이지만 이해하기 쉬운 용어)
+            // 3. Technical classification (developer-friendly but understandable terms)
             if (content.includes('모바일') || content.includes('mobile') || content.includes('스마트폰') || 
                 content.includes('tablet') || content.includes('반응형')) {
-              labels.push('📱 모바일');
+              labels.push('tech/mobile');
             }
             
             if (content.includes('속도') || content.includes('느림') || content.includes('performance') || 
                 content.includes('빠르게') || content.includes('최적화')) {
-              labels.push('⚡ 성능');
+              labels.push('tech/performance');
             }
             
             if (content.includes('디자인') || content.includes('ui') || content.includes('화면') || 
                 content.includes('버튼') || content.includes('색상') || content.includes('레이아웃')) {
-              labels.push('🎨 디자인/UI');
+              labels.push('tech/ui');
             }
             
-            // 4. 사용자 타입별 분류
+            // 4. User type classification
             if (content.includes('간호사') || content.includes('의료진') || content.includes('보건관리자')) {
-              labels.push('👩‍⚕️ 의료진');
+              labels.push('user/medical-staff');
             }
             
             if (content.includes('안전관리자') || content.includes('관리자') || content.includes('담당자')) {
-              labels.push('👨‍💼 관리자');
+              labels.push('user/admin');
             }
             
             if (content.includes('근로자') || content.includes('직원') || content.includes('사용자') || content.includes('일반')) {
-              labels.push('👷 근로자');
+              labels.push('user/worker');
             }
             
-            // 5. 한국어 관련 이슈
+            // 5. Korean language related issues
             if (content.includes('한글') || content.includes('한국어') || content.includes('번역') || 
                 content.includes('언어') || /[가-힣]/.test(title + body)) {
-              labels.push('🇰🇷 한국어');
+              labels.push('lang/korean');
             }
             
-            // 6. 데이터/보안 관련 (PHI 중요)
+            // 6. Data/security related (PHI important)
             if (content.includes('개인정보') || content.includes('보안') || content.includes('암호화') || 
                 content.includes('privacy') || content.includes('security') || content.includes('phi')) {
-              labels.push('🛡️ 보안/개인정보');
+              labels.push('security/phi');
             }
             
             if (content.includes('백업') || content.includes('데이터') || content.includes('손실') || 
                 content.includes('복구') || content.includes('backup') || content.includes('data')) {
-              labels.push('💾 데이터');
+              labels.push('data/backup');
             }
             
-            // 7. 브라우저 호환성
+            // 7. Browser compatibility
             if (content.includes('ie') || content.includes('explorer') || content.includes('chrome') || 
                 content.includes('safari') || content.includes('firefox') || content.includes('브라우저')) {
-              labels.push('🌐 브라우저');
+              labels.push('tech/browser');
             }
             
-            // 8. 기존 라벨 확인 및 중복 제거
+            // 8. Check existing labels and remove duplicates
             const existingLabels = issue.labels.map(label => 
               typeof label === 'string' ? label : label.name
             );
             
             const newLabels = labels.filter(label => !existingLabels.includes(label));
             
-            console.log(`🏷️ 기존 라벨: ${existingLabels.join(', ')}`);
-            console.log(`🆕 새로운 라벨: ${newLabels.join(', ')}`);
+            console.log(`🏷️ Existing labels: ${existingLabels.join(', ')}`);
+            console.log(`🆕 New labels: ${newLabels.join(', ')}`);
             
-            // 라벨 적용
+            // Apply labels
             if (newLabels.length > 0) {
               try {
                 await github.rest.issues.addLabels({
@@ -171,48 +171,48 @@ jobs:
                   labels: newLabels
                 });
                 
-                console.log(`✅ ${newLabels.length}개 라벨 추가 완료!`);
+                console.log(`✅ ${newLabels.length} labels added successfully!`);
                 
-                // 비개발자를 위한 친화적 댓글 추가 (한국어)
+                // Add non-developer friendly comment (Korean)
                 const labelExplanation = `
-            🏷️ **자동 라벨링 완료!**
+            🏷️ **Auto Labeling Complete!**
             
-            이 이슈는 다음과 같이 분류되었습니다:
+            This issue has been classified as follows:
             
             ${newLabels.map(label => {
               const explanations = {
-                '🚨 긴급': '즉시 처리가 필요한 긴급 문제입니다.',
-                '📈 개선요청': '기능 개선이나 새로운 기능 요청입니다.',
-                '❓ 문의': '사용법이나 기능에 대한 문의입니다.',
-                '📝 일반': '일반적인 이슈나 피드백입니다.',
-                '📋 설문조사': '설문조사 기능 관련 이슈입니다.',
-                '🔧 관리자': '관리자 기능 관련 이슈입니다.',
-                '🏥 의료': '의료/건강검진 기능 관련 이슈입니다.',
-                '📄 문서관리': '문서 업로드/다운로드 관련 이슈입니다.',
-                '🔐 로그인/인증': '로그인이나 사용자 인증 관련 이슈입니다.',
-                '🔗 API/연동': 'API나 외부 시스템 연동 관련 이슈입니다.',
-                '📱 모바일': '모바일 기기에서의 사용성 관련 이슈입니다.',
-                '⚡ 성능': '시스템 속도나 성능 관련 이슈입니다.',
-                '🎨 디자인/UI': '화면 디자인이나 사용자 인터페이스 관련 이슈입니다.',
-                '👩‍⚕️ 의료진': '의료진이 사용하는 기능 관련 이슈입니다.',
-                '👨‍💼 관리자': '안전관리자나 시스템 관리자 관련 이슈입니다.',
-                '👷 근로자': '일반 근로자가 사용하는 기능 관련 이슈입니다.',
-                '🇰🇷 한국어': '한국어 표시나 다국어 관련 이슈입니다.',
-                '🛡️ 보안/개인정보': '보안이나 개인정보 보호 관련 이슈입니다.',
-                '💾 데이터': '데이터 저장이나 백업 관련 이슈입니다.',
-                '🌐 브라우저': '특정 브라우저에서의 호환성 이슈입니다.'
+                'urgent': 'Critical issue requiring immediate attention.',
+                'enhancement': 'Feature improvement or new feature request.',
+                'question': 'Usage question or feature inquiry.',
+                'general': 'General issue or feedback.',
+                'area/survey': 'Survey system related issue.',
+                'area/admin': 'Admin panel related issue.',
+                'area/medical': 'Medical/health check related issue.',
+                'area/document': 'Document management related issue.',
+                'area/auth': 'Authentication or login related issue.',
+                'area/api': 'API or external integration related issue.',
+                'tech/mobile': 'Mobile device usability related issue.',
+                'tech/performance': 'System performance related issue.',
+                'tech/ui': 'User interface design related issue.',
+                'user/medical-staff': 'Medical staff function related issue.',
+                'user/admin': 'Safety manager or system admin related issue.',
+                'user/worker': 'General worker function related issue.',
+                'lang/korean': 'Korean language or localization related issue.',
+                'security/phi': 'Security or personal health information related issue.',
+                'data/backup': 'Data storage or backup related issue.',
+                'tech/browser': 'Browser compatibility related issue.'
               };
-              return `- **${label}**: ${explanations[label] || '관련 이슈입니다.'}`;
+              return `- **${label}**: ${explanations[label] || 'Related issue.'}`;
             }).join('\n')}
             
-            📞 **도움이 필요하시면:**
-            - 긴급한 문제: @claude 를 멘션하여 즉시 도움을 요청하세요
-            - 일반 문의: 이슈에 추가 설명을 남겨주세요
+            📞 **Need Help?**
+            - Urgent issues: Mention @claude for immediate assistance
+            - General inquiries: Add additional details in the issue
             
             ---
-            🤖 *SafeWork 자동 라벨링 시스템*`;
+            🤖 *SafeWork Auto Labeling System*`;
                 
-                if (newLabels.some(label => ['🚨 긴급', '📈 개선요청', '❓ 문의'].includes(label))) {
+                if (newLabels.some(label => ['urgent', 'enhancement', 'question'].includes(label))) {
                   await github.rest.issues.createComment({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
@@ -220,29 +220,29 @@ jobs:
                     body: labelExplanation
                   });
                   
-                  console.log("💬 사용자 친화적 설명 댓글 추가됨");
+                  console.log("💬 User-friendly explanation comment added");
                 }
                 
-                // 긴급 이슈인 경우 Claude AI 자동 호출
-                if (newLabels.includes('🚨 긴급')) {
+                // Automatically call Claude AI for urgent issues
+                if (newLabels.includes('urgent')) {
                   await github.rest.issues.createComment({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
                     issue_number: issueNumber,
-                    body: `🚨 **긴급 이슈 자동 처리**\n\n@claude 이 긴급 이슈를 즉시 분석하고 해결 방안을 제시해주세요.\n\n우선순위: P0-CRITICAL`
+                    body: `🚨 **Urgent Issue Auto Processing**\n\n@claude Please analyze this urgent issue immediately and provide solution.\n\nPriority: P0-CRITICAL`
                   });
                   
-                  console.log("🚨 긴급 이슈로 Claude AI 자동 호출됨");
+                  console.log("🚨 Claude AI automatically called for urgent issue");
                 }
                 
               } catch (error) {
-                console.log(`❌ 라벨 추가 실패: ${error.message}`);
+                console.log(`❌ Label addition failed: ${error.message}`);
               }
             } else {
-              console.log("ℹ️ 추가할 새로운 라벨이 없습니다.");
+              console.log("ℹ️ No new labels to add.");
             }
 
-  # 📊 라벨링 통계 및 대시보드 업데이트
+  # Issue Statistics and Dashboard Update
   update-dashboard:
     needs: smart-labeling
     if: always()
@@ -250,14 +250,14 @@ jobs:
     timeout-minutes: 3
     
     steps:
-      - name: 📊 SafeWork 이슈 대시보드 업데이트
+      - name: SafeWork Issue Dashboard Update
         uses: actions/github-script@v7
         with:
           script: |
-            console.log("📊 SafeWork 이슈 대시보드 업데이트...");
+            console.log("📊 SafeWork Issue Dashboard Update...");
             
             try {
-              // 모든 열린 이슈 가져오기
+              // Get all open issues
               const { data: issues } = await github.rest.issues.listForRepo({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -265,9 +265,9 @@ jobs:
                 per_page: 100
               });
               
-              // 라벨별 통계 집계
+              // Aggregate statistics by label
               const labelStats = {};
-              const priorityStats = {'🚨 긴급': 0, '📈 개선요청': 0, '❓ 문의': 0, '📝 일반': 0};
+              const priorityStats = {'urgent': 0, 'enhancement': 0, 'question': 0, 'general': 0};
               const areaStats = {};
               
               issues.forEach(issue => {
@@ -275,34 +275,33 @@ jobs:
                   const labelName = typeof label === 'string' ? label : label.name;
                   labelStats[labelName] = (labelStats[labelName] || 0) + 1;
                   
-                  // 우선순위 통계
+                  // Priority statistics
                   if (priorityStats.hasOwnProperty(labelName)) {
                     priorityStats[labelName]++;
                   }
                   
-                  // 영역별 통계
-                  if (labelName.includes('📋') || labelName.includes('🔧') || labelName.includes('🏥') || 
-                      labelName.includes('📄') || labelName.includes('🔐') || labelName.includes('🔗')) {
+                  // Area statistics
+                  if (labelName.includes('area/') || labelName.includes('tech/') || labelName.includes('user/')) {
                     areaStats[labelName] = (areaStats[labelName] || 0) + 1;
                   }
                 });
               });
               
-              console.log("📈 이슈 현황:");
-              console.log(`  - 전체 열린 이슈: ${issues.length}개`);
-              console.log("📊 우선순위별:");
+              console.log("📈 Issue Status:");
+              console.log(`  - Total open issues: ${issues.length}`);
+              console.log("📊 By Priority:");
               Object.entries(priorityStats).forEach(([label, count]) => {
-                if (count > 0) console.log(`  - ${label}: ${count}개`);
+                if (count > 0) console.log(`  - ${label}: ${count}`);
               });
               
-              console.log("🎯 영역별:");
+              console.log("🎯 By Area:");
               Object.entries(areaStats).forEach(([label, count]) => {
-                console.log(`  - ${label}: ${count}개`);
+                console.log(`  - ${label}: ${count}`);
               });
               
-              // README에 대시보드 섹션이 있다면 업데이트
-              // (향후 확장 가능)
+              // Update dashboard section in README if exists
+              // (Future expansion possible)
               
             } catch (error) {
-              console.log(`❌ 대시보드 업데이트 실패: ${error.message}`);
+              console.log(`❌ Dashboard update failed: ${error.message}`);
             }

@@ -1,411 +1,294 @@
-name: SafeWork Claude AI Enhanced v2.0
+name: SafeWork Claude AI Advanced
 
 on:
   issues:
     types: [opened, edited, reopened]
   issue_comment:
-    types: [created, edited]
+    types: [created]
   pull_request:
-    types: [opened, edited, reopened, synchronize, ready_for_review]
+    types: [opened, edited, synchronize, reopened]
   pull_request_review:
     types: [submitted]
-  pull_request_review_comment:
-    types: [created, edited]
   workflow_dispatch:
     inputs:
       issue_number:
-        description: '처리할 이슈 번호 (선택사항)'
+        description: 'Issue number to process'
         required: false
         type: string
-      mode:
-        description: '실행 모드'
-        required: true
-        default: 'auto'
-        type: choice
-        options:
-          - auto
-          - issue_analysis
-          - pr_review  
-          - bulk_processing
-          - health_check
+      pr_number:
+        description: 'Pull request number to process'  
+        required: false
+        type: string
 
-env:
-  CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  actions: read
+  checks: read
+  discussions: read
+  repository-projects: read
 
 jobs:
-  # 🔍 사전 분석 및 분류 단계
-  pre-analysis:
+  claude-ai-automation:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      should_process: ${{ steps.analysis.outputs.should_process }}
-      processing_mode: ${{ steps.analysis.outputs.processing_mode }}
-      priority_level: ${{ steps.analysis.outputs.priority_level }}
-      target_context: ${{ steps.analysis.outputs.target_context }}
-      skip_reason: ${{ steps.analysis.outputs.skip_reason }}
+    timeout-minutes: 25
+    
+    # Advanced conditions for intelligent triggering
+    if: |
+      (github.event_name == 'issues' && 
+       (github.event.action == 'opened' || 
+        github.event.action == 'edited' || 
+        github.event.action == 'reopened')) ||
+      (github.event_name == 'issue_comment' && 
+       github.event.action == 'created' && 
+       (contains(github.event.comment.body, '@claude') || 
+        contains(github.event.comment.body, 'claude'))) ||
+      (github.event_name == 'pull_request' && 
+       (github.event.action == 'opened' || 
+        github.event.action == 'edited' || 
+        github.event.action == 'synchronize' || 
+        github.event.action == 'reopened')) ||
+      (github.event_name == 'pull_request_review' && 
+       github.event.action == 'submitted') ||
+      github.event_name == 'workflow_dispatch'
+    
     steps:
-      - name: 🎯 Claude 작업 분류 및 우선순위 설정
-        id: analysis
+      - name: Debug Event Information
         run: |
-          echo "🔍 Claude 작업 분석 시작..."
+          echo "🔍 Event debugging information:"
+          echo "Event name: ${{ github.event_name }}"
+          echo "Action: ${{ github.event.action }}"
+          echo "Repository: ${{ github.repository }}"
+          echo "Actor: ${{ github.actor }}"
           
-          should_process="false"
-          processing_mode="none"
-          priority_level="P3-LOW"
-          target_context=""
-          skip_reason=""
-          
-          # 수동 실행 분석
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            should_process="true"
-            processing_mode="${{ github.event.inputs.mode }}"
-            priority_level="P1-HIGH"
-            target_context="Manual execution: ${{ github.event.inputs.issue_number }}"
-            
-          # 이슈 관련 이벤트
-          elif [ "${{ github.event_name }}" = "issues" ]; then
-            issue_title="${{ github.event.issue.title }}"
-            issue_body="${{ github.event.issue.body }}"
-            
-            # 우선순위 결정 로직
-            if echo "$issue_title $issue_body" | grep -iE "(critical|urgent|outage|down|breach|security)" > /dev/null; then
-              priority_level="P0-CRITICAL"
-            elif echo "$issue_title $issue_body" | grep -iE "(error|bug|fail|broken)" > /dev/null; then
-              priority_level="P1-HIGH" 
-            elif echo "$issue_title $issue_body" | grep -iE "(feature|enhancement|improve)" > /dev/null; then
-              priority_level="P2-MEDIUM"
-            fi
-            
-            should_process="true"
-            processing_mode="issue_analysis"
-            target_context="Issue #${{ github.event.issue.number }}: $issue_title"
-            
-          # 이슈 댓글 분석
+          if [ "${{ github.event_name }}" = "issues" ]; then
+            echo "Issue number: ${{ github.event.issue.number }}"
+            echo "Issue title: ${{ github.event.issue.title }}"
+            echo "Issue author: ${{ github.event.issue.user.login }}"
           elif [ "${{ github.event_name }}" = "issue_comment" ]; then
-            comment_body="${{ github.event.comment.body }}"
-            
-            if echo "$comment_body" | grep -iE "@claude|claude" > /dev/null; then
-              should_process="true"
-              processing_mode="issue_analysis"
-              priority_level="P1-HIGH"
-              target_context="Issue Comment #${{ github.event.issue.number }}"
-            else
-              skip_reason="No Claude mention in comment"
-            fi
-            
-          # PR 관련 이벤트
+            echo "Issue number: ${{ github.event.issue.number }}"
+            echo "Comment author: ${{ github.event.comment.user.login }}"
+            echo "Comment contains @claude: $(echo '${{ github.event.comment.body }}' | grep -q '@claude' && echo 'yes' || echo 'no')"
           elif [ "${{ github.event_name }}" = "pull_request" ]; then
-            if [ "${{ github.event.action }}" = "synchronize" ]; then
-              skip_reason="PR synchronize - skipping to avoid noise"
-            else
-              should_process="true"
-              processing_mode="pr_review"
-              priority_level="P2-MEDIUM"
-              target_context="PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}"
-            fi
-            
-          # PR 리뷰 관련
-          elif [ "${{ github.event_name }}" = "pull_request_review" ] || [ "${{ github.event_name }}" = "pull_request_review_comment" ]; then
-            should_process="true"
-            processing_mode="pr_review"
-            priority_level="P2-MEDIUM"
-            target_context="PR Review activity"
-          fi
-          
-          echo "should_process=$should_process" >> $GITHUB_OUTPUT
-          echo "processing_mode=$processing_mode" >> $GITHUB_OUTPUT 
-          echo "priority_level=$priority_level" >> $GITHUB_OUTPUT
-          echo "target_context=$target_context" >> $GITHUB_OUTPUT
-          echo "skip_reason=$skip_reason" >> $GITHUB_OUTPUT
-          
-          if [ "$should_process" = "true" ]; then
-            echo "✅ Claude 처리 대상: $processing_mode ($priority_level)"
-            echo "📋 대상: $target_context"
-          else
-            echo "⏭️ Claude 처리 건너뜀: $skip_reason"
+            echo "PR number: ${{ github.event.pull_request.number }}"
+            echo "PR title: ${{ github.event.pull_request.title }}"
+            echo "PR author: ${{ github.event.pull_request.user.login }}"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual trigger"
+            echo "Issue number: ${{ github.event.inputs.issue_number }}"
+            echo "PR number: ${{ github.event.inputs.pr_number }}"
           fi
 
-  # 🤖 메인 Claude AI 처리 작업
-  claude-ai:
-    needs: pre-analysis  
-    if: needs.pre-analysis.outputs.should_process == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    
-    environment:
-      name: claude-ai
-      url: https://github.com/${{ github.repository }}
-    
-    permissions:
-      contents: write
-      issues: write
-      pull-requests: write
-      actions: read
-      
-    steps:
-      - name: 🚀 SafeWork Claude AI 시작 - ${{ needs.pre-analysis.outputs.processing_mode }}
-        run: |
-          echo "🤖 SafeWork Claude AI v2.0 시작!"
-          echo "⏰ 처리 시작: $(TZ='Asia/Seoul' date '+%Y-%m-%d %H:%M:%S KST')"
-          echo "🎯 처리 모드: ${{ needs.pre-analysis.outputs.processing_mode }}"
-          echo "📈 우선순위: ${{ needs.pre-analysis.outputs.priority_level }}"
-          echo "📋 대상: ${{ needs.pre-analysis.outputs.target_context }}"
-          echo "🔗 저장소: ${{ github.repository }}"
-          
-          # 토큰 상태 확인
-          if [ -n "${{ env.CLAUDE_CODE_OAUTH_TOKEN }}" ]; then
-            echo "✅ Claude OAuth Token 설정됨"
-          else
-            echo "❌ Claude OAuth Token 누락!"
-            exit 1
-          fi
-
-      - name: 📥 소스코드 체크아웃
+      - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 전체 히스토리 가져오기
-          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
-      - name: 🤖 Claude Code Action 실행 with Enhanced Features  
-        uses: anthropics/claude-code-action@v1
-        with:
-          claude_code_oauth_token: ${{ env.CLAUDE_CODE_OAUTH_TOKEN }}
-          
-          # 고급 설정 (지원되는 파라미터만 사용)
-          track_progress: ${{ github.event_name != 'workflow_dispatch' }}
-          use_sticky_comment: true  
-          use_commit_signing: false
-          
-          prompt: |
-            REPO: ${{ github.repository }}
-            EVENT: ${{ github.event_name }}
-            PROCESSING_MODE: ${{ needs.pre-analysis.outputs.processing_mode }}
-            PRIORITY: ${{ needs.pre-analysis.outputs.priority_level }}
-            TARGET: ${{ needs.pre-analysis.outputs.target_context }}
-            
-            {% if github.event.pull_request %}
-            PR_NUMBER: ${{ github.event.pull_request.number }}
-            PR_TITLE: ${{ github.event.pull_request.title }}
-            PR_AUTHOR: ${{ github.event.pull_request.user.login }}
-            {% endif %}
-            
-            {% if github.event.issue %}
-            ISSUE_NUMBER: ${{ github.event.issue.number }}
-            ISSUE_TITLE: ${{ github.event.issue.title }}
-            ISSUE_AUTHOR: ${{ github.event.issue.user.login }}
-            {% endif %}
-            
-            # 🏥 SafeWork AI - 산업안전보건 전문 AI 어시스턴트
-            
-            **시스템 컨텍스트:**
-            - 🏭 **도메인**: 한국 산업안전보건관리시스템 (SafeWork)
-            - 💊 **특수 요구사항**: PHI(개인건강정보) 보호 최우선
-            - 🛠️ **기술스택**: Flask 3.0+, SQLAlchemy 2.0, MySQL 8.0 UTF8MB4, Redis 5.0
-            - 🌏 **언어/시간**: 한국어 UI, KST 타임존, 한글 데이터
-            - ⚡ **품질기준**: 80%+ 테스트 커버리지, 엄격한 코드 표준
-            
-            **핵심 기능 도메인:**
-            - 📋 **설문조사**: 근골격계(001), 신규입사자(002) 조건부 로직
-            - 🏥 **의료관리**: 건강검진, 의무실 방문, 의약품 재고
-            - 👥 **안전관리**: 13개 SafeWork 관리패널 (근로자, 건강검진, 의료방문, 의약품, 상담, 건강프로그램, 특수관리, 환경측정, 위험평가, MSDS, 보호구, 교육, 자격증)
-            - 📄 **문서시스템**: 버전 관리, 접근 로깅
-            - 🔒 **보안/인증**: 익명 설문, 속도 제한
-            - 🌐 **API**: RESTful API v2 외부 연동
-            
-            **운영 환경:**
-            - 🌐 **Production**: https://safework.jclee.me
-            - 🔧 **Admin**: https://safework.jclee.me/admin  
-            - 📡 **API**: https://safework.jclee.me/api/safework/v2
-            - 📊 **Health**: https://safework.jclee.me/health
-            
-            ---
-            
-            ## 🎯 모드별 처리 전략
-            
-            {% if needs.pre-analysis.outputs.processing_mode == 'issue_analysis' %}
-            ### 📋 이슈 분석 모드 ({{ needs.pre-analysis.outputs.priority_level }})
-            
-            **우선 처리 방향:**
-            {% if needs.pre-analysis.outputs.priority_level == 'P0-CRITICAL' %}
-            🚨 **P0-CRITICAL 대응:**
-            - 서비스 중단, PHI 유출, 데이터 손실 즉시 대응
-            - 롤백 가능한 핫픽스 우선 제공
-            - 운영팀 즉시 알림 필요
-            {% elif needs.pre-analysis.outputs.priority_level == 'P1-HIGH' %}
-            ⚡ **P1-HIGH 우선 처리:**
-            - 설문조사 오류, 관리자 페이지 문제, DB 이슈
-            - 당일 내 해결 목표
-            - 자동화된 테스트 포함
-            {% elif needs.pre-analysis.outputs.priority_level == 'P2-MEDIUM' %}
-            📊 **P2-MEDIUM 계획적 처리:**
-            - UI 개선, API 성능, 기능 개선
-            - 다음 배포 주기에 포함
-            - 충분한 테스트와 문서화
-            {% else %}
-            📝 **P3-LOW 백로그 관리:**
-            - 문서화, 정리, 마이너 버그
-            - 여유시간에 처리
-            - 코드 품질 개선 기회로 활용
-            {% endif %}
-            
-            **이슈 분석 체크리스트:**
-            - [ ] 도메인별 영향도 분석 (설문/의료/안전/문서/API)
-            - [ ] PHI 보안 영향 평가 
-            - [ ] 다국어(한/영) 문제 확인
-            - [ ] MySQL/Redis 데이터 무결성
-            - [ ] 기존 테스트 영향도
-            - [ ] 운영 환경 호환성
-            
-            **자동 라벨 적용:**
-            - 도메인: area/survey, area/admin, area/api, area/security
-            - 기술: tech/flask, tech/mysql, tech/redis, tech/frontend
-            - 언어: korean (한국어 이슈인 경우)
-            - 의료: medical/phi (개인건강정보 관련)
-            
-            **응답 원칙:**
-            - 비즈니스 설명은 **한국어**로 제공
-            - 기술적 상세사항은 **영어**로 제공  
-            - 의료 데이터 보안을 최우선으로 고려
-            - 한국 의료법규 및 개인정보보호법 준수
-            
-            {% elif needs.pre-analysis.outputs.processing_mode == 'pr_review' %}
-            ### 🔍 PR 리뷰 모드
-            
-            **SafeWork PR 리뷰 체크포인트:**
-            
-            🔐 **보안 검토 (최우선):**
-            - PHI 보호: 개인건강정보 노출, 로깅 확인
-            - SQL 인젝션: SQLAlchemy 쿼리, 동적 쿼리 검증
-            - CSRF 보호: WTForms, AJAX 요청 토큰 확인
-            - 인증/권한: @login_required, 관리자 권한 검증
-            - 파일 업로드: 문서 관리 보안, 파일 검증
-            - 세션 관리: Redis 세션, 만료 정책
-            
-            🗄️ **데이터베이스 (MySQL 8.0):**
-            - SQLAlchemy 2.0 호환성 확인
-            - 트랜잭션 관리: commit/rollback 패턴
-            - 인덱스 전략: 검색 성능, FK 관계
-            - UTF8MB4 캐릭터셋: 한글 텍스트 지원
-            - 마이그레이션: models 변경 영향도
-            - 백업/복원: 중요 데이터 보호
-            
-            🎨 **한국어 UX/UI (Bootstrap 4.6):**
-            - KST 타임존: datetime 처리 일관성
-            - 한글 텍스트: UTF8MB4, 줄바꿈, 정렬
-            - 폼 검증: WTForms 한글 메시지
-            - 반응형: 모바일, 태블릿 호환성
-            - 접근성: 의료진 사용 편의성
-            - 브라우저 호환: IE11+ 지원
-            
-            ⚡ **성능 및 캐싱 (Redis 5.0):**
-            - Redis 캐싱: 설문 데이터, 세션 저장
-            - 쿼리 최적화: N+1 문제, 인덱스 활용
-            - 페이지네이션: 대용량 데이터 처리
-            - 정적 자원: CSS/JS 최소화, CDN
-            - 메모리 사용: 대용량 Excel/PDF 처리
-            - API 성능: RESTful 응답 시간
-            
-            🧪 **테스트 및 품질 (80%+ 커버리지):**
-            - pytest: 모델, 뷰, API 테스트
-            - 통합 테스트: MySQL, Redis 연동
-            - 보안 테스트: 권한, 인증 흐름
-            - 성능 테스트: 부하, 동시성
-            - 한글 테스트: 다국어 데이터
-            - 회귀 테스트: 기존 기능 영향도
-            
-            📋 **SafeWork 도메인 로직:**
-            - 설문조사 로직: 001/002 조건부 분기, 유효성 검사
-            - 관리자 패널: 13개 패널 권한, 데이터 일관성
-            - 의료 데이터: 건강검진, 의무실, 의약품 워크플로우
-            - 문서 시스템: 버전 관리, 승인 프로세스
-            - API 일관성: RESTful 규칙, 에러 처리
-            - 감사 로깅: AuditLog 모델, 접근 추적
-            
-            **리뷰 결과 제공:**
-            - ✅ 승인 조건 명시
-            - 🔧 변경 요청 구체적 가이드  
-            - 💡 개선 제안 (선택사항)
-            - 🚨 블로킹 이슈 우선순위
-            
-            {% elif needs.pre-analysis.outputs.processing_mode == 'bulk_processing' %}
-            ### 📊 대량 처리 모드
-            - 여러 이슈/PR 일괄 분석
-            - 패턴 기반 자동 라벨링
-            - 우선순위 기반 정렬
-            - 중복 이슈 감지 및 통합
-            
-            {% elif needs.pre-analysis.outputs.processing_mode == 'health_check' %}
-            ### 🩺 헬스체크 모드
-            - 저장소 상태 점검
-            - 워크플로우 실행 이력 분석
-            - 이슈/PR 처리 속도 리포트
-            - 자동화 성능 지표
-            
-            {% endif %}
-            
-            ---
-            
-            ## 🔄 실행 가이드라인
-            
-            1. **한국 의료법규 준수** - 개인건강정보 보호법, 의료법 기준 적용
-            2. **실행 가능한 솔루션** - 구체적이고 즉시 적용 가능한 코드/설정 제공
-            3. **단계별 검증** - 각 단계마다 테스트 방법 제시
-            4. **롤백 계획** - 문제 발생 시 되돌릴 수 있는 방법 포함
-            5. **문서화** - 변경사항에 대한 명확한 기록
-            
-            ## 🎯 최종 목표
-            SafeWork 시스템의 안정성, 보안성, 사용성을 높이며, 
-            한국 산업안전보건 환경에 최적화된 솔루션을 제공합니다.
-            
-            **지금 시작하세요! 🚀**
-
-  # 📊 후속 작업 및 모니터링
-  post-processing:
-    needs: [pre-analysis, claude-ai]
-    if: always() && needs.pre-analysis.outputs.should_process == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    
-    steps:
-      - name: 📈 Claude 작업 결과 분석 및 로깅
+      - name: SafeWork Context Analysis & Prompt Selection
+        id: context
         run: |
-          echo "📊 Claude AI 작업 완료 분석..."
-          echo "⏰ 완료 시간: $(TZ='Asia/Seoul' date '+%Y-%m-%d %H:%M:%S KST')"
-          echo "🎯 처리된 모드: ${{ needs.pre-analysis.outputs.processing_mode }}"
-          echo "📈 우선순위: ${{ needs.pre-analysis.outputs.priority_level }}"
-          echo "📋 대상: ${{ needs.pre-analysis.outputs.target_context }}"
+          echo "🧠 SafeWork context analysis..."
           
-          if [ "${{ needs.claude-ai.result }}" = "success" ]; then
-            echo "✅ Claude AI 작업 성공"
-            
-            # 성공한 경우 배포 파이프라인 트리거 고려
-            if [ "${{ needs.pre-analysis.outputs.priority_level }}" = "P0-CRITICAL" ] || [ "${{ needs.pre-analysis.outputs.priority_level }}" = "P1-HIGH" ]; then
-              echo "🚀 고우선순위 작업 완료 - 자동 배포 고려 중"
-            fi
-            
-          elif [ "${{ needs.claude-ai.result }}" = "failure" ]; then
-            echo "❌ Claude AI 작업 실패"
-            echo "🔍 실패 원인 분석 필요"
-            
-          else
-            echo "⚠️ Claude AI 작업 상태 불명 (${{ needs.claude-ai.result }})"
+          # Initialize variables
+          context_type="general"
+          domain_context=""
+          korean_context=""
+          
+          # Extract content for analysis
+          if [ "${{ github.event_name }}" = "issues" ]; then
+            title="${{ github.event.issue.title }}"
+            body="${{ github.event.issue.body }}"
+            content="$title $body"
+          elif [ "${{ github.event_name }}" = "issue_comment" ]; then
+            comment="${{ github.event.comment.body }}"
+            issue_title="${{ github.event.issue.title }}"
+            content="$comment $issue_title"
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            pr_title="${{ github.event.pull_request.title }}"
+            pr_body="${{ github.event.pull_request.body }}"
+            content="$pr_title $pr_body"
+            context_type="pull_request"
           fi
           
-      - name: 📊 성능 메트릭 수집
-        if: needs.claude-ai.result == 'success'
+          # SafeWork domain detection
+          if echo "$content" | grep -qi -E "(설문|survey|001|002|근골격|musculoskeletal)"; then
+            domain_context="survey_system"
+          elif echo "$content" | grep -qi -E "(관리자|admin|safework|dashboard)"; then
+            domain_context="admin_system"
+          elif echo "$content" | grep -qi -E "(의료|health|medical|검진|medication)"; then
+            domain_context="medical_system"
+          elif echo "$content" | grep -qi -E "(문서|document|upload|download)"; then
+            domain_context="document_system"
+          elif echo "$content" | grep -qi -E "(api|연동|integration)"; then
+            domain_context="api_system"
+          elif echo "$content" | grep -qi -E "(인증|auth|login|password)"; then
+            domain_context="auth_system"
+          elif echo "$content" | grep -qi -E "(배포|deploy|docker|watchtower)"; then
+            domain_context="deployment_system"
+          fi
+          
+          # Korean language detection
+          if echo "$content" | grep -q '[가-힣]'; then
+            korean_context="detected"
+          fi
+          
+          echo "context_type=$context_type" >> $GITHUB_OUTPUT
+          echo "domain_context=$domain_context" >> $GITHUB_OUTPUT
+          echo "korean_context=$korean_context" >> $GITHUB_OUTPUT
+          
+          echo "📋 Context analysis results:"
+          echo "  - Type: $context_type"
+          echo "  - Domain: $domain_context"
+          echo "  - Korean: $korean_context"
+
+      - name: Advanced Claude Code Action with Domain Intelligence
+        uses: anthropics/claude-code-action@v1
+        with:
+          # Authentication using OAuth token
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          
+          # Advanced configuration
+          max_turns: 15
+          track_progress: true
+          use_sticky_comment: true
+          use_commit_signing: false
+          
+          # Dynamic prompts based on context
+          prompt: |
+            You are Claude, an AI assistant specialized in SafeWork industrial health & safety management system.
+            
+            ## System Context
+            SafeWork is a Flask 3.0+ application managing Korean workplace health surveys, medical checkups, and safety administration.
+            
+            **Core Components:**
+            - Survey System: 001 (musculoskeletal), 002 (new employee health)
+            - SafeWork Admin: 13 specialized panels (workers, health checks, medications, etc.)
+            - Document Management: Version control, access logging
+            - API v2: RESTful endpoints for external integrations
+            - Database: MySQL 8.0 UTF8MB4, Redis 5.0 caching
+            - Deployment: Docker + Watchtower on registry.jclee.me
+            
+            **Domain Context Detected:** ${{ steps.context.outputs.domain_context }}
+            **Event Type:** ${{ github.event_name }}
+            **Korean Language:** ${{ steps.context.outputs.korean_context }}
+            
+            ## Specialized Instructions by Domain
+            
+            ### Survey System (001/002)
+            - Focus on form validation, conditional logic (JavaScript), Korean UI
+            - Body parts: 16 regions with pain scale (1-5)
+            - Anonymous submissions supported (user_id=1)
+            - MySQL KST timezone handling
+            
+            ### Admin System  
+            - 13 SafeWork panels: workers, health_checks, medical_visits, medications, consultations, health_programs, special_management, environment_measurements, risk_assessment, msds, protective_equipment, education, certifications
+            - Bootstrap 4.6 UI, jQuery AJAX, CSRF protection
+            - Pagination (20 items/page), audit logging
+            
+            ### Medical System
+            - PHI (Personal Health Information) compliance
+            - Medication expiry tracking, dosage management  
+            - Integration with health checkup workflows
+            
+            ### Document System
+            - Version control, access logs, category management
+            - Public/private/admin permissions
+            - File upload security, Korean filename support
+            
+            ### API System
+            - RESTful v2 endpoints: /api/safework/v2/*
+            - CRUD operations for all SafeWork entities
+            - JSON responses, proper HTTP status codes
+            
+            ### Auth System
+            - Flask-Login integration, session management
+            - @login_required decorators, role-based access
+            - Password security, rate limiting
+            
+            ### Deployment System
+            - Docker multi-platform builds (amd64/arm64)
+            - Watchtower automatic updates
+            - GitHub Actions → registry.jclee.me → production
+            
+            ## Task Priority Rules
+            1. **Critical Issues**: Security, PHI leaks, service outages
+            2. **High Priority**: Survey submission errors, admin panel failures  
+            3. **Medium Priority**: UI improvements, performance optimization
+            4. **Low Priority**: Documentation, code refactoring
+            
+            ## Response Guidelines
+            - Use Korean for user communication when Korean content detected
+            - Provide specific file paths (e.g., `app/routes/admin.py:123`)
+            - Include deployment considerations for production changes
+            - Reference SafeWork domain expertise in solutions
+            - Always test solutions against MySQL 8.0 UTF8MB4 compatibility
+            
+            ## Current Task Analysis
+            Please analyze the current GitHub event and provide appropriate assistance based on the SafeWork domain context detected above.
+
+      - name: Post-Processing & Status Update
+        if: always()
         run: |
-          echo "📊 Claude AI 성능 메트릭 수집..."
+          echo "🎯 Claude Code Action completed"
+          echo "Event: ${{ github.event_name }}"
+          echo "Context: ${{ steps.context.outputs.domain_context }}"
+          echo "Status: ${{ job.status }}"
           
-          # 워크플로우 실행 시간 계산
-          START_TIME="${{ github.event.repository.updated_at }}"
-          END_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ SafeWork AI automation successful"
+          else
+            echo "⚠️ SafeWork AI automation completed with issues"
+          fi
           
-          echo "⏱️ 실행 시간 기록:"
-          echo "  - 시작: $START_TIME"  
-          echo "  - 종료: $END_TIME"
-          echo "  - 모드: ${{ needs.pre-analysis.outputs.processing_mode }}"
-          echo "  - 우선순위: ${{ needs.pre-analysis.outputs.priority_level }}"
-          
-          # 향후 메트릭 분석을 위한 구조화된 로그
-          echo "METRICS|${{ github.repository }}|${{ needs.pre-analysis.outputs.processing_mode }}|${{ needs.pre-analysis.outputs.priority_level }}|${{ needs.claude-ai.result }}|$END_TIME"
+          # Trigger deployment workflow if changes were made
+          if [ "${{ job.status }}" = "success" ] && [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "🚀 Changes detected - deployment pipeline will be triggered"
+          fi
+
+  # Parallel job for urgent issue handling
+  urgent-issue-handler:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: |
+      github.event_name == 'issues' && 
+      github.event.action == 'opened' &&
+      (contains(github.event.issue.title, '긴급') || 
+       contains(github.event.issue.title, 'urgent') ||
+       contains(github.event.issue.title, 'critical') ||
+       contains(github.event.issue.body, '중단') ||
+       contains(github.event.issue.body, '작동 안'))
+    
+    steps:
+      - name: Urgent Issue Alert
+        uses: actions/github-script@v7
+        with:
+          script: |
+            console.log("🚨 Urgent SafeWork issue detected!");
+            
+            const issue = context.payload.issue;
+            
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              labels: ['urgent', 'priority-high', 'safework']
+            });
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: `🚨 **Urgent SafeWork Issue Detected**
+              
+              This issue has been automatically flagged as urgent and will be processed immediately.
+              
+              **Estimated Response Time:** < 5 minutes
+              **Priority Level:** P0-CRITICAL
+              **Domain:** SafeWork Industrial Safety System
+              
+              The main Claude AI workflow will process this issue with high priority.
+              
+              ---
+              🤖 *SafeWork Urgent Issue Handler*`
+            });

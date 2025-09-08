@@ -1,4 +1,4 @@
-name: SafeWork 문서 자동 동기화 & API 문서 생성
+name: SafeWork Documentation Sync & API Docs Generation
 
 on:
   push:

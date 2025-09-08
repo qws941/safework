@@ -1,4 +1,4 @@
-name: SafeWork 성능 모니터링 & 최적화
+name: SafeWork Performance Monitoring & Optimization
 
 on:
   schedule:
