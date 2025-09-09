@@ -23,18 +23,19 @@ except ImportError:
 def upgrade():
     """Apply the migration - Create admin user"""
 
-    # Check if admin user already exists
+    # Check if admin user already exists (check both admin and safewrork)
     existing_admin = User.query.filter_by(username="admin").first()
+    existing_safewrork = User.query.filter_by(username="safewrork").first()
 
-    if not existing_admin:
-        # Create admin user
-        admin_user = User(username="admin", email="admin@safework.local", is_admin=True)
-        admin_user.set_password("safework2024")
+    if not existing_admin and not existing_safewrork:
+        # Create admin user with actual credentials
+        admin_user = User(username="safewrork", email="admin@safework.local", is_admin=True)
+        admin_user.set_password("123")
 
         db.session.add(admin_user)
         db.session.commit()
 
-        print("✅ Created default admin user (admin/safework2024)")
+        print("✅ Created default admin user (safewrork/123)")
     else:
         print("ℹ️  Admin user already exists, skipping creation")
 
@@ -42,14 +43,18 @@ def upgrade():
 def downgrade():
     """Rollback the migration - Remove admin user"""
 
+    # Check for both possible admin usernames
     admin_user = User.query.filter_by(username="admin").first()
+    safewrork_user = User.query.filter_by(username="safewrork").first()
+    
+    user_to_remove = admin_user or safewrork_user
 
-    if admin_user:
+    if user_to_remove:
         # Only delete if it's the default admin (no surveys)
-        if admin_user.surveys.count() == 0:
-            db.session.delete(admin_user)
+        if user_to_remove.surveys.count() == 0:
+            db.session.delete(user_to_remove)
             db.session.commit()
-            print("✅ Removed default admin user")
+            print(f"✅ Removed default admin user ({user_to_remove.username})")
         else:
             print("⚠️  Admin user has associated data, skipping deletion")
     else:

@@ -386,7 +386,7 @@ python app/migrate.py rollback --version 002
 **Performance:** Redis caching, DB indexing, lazy loading, pagination (20/page)
 
 ### Account Information
-- **Admin Account**: admin / safework2024
+- **Admin Account**: safewrork / 123
 - **Test Account**: test / test123
 - **Registry**: registry.jclee.me (admin/bingogo1)
 
