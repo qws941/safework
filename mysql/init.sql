@@ -75,6 +75,9 @@ CREATE TABLE IF NOT EXISTS surveys (
     -- 설문 응답 (JSON 형태로 추가 데이터 저장)
     responses JSON,
     
+    -- 추가 증상 데이터 (통증 빈도, 시기, 특성 등)
+    symptoms_data JSON COMMENT '추가 증상 데이터 (통증 빈도, 시기, 특성 등)',
+    
     -- 메타데이터
     submission_date DATETIME DEFAULT CURRENT_TIMESTAMP,
     status VARCHAR(20) DEFAULT 'submitted',
