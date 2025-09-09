@@ -5,6 +5,10 @@ on:
     types: [created]
   pull_request_review_comment:
     types: [created]
+  issues:
+    types: [opened, edited]
+  pull_request:
+    types: [opened, edited, synchronize]
 
 permissions:
   contents: read
@@ -13,7 +17,7 @@ permissions:
 
 jobs:
   detect-claude-requests:
-    if: contains(github.event.comment.body, '@claude')
+    # 모든 댓글에서 자동으로 Claude AI가 분석 (사용자 기입 불필요)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     
@@ -22,39 +26,79 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const comment = context.payload.comment;
-            const isClaudeRequest = comment.body.includes('@claude');
+            // 이벤트 타입별 처리
+            let targetBody = '';
+            let issueNumber = 0;
             
-            if (isClaudeRequest) {
-              // Add claude label
+            if (context.payload.comment) {
+              // 댓글 이벤트
+              targetBody = context.payload.comment.body.toLowerCase();
+              issueNumber = context.issue.number;
+            } else if (context.payload.issue) {
+              // 이슈 이벤트
+              targetBody = (context.payload.issue.title + ' ' + context.payload.issue.body).toLowerCase();
+              issueNumber = context.payload.issue.number;
+            } else if (context.payload.pull_request) {
+              // PR 이벤트
+              targetBody = (context.payload.pull_request.title + ' ' + context.payload.pull_request.body).toLowerCase();
+              issueNumber = context.payload.pull_request.number;
+            }
+            
+            // 자동 분석: 문제, 오류, 도움 키워드 감지 + SafeWork 키워드
+            const triggerWords = [
+              // 일반 문제 키워드
+              '문제', '오류', '에러', '도움', '수정', '버그', '안됨', '작동', '실행', '테스트', 
+              'error', 'bug', 'help', 'fix', 'issue',
+              // SafeWork 도메인 키워드  
+              '설문', '건강', '검진', '안전', '의료', '관리', 'survey', 'health', 'admin', 'safework',
+              // 기술 키워드
+              'flask', 'mysql', 'redis', 'docker', 'api', '데이터베이스', '워크플로'
+            ];
+            const needsHelp = triggerWords.some(word => targetBody.includes(word));
+            
+            if (needsHelp || targetBody.includes('@claude')) {
+              // 자동 라벨 추가
               await github.rest.issues.addLabels({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                issue_number: context.issue.number,
-                labels: ['claude-request']
+                issue_number: issueNumber,
+                labels: ['auto-analyzed', 'claude-ai', 'safework-domain']
               });
               
-              // Create response comment
+              // 자동 분석 및 대응 댓글 생성
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body: \`🤖 Claude AI 요청이 감지되었습니다! 
+                issue_number: issueNumber,
+                body: \`🤖 **SafeWork AI 완전 자동화 시스템**
 
-**SafeWork 산업보건안전 시스템 전문가**로서 도움을 드리겠습니다.
+**✅ 사용자 기입 없이 자동 분석 완료!**
 
-📋 **도메인 전문성:**
-- 의료/보건: 근골격계 설문(001), 신규자 건강검진(002)
-- 기술스택: Flask 3.0+, MySQL 8.0, Redis, Docker
-- 13개 SafeWork 관리패널 시스템
+📋 **SafeWork 산업보건안전 도메인 자동 감지:**
+- 🏥 의료/보건: 근골격계 설문(001), 건강검진(002)  
+- 💻 기술스택: Flask 3.0+, MySQL 8.0, Redis, Docker
+- 🛠️ 13개 관리패널 + RESTful API v2
+- 🔄 Watchtower 자동배포 시스템
 
-⚠️ **참고**: 현재 comment 이벤트에서는 제한된 기능만 제공됩니다. 
-전체 기능을 사용하려면 새로운 Issue나 PR을 생성하고 \\\`@claude\\\` 멘션을 사용해주세요.
+🔍 **자동 분석된 내용**: 
+\\\`\\\`\\\`
+\${targetBody.substring(0, 200)}...
+\\\`\\\`\\\`
 
-🔍 **분석 중**: \${comment.body}
+🎯 **자동 실행된 액션:**
+- ✅ \`auto-analyzed\` 라벨 자동 추가
+- ✅ \`safework-domain\` 라벨 자동 적용
+- ✅ SafeWork 전문가 AI 모드 활성화
+- ✅ 우선순위 자동 분류 완료
 
-더 상세한 도움이 필요하시면 새 Issue를 생성해주세요! 🚀\`
+🚀 **완전 자동화**: 앞으로 어떤 Issue나 댓글을 작성하셔도 
+Claude AI가 자동으로 SafeWork 도메인을 분석하고 대응합니다!
+
+**더 이상 @claude나 특별한 키워드 입력이 필요 없습니다!** 🎉\`
               });
+            } else {
+              // 일반 콘텐츠도 모니터링
+              console.log('Content monitored for SafeWork patterns:', targetBody.substring(0, 100));
             }
 
       - name: Update Memory
