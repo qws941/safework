@@ -27,7 +27,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const { WebClient } = require('@slack/web-api');
+            // @slack/web-api 모듈이 GitHub Actions에서 사용할 수 없으므로 fetch를 사용
             
             // 이벤트 타입 감지
             const eventType = context.eventName;
@@ -301,7 +301,7 @@ jobs:
               };
             }
             
-            // Slack 메시지 전송
+            // GitHub Actions fetch를 사용하여 Slack 메시지 전송
             async function sendSlackNotification(payload) {
               const webhookUrl = process.env.SLACK_WEBHOOK_URL;
               if (!webhookUrl) {
@@ -310,19 +310,44 @@ jobs:
               }
               
               try {
-                const response = await fetch(webhookUrl, {
+                const https = require('https');
+                const url = require('url');
+                
+                const parsedUrl = url.parse(webhookUrl);
+                const postData = JSON.stringify(payload);
+                
+                const options = {
+                  hostname: parsedUrl.hostname,
+                  port: parsedUrl.port || 443,
+                  path: parsedUrl.pathname,
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify(payload)
+                    'Content-Length': Buffer.byteLength(postData)
+                  }
+                };
+                
+                const req = https.request(options, (res) => {
+                  let data = '';
+                  res.on('data', (chunk) => {
+                    data += chunk;
+                  });
+                  res.on('end', () => {
+                    if (res.statusCode === 200) {
+                      console.log('Slack notification sent successfully');
+                    } else {
+                      console.error('Failed to send Slack notification:', res.statusCode, data);
+                    }
+                  });
                 });
                 
-                if (response.ok) {
-                  console.log('Slack notification sent successfully');
-                } else {
-                  console.error('Failed to send Slack notification:', response.statusText);
-                }
+                req.on('error', (error) => {
+                  console.error('Error sending Slack notification:', error);
+                });
+                
+                req.write(postData);
+                req.end();
+                
               } catch (error) {
                 console.error('Error sending Slack notification:', error);
               }
