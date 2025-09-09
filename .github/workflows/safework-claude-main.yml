@@ -72,10 +72,7 @@ jobs:
         id: claude
         uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          
-          # Enable progress tracking for issues and PRs
-          track_progress: ${{ github.event_name != 'workflow_dispatch' }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           use_sticky_comment: true
           use_commit_signing: false
           
