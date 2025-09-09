@@ -68,6 +68,7 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           model: "claude-opus-4-1-20250805"
+          track_progress: false
           use_sticky_comment: true
           use_commit_signing: false
           
