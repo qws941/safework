@@ -42,8 +42,8 @@
             <tr>
                 <th>제출일시</th>
                 <th>이름</th>
-                <th>부서</th>
-                <th>통증수준</th>
+                <th>업체/공정</th>
+                <th>증상여부</th>
                 <th>상태</th>
             </tr>
         </thead>
@@ -52,17 +52,12 @@
             <tr>
                 <td>{{ survey.submission_date.strftime('%Y-%m-%d %H:%M') }}</td>
                 <td>{{ survey.name }}</td>
-                <td>{{ survey.department }}</td>
+                <td>{{ survey.company.name if survey.company else '-' }} / {{ survey.process.name if survey.process else '-' }}</td>
                 <td>
-                    {% set max_pain = [survey.neck_pain, survey.shoulder_pain, survey.arm_pain, 
-                                      survey.hand_pain, survey.back_pain, survey.waist_pain, 
-                                      survey.leg_pain] | max %}
-                    {% if max_pain >= 7 %}
-                        <span class="badge bg-danger">높음</span>
-                    {% elif max_pain >= 4 %}
-                        <span class="badge bg-warning">중간</span>
+                    {% if survey.has_symptoms %}
+                        <span class="badge bg-danger">증상 있음</span>
                     {% else %}
-                        <span class="badge bg-success">낮음</span>
+                        <span class="badge bg-success">증상 없음</span>
                     {% endif %}
                 </td>
                 <td>
