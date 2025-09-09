@@ -1,32 +1,10 @@
-name: SafeWork Claude AI - Comments
+name: SafeWork Claude AI - Issues & PRs
 
 on:
-  issue_comment:
-    types: [created]
-  pull_request_review_comment:
-    types: [created]
-  pull_request_review:
-    types: [submitted]
-  workflow_dispatch:
-    inputs:
-      issue_number:
-        description: 'Issue number to process'
-        required: false
-        type: string
-      pr_number:
-        description: 'PR number to process'
-        required: false
-        type: string
-      action_type:
-        description: 'Type of action to perform'
-        required: false
-        default: 'analyze'
-        type: choice
-        options:
-        - analyze
-        - fix
-        - review
-        - deploy
+  issues:
+    types: [opened, edited, reopened, assigned]
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
 
 permissions:
   contents: write
@@ -36,14 +14,10 @@ permissions:
   id-token: write
 
 jobs:
-  safework-claude:
+  safework-claude-issues:
     if: |
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
       (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude'))) ||
-      (github.event_name == 'pull_request' && (contains(github.event.pull_request.body, '@claude') || contains(github.event.pull_request.title, '@claude'))) ||
-      github.event_name == 'workflow_dispatch'
+      (github.event_name == 'pull_request' && (contains(github.event.pull_request.body, '@claude') || contains(github.event.pull_request.title, '@claude')))
     runs-on: ubuntu-latest
     timeout-minutes: 30
     
@@ -64,11 +38,12 @@ jobs:
           cd app
           pip install -r requirements.txt
 
-      - name: Run SafeWork Claude AI
+      - name: Run SafeWork Claude AI (Issues & PRs)
         id: claude
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          track_progress: true
           use_sticky_comment: true
           use_commit_signing: false
           
@@ -82,7 +57,6 @@ jobs:
             **이벤트**: ${{ github.event_name }}
             ${{ github.event_name == 'issues' && format('**이슈 번호**: #{0}', github.event.issue.number) || '' }}
             ${{ github.event_name == 'pull_request' && format('**PR 번호**: #{0}', github.event.pull_request.number) || '' }}
-            ${{ github.event_name == 'workflow_dispatch' && format('**수동 실행** - 이슈: {0}, PR: {1}, 액션: {2}', inputs.issue_number, inputs.pr_number, inputs.action_type) || '' }}
 
             ## 도메인 전문성
             - **의료/보건**: 근골격계 설문(001), 신규자 건강검진(002), 13개 SafeWork 관리패널
@@ -120,7 +94,7 @@ jobs:
             - **성능**: Redis 캐싱, DB 인덱싱, 지연로딩, 페이징(20/page)
             - **테스트**: pytest, 80%+ 커버리지, conftest.py 픽스처
 
-            **지금 분석하고 필요한 작업을 수행해주세요.**
+            **track_progress 활성화로 작업 진행상황을 실시간 추적합니다. 분석하고 필요한 작업을 수행해주세요.**
 
           # SafeWork-optimized tool permissions
           claude_args: |
@@ -131,6 +105,6 @@ jobs:
       - name: Post-process results
         if: always()
         run: |
-          echo "SafeWork Claude AI 작업 완료"
+          echo "SafeWork Claude AI (Issues & PRs) 작업 완료"
           echo "이벤트: ${{ github.event_name }}"
           echo "상태: ${{ steps.claude.conclusion }}"
