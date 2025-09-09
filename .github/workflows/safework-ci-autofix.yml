@@ -1,0 +1,342 @@
+name: SafeWork CI Auto-Fix - Flask & MySQL Expert
+
+on:
+  workflow_run:
+    workflows: ["SafeWork CI/CD Pipeline", "Test SafeWork Application", "Docker Build and Push"]
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      failed_workflow:
+        description: 'Failed workflow run ID'
+        required: true
+        type: string
+      fix_type:
+        description: 'Type of fix to attempt'
+        required: false
+        default: 'auto'
+        type: choice
+        options:
+        - auto
+        - eslint
+        - pytest
+        - docker
+        - mysql
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+  issues: write
+  id-token: write
+
+jobs:
+  safework-ci-autofix:
+    if: |
+      (github.event.workflow_run.conclusion == 'failure' &&
+       github.event.workflow_run.pull_requests[0] &&
+       !startsWith(github.event.workflow_run.head_branch, 'claude-autofix-')) ||
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch || github.ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python 3.9
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Setup git identity
+        run: |
+          git config --global user.email "claude-safework[bot]@users.noreply.github.com"
+          git config --global user.name "Claude SafeWork Bot"
+
+      - name: Create autofix branch
+        id: branch
+        run: |
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          BRANCH_NAME="claude-autofix-${TIMESTAMP}-${{ github.run_id }}"
+          git checkout -b "$BRANCH_NAME"
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+
+      - name: Install SafeWork dependencies
+        run: |
+          cd app
+          pip install -r requirements.txt
+          pip install pytest pytest-cov flake8 black bandit safety
+
+      - name: Get CI failure details
+        id: failure_details
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runId = ${{ github.event.workflow_run.id || inputs.failed_workflow }};
+            
+            const run = await github.rest.actions.getWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: runId
+            });
+
+            const jobs = await github.rest.actions.listJobsForWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: runId
+            });
+
+            const failedJobs = jobs.data.jobs.filter(job => job.conclusion === 'failure');
+            
+            let errorCategories = {
+              eslint: false,
+              pytest: false,
+              docker: false,
+              mysql: false,
+              security: false
+            };
+
+            let errorSummary = [];
+            
+            for (const job of failedJobs) {
+              const jobName = job.name.toLowerCase();
+              
+              if (jobName.includes('lint') || jobName.includes('eslint')) {
+                errorCategories.eslint = true;
+              }
+              if (jobName.includes('test') || jobName.includes('pytest')) {
+                errorCategories.pytest = true;
+              }
+              if (jobName.includes('docker') || jobName.includes('build')) {
+                errorCategories.docker = true;
+              }
+              if (jobName.includes('mysql') || jobName.includes('database')) {
+                errorCategories.mysql = true;
+              }
+              if (jobName.includes('security') || jobName.includes('bandit')) {
+                errorCategories.security = true;
+              }
+              
+              errorSummary.push({
+                jobName: job.name,
+                stepsFailed: job.steps.filter(step => step.conclusion === 'failure').map(step => step.name)
+              });
+            }
+
+            return {
+              runUrl: run.data.html_url,
+              failedJobs: failedJobs.map(j => j.name),
+              errorCategories: errorCategories,
+              errorSummary: errorSummary,
+              prNumber: ${{ github.event.workflow_run.pull_requests[0].number || 'null' }}
+            };
+
+      - name: SafeWork CI Auto-Fix with Claude
+        id: claude_fix
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+
+          prompt: |
+            # SafeWork CI 자동 수정 시스템
+
+            ## CI 실패 정보
+            **워크플로 실행**: ${{ fromJSON(steps.failure_details.outputs.result).runUrl }}
+            **실패한 Job들**: ${{ join(fromJSON(steps.failure_details.outputs.result).failedJobs, ', ') }}
+            **PR 번호**: ${{ fromJSON(steps.failure_details.outputs.result).prNumber }}
+            **수정 브랜치**: ${{ steps.branch.outputs.branch_name }}
+
+            ## 오류 카테고리 분석
+            ```json
+            ${{ toJSON(fromJSON(steps.failure_details.outputs.result).errorCategories) }}
+            ```
+
+            ## SafeWork 전용 자동 수정 전략
+
+            ### 1. ESLint 오류 수정 🔧
+            ```bash
+            # 현재 상태: 18 errors, 1 warning
+            cd app && npm run lint:fix  # 11개 자동 수정
+            
+            # 수동 수정 필요한 오류들:
+            - 'quotes': single quotes 강제
+            - 'curly': if 문 중괄호 필수
+            - 'no-unused-vars': 미사용 변수 제거
+            - 'max-lines-per-function': 100줄 제한
+            ```
+
+            ### 2. Pytest 테스트 실패 수정 🧪
+            ```python
+            # SafeWork 테스트 패턴
+            # 목표: 39/39 tests passing, 80%+ coverage
+            
+            # 일반적인 실패 원인:
+            - MySQL 8.0 호환성 (UTF8MB4)
+            - Redis 연결 실패
+            - Flask context 누락
+            - 설문 데이터 validation
+            - 의료정보 암호화 테스트
+            ```
+
+            ### 3. Docker 빌드 실패 수정 🐳
+            ```dockerfile
+            # SafeWork Docker 패턴
+            - Python 3.9 base image
+            - MySQL 8.0 client 라이브러리
+            - Redis connection pool
+            - 환경변수 validation
+            - 헬스체크 엔드포인트 (/health)
+            ```
+
+            ### 4. MySQL 마이그레이션 오류 🗄️
+            ```python
+            # SafeWork DB 패턴
+            - INFORMATION_SCHEMA 쿼리
+            - AUTO_INCREMENT, INSERT IGNORE
+            - UTF8MB4 charset 필수
+            - KST 타임존 (kst_now())
+            - 트랜잭션 롤백 지원
+            ```
+
+            ### 5. 보안 스캔 실패 🔒
+            ```python
+            # Bandit/Safety 일반 이슈
+            - hardcoded passwords 제거
+            - SQL injection 방지
+            - XSS protection 강화
+            - CSRF 토큰 검증
+            - PHI 데이터 암호화
+            ```
+
+            ## 자동 수정 단계별 가이드
+
+            ### Phase 1: 빠른 수정 (Auto-fixable)
+            1. **ESLint Auto-fix**: `cd app && npm run lint:fix`
+            2. **Black Formatting**: `cd app && black . --line-length 88`
+            3. **Import Sorting**: `cd app && isort .`
+            4. **Trailing Whitespace**: 자동 제거
+
+            ### Phase 2: 구조적 수정
+            1. **함수 크기 제한**: 100줄 초과 함수 분할
+            2. **파일 크기 제한**: 500줄 초과 파일 모듈화
+            3. **미사용 코드 제거**: imports, variables, functions
+            4. **Type hints 추가**: Flask route parameters
+
+            ### Phase 3: 테스트 수정
+            1. **DB 연결 테스트**: MySQL/Redis connection
+            2. **설문 제출 테스트**: 001/002 form validation
+            3. **API 엔드포인트**: v2 REST API 테스트
+            4. **인증 테스트**: login/logout flows
+
+            ### Phase 4: 배포 준비
+            1. **Docker 이미지**: multi-platform build
+            2. **환경변수 검증**: production settings
+            3. **헬스체크**: /health endpoint
+            4. **Watchtower 호환성**: auto-deployment
+
+            ## 수정 후 검증
+            ```bash
+            # 모든 수정 후 실행할 검증 명령어
+            cd app
+            python -m pytest --cov=. --cov-report=html  # 테스트 + 커버리지
+            flake8 . --max-line-length=88                # 코드 스타일
+            bandit -r . -f json                         # 보안 스캔
+            python app.py --check-config                # 설정 검증
+            ```
+
+            ## 작업 지시사항
+            1. **실패한 CI 로그 분석하고 오류 카테고리 식별**
+            2. **SafeWork 도메인 특성 고려한 수정사항 적용**
+            3. **단계별로 수정하고 각 단계마다 검증**
+            4. **수정 완료 후 커밋 메시지에 상세한 수정 내역 포함**
+            5. **PR 코멘트로 수정 요약 및 검증 결과 제공**
+
+            **지금 CI 실패를 분석하고 SafeWork 시스템에 특화된 자동 수정을 진행해주세요.**
+
+          claude_args: |
+            --allowedTools "Edit,MultiEdit,Write,Read,Bash(git:*),Bash(python:*),Bash(pip:*),Bash(pytest:*),Bash(npm:*),Bash(docker:*),Bash(flake8:*),Bash(black:*)"
+            --max-turns 20
+
+      - name: Push autofix changes
+        id: push_changes
+        run: |
+          if [[ -n $(git status --porcelain) ]]; then
+            git add -A
+            git commit -m "🤖 SafeWork CI Auto-Fix
+
+            자동 수정된 항목:
+            - ESLint 오류 수정
+            - Python 코드 포맷팅
+            - 테스트 실패 수정
+            - Docker 빌드 이슈 해결
+            
+            수정 브랜치: ${{ steps.branch.outputs.branch_name }}
+            원본 실패 워크플로: ${{ fromJSON(steps.failure_details.outputs.result).runUrl }}
+            
+            Claude SafeWork Bot이 자동 생성한 수정사항입니다."
+            
+            git push origin "${{ steps.branch.outputs.branch_name }}"
+            echo "changes_pushed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changes_pushed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create auto-fix PR
+        if: steps.push_changes.outputs.changes_pushed == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🤖 SafeWork CI 자동 수정',
+              body: `## 🚨 CI 실패 자동 수정사항
+
+            ### 원본 실패 정보
+            - **실패 워크플로**: ${{ fromJSON(steps.failure_details.outputs.result).runUrl }}
+            - **실패 Job들**: ${{ join(fromJSON(steps.failure_details.outputs.result).failedJobs, ', ') }}
+            - **원본 PR**: ${${{ fromJSON(steps.failure_details.outputs.result).prNumber }} || 'N/A'}
+
+            ### 자동 수정 카테고리
+            ${JSON.stringify(${{ fromJSON(steps.failure_details.outputs.result).errorCategories }}, null, 2)}
+
+            ### 수정된 항목들
+            - ✅ ESLint 오류 자동 수정
+            - ✅ Python 코드 포맷팅 (Black)
+            - ✅ Import 정렬 (isort)
+            - ✅ 테스트 실패 수정
+            - ✅ Docker 빌드 이슈 해결
+
+            ### 검증 필요사항
+            - [ ] 수정사항 코드 리뷰
+            - [ ] 테스트 통과 확인
+            - [ ] SafeWork 기능 정상 동작 확인
+            - [ ] 의료정보 보호 규정 준수 확인
+
+            ---
+            🤖 **Claude SafeWork Bot**이 자동 생성한 수정사항입니다.
+            수동 검토 후 병합해주세요.`,
+              head: '${{ steps.branch.outputs.branch_name }}',
+              base: '${{ github.event.workflow_run.head_branch || github.ref_name }}'
+            });
+
+            // Add labels
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              labels: ['automated-fix', 'ci/cd', 'claude-bot']
+            });
+
+            console.log(`자동 수정 PR 생성 완료: #${pr.number}`);
+
+      - name: Auto-fix completed
+        run: |
+          echo "SafeWork CI 자동 수정 완료"
+          echo "브랜치: ${{ steps.branch.outputs.branch_name }}"
+          echo "변경사항 푸시: ${{ steps.push_changes.outputs.changes_pushed }}"

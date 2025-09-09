@@ -1,0 +1,129 @@
+name: SafeWork Issue Triage & Auto-Labeling
+
+on:
+  issues:
+    types: [opened, edited]
+  workflow_dispatch:
+    inputs:
+      issue_numbers:
+        description: 'Comma-separated issue numbers to re-triage'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  triage-safework-issue:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup SafeWork context
+        run: |
+          echo "Preparing SafeWork domain context..."
+          # Extract key project info for Claude
+          ls -la app/ || true
+          ls -la app/models*.py || true
+          ls -la app/routes/ || true
+
+      - name: SafeWork Issue Triage with Claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          allowed_non_write_users: "*"
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+          prompt: |
+            # SafeWork 이슈 자동 분류 및 라벨링 시스템
+
+            ## 프로젝트 정보
+            **저장소**: ${{ github.repository }}
+            **이슈 번호**: ${{ github.event.issue.number || inputs.issue_numbers }}
+            **이슈 제목**: "${{ github.event.issue.title }}"
+
+            ## SafeWork 도메인 분류 규칙
+
+            ### 1. 우선순위 라벨 (Priority)
+            - **P0-Critical**: `긴급`, `urgent`, `critical`, `시스템 중단`, `작동 안 함`, `데이터 손실`
+            - **P1-High**: `보안`, `security`, `개인정보`, `PHI`, `인증`, `권한`, `결제`
+            - **P2-Medium**: `버그`, `bug`, `오류`, `error`, `실패`, `failure`
+            - **P3-Low**: `개선`, `enhancement`, `기능 추가`, `새로운`, `요청`
+
+            ### 2. 카테고리 라벨 (Category)
+            - **category/survey**: `설문`, `survey`, `001`, `002`, `근골격계`, `건강검진`
+            - **category/admin**: `관리자`, `admin`, `safework`, `패널`, `관리`
+            - **category/medical**: `의료`, `health`, `검진`, `진료`, `약물`, `medication`
+            - **category/api**: `api`, `연동`, `integration`, `REST`, `endpoint`
+            - **category/auth**: `로그인`, `login`, `인증`, `authentication`, `권한`, `authorization`
+            - **category/database**: `데이터베이스`, `database`, `MySQL`, `migration`, `데이터`
+            - **category/frontend**: `UI`, `화면`, `frontend`, `Bootstrap`, `JavaScript`
+            - **category/deployment**: `배포`, `deployment`, `Docker`, `Watchtower`, `CI/CD`
+
+            ### 3. 기술 스택 라벨 (Technology)
+            - **tech/flask**: `Flask`, `Python`, `backend`, `서버`
+            - **tech/database**: `MySQL`, `SQLAlchemy`, `Redis`, `DB`
+            - **tech/frontend**: `Bootstrap`, `jQuery`, `JavaScript`, `CSS`
+            - **tech/docker**: `Docker`, `container`, `compose`
+
+            ### 4. 상태 라벨 (Status)
+            - **status/needs-info**: 정보 부족, 재현 불가, 추가 정보 필요
+            - **status/duplicate**: 중복 이슈
+            - **status/wontfix**: 수정하지 않음
+            - **status/help-wanted**: 도움 필요
+
+            ### 5. 언어 라벨 (Language)
+            - **lang/korean**: 한국어 이슈
+            - **lang/english**: 영어 이슈
+
+            ## 자동 처리 규칙
+
+            ### 긴급 이슈 처리
+            ```
+            if P0-Critical:
+              - 즉시 assignee 설정 (admin)
+              - milestone 설정 (Next Release)
+              - 관련팀 멘션 @admin
+              - 슬랙 알림 트리거
+            ```
+
+            ### 보안 이슈 처리
+            ```
+            if category/auth or "보안" in content:
+              - private 레포지토리로 이관 권장
+              - security team 멘션
+              - 보안 체크리스트 첨부
+            ```
+
+            ### 중복 이슈 감지
+            ```
+            기존 이슈와 키워드 매칭:
+            - 제목 유사도 > 80%
+            - 에러 메시지 동일
+            - 재현 단계 유사
+            ```
+
+            ## 작업 지시사항
+            1. **이슈 분석**: 제목, 본문, 첨부파일 분석
+            2. **도메인 컨텍스트**: SafeWork 의료/보건 시스템 특성 고려
+            3. **라벨 적용**: 위 규칙에 따라 적절한 라벨 2-4개 선택
+            4. **우선순위**: P0-P3 중 하나는 반드시 설정
+            5. **한국어 응답**: 한국어 이슈는 한국어로 응답
+            6. **추가 정보**: 필요시 이슈 작성자에게 정보 요청
+
+            **지금 이슈를 분석하고 적절한 라벨을 적용해주세요.**
+
+          claude_args: |
+            --allowedTools "Bash(gh issue:*),Bash(gh label:*),Read,Grep"
+            --max-turns 10
+
+      - name: Issue triage completed
+        run: |
+          echo "SafeWork 이슈 분류 완료: #${{ github.event.issue.number || inputs.issue_numbers }}"

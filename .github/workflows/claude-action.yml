@@ -1,11 +1,11 @@
-name: Claude
+name: Claude SafeWork Assistant (Legacy)
 on:
-  issues:
-    types: [opened, edited, reopened]
   issue_comment:
-    types: [created, edited]
-  pull_request:
-    types: [opened, edited, synchronize, reopened]
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  pull_request_review:
+    types: [submitted]
   workflow_dispatch:
     inputs:
       issue_number:
@@ -16,6 +16,15 @@ on:
         description: 'PR number to process'
         required: false
         type: string
+      trigger_type:
+        description: 'Manual trigger type'
+        required: false
+        default: 'analyze'
+        type: choice
+        options:
+        - analyze
+        - fix
+        - review
 
 permissions:
   contents: write
@@ -25,42 +34,45 @@ permissions:
   actions: read
 
 jobs:
-  claude:
+  claude-legacy:
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude-legacy')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude-legacy')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude-legacy')) ||
+      github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
-      - name: Claude Code Action
+      - name: Claude Legacy Assistant
         uses: anthropics/claude-code-action@v1
         with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          track_progress: ${{ github.event_name == 'pull_request' || github.event_name == 'issues' }}
-          use_sticky_comment: true
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          track_progress: false
+          use_sticky_comment: false
           use_commit_signing: false
           prompt: |
-            You are Claude, specialized in SafeWork industrial safety management system.
-            
-            SafeWork Context:
-            - Flask 3.0+ application with MySQL 8.0 database
-            - 13 specialized admin panels for safety management
-            - Survey system (001 musculoskeletal, 002 health checkup)
-            - Korean localization and KST timezone
-            - Docker deployment with Watchtower auto-updates
-            
-            Response Guidelines:
-            - Respond in Korean for Korean issues/comments
-            - Focus on SafeWork domain expertise 
-            - Provide practical, actionable solutions
-            - Include code examples when helpful
-            - Consider safety compliance requirements
-            
-            Priority Keywords Detection:
-            - 긴급/urgent/critical → High priority response
-            - 버그/bug/오류/error → Technical debugging focus  
-            - 설문/survey → Survey system expertise
-            - 관리자/admin → Admin panel guidance
-            - 배포/deploy → Deployment pipeline help
+            # SafeWork Legacy Assistant
+
+            **참고**: 이 워크플로는 레거시 버전입니다. 새로운 기능은 `safework-claude-main.yml`을 사용하세요.
+
+            ## 기본 SafeWork 컨텍스트
+            - **프로젝트**: SafeWork 산업보건안전 관리시스템
+            - **기술스택**: Flask 3.0+, MySQL 8.0, Redis, Docker
+            - **도메인**: 의료/보건 안전관리, 13개 관리패널
+            - **언어**: 한국어 우선 응답
+
+            ## 트리거 조건
+            - `@claude-legacy` 멘션시에만 활성화
+            - 수동 실행 (workflow_dispatch)
+            - 간단한 질문/답변용
+
+            **더 고급 기능이 필요한 경우 `@claude` 멘션을 사용하여 메인 워크플로를 활성화하세요.**
+
+          claude_args: |
+            --allowedTools "Read,Bash(gh:*)"
+            --max-turns 5

@@ -1,0 +1,143 @@
+name: SafeWork Claude AI - Main Automation
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened, edited, reopened, assigned]
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+  pull_request_review:
+    types: [submitted]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to process'
+        required: false
+        type: string
+      pr_number:
+        description: 'PR number to process'
+        required: false
+        type: string
+      action_type:
+        description: 'Type of action to perform'
+        required: false
+        default: 'analyze'
+        type: choice
+        options:
+        - analyze
+        - fix
+        - review
+        - deploy
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: read
+  id-token: write
+
+jobs:
+  safework-claude:
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude'))) ||
+      (github.event_name == 'pull_request' && (contains(github.event.pull_request.body, '@claude') || contains(github.event.pull_request.title, '@claude'))) ||
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python for SafeWork context
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install SafeWork dependencies
+        run: |
+          cd app
+          pip install -r requirements.txt
+
+      - name: Run SafeWork Claude AI
+        id: claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          
+          # Enable progress tracking for issues and PRs
+          track_progress: ${{ github.event_name != 'workflow_dispatch' }}
+          use_sticky_comment: true
+          use_commit_signing: false
+          
+          # Enhanced prompt with SafeWork domain expertise
+          prompt: |
+            # SafeWork 산업보건안전 시스템 전문가 Claude
+
+            ## 시스템 컨텍스트
+            **프로젝트**: SafeWork - 산업보건안전 관리시스템 (Flask 3.0+)
+            **저장소**: ${{ github.repository }}
+            **이벤트**: ${{ github.event_name }}
+            ${{ github.event_name == 'issues' && format('**이슈 번호**: #{0}', github.event.issue.number) || '' }}
+            ${{ github.event_name == 'pull_request' && format('**PR 번호**: #{0}', github.event.pull_request.number) || '' }}
+            ${{ github.event_name == 'workflow_dispatch' && format('**수동 실행** - 이슈: {0}, PR: {1}, 액션: {2}', inputs.issue_number, inputs.pr_number, inputs.action_type) || '' }}
+
+            ## 도메인 전문성
+            - **의료/보건**: 근골격계 설문(001), 신규자 건강검진(002), 13개 SafeWork 관리패널
+            - **기술스택**: Flask 3.0+, SQLAlchemy 2.0, MySQL 8.0, Redis, Docker, Bootstrap 4.6
+            - **워크플로**: Watchtower 자동배포, 5개 특화 GitHub Actions, 한국어 지원
+
+            ## AI 에이전트 역할
+            1. **한국어 우선 응답**: 한국어 컨텐츠 감지시 한국어로 응답
+            2. **도메인 컨텍스트 분석**: 
+               - 설문시스템 → `설문`, `survey`, `001`, `002` 키워드
+               - 관리시스템 → `관리자`, `admin`, `safework` 키워드  
+               - 의료시스템 → `의료`, `health`, `검진` 키워드
+               - API연동 → `api`, `연동`, `integration` 키워드
+            3. **자동 문제해결**: 
+               - ESLint 오류 수정 (18개 오류, 1개 경고)
+               - 테스트 실패 분석 (39/39 통과 목표)
+               - 데이터베이스 마이그레이션 오류
+               - Docker 배포 이슈
+            4. **보안 우선**: 
+               - PHI(개인건강정보) 보호
+               - CSRF 토큰 검증
+               - SQL 인젝션 방지
+               - 익명 설문 지원 (user_id=1)
+
+            ## 작업 우선순위
+            1. **P0-긴급**: `긴급`, `urgent`, `critical`, `중단`, `작동 안` 키워드
+            2. **보안 이슈**: 취약점, 개인정보, 인증 관련
+            3. **의료 데이터**: 건강검진, 설문조사 관련 오류
+            4. **배포 파이프라인**: CI/CD, Docker, Watchtower 이슈
+
+            ## 기술적 가이드라인
+            - **MySQL 8.0**: UTF8MB4, 트랜잭션, `kst_now()` 타임존
+            - **Flask 패턴**: Blueprint 기반 8개 라우터, Factory 패턴
+            - **보안**: `@login_required`, CSRF 전역, 감사로그, 비율제한
+            - **성능**: Redis 캐싱, DB 인덱싱, 지연로딩, 페이징(20/page)
+            - **테스트**: pytest, 80%+ 커버리지, conftest.py 픽스처
+
+            **지금 분석하고 필요한 작업을 수행해주세요.**
+
+          # SafeWork-optimized tool permissions
+          claude_args: |
+            --allowedTools "Edit,MultiEdit,Write,Read,Glob,Grep,Bash(git:*),Bash(python:*),Bash(pip:*),Bash(pytest:*),Bash(docker:*),Bash(gh:*),Bash(npm:*),Bash(mysql:*)"
+            --model claude-sonnet-4-20250514
+            --max-turns 15
+
+      - name: Post-process results
+        if: always()
+        run: |
+          echo "SafeWork Claude AI 작업 완료"
+          echo "이벤트: ${{ github.event_name }}"
+          echo "상태: ${{ steps.claude.conclusion }}"

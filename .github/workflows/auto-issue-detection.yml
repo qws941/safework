@@ -1,0 +1,392 @@
+name: SafeWork Auto Issue Detection & CI/CD Monitor
+
+on:
+  push:
+    branches: [ master, main, develop ]
+  pull_request:
+    branches: [ master, main ]
+  schedule:
+    - cron: '*/30 * * * *'  # 30분마다 실행
+  workflow_run:
+    workflows: ["Deploy", "Claude", "Review", "SafeWork Smart Notifications"]
+    types: [completed]
+
+env:
+  SAFEWORK_URL: "https://safework.jclee.me"
+
+jobs:
+  auto-detect-issues:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 50
+
+      - name: Setup Python for Analysis
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Analysis Dependencies
+        run: |
+          pip install requests beautifulsoup4 flask sqlalchemy pytest bandit safety
+
+      - name: SafeWork Comprehensive Issue Detection
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const { execSync } = require('child_process');
+            
+            // 1. 시스템 헬스 체크
+            async function checkSystemHealth() {
+              console.log('🏥 SafeWork 시스템 헬스 체크 시작...');
+              
+              const issues = [];
+              
+              try {
+                // SafeWork 앱 접속 테스트
+                const response = await fetch('${{ env.SAFEWORK_URL }}/health', {
+                  timeout: 10000
+                });
+                
+                if (!response.ok) {
+                  issues.push({
+                    title: `🚨 SafeWork 시스템 다운 감지`,
+                    body: `SafeWork 앱이 응답하지 않습니다.
+                    
+**상태 정보:**
+- URL: ${{ env.SAFEWORK_URL }}
+- HTTP 상태: ${response.status}
+- 감지 시간: ${new Date().toISOString()}
+
+**자동 대응 필요:**
+- [ ] 서버 상태 확인
+- [ ] Docker 컨테이너 재시작
+- [ ] 로그 분석
+- [ ] DB 연결 상태 확인`,
+                    labels: ['P0-CRITICAL', 'component:deployment', 'automated']
+                  });
+                }
+              } catch (error) {
+                issues.push({
+                  title: `💔 SafeWork 시스템 연결 실패`,
+                  body: `SafeWork 시스템에 연결할 수 없습니다.
+                  
+**오류 정보:**
+- 오류: ${error.message}
+- 감지 시간: ${new Date().toISOString()}
+
+**즉시 확인 필요:**
+- [ ] 서버 가동 상태
+- [ ] 네트워크 연결
+- [ ] DNS 설정
+- [ ] SSL 인증서`,
+                  labels: ['P0-CRITICAL', 'component:deployment', 'automated']
+                });
+              }
+              
+              return issues;
+            }
+            
+            // 2. CI/CD 파이프라인 모니터링
+            async function monitorCICDPipeline() {
+              console.log('🔍 CI/CD 파이프라인 실패 감지...');
+              
+              const issues = [];
+              
+              try {
+                // 최근 워크플로 실행 조회
+                const { data: runs } = await github.rest.actions.listWorkflowRunsForRepo({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  per_page: 20,
+                  status: 'completed'
+                });
+                
+                const failedRuns = runs.workflow_runs.filter(run => 
+                  run.conclusion === 'failure' && 
+                  new Date(run.created_at) > new Date(Date.now() - 2 * 60 * 60 * 1000) // 2시간 내
+                );
+                
+                // 실패율이 50% 이상이면 이슈 생성
+                if (failedRuns.length >= 3) {
+                  const failuresByWorkflow = {};
+                  failedRuns.forEach(run => {
+                    failuresByWorkflow[run.name] = (failuresByWorkflow[run.name] || 0) + 1;
+                  });
+                  
+                  issues.push({
+                    title: `⚠️ CI/CD 파이프라인 다중 실패 감지`,
+                    body: `최근 2시간 내 다수의 워크플로 실패가 감지되었습니다.
+                    
+**실패 현황:**
+${Object.entries(failuresByWorkflow).map(([name, count]) => 
+  `- ${name}: ${count}번 실패`).join('\\n')}
+
+**실패한 워크플로:**
+${failedRuns.slice(0, 5).map(run => 
+  `- [${run.name}](${run.html_url}) (${new Date(run.created_at).toLocaleString()})`).join('\\n')}
+
+**자동 분석 및 대응 필요**`,
+                    labels: ['P1-HIGH', 'component:deployment', 'automated']
+                  });
+                }
+                
+              } catch (error) {
+                console.error('CI/CD 모니터링 오류:', error);
+              }
+              
+              return issues;
+            }
+            
+            // 3. 코드 품질 자동 분석
+            async function analyzeCodeQuality() {
+              console.log('📊 코드 품질 자동 분석...');
+              
+              const issues = [];
+              
+              try {
+                // Python 코드 보안 취약점 검사
+                try {
+                  const banditResult = execSync('bandit -r app/ -f json', { encoding: 'utf-8' });
+                  const banditData = JSON.parse(banditResult);
+                  
+                  const highSeverityIssues = banditData.results.filter(r => 
+                    r.issue_severity === 'HIGH' || r.issue_severity === 'MEDIUM'
+                  );
+                  
+                  if (highSeverityIssues.length > 0) {
+                    issues.push({
+                      title: `🔐 보안 취약점 자동 감지 (${highSeverityIssues.length}건)`,
+                      body: `Bandit 보안 분석에서 취약점이 발견되었습니다.
+                      
+**발견된 취약점:**
+${highSeverityIssues.slice(0, 5).map(issue => 
+  `- **${issue.test_name}** (${issue.issue_severity})
+  - 파일: ${issue.filename}:${issue.line_number}
+  - 설명: ${issue.issue_text}`).join('\\n\\n')}
+
+**보안 강화 필요**`,
+                      labels: ['P1-HIGH', 'type:security', 'automated']
+                    });
+                  }
+                } catch (e) {
+                  console.log('Bandit 분석 건너뛰기:', e.message);
+                }
+                
+                // 의존성 취약점 검사
+                try {
+                  const safetyResult = execSync('safety check --json', { encoding: 'utf-8' });
+                  const safetyData = JSON.parse(safetyResult);
+                  
+                  if (safetyData.length > 0) {
+                    issues.push({
+                      title: `📦 의존성 취약점 자동 감지 (${safetyData.length}건)`,
+                      body: `Python 패키지 취약점이 발견되었습니다.
+                      
+**취약한 패키지:**
+${safetyData.slice(0, 5).map(vuln => 
+  `- **${vuln.package_name} ${vuln.installed_version}**
+  - 취약점: ${vuln.vulnerability_id}
+  - 심각도: ${vuln.severity || 'Unknown'}
+  - 해결: ${vuln.more_info_url}`).join('\\n\\n')}
+
+**의존성 업데이트 필요**`,
+                      labels: ['P2-MEDIUM', 'type:dependencies', 'automated']
+                    });
+                  }
+                } catch (e) {
+                  console.log('Safety 분석 건너뛰기:', e.message);
+                }
+                
+              } catch (error) {
+                console.error('코드 품질 분석 오류:', error);
+              }
+              
+              return issues;
+            }
+            
+            // 4. 데이터베이스 및 성능 모니터링  
+            async function checkDatabaseHealth() {
+              console.log('🗄️ 데이터베이스 성능 모니터링...');
+              
+              const issues = [];
+              
+              try {
+                // SafeWork API를 통한 DB 상태 확인
+                const apiResponse = await fetch('${{ env.SAFEWORK_URL }}/api/health', {
+                  timeout: 5000
+                });
+                
+                if (apiResponse.ok) {
+                  const healthData = await apiResponse.json();
+                  
+                  // DB 응답 시간이 2초 이상이면 성능 이슈
+                  if (healthData.database_response_time > 2000) {
+                    issues.push({
+                      title: `🐌 데이터베이스 성능 저하 감지`,
+                      body: `데이터베이스 응답 시간이 비정상적으로 느립니다.
+                      
+**성능 지표:**
+- DB 응답 시간: ${healthData.database_response_time}ms
+- 임계값: 2000ms
+- 감지 시간: ${new Date().toISOString()}
+
+**성능 최적화 필요:**
+- [ ] 슬로우 쿼리 분석
+- [ ] 인덱스 최적화
+- [ ] 커넥션 풀 점검
+- [ ] 메모리 사용량 확인`,
+                      labels: ['P2-MEDIUM', 'component:database', 'automated']
+                    });
+                  }
+                }
+                
+              } catch (error) {
+                console.log('DB 헬스체크 건너뛰기:', error.message);
+              }
+              
+              return issues;
+            }
+            
+            // 5. 통합 이슈 생성 및 관리
+            async function createOrUpdateIssues(detectedIssues) {
+              console.log(`📝 ${detectedIssues.length}개 이슈 처리 중...`);
+              
+              for (const issue of detectedIssues) {
+                try {
+                  // 기존 유사 이슈 확인
+                  const { data: existingIssues } = await github.rest.issues.listForRepo({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    state: 'open',
+                    labels: 'automated',
+                    per_page: 100
+                  });
+                  
+                  const duplicate = existingIssues.find(existing => 
+                    existing.title.includes(issue.title.split(' ').slice(-3).join(' '))
+                  );
+                  
+                  if (!duplicate) {
+                    // 새 이슈 생성
+                    await github.rest.issues.create({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      title: issue.title,
+                      body: issue.body + '\\n\\n---\\n🤖 **자동 감지 시스템**에 의해 생성된 이슈입니다.',
+                      labels: issue.labels
+                    });
+                    
+                    console.log(`✅ 새 이슈 생성: ${issue.title}`);
+                  } else {
+                    console.log(`⏭️ 중복 이슈 건너뛰기: ${issue.title}`);
+                  }
+                } catch (error) {
+                  console.error(`❌ 이슈 생성 실패: ${issue.title}`, error);
+                }
+              }
+            }
+            
+            // 메인 실행 로직
+            async function runAutoDetection() {
+              console.log('🚀 SafeWork 자동 이슈 감지 시작...');
+              
+              const allIssues = [];
+              
+              // 모든 감지 함수 병렬 실행
+              const [healthIssues, cicdIssues, qualityIssues, dbIssues] = await Promise.all([
+                checkSystemHealth(),
+                monitorCICDPipeline(), 
+                analyzeCodeQuality(),
+                checkDatabaseHealth()
+              ]);
+              
+              allIssues.push(...healthIssues, ...cicdIssues, ...qualityIssues, ...dbIssues);
+              
+              if (allIssues.length > 0) {
+                await createOrUpdateIssues(allIssues);
+                console.log(`🎯 총 ${allIssues.length}개 이슈 감지 및 처리 완료`);
+              } else {
+                console.log('✅ 감지된 이슈 없음 - 시스템 정상');
+              }
+            }
+            
+            await runAutoDetection();
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # 감지된 이슈를 Slack으로 즉시 알림
+  slack-alert:
+    runs-on: ubuntu-latest
+    needs: auto-detect-issues
+    if: always()
+    steps:
+      - name: Send Detection Summary to Slack
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const webhookUrl = process.env.SLACK_WEBHOOK_URL;
+            if (!webhookUrl) {
+              console.log('SLACK_WEBHOOK_URL not configured');
+              return;
+            }
+            
+            const payload = {
+              channel: '#safework-alerts',
+              text: '🔍 SafeWork 자동 이슈 감지 완료',
+              attachments: [{
+                color: 'good',
+                title: '🤖 자동 감지 시스템 실행 결과',
+                fields: [
+                  {
+                    title: '실행 시간',
+                    value: new Date().toLocaleString('ko-KR', {timeZone: 'Asia/Seoul'}),
+                    short: true
+                  },
+                  {
+                    title: '감지 범위',
+                    value: '시스템 헬스, CI/CD, 코드 품질, DB 성능',
+                    short: true
+                  },
+                  {
+                    title: 'SafeWork 상태',
+                    value: '<${{ env.SAFEWORK_URL }}|시스템 확인>',
+                    short: false
+                  }
+                ],
+                footer: 'SafeWork 자동 감지 시스템',
+                ts: Math.floor(Date.now() / 1000)
+              }]
+            };
+            
+            const https = require('https');
+            const url = require('url');
+            
+            const parsedUrl = url.parse(webhookUrl);
+            const postData = JSON.stringify(payload);
+            
+            const options = {
+              hostname: parsedUrl.hostname,
+              port: parsedUrl.port || 443,
+              path: parsedUrl.pathname,
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(postData)
+              }
+            };
+            
+            const req = https.request(options, (res) => {
+              if (res.statusCode === 200) {
+                console.log('Slack 알림 전송 완료');
+              }
+            });
+            
+            req.write(postData);
+            req.end();
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

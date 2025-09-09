@@ -86,7 +86,7 @@ def dashboard():
         hand_count=hand_count,
         waist_count=waist_count,
         leg_count=leg_count,
-        high_risk_count=high_risk_count,
+        high_risk=high_risk_count,  # 템플릿과 일치하도록 수정
         dept_stats=dept_stats,
         recent_surveys=recent_surveys,
     )

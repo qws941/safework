@@ -16,10 +16,10 @@
    - **보안 등급**: P0-CRITICAL
 
 ### 🤖 AI 자동화 Secrets
-3. **`CLAUDE_CODE_OAUTH_TOKEN`**
-   - **용도**: Claude Code Action v1 OAuth 인증
+3. **`ANTHROPIC_API_KEY`**
+   - **용도**: Claude Code Action v1 API 인증
    - **사용 위치**: claude-code-action.yml, main_deploy.yml
-   - **설정 방법**: Claude Code 터미널에서 `/install-github-app` 실행
+   - **설정 방법**: https://console.anthropic.com에서 API 키 발급
    - **보안 등급**: P0-CRITICAL
 
 4. **`SLACK_BOT_TOKEN`**
@@ -67,7 +67,7 @@ Branch Protection Rules (master):
 ### 2. Secrets 관리 정책
 ```bash
 # 토큰 순환 주기
-CLAUDE_CODE_OAUTH_TOKEN: 90일마다 갱신
+ANTHROPIC_API_KEY: 90일마다 갱신
 WATCHTOWER_HTTP_API_TOKEN: 30일마다 갱신
 SLACK_BOT_TOKEN: 180일마다 갱신
 REGISTRY_PASSWORD: 60일마다 갱신
@@ -129,7 +129,7 @@ echo "Watchtower 설정에서 새 토큰으로 업데이트 필요"
 
 ### Phase 1: 즉시 적용 (P0-CRITICAL)
 - [ ] GitHub 계정 2FA 활성화
-- [ ] CLAUDE_CODE_OAUTH_TOKEN 유효성 확인
+- [ ] ANTHROPIC_API_KEY 유효성 확인
 - [ ] WATCHTOWER_HTTP_API_TOKEN 액세스 테스트
 - [ ] REGISTRY_PASSWORD 복잡도 강화
 
@@ -155,7 +155,7 @@ echo "🔍 GitHub Secrets 상태 검증..."
 
 # 필수 secrets 존재 여부 확인
 REQUIRED_SECRETS=(
-    "CLAUDE_CODE_OAUTH_TOKEN"
+    "ANTHROPIC_API_KEY"
     "REGISTRY_PASSWORD" 
     "WATCHTOWER_HTTP_API_TOKEN"
     "SLACK_BOT_TOKEN"

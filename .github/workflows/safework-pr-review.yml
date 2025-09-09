@@ -1,0 +1,193 @@
+name: SafeWork PR Review - Medical & Safety Expert
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review, reopened]
+    paths:
+      - 'app/**'
+      - 'docker-compose.yml'
+      - 'requirements.txt'
+      - '.github/workflows/**'
+
+permissions:
+  contents: read
+  pull-requests: write
+  actions: read
+  id-token: write
+
+jobs:
+  safework-pr-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.event.pull_request.draft == false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Python for code analysis
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install SafeWork dependencies
+        run: |
+          cd app
+          pip install -r requirements.txt || echo "Requirements installation failed"
+
+      - name: Analyze changed files
+        id: changes
+        run: |
+          echo "Changed files:"
+          git diff --name-only HEAD~1 HEAD
+          
+          # Categorize changes
+          MODELS_CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -E "models.*\.py$" | wc -l)
+          ROUTES_CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -E "routes/.*\.py$" | wc -l)
+          TEMPLATES_CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -E "templates/.*\.html$" | wc -l)
+          MIGRATIONS_CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -E "migrations/.*\.py$" | wc -l)
+          
+          echo "models_changed=$MODELS_CHANGED" >> $GITHUB_OUTPUT
+          echo "routes_changed=$ROUTES_CHANGED" >> $GITHUB_OUTPUT
+          echo "templates_changed=$TEMPLATES_CHANGED" >> $GITHUB_OUTPUT
+          echo "migrations_changed=$MIGRATIONS_CHANGED" >> $GITHUB_OUTPUT
+
+      - name: SafeWork Medical & Safety PR Review
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          track_progress: true
+          use_sticky_comment: true
+
+          prompt: |
+            # SafeWork 의료보건안전 시스템 PR 검토
+
+            ## PR 정보
+            **저장소**: ${{ github.repository }}
+            **PR 번호**: #${{ github.event.pull_request.number }}
+            **PR 제목**: "${{ github.event.pull_request.title }}"
+            **작성자**: @${{ github.event.pull_request.user.login }}
+            **베이스 브랜치**: ${{ github.event.pull_request.base.ref }}
+            **헤드 브랜치**: ${{ github.event.pull_request.head.ref }}
+
+            ## 변경사항 분석
+            - **모델 변경**: ${{ steps.changes.outputs.models_changed }}개 파일
+            - **라우트 변경**: ${{ steps.changes.outputs.routes_changed }}개 파일  
+            - **템플릿 변경**: ${{ steps.changes.outputs.templates_changed }}개 파일
+            - **마이그레이션**: ${{ steps.changes.outputs.migrations_changed }}개 파일
+
+            ## SafeWork 전문 검토 영역
+
+            ### 1. 의료정보보호 (PHI) 검토 🏥
+            - **개인건강정보 (PHI) 보호**: 
+              - 건강검진 데이터, 근골격계 설문 응답 암호화
+              - 로그에 의료정보 노출 없는지 확인
+              - 익명화 처리 적절성 (user_id=1 패턴)
+            - **HIPAA/개인정보보호법 준수**:
+              - 데이터 접근 권한 제한
+              - 감사 로그 누락 확인
+              - 데이터 전송시 TLS 사용
+
+            ### 2. SafeWork 도메인 로직 검토 📋
+            - **설문조사 시스템**:
+              - 001 근골격계 설문: 16개 신체부위, 통증 척도
+              - 002 신규자 건강검진: 의료이력 통합
+              - JSON 데이터 구조 validation
+              - 조건부 로직 JavaScript ID 매칭
+            - **13개 관리패널 일관성**:
+              - Workers, Health Checks, Medications 등
+              - RESTful API v2 호환성
+              - Bootstrap 4.6 + jQuery 패턴
+
+            ### 3. 데이터베이스 안전성 🗄️
+            - **MySQL 8.0 호환성**:
+              - UTF8MB4 charset 사용
+              - 트랜잭션 롤백 처리
+              - `kst_now()` 타임존 일관성
+            - **마이그레이션 검토**:
+              - INFORMATION_SCHEMA 사용법
+              - AUTO_INCREMENT, INSERT IGNORE 문법
+              - 인덱스 관리 적절성
+
+            ### 4. 보안 및 인증 🔒
+            - **Flask 보안 패턴**:
+              - `@login_required` 데코레이터 사용
+              - CSRF 토큰 검증 (global)
+              - XSS 방지 (템플릿 이스케이핑)
+            - **API 보안**:
+              - 입력 validation 및 sanitization
+              - SQL 인젝션 방지
+              - 비율 제한 (anonymous survey)
+
+            ### 5. 성능 및 확장성 ⚡
+            - **데이터베이스 성능**:
+              - 쿼리 최적화 (lazy loading)
+              - 인덱스 활용
+              - N+1 문제 방지
+            - **캐싱 전략**:
+              - Redis 캐싱 활용
+              - 페이지네이션 (20/page)
+              - 정적 리소스 압축
+
+            ### 6. 사용자 경험 (UX) 👥
+            - **다국어 지원**:
+              - 한국어 우선 인터페이스
+              - KST 타임존 일관성
+              - 의료 용어 정확성
+            - **접근성**:
+              - 산업 현장 사용자 고려
+              - 모바일 반응형 (Bootstrap 4.6)
+              - 키보드 네비게이션
+
+            ### 7. 테스트 및 품질 🧪
+            - **테스트 커버리지**:
+              - 의료 데이터 처리 테스트
+              - 설문 제출 flow 테스트
+              - API 엔드포인트 테스트
+            - **코드 품질**:
+              - ESLint 규칙 준수 (18 errors 해결)
+              - 파일당 500줄, 함수당 100줄 제한
+              - pytest 39/39 통과
+
+            ### 8. 배포 및 운영 🚀
+            - **Docker & Watchtower**:
+              - multi-platform 이미지
+              - 환경변수 보안 관리
+              - 헬스체크 엔드포인트
+            - **GitHub Actions**:
+              - 5개 특화 워크플로 호환성
+              - 보안 스캔 (Trivy, Bandit)
+              - 자동 배포 파이프라인
+
+            ## 검토 지침
+            1. **한국어 PR은 한국어로 검토 및 피드백**
+            2. **의료정보 관련 변경사항은 특별히 엄격하게 검토**
+            3. **인라인 코멘트로 구체적 개선사항 제시**
+            4. **전체 코멘트로 아키텍처 레벨 피드백**
+            5. **보안 이슈 발견시 즉시 지적**
+            6. **성능 영향도 분석 및 권장사항**
+
+            ## 체크리스트
+            - [ ] PHI 데이터 보호 검증
+            - [ ] SafeWork 도메인 로직 정확성
+            - [ ] MySQL 8.0 호환성 확인
+            - [ ] 보안 vulnerability 스캔
+            - [ ] 테스트 커버리지 확인
+            - [ ] 성능 impact 분석
+            - [ ] 접근성 및 UX 검토
+            - [ ] 배포 파이프라인 호환성
+
+            **이제 PR을 종합적으로 검토하고 SafeWork 의료보건 시스템에 특화된 피드백을 제공해주세요.**
+
+          claude_args: |
+            --allowedTools "Read,Grep,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(python:*),Bash(pytest:*)"
+            --max-turns 15
+
+      - name: Post-review summary
+        run: |
+          echo "SafeWork PR 검토 완료"
+          echo "PR: #${{ github.event.pull_request.number }}"
+          echo "변경사항: Models(${{ steps.changes.outputs.models_changed }}) Routes(${{ steps.changes.outputs.routes_changed }}) Templates(${{ steps.changes.outputs.templates_changed }})"

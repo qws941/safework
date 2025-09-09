@@ -210,9 +210,9 @@ $.ajaxSetup({
 ### Required GitHub Secrets
 
 **Critical for Claude Code Action v1:**
-- `CLAUDE_CODE_OAUTH_TOKEN`: Claude Code OAuth token for AI automation
-  - **Setup**: Run `/install-github-app` in Claude Code terminal
-  - **Format**: `claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}`
+- `ANTHROPIC_API_KEY`: Anthropic API key for Claude Code Action
+  - **Setup**: Get API key from https://console.anthropic.com
+  - **Format**: `anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}`
   - **Required for**: Issue processing, PR reviews, automated responses
 
 **Deployment & Infrastructure:**
@@ -228,7 +228,7 @@ $.ajaxSetup({
 # claude-code-action.yml - Claude Code Action v1
 uses: anthropics/claude-code-action@v1
 with:
-  claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+  anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
   track_progress: ${{ github.event_name != 'workflow_dispatch' }}  # Conditional
   use_sticky_comment: true
   use_commit_signing: false
@@ -394,26 +394,26 @@ ADMIN_PASSWORD=safework2024
 # Solution: Use conditional track_progress
 track_progress: ${{ github.event_name != 'workflow_dispatch' }}
 
-# Error: Missing CLAUDE_CODE_OAUTH_TOKEN
-# Solution: Set up OAuth token via Claude Code terminal
-/install-github-app  # Run this in Claude Code
+# Error: Missing ANTHROPIC_API_KEY
+# Solution: Set up API key from Anthropic Console
+# Get API key from https://console.anthropic.com
 
 # Error: Invalid token format
 # Solution: Use correct parameter name
-claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
 
 **Authentication Issues:**
 ```bash
 # Check Claude Code Action authentication
 # 1. Verify secret exists in GitHub Settings → Secrets
-# 2. Ensure correct parameter name (claude_code_oauth_token)
-# 3. Run /install-github-app in Claude Code if token missing
+# 2. Ensure correct parameter name (anthropic_api_key)
+# 3. Get API key from https://console.anthropic.com if missing
 
 # Test authentication in workflow
 - name: Debug Claude Authentication
   run: |
-    echo "Token present: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}"
+    echo "Token present: ${{ secrets.ANTHROPIC_API_KEY != '' }}"
 ```
 
 **Workflow Configuration:**
@@ -422,7 +422,7 @@ claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 - name: Claude Code Action
   uses: anthropics/claude-code-action@v1
   with:
-    claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
     track_progress: ${{ github.event_name != 'workflow_dispatch' }}
     use_sticky_comment: true
     use_commit_signing: false
