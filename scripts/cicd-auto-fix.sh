@@ -104,8 +104,8 @@ REGISTRY_PASSWORD=SafeWork[복잡한패스워드]Registry@
 # Watchtower API 토큰  
 WATCHTOWER_HTTP_API_TOKEN=wt_[32자 무작위 토큰]
 
-# Anthropic API 키
-ANTHROPIC_API_KEY=[Anthropic Console에서 발급받은 API 키]
+# Claude Code OAuth 토큰
+CLAUDE_CODE_OAUTH_TOKEN=[Claude Code에서 생성한 토큰]
 
 # Slack Bot 토큰
 SLACK_BOT_TOKEN=xoxb-[Slack에서 생성한 봇 토큰]

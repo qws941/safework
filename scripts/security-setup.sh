@@ -111,7 +111,7 @@ REGISTRY_PASSWORD: $REGISTRY_PASSWORD
 WATCHTOWER_HTTP_API_TOKEN: $WATCHTOWER_TOKEN
 
 # AI 자동화 토큰 (수동 설정 필요)
-ANTHROPIC_API_KEY: [https://console.anthropic.com에서 API 키 발급]
+CLAUDE_CODE_OAUTH_TOKEN: [Claude Code 터미널에서 /install-github-app 실행]
 SLACK_BOT_TOKEN: [Slack App 설정에서 Bot Token 복사]
 \`\`\`
 

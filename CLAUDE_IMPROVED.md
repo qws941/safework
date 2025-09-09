@@ -207,7 +207,7 @@ The project uses a simplified CI/CD pipeline with 5 core workflows:
 ```yaml
 uses: anthropics/claude-code-action@v1
 with:
-  anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+  claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
   track_progress: ${{ github.event_name != 'workflow_dispatch' }}
   use_sticky_comment: true
   use_commit_signing: false
@@ -238,8 +238,8 @@ on:
 ### Required GitHub Secrets
 
 **Critical for Claude Code Action:**
-- `ANTHROPIC_API_KEY`: Anthropic API key for Claude Code Action
-  - **Setup**: Get API key from https://console.anthropic.com
+- `CLAUDE_CODE_OAUTH_TOKEN`: Claude Code OAuth token
+  - **Setup**: Run `/install-github-app` in Claude Code terminal
   - **Required for**: Issue processing, PR reviews, automated responses
 
 **Deployment & Infrastructure:**
