@@ -44,6 +44,8 @@ env:
   PROJECT_NAME: safework
   WATCHTOWER_HOST: watchtower.jclee.me
   WATCHTOWER_HTTP_API_TOKEN: ${{ secrets.WATCHTOWER_HTTP_API_TOKEN }}
+  PORTAINER_WEBHOOK_URL: https://portainer.jclee.me/api/webhooks/4877b1cf-2a5e-46b7-bebf-c5e9909dd6f1
+  PORTAINER_WEBHOOK_TOKEN: ${{ secrets.PORTAINER_WEBHOOK_TOKEN }}
   REGISTRY_USERNAME: admin
   REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
   DEPLOYMENT_ENVIRONMENT: production
@@ -226,8 +228,78 @@ jobs:
           sarif_file: 'trivy-results.sarif'
         continue-on-error: true
 
-  container-logs-analysis:
+  portainer-deployment:
     needs: [pre-validation, build-and-push]
+    if: needs.pre-validation.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+      - name: Trigger Portainer Webhook
+        run: |
+          echo "🚀 Portainer 배포 웹훅 트리거 중..."
+          echo "🌐 Webhook URL: ${{ env.PORTAINER_WEBHOOK_URL }}"
+          
+          # Portainer webhook 호출
+          RESPONSE=$(curl -X POST "${{ env.PORTAINER_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d '{"token":"${{ env.PORTAINER_WEBHOOK_TOKEN }}"}' \
+            -w "\nHTTP_CODE:%{http_code}" \
+            --max-time 30 \
+            --silent) || {
+            echo "❌ Portainer 웹훅 호출 실패"
+            exit 1
+          }
+          
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1 | cut -d: -f2)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+          
+          echo "📊 HTTP 응답 코드: $HTTP_CODE"
+          echo "📋 응답 내용:"
+          echo "$BODY"
+          
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "✅ Portainer 배포 성공적으로 트리거됨"
+          else
+            echo "⚠️ Portainer 웹훅 응답 확인 필요"
+            if echo "$BODY" | grep -q "Pull image error"; then
+              echo "🔍 Registry 인증 오류 감지됨"
+              echo "💡 Portainer에서 Registry 자격증명을 확인하세요"
+            fi
+          fi
+
+      - name: Verify Portainer Deployment
+        run: |
+          echo "⏱️ Portainer 배포 완료 대기 중..."
+          sleep 30  # Portainer 배포 시간 대기
+          
+          echo "🔍 SafeWork 서비스 상태 확인 중..."
+          
+          # 기본 헬스 체크
+          for i in {1..6}; do
+            echo "헬스 체크 시도 $i/6..."
+            
+            RESPONSE=$(curl -s -w "%{http_code}" -o /tmp/health_check.txt "https://safework.jclee.me/health" --max-time 15)
+            HTTP_CODE="${RESPONSE: -3}"
+            
+            if [ "$HTTP_CODE" -eq 200 ]; then
+              echo "✅ SafeWork 서비스 정상 작동 중"
+              break
+            elif [ "$i" -eq 6 ]; then
+              echo "❌ SafeWork 서비스 응답 없음 (HTTP $HTTP_CODE)"
+              if [ -f /tmp/health_check.txt ]; then
+                echo "📋 응답 내용:"
+                head -5 /tmp/health_check.txt
+              fi
+              exit 1
+            else
+              echo "⚠️ 재시도 중... (HTTP $HTTP_CODE)"
+              sleep 10
+            fi
+          done
+
+  container-logs-analysis:
+    needs: [pre-validation, build-and-push, portainer-deployment]
     if: needs.pre-validation.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -261,7 +333,7 @@ jobs:
           echo "📊 컨테이너 로그 분석 완료 - health-verification으로 계속..."
 
   health-verification:
-    needs: [pre-validation, build-and-push, container-logs-analysis]
+    needs: [pre-validation, build-and-push, portainer-deployment, container-logs-analysis]
     if: needs.pre-validation.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -372,7 +444,7 @@ jobs:
           cat /tmp/deployment_record.json | jq .
 
   notification:
-    needs: [pre-validation, build-and-push, container-logs-analysis, health-verification]
+    needs: [pre-validation, build-and-push, portainer-deployment, container-logs-analysis, health-verification]
     if: always() && needs.pre-validation.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
