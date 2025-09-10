@@ -62,6 +62,71 @@ jobs:
           cd app
           pip install -r requirements.txt
 
+      - name: Analyze Container Logs for Errors
+        id: container-logs
+        run: |
+          echo "🔍 SafeWork 컨테이너 로그 분석 시작..."
+          
+          # Docker 컨테이너가 실행 중인지 확인
+          CONTAINER_STATUS=$(docker-compose ps -q safework-app 2>/dev/null || echo "not_running")
+          
+          if [ "$CONTAINER_STATUS" != "not_running" ] && [ -n "$CONTAINER_STATUS" ]; then
+            echo "📦 실행 중인 SafeWork 컨테이너 발견: $CONTAINER_STATUS"
+            
+            # 실제 컨테이너 로그 수집
+            echo "📋 최근 컨테이너 로그 수집 중..."
+            CONTAINER_LOGS=$(docker logs --tail=50 "$CONTAINER_STATUS" 2>&1 || echo "로그 수집 실패")
+            
+            # Gunicorn 오류 패턴 검색
+            echo "🔍 알려진 Gunicorn 오류 패턴 검색 중..."
+            
+            GUNICORN_ERRORS=""
+            if echo "$CONTAINER_LOGS" | grep -q "gunicorn.errors.HaltServer"; then
+              GUNICORN_ERRORS="$GUNICORN_ERRORS\n❌ gunicorn.errors.HaltServer 감지"
+            fi
+            
+            if echo "$CONTAINER_LOGS" | grep -q "Worker failed to boot"; then
+              GUNICORN_ERRORS="$GUNICORN_ERRORS\n❌ Worker failed to boot 감지"
+            fi
+            
+            if echo "$CONTAINER_LOGS" | grep -q "ImportError\|ModuleNotFoundError"; then
+              GUNICORN_ERRORS="$GUNICORN_ERRORS\n❌ Import 오류 감지"
+            fi
+            
+            if echo "$CONTAINER_LOGS" | grep -q "OperationalError\|Connection refused"; then
+              GUNICORN_ERRORS="$GUNICORN_ERRORS\n❌ 데이터베이스 연결 오류 감지"
+            fi
+            
+            # 오류 발견 결과
+            if [ -n "$GUNICORN_ERRORS" ]; then
+              echo "⚠️ 발견된 오류들:"
+              echo -e "$GUNICORN_ERRORS"
+              echo "container_errors=true" >> $GITHUB_OUTPUT
+              echo "error_details<<EOF" >> $GITHUB_OUTPUT
+              echo -e "$GUNICORN_ERRORS" >> $GITHUB_OUTPUT
+              echo "EOF" >> $GITHUB_OUTPUT
+            else
+              echo "✅ 알려진 오류 패턴 없음"
+              echo "container_errors=false" >> $GITHUB_OUTPUT
+            fi
+            
+            # 전체 로그를 아티팩트로 저장
+            echo "$CONTAINER_LOGS" > safework_container_logs.txt
+            echo "logs_collected=true" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ SafeWork 컨테이너가 실행되지 않음"
+            echo "logs_collected=false" >> $GITHUB_OUTPUT
+            echo "container_errors=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload Container Logs
+        if: steps.container-logs.outputs.logs_collected == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: safework-container-logs-${{ github.run_id }}
+          path: safework_container_logs.txt
+          retention-days: 7
+
       - name: Run SafeWork Claude AI
         id: claude
         uses: anthropics/claude-code-action@v1
@@ -75,6 +140,9 @@ jobs:
           # Enhanced prompt with SafeWork domain expertise
           prompt: |
             # SafeWork 산업보건안전 시스템 전문가 Claude
+
+            ## 컨테이너 로그 분석 결과
+            ${{ steps.container-logs.outputs.container_errors == 'true' && format('⚠️ **컨테이너 오류 발견**: {0}', steps.container-logs.outputs.error_details) || '✅ **컨테이너 정상**: 알려진 오류 패턴 없음' }}
 
             ## 시스템 컨텍스트
             **프로젝트**: SafeWork - 산업보건안전 관리시스템 (Flask 3.0+)
@@ -96,12 +164,18 @@ jobs:
                - 관리시스템 → `관리자`, `admin`, `safework` 키워드  
                - 의료시스템 → `의료`, `health`, `검진` 키워드
                - API연동 → `api`, `연동`, `integration` 키워드
-            3. **자동 문제해결**: 
+            3. **컨테이너 오류 자동 수정** (${{ steps.container-logs.outputs.container_errors == 'true' && '**🚨 우선 작업**' || '' }}): 
+               ${{ steps.container-logs.outputs.container_errors == 'true' && '- **gunicorn.errors.HaltServer** → Flask app import 경로 수정' || '' }}
+               ${{ steps.container-logs.outputs.container_errors == 'true' && '- **Worker failed to boot** → 의존성 및 환경변수 검증' || '' }}
+               ${{ steps.container-logs.outputs.container_errors == 'true' && '- **Import 오류** → requirements.txt 및 모듈 경로 수정' || '' }}
+               ${{ steps.container-logs.outputs.container_errors == 'true' && '- **데이터베이스 연결** → MySQL 연결 설정 및 초기화 수정' || '' }}
+               ${{ steps.container-logs.outputs.container_errors == 'true' && '- **즉시 코드 수정 후 커밋하여 근본 해결**' || '' }}
+            4. **일반 문제해결**: 
                - ESLint 오류 수정 (18개 오류, 1개 경고)
                - 테스트 실패 분석 (39/39 통과 목표)
                - 데이터베이스 마이그레이션 오류
                - Docker 배포 이슈
-            4. **보안 우선**: 
+            5. **보안 우선**: 
                - PHI(개인건강정보) 보호
                - CSRF 토큰 검증
                - SQL 인젝션 방지
@@ -119,6 +193,18 @@ jobs:
             - **보안**: `@login_required`, CSRF 전역, 감사로그, 비율제한
             - **성능**: Redis 캐싱, DB 인덱싱, 지연로딩, 페이징(20/page)
             - **테스트**: pytest, 80%+ 커버리지, conftest.py 픽스처
+
+            ## 📋 컨테이너 오류 발견 시 필수 작업 순서
+            ${{ steps.container-logs.outputs.container_errors == 'true' && '
+            ### 🚨 **즉시 수행할 근본 해결책**:
+            1. **Flask 앱 import 문제** → `app/app.py`의 `create_app()` 함수 및 Gunicorn 진입점 검증
+            2. **의존성 문제** → `app/requirements.txt` 누락 패키지 확인 및 추가
+            3. **환경변수 문제** → `app/Dockerfile`의 ENV 설정과 실제 사용 변수 일치 확인
+            4. **데이터베이스 초기화** → `app/start.sh`의 DB 연결 로직 및 테이블 존재 여부 확인
+            5. **즉시 수정 후 커밋** → 변경사항을 바로 커밋하여 다음 배포에서 수정된 상태 배포
+
+            **⚡ 컨테이너 로그 파일**: safework-container-logs-${{ github.run_id }} (아티팩트에서 다운로드 가능)
+            ' || '' }}
 
             **지금 분석하고 필요한 작업을 수행해주세요.**
 
