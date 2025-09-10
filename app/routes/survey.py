@@ -148,11 +148,8 @@ def musculoskeletal_symptom_survey():
             disease_gout=request.form.get("disease_gout") == "on",
             disease_alcoholism=request.form.get("disease_alcoholism") == "on",
             disease_status=request.form.get("disease_status"),
-            # 4. 과거 사고 (새로운 구조화된 데이터)
+            # 4. 과거 사고
             past_accident=request.form.get("past_accident") == "예",
-            # 새로운 구조화된 사고 데이터 처리
-            accidents_data=request.form.get("accidents_data", "{}"),
-            # 기존 필드들은 호환성을 위해 유지 (기본값 false)
             accident_hand=False,
             accident_arm=False, 
             accident_shoulder=False,
