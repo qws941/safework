@@ -197,7 +197,6 @@ def create_app(config_name=None):
             "start_time": datetime.fromtimestamp(
                 app.start_time, tz=timezone(timedelta(hours=9))
             ).strftime("%Y-%m-%d %H:%M:%S KST"),
-            "csrf_token": lambda: "",  # Add empty csrf_token function
         }
 
     # Audit logging
