@@ -116,43 +116,42 @@ jobs:
           status: custom
           custom_payload: |
             {
-              "text": "${{ steps.claude.conclusion == 'success' && '🤖 Claude AI 이슈/PR 처리 완료' || '⚠️ Claude AI 이슈/PR 처리 실패' }}",
+              "text": "${{ steps.claude.conclusion == 'success' && '🤖 Claude AI Issue/PR Complete' || '⚠️ Claude AI Issue/PR Failed' }}",
               "attachments": [
                 {
                   "color": "${{ steps.claude.conclusion == 'success' && 'good' || 'danger' }}",
                   "fields": [
                     {
-                      "title": "워크플로우",
+                      "title": "Workflow",
                       "value": "SafeWork Claude AI - Issues & PRs",
                       "short": true
                     },
                     {
-                      "title": "이벤트",
+                      "title": "Event",
                       "value": "${{ github.event_name }}",
                       "short": true
                     },
                     {
-                      "title": "상태",
+                      "title": "Status",
                       "value": "${{ steps.claude.conclusion }}",
                       "short": true
                     },
                     {
-                      "title": "실행자",
+                      "title": "Actor",
                       "value": "${{ github.actor }}",
                       "short": true
                     },
-                    ${{ github.event_name == 'issues' && format('{"title": "이슈 번호", "value": "<{0}|#{1}: {2}>", "short": false},', github.event.issue.html_url, github.event.issue.number, github.event.issue.title) || '' }}
-                    ${{ github.event_name == 'pull_request' && format('{"title": "PR 번호", "value": "<{0}|#{1}: {2}>", "short": false},', github.event.pull_request.html_url, github.event.pull_request.number, github.event.pull_request.title) || '' }}
+                    ${{ github.event_name == 'issues' && format('{"title": "Issue", "value": "<{0}|#{1}: {2}>", "short": false},', github.event.issue.html_url, github.event.issue.number, github.event.issue.title) || '' }}
+                    ${{ github.event_name == 'pull_request' && format('{"title": "PR", "value": "<{0}|#{1}: {2}>", "short": false},', github.event.pull_request.html_url, github.event.pull_request.number, github.event.pull_request.title) || '' }}
                     {
                       "title": "Repository",
                       "value": "<${{ github.event.repository.html_url }}|${{ github.repository }}>",
                       "short": false
                     }
                   ],
-                  "footer": "SafeWork 자동화 시스템",
-                  "ts": ${{ github.event.repository.updated_at && github.event.repository.updated_at || 'null' }}
+                  "footer": "SafeWork 자동화 시스템"
                 }
               ]
             }
         env:
-          SLACK_WEBHOOK_URL: https://hooks.slack.com/services/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
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

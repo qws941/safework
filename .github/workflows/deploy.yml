@@ -412,17 +412,17 @@ jobs:
           echo "📢 배포 상태 알림 준비 중..."
           
           if [ "${{ needs.health-verification.result }}" = "success" ]; then
-            STATUS="✅ 성공"
+            STATUS="✅ Success"
             COLOR="good"
-            MESSAGE="SafeWork 배포가 성공적으로 완료되었습니다."
+            MESSAGE="SafeWork deployment completed successfully."
           elif [ "${{ needs.health-verification.result }}" = "failure" ]; then
-            STATUS="❌ 실패"
+            STATUS="❌ Failed"
             COLOR="danger"  
-            MESSAGE="SafeWork 배포 중 문제가 발생했습니다."
+            MESSAGE="SafeWork deployment encountered issues."
           else
-            STATUS="⚠️ 부분 완료"
+            STATUS="⚠️ Partial"
             COLOR="warning"
-            MESSAGE="SafeWork 배포가 부분적으로 완료되었습니다."
+            MESSAGE="SafeWork deployment partially completed."
           fi
           
           echo "📊 최종 상태: $STATUS"
@@ -440,38 +440,38 @@ jobs:
           status: custom
           custom_payload: |
             {
-              "text": "${{ env.STATUS }} SafeWork 프로덕션 배포",
+              "text": "${{ env.STATUS }} SafeWork Production Deploy",
               "attachments": [
                 {
                   "color": "${{ env.COLOR }}",
                   "fields": [
                     {
-                      "title": "배포 상태",
+                      "title": "Deployment Status",
                       "value": "${{ env.MESSAGE }}",
                       "short": false
                     },
                     {
-                      "title": "환경",
+                      "title": "Environment",
                       "value": "${{ env.DEPLOYMENT_ENVIRONMENT }}",
                       "short": true
                     },
                     {
-                      "title": "트리거",
+                      "title": "Trigger",
                       "value": "${{ github.event_name }}",
                       "short": true
                     },
                     {
-                      "title": "브랜치",
+                      "title": "Branch",
                       "value": "${{ github.ref_name }}",
                       "short": true
                     },
                     {
-                      "title": "실행자",
+                      "title": "Actor",
                       "value": "${{ github.actor }}",
                       "short": true
                     },
                     {
-                      "title": "이미지 태그",
+                      "title": "Image Tags",
                       "value": "${{ needs.pre-validation.outputs.image_tags }}",
                       "short": false
                     },
@@ -486,15 +486,14 @@ jobs:
                       "short": true
                     },
                     {
-                      "title": "워크플로우 링크",
+                      "title": "Workflow Link",
                       "value": "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>",
                       "short": false
                     }
                   ],
-                  "footer": "SafeWork 자동배포 시스템",
-                  "ts": ${{ github.event.repository.updated_at && github.event.repository.updated_at || 'null' }}
+                  "footer": "SafeWork Auto Deploy System"
                 }
               ]
             }
         env:
-          SLACK_WEBHOOK_URL: https://hooks.slack.com/services/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
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
