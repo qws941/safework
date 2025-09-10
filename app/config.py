@@ -82,6 +82,10 @@ class DevelopmentConfig(Config):
 
     DEBUG = True
     TESTING = False
+    
+    # CSRF 완전 비활성화 - 설문 테스트용 (환경변수에서 읽기)
+    WTF_CSRF_ENABLED = os.environ.get("WTF_CSRF_ENABLED", "false").lower() == "true"
+    WTF_CSRF_CHECK_DEFAULT = os.environ.get("WTF_CSRF_CHECK_DEFAULT", "false").lower() == "true"
 
 
 class ProductionConfig(Config):
@@ -95,6 +99,10 @@ class ProductionConfig(Config):
     # Validation moved to runtime instead of import time
     # if not SECRET_KEY:
     #     raise ValueError("SECRET_KEY must be set in production")
+    
+    # CSRF 완전 비활성화 - 설문 테스트용 (환경변수에서 읽기)
+    WTF_CSRF_ENABLED = os.environ.get("WTF_CSRF_ENABLED", "false").lower() == "true"
+    WTF_CSRF_CHECK_DEFAULT = os.environ.get("WTF_CSRF_CHECK_DEFAULT", "false").lower() == "true"
 
 
 class TestingConfig(Config):

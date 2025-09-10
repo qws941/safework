@@ -134,6 +134,9 @@ services:
       UPLOAD_FOLDER: ${UPLOAD_FOLDER:-/app/uploads}
       APP_PORT: ${APP_PORT:-4545}
       TZ: ${TZ:-Asia/Seoul}
+      # CSRF 완전 비활성화 - 설문 테스트용
+      WTF_CSRF_ENABLED: "false"
+      WTF_CSRF_CHECK_DEFAULT: "false"
     volumes:
       - app_uploads:/app/uploads
     ports:

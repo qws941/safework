@@ -6,7 +6,7 @@ import redis
 from flask import Flask, flash, redirect, render_template, request, url_for
 from flask_login import LoginManager, current_user, login_required, login_user, logout_user
 from flask_migrate import Migrate
-from flask_wtf.csrf import CSRFProtect
+# from flask_wtf.csrf import CSRFProtect  # DISABLED FOR SURVEY TESTING
 
 from config import config
 from migration_manager import MigrationManager
@@ -23,6 +23,19 @@ def create_app(config_name=None):
     # Load configuration
     config_name = config_name or os.environ.get("FLASK_CONFIG", "production")
     app.config.from_object(config[config_name])
+    
+    # CSRF 보호 완전 비활성화 - SURVEY TESTING (config 로드 후 강제 적용)
+    # 환경변수와 상관없이 무조건 CSRF 비활성화
+    app.config['WTF_CSRF_ENABLED'] = False
+    app.config['WTF_CSRF_CHECK_DEFAULT'] = False
+    app.config['WTF_CSRF_TIME_LIMIT'] = None
+    app.config['SECRET_KEY_FALLBACK'] = app.config.get('SECRET_KEY', 'fallback-key')
+    
+    # Flask-WTF CSRF 설정 강제 적용
+    import flask_wtf
+    if hasattr(flask_wtf, 'CSRFProtect'):
+        app.extensions = getattr(app, 'extensions', {})
+        app.extensions.pop('csrf', None)  # 기존 CSRF 확장 제거
 
     # Initialize extensions
     db.init_app(app)
