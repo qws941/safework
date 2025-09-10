@@ -31,6 +31,7 @@ class Department(db.Model):
     # Relationships
     workers = relationship('Worker', back_populates='department', foreign_keys='Worker.department_id')
     parent = relationship('Department', remote_side=[id])
+    manager = relationship('Worker', foreign_keys=[manager_id], post_update=True)
     
     def __repr__(self):
         return f'<Department {self.name}>'
@@ -71,7 +72,7 @@ class Worker(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    department = relationship('Department', back_populates='workers')
+    department = relationship('Department', back_populates='workers', foreign_keys=[department_id])
     health_check_targets = relationship('HealthCheckTarget', back_populates='worker')
     health_check_results = relationship('HealthCheckResult', back_populates='worker')
     medical_visits = relationship('MedicalVisit', back_populates='worker')
