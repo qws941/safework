@@ -130,13 +130,13 @@ def musculoskeletal_symptom_survey():
             status="submitted",
         )
 
-        # 추가 증상 데이터를 JSON으로 저장
-        symptoms_data = {
-            "pain_frequency": request.form.get("pain_frequency"),
-            "pain_timing": request.form.get("pain_timing"),  
-            "pain_characteristics": request.form.get("pain_characteristics"),
-        }
-        survey.symptoms_data = symptoms_data
+        # 추가 증상 데이터를 JSON으로 저장 - 임시 비활성화 (DB 컬럼 없음)
+        # symptoms_data = {
+        #     "pain_frequency": request.form.get("pain_frequency"),
+        #     "pain_timing": request.form.get("pain_timing"),  
+        #     "pain_characteristics": request.form.get("pain_characteristics"),
+        # }
+        # survey.symptoms_data = symptoms_data
 
         db.session.add(survey)
         db.session.commit()
@@ -197,7 +197,7 @@ def new_employee_health_checkup_form():
             weight_kg=request.form.get("weight_kg", type=float),
             blood_type=request.form.get("blood_type"),
             # 기존 질병 이력
-            existing_conditions=json.dumps(request.form.getlist("existing_conditions")),
+            existing_conditions=request.form.get("existing_conditions"),
             medication_history=request.form.get("medication_history"),
             allergy_history=request.form.get("allergy_history"),
             # 추가 필드는 필요시 확장
@@ -433,7 +433,7 @@ def api_submit():
             back_pain=data.get("back_pain", 0),
             waist_pain=data.get("waist_pain", 0),
             leg_pain=data.get("leg_pain", 0),
-            symptoms_data=data.get("symptoms_data"),
+            # symptoms_data=data.get("symptoms_data"),  # 임시 비활성화
             ip_address=request.remote_addr,
             status="submitted",
         )
