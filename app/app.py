@@ -30,6 +30,12 @@ def create_app(config_name=None):
 
     # Initialize CSRF Protection
     csrf = CSRFProtect(app)
+    
+    # Add CSRF token to template context
+    @app.context_processor
+    def inject_csrf_token():
+        from flask_wtf.csrf import generate_csrf
+        return dict(csrf_token=generate_csrf)
 
     # Initialize migration manager
     migration_manager = MigrationManager(app)
