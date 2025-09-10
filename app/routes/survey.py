@@ -13,8 +13,9 @@ survey_bp = Blueprint("survey", __name__)
 
 def get_or_create_company(name):
     """회사명으로 Company 객체 찾기 또는 생성"""
-    if not name:
-        return None
+    if not name or name.strip() == "":
+        # 기본 회사 생성 또는 찾기
+        name = "기타"
     company = Company.query.filter_by(name=name).first()
     if not company:
         company = Company(name=name, is_active=True)
@@ -25,8 +26,9 @@ def get_or_create_company(name):
 
 def get_or_create_process(name):
     """공정명으로 Process 객체 찾기 또는 생성"""
-    if not name:
-        return None
+    if not name or name.strip() == "":
+        # 기본 공정 생성 또는 찾기
+        name = "기타"
     process = Process.query.filter_by(name=name).first()
     if not process:
         process = Process(name=name, is_active=True)
@@ -37,8 +39,9 @@ def get_or_create_process(name):
 
 def get_or_create_role(title):
     """직위/역할로 Role 객체 찾기 또는 생성"""
-    if not title:
-        return None
+    if not title or title.strip() == "":
+        # 기본 역할 생성 또는 찾기
+        title = "기타"
     role = Role.query.filter_by(title=title).first()
     if not role:
         role = Role(title=title, is_active=True)
@@ -181,15 +184,21 @@ def musculoskeletal_symptom_survey():
         # }
         # survey.symptoms_data = symptoms_data
 
-        db.session.add(survey)
-        db.session.commit()
+        try:
+            db.session.add(survey)
+            db.session.commit()
 
-        # Redis에 캐시
-        if hasattr(current_app, "redis"):
-            cache_key = f"survey:{survey.id}"
-            current_app.redis.setex(
-                cache_key, 3600, json.dumps(survey.to_dict(), default=str)  # 1시간 캐시
-            )
+            # Redis에 캐시
+            if hasattr(current_app, "redis"):
+                cache_key = f"survey:{survey.id}"
+                current_app.redis.setex(
+                    cache_key, 3600, json.dumps(survey.to_dict(), default=str)  # 1시간 캐시
+                )
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Survey submission error: {str(e)}")
+            flash(f"설문 제출 중 오류가 발생했습니다: {str(e)}", "error")
+            return redirect(url_for("survey.musculoskeletal_symptom_survey"))
 
         # 감사 로그
         if current_user.is_authenticated:
