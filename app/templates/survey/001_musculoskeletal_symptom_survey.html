@@ -2,9 +2,7 @@
 
 {% block title %}근골격계 증상조사표 - {{ app_name }}{% endblock %}
 
-{% block extra_head %}
-    <meta name="csrf-token" content="{{ csrf_token_value }}">
-{% endblock %}
+{% block extra_head %}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -967,7 +965,6 @@
 {% block content %}
 <div class="survey-container">
     <form method="POST" action="{{ url_for('survey.musculoskeletal_symptom_survey') }}" id="surveyForm">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token_value }}"/>
         
         <div class="text-center mb-4">
             <h2 style="color: #1f2937; margin-bottom: 5px;">
