@@ -185,12 +185,12 @@ def musculoskeletal_symptom_survey():
             db.session.add(survey)
             db.session.commit()
 
-            # Redis에 캐시
-            if hasattr(current_app, "redis"):
-                cache_key = f"survey:{survey.id}"
-                current_app.redis.setex(
-                    cache_key, 3600, json.dumps(survey.to_dict(), default=str)  # 1시간 캐시
-                )
+            # Redis에 캐시 - to_dict() 메서드 미정의로 인해 임시 비활성화
+            # if hasattr(current_app, "redis"):
+            #     cache_key = f"survey:{survey.id}"
+            #     current_app.redis.setex(
+            #         cache_key, 3600, json.dumps(survey.to_dict(), default=str)  # 1시간 캐시
+            #     )
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Survey submission error: {str(e)}")
