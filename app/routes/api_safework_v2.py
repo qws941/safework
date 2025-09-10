@@ -9,6 +9,7 @@ from models_safework_v2 import (
     SafeworkWorker, SafeworkHealthCheck, SafeworkMedicalVisit,
     SafeworkMedication, SafeworkMedicationLog, SafeworkHealthPlan
 )
+from models_safework import SafeworkMsds
 
 api_safework_bp = Blueprint('api_safework', __name__)
 
@@ -678,4 +679,481 @@ def get_inventory_valuation():
             }
         })
     except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ========================================
+# MSDS (물질안전보건자료) 관리 API
+# ========================================
+
+@api_safework_bp.route('/msds', methods=['GET'])
+@login_required
+def get_msds_list():
+    """MSDS 목록 조회"""
+    try:
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 20, type=int)
+        search = request.args.get('search')
+        hazard_level = request.args.get('hazard_level')
+        status = request.args.get('status')
+        department = request.args.get('department')
+        expiring_soon = request.args.get('expiring_soon', type=bool)
+        
+        query = SafeworkMsds.query
+        
+        # 검색 조건
+        if search:
+            query = query.filter(
+                db.or_(
+                    SafeworkMsds.chemical_name.contains(search),
+                    SafeworkMsds.cas_number.contains(search),
+                    SafeworkMsds.product_name.contains(search),
+                    SafeworkMsds.supplier.contains(search)
+                )
+            )
+        
+        # 위험도 필터
+        if hazard_level:
+            query = query.filter_by(hazard_level=hazard_level)
+        
+        # 상태 필터
+        if status:
+            query = query.filter_by(status=status)
+            
+        # 사용부서 필터
+        if department:
+            query = query.filter_by(usage_department=department)
+        
+        # 만료 임박 필터 (30일 이내)
+        if expiring_soon:
+            from datetime import timedelta
+            warning_date = datetime.now().date() + timedelta(days=30)
+            query = query.filter(SafeworkMsds.expiry_date <= warning_date)
+        
+        msds_list = query.order_by(SafeworkMsds.chemical_name).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
+        
+        return jsonify({
+            'success': True,
+            'data': [msds.to_summary_dict() for msds in msds_list.items],
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': msds_list.total,
+                'pages': msds_list.pages,
+                'has_next': msds_list.has_next,
+                'has_prev': msds_list.has_prev
+            }
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_safework_bp.route('/msds/<int:msds_id>', methods=['GET'])
+@login_required
+def get_msds_detail(msds_id):
+    """MSDS 상세 정보 조회"""
+    try:
+        msds = SafeworkMsds.query.get_or_404(msds_id)
+        return jsonify({
+            'success': True,
+            'data': msds.to_dict()
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_safework_bp.route('/msds', methods=['POST'])
+@login_required
+def create_msds():
+    """새 MSDS 등록"""
+    try:
+        data = request.get_json()
+        
+        msds = SafeworkMsds(
+            chemical_name=data['chemical_name'],
+            cas_number=data.get('cas_number'),
+            product_name=data.get('product_name'),
+            supplier=data.get('supplier'),
+            supplier_contact=data.get('supplier_contact'),
+            hazard_classification=data.get('hazard_classification'),
+            signal_word=data.get('signal_word', 'WARNING'),
+            hazard_statements=data.get('hazard_statements'),
+            precautionary_statements=data.get('precautionary_statements'),
+            
+            # 물리화학적 특성
+            appearance=data.get('appearance'),
+            odor=data.get('odor'),
+            ph_value=data.get('ph_value'),
+            melting_point=data.get('melting_point'),
+            boiling_point=data.get('boiling_point'),
+            flash_point=data.get('flash_point'),
+            auto_ignition_temp=data.get('auto_ignition_temp'),
+            
+            # 사용 및 관리 정보
+            usage_department=data.get('usage_department'),
+            usage_purpose=data.get('usage_purpose'),
+            storage_location=data.get('storage_location'),
+            storage_conditions=data.get('storage_conditions'),
+            handling_precautions=data.get('handling_precautions'),
+            
+            # 응급조치 정보
+            first_aid_inhalation=data.get('first_aid_inhalation'),
+            first_aid_skin=data.get('first_aid_skin'),
+            first_aid_eye=data.get('first_aid_eye'),
+            first_aid_ingestion=data.get('first_aid_ingestion'),
+            
+            # 소화 정보
+            extinguishing_media=data.get('extinguishing_media'),
+            unsuitable_extinguishing_media=data.get('unsuitable_extinguishing_media'),
+            fire_fighting_measures=data.get('fire_fighting_measures'),
+            
+            # 누출사고시 대처방법
+            personal_precautions=data.get('personal_precautions'),
+            environmental_precautions=data.get('environmental_precautions'),
+            containment_cleanup=data.get('containment_cleanup'),
+            
+            # 노출방지 및 개인보호구
+            exposure_limits=data.get('exposure_limits'),
+            engineering_controls=data.get('engineering_controls'),
+            personal_protective_equipment=data.get('personal_protective_equipment'),
+            
+            # 안정성 및 반응성
+            chemical_stability=data.get('chemical_stability'),
+            reactivity=data.get('reactivity'),
+            incompatible_materials=data.get('incompatible_materials'),
+            
+            # 독성학적 정보
+            acute_toxicity=data.get('acute_toxicity'),
+            skin_corrosion=data.get('skin_corrosion'),
+            eye_damage=data.get('eye_damage'),
+            respiratory_sensitisation=data.get('respiratory_sensitisation'),
+            skin_sensitisation=data.get('skin_sensitisation'),
+            carcinogenicity=data.get('carcinogenicity'),
+            reproductive_toxicity=data.get('reproductive_toxicity'),
+            
+            # 생태독성 정보
+            aquatic_toxicity=data.get('aquatic_toxicity'),
+            persistence_degradability=data.get('persistence_degradability'),
+            bioaccumulation=data.get('bioaccumulation'),
+            mobility=data.get('mobility'),
+            
+            # 폐기 정보
+            waste_disposal=data.get('waste_disposal'),
+            contaminated_packaging=data.get('contaminated_packaging'),
+            
+            # 운송 정보
+            un_number=data.get('un_number'),
+            proper_shipping_name=data.get('proper_shipping_name'),
+            transport_hazard_class=data.get('transport_hazard_class'),
+            packing_group=data.get('packing_group'),
+            
+            # 법적 규제현황
+            industrial_safety_act=data.get('industrial_safety_act'),
+            chemical_control_act=data.get('chemical_control_act'),
+            dangerous_goods_act=data.get('dangerous_goods_act'),
+            
+            # 문서 관리 정보
+            msds_version=data.get('msds_version'),
+            revision_date=datetime.strptime(data['revision_date'], '%Y-%m-%d').date() if data.get('revision_date') else None,
+            prepared_by=data.get('prepared_by'),
+            last_updated=datetime.strptime(data['last_updated'], '%Y-%m-%d').date() if data.get('last_updated') else None,
+            expiry_date=datetime.strptime(data['expiry_date'], '%Y-%m-%d').date() if data.get('expiry_date') else None,
+            document_path=data.get('document_path'),
+            
+            # 상태 및 메타데이터
+            status=data.get('status', 'ACTIVE'),
+            approval_status=data.get('approval_status', 'PENDING'),
+            hazard_level=data.get('hazard_level', 'MEDIUM'),
+            risk_assessment_score=data.get('risk_assessment_score'),
+            
+            # 사용량 추적
+            annual_usage_amount=data.get('annual_usage_amount'),
+            usage_unit=data.get('usage_unit'),
+            inventory_amount=data.get('inventory_amount'),
+            
+            # 감사 정보
+            created_by=current_user.username,
+            updated_by=current_user.username
+        )
+        
+        db.session.add(msds)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'MSDS가 등록되었습니다.',
+            'msds_id': msds.id
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_safework_bp.route('/msds/<int:msds_id>', methods=['PUT'])
+@login_required
+def update_msds(msds_id):
+    """MSDS 정보 수정"""
+    try:
+        msds = SafeworkMsds.query.get_or_404(msds_id)
+        data = request.get_json()
+        
+        # 업데이트할 필드들
+        updateable_fields = [
+            'chemical_name', 'cas_number', 'product_name', 'supplier', 'supplier_contact',
+            'hazard_classification', 'signal_word', 'hazard_statements', 'precautionary_statements',
+            'appearance', 'odor', 'ph_value', 'melting_point', 'boiling_point', 'flash_point', 'auto_ignition_temp',
+            'usage_department', 'usage_purpose', 'storage_location', 'storage_conditions', 'handling_precautions',
+            'first_aid_inhalation', 'first_aid_skin', 'first_aid_eye', 'first_aid_ingestion',
+            'extinguishing_media', 'unsuitable_extinguishing_media', 'fire_fighting_measures',
+            'personal_precautions', 'environmental_precautions', 'containment_cleanup',
+            'exposure_limits', 'engineering_controls', 'personal_protective_equipment',
+            'chemical_stability', 'reactivity', 'incompatible_materials',
+            'acute_toxicity', 'skin_corrosion', 'eye_damage', 'respiratory_sensitisation',
+            'skin_sensitisation', 'carcinogenicity', 'reproductive_toxicity',
+            'aquatic_toxicity', 'persistence_degradability', 'bioaccumulation', 'mobility',
+            'waste_disposal', 'contaminated_packaging',
+            'un_number', 'proper_shipping_name', 'transport_hazard_class', 'packing_group',
+            'industrial_safety_act', 'chemical_control_act', 'dangerous_goods_act',
+            'msds_version', 'prepared_by', 'document_path',
+            'status', 'approval_status', 'hazard_level', 'risk_assessment_score',
+            'annual_usage_amount', 'usage_unit', 'inventory_amount'
+        ]
+        
+        # 날짜 필드 처리
+        date_fields = ['revision_date', 'last_updated', 'expiry_date', 'approved_date']
+        
+        for field in updateable_fields:
+            if field in data:
+                setattr(msds, field, data[field])
+        
+        for field in date_fields:
+            if field in data and data[field]:
+                setattr(msds, field, datetime.strptime(data[field], '%Y-%m-%d').date())
+        
+        # 승인 정보 처리
+        if data.get('approval_status') == 'APPROVED':
+            msds.approved_by = current_user.username
+            msds.approved_date = datetime.now().date()
+        
+        msds.updated_by = current_user.username
+        msds.updated_at = datetime.utcnow()
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'MSDS 정보가 업데이트되었습니다.'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_safework_bp.route('/msds/<int:msds_id>', methods=['DELETE'])
+@login_required  
+def delete_msds(msds_id):
+    """MSDS 삭제 (비활성화)"""
+    try:
+        msds = SafeworkMsds.query.get_or_404(msds_id)
+        
+        # 실제 삭제 대신 상태를 변경
+        msds.status = 'EXPIRED'
+        msds.updated_by = current_user.username
+        msds.updated_at = datetime.utcnow()
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'MSDS가 삭제되었습니다.'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_safework_bp.route('/msds/alerts', methods=['GET'])
+@login_required
+def get_msds_alerts():
+    """MSDS 알림 조회 (만료 예정, 만료됨)"""
+    try:
+        from datetime import timedelta
+        today = datetime.now().date()
+        warning_date = today + timedelta(days=30)
+        
+        # 만료 예정 MSDS (30일 이내)
+        expiring_soon = SafeworkMsds.query.filter(
+            SafeworkMsds.expiry_date.between(today, warning_date),
+            SafeworkMsds.status == 'ACTIVE'
+        ).order_by(SafeworkMsds.expiry_date).all()
+        
+        # 이미 만료된 MSDS
+        expired = SafeworkMsds.query.filter(
+            SafeworkMsds.expiry_date < today,
+            SafeworkMsds.status == 'ACTIVE'
+        ).order_by(SafeworkMsds.expiry_date).all()
+        
+        # 승인 대기 중인 MSDS
+        pending_approval = SafeworkMsds.query.filter(
+            SafeworkMsds.approval_status == 'PENDING',
+            SafeworkMsds.status == 'ACTIVE'
+        ).order_by(SafeworkMsds.created_at.desc()).all()
+        
+        # 고위험 물질
+        high_risk = SafeworkMsds.query.filter(
+            SafeworkMsds.hazard_level.in_(['HIGH', 'VERY_HIGH']),
+            SafeworkMsds.status == 'ACTIVE'
+        ).order_by(SafeworkMsds.hazard_level.desc()).all()
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'expiring_soon': [msds.to_summary_dict() for msds in expiring_soon],
+                'expired': [msds.to_summary_dict() for msds in expired],
+                'pending_approval': [msds.to_summary_dict() for msds in pending_approval],
+                'high_risk': [msds.to_summary_dict() for msds in high_risk],
+                'total_alerts': len(expiring_soon) + len(expired) + len(pending_approval)
+            }
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_safework_bp.route('/msds/statistics', methods=['GET'])
+@login_required
+def get_msds_statistics():
+    """MSDS 통계"""
+    try:
+        # 전체 통계
+        total_msds = SafeworkMsds.query.filter_by(status='ACTIVE').count()
+        
+        # 위험도별 통계
+        hazard_stats = db.session.query(
+            SafeworkMsds.hazard_level,
+            func.count(SafeworkMsds.id).label('count')
+        ).filter_by(status='ACTIVE').group_by(SafeworkMsds.hazard_level).all()
+        
+        # 부서별 통계
+        dept_stats = db.session.query(
+            SafeworkMsds.usage_department,
+            func.count(SafeworkMsds.id).label('count')
+        ).filter_by(status='ACTIVE').group_by(SafeworkMsds.usage_department).all()
+        
+        # 상태별 통계  
+        status_stats = db.session.query(
+            SafeworkMsds.status,
+            func.count(SafeworkMsds.id).label('count')
+        ).group_by(SafeworkMsds.status).all()
+        
+        # 승인 상태별 통계
+        approval_stats = db.session.query(
+            SafeworkMsds.approval_status,
+            func.count(SafeworkMsds.id).label('count')
+        ).filter_by(status='ACTIVE').group_by(SafeworkMsds.approval_status).all()
+        
+        # 만료 관련 통계
+        today = datetime.now().date()
+        expired_count = SafeworkMsds.query.filter(
+            SafeworkMsds.expiry_date < today,
+            SafeworkMsds.status == 'ACTIVE'
+        ).count()
+        
+        from datetime import timedelta
+        expiring_soon_count = SafeworkMsds.query.filter(
+            SafeworkMsds.expiry_date.between(today, today + timedelta(days=30)),
+            SafeworkMsds.status == 'ACTIVE'
+        ).count()
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'total_msds': total_msds,
+                'hazard_level_breakdown': [{'level': row[0], 'count': row[1]} for row in hazard_stats],
+                'department_breakdown': [{'department': row[0], 'count': row[1]} for row in dept_stats if row[0]],
+                'status_breakdown': [{'status': row[0], 'count': row[1]} for row in status_stats],
+                'approval_breakdown': [{'status': row[0], 'count': row[1]} for row in approval_stats],
+                'expiry_alerts': {
+                    'expired': expired_count,
+                    'expiring_soon': expiring_soon_count
+                }
+            }
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_safework_bp.route('/msds/<int:msds_id>/approve', methods=['POST'])
+@login_required
+def approve_msds(msds_id):
+    """MSDS 승인"""
+    try:
+        msds = SafeworkMsds.query.get_or_404(msds_id)
+        data = request.get_json()
+        
+        action = data.get('action', 'approve')  # approve, reject
+        
+        if action == 'approve':
+            msds.approval_status = 'APPROVED'
+            msds.approved_by = current_user.username
+            msds.approved_date = datetime.now().date()
+            message = 'MSDS가 승인되었습니다.'
+        elif action == 'reject':
+            msds.approval_status = 'REJECTED'
+            message = 'MSDS가 반려되었습니다.'
+        else:
+            return jsonify({'success': False, 'error': '유효하지 않은 액션입니다.'}), 400
+        
+        msds.updated_by = current_user.username
+        msds.updated_at = datetime.utcnow()
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': message
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_safework_bp.route('/msds/bulk-update-status', methods=['POST'])
+@login_required
+def bulk_update_msds_status():
+    """MSDS 상태 일괄 업데이트"""
+    try:
+        data = request.get_json()
+        msds_ids = data.get('msds_ids', [])
+        new_status = data.get('status')
+        
+        if not msds_ids or not new_status:
+            return jsonify({'success': False, 'error': '필수 데이터가 누락되었습니다.'}), 400
+        
+        updated_count = SafeworkMsds.query.filter(
+            SafeworkMsds.id.in_(msds_ids)
+        ).update(
+            {
+                'status': new_status,
+                'updated_by': current_user.username,
+                'updated_at': datetime.utcnow()
+            },
+            synchronize_session=False
+        )
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'{updated_count}개 MSDS의 상태가 업데이트되었습니다.',
+            'updated_count': updated_count
+        })
+        
+    except Exception as e:
+        db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500

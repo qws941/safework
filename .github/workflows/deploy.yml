@@ -430,5 +430,71 @@ jobs:
           echo "🎨 색상: $COLOR"
           echo "🏷️ 이미지: ${{ needs.pre-validation.outputs.image_tags }}"
           
-          # Future: Add Slack notification here if needed
-          echo "🔔 알림 시스템은 필요시 추가 예정"
+          echo "STATUS=$STATUS" >> $GITHUB_ENV
+          echo "COLOR=$COLOR" >> $GITHUB_ENV
+          echo "MESSAGE=$MESSAGE" >> $GITHUB_ENV
+
+      - name: Send Slack deployment notification
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          custom_payload: |
+            {
+              "text": "${{ env.STATUS }} SafeWork 프로덕션 배포",
+              "attachments": [
+                {
+                  "color": "${{ env.COLOR }}",
+                  "fields": [
+                    {
+                      "title": "배포 상태",
+                      "value": "${{ env.MESSAGE }}",
+                      "short": false
+                    },
+                    {
+                      "title": "환경",
+                      "value": "${{ env.DEPLOYMENT_ENVIRONMENT }}",
+                      "short": true
+                    },
+                    {
+                      "title": "트리거",
+                      "value": "${{ github.event_name }}",
+                      "short": true
+                    },
+                    {
+                      "title": "브랜치",
+                      "value": "${{ github.ref_name }}",
+                      "short": true
+                    },
+                    {
+                      "title": "실행자",
+                      "value": "${{ github.actor }}",
+                      "short": true
+                    },
+                    {
+                      "title": "이미지 태그",
+                      "value": "${{ needs.pre-validation.outputs.image_tags }}",
+                      "short": false
+                    },
+                    {
+                      "title": "Registry",
+                      "value": "${{ env.REGISTRY }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Watchtower",
+                      "value": "${{ env.WATCHTOWER_HOST }}",
+                      "short": true
+                    },
+                    {
+                      "title": "워크플로우 링크",
+                      "value": "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>",
+                      "short": false
+                    }
+                  ],
+                  "footer": "SafeWork 자동배포 시스템",
+                  "ts": ${{ github.event.repository.updated_at && github.event.repository.updated_at || 'null' }}
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: https://hooks.slack.com/services/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

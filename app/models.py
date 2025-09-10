@@ -152,8 +152,7 @@ class Survey(db.Model):
     # 다리/발
     leg_data = db.Column(db.JSON)
     
-    # 추가 증상 데이터 (통증 빈도, 시기, 특성 등)
-    symptoms_data = db.Column(db.JSON)
+
 
     # 각 JSON 필드는 다음 구조를 가짐:
     # {

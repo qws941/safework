@@ -353,3 +353,192 @@ class EnvironmentMeasurement(db.Model):
             'result': self.result,
             'is_exceeded': self.result in ['EXCEEDED', 'ACTION_REQUIRED']
         }
+
+
+# ========================================
+# MSDS (물질안전보건자료) 관리 모델
+# ========================================
+
+class SafeworkMsds(db.Model):
+    """물질안전보건자료 (MSDS) 관리"""
+    __tablename__ = 'safework_msds'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    chemical_name = db.Column(db.String(200), nullable=False)  # 화학물질명
+    cas_number = db.Column(db.String(50))  # CAS 번호
+    product_name = db.Column(db.String(200))  # 제품명
+    supplier = db.Column(db.String(200))  # 공급업체
+    supplier_contact = db.Column(db.String(100))  # 공급업체 연락처
+    
+    # 위험성 정보
+    hazard_classification = db.Column(db.Text)  # 위험성 분류
+    signal_word = db.Column(db.Enum('DANGER', 'WARNING', 'CAUTION'), default='WARNING')  # 신호어
+    hazard_statements = db.Column(db.Text)  # 유해성 문구
+    precautionary_statements = db.Column(db.Text)  # 예방조치 문구
+    
+    # 물리화학적 특성
+    appearance = db.Column(db.String(200))  # 외관
+    odor = db.Column(db.String(200))  # 냄새
+    ph_value = db.Column(db.String(50))  # pH
+    melting_point = db.Column(db.String(50))  # 녹는점
+    boiling_point = db.Column(db.String(50))  # 끓는점
+    flash_point = db.Column(db.String(50))  # 인화점
+    auto_ignition_temp = db.Column(db.String(50))  # 자연발화온도
+    
+    # 사용 및 관리 정보
+    usage_department = db.Column(db.String(100))  # 사용부서
+    usage_purpose = db.Column(db.Text)  # 사용목적
+    storage_location = db.Column(db.String(200))  # 보관장소
+    storage_conditions = db.Column(db.Text)  # 보관조건
+    handling_precautions = db.Column(db.Text)  # 취급주의사항
+    
+    # 응급조치 정보
+    first_aid_inhalation = db.Column(db.Text)  # 흡입시 응급조치
+    first_aid_skin = db.Column(db.Text)  # 피부접촉시 응급조치
+    first_aid_eye = db.Column(db.Text)  # 눈 접촉시 응급조치
+    first_aid_ingestion = db.Column(db.Text)  # 섭취시 응급조치
+    
+    # 소화 정보
+    extinguishing_media = db.Column(db.Text)  # 적합한 소화제
+    unsuitable_extinguishing_media = db.Column(db.Text)  # 부적합한 소화제
+    fire_fighting_measures = db.Column(db.Text)  # 화재진압방법
+    
+    # 누출사고시 대처방법
+    personal_precautions = db.Column(db.Text)  # 개인적 예방조치
+    environmental_precautions = db.Column(db.Text)  # 환경적 예방조치
+    containment_cleanup = db.Column(db.Text)  # 정화 및 제거방법
+    
+    # 노출방지 및 개인보호구
+    exposure_limits = db.Column(db.Text)  # 노출기준
+    engineering_controls = db.Column(db.Text)  # 공학적 대책
+    personal_protective_equipment = db.Column(db.Text)  # 개인보호장비
+    
+    # 안정성 및 반응성
+    chemical_stability = db.Column(db.Text)  # 화학적 안정성
+    reactivity = db.Column(db.Text)  # 반응성
+    incompatible_materials = db.Column(db.Text)  # 피해야 할 물질
+    
+    # 독성학적 정보
+    acute_toxicity = db.Column(db.Text)  # 급성독성
+    skin_corrosion = db.Column(db.Text)  # 피부부식성/자극성
+    eye_damage = db.Column(db.Text)  # 심한 눈 손상/자극성
+    respiratory_sensitisation = db.Column(db.Text)  # 호흡기 과민성
+    skin_sensitisation = db.Column(db.Text)  # 피부 과민성
+    carcinogenicity = db.Column(db.Text)  # 발암성
+    reproductive_toxicity = db.Column(db.Text)  # 생식독성
+    
+    # 생태독성 정보
+    aquatic_toxicity = db.Column(db.Text)  # 수생환경 유해성
+    persistence_degradability = db.Column(db.Text)  # 잔류성 및 분해성
+    bioaccumulation = db.Column(db.Text)  # 생체축적성
+    mobility = db.Column(db.Text)  # 토양이동성
+    
+    # 폐기 정보
+    waste_disposal = db.Column(db.Text)  # 폐기방법
+    contaminated_packaging = db.Column(db.Text)  # 오염된 포장재 폐기방법
+    
+    # 운송 정보
+    un_number = db.Column(db.String(20))  # UN 번호
+    proper_shipping_name = db.Column(db.String(200))  # 적정선적명
+    transport_hazard_class = db.Column(db.String(50))  # 운송시 위험등급
+    packing_group = db.Column(db.String(20))  # 포장등급
+    
+    # 법적 규제현황
+    industrial_safety_act = db.Column(db.Text)  # 산업안전보건법
+    chemical_control_act = db.Column(db.Text)  # 화학물질관리법
+    dangerous_goods_act = db.Column(db.Text)  # 위험물안전관리법
+    
+    # 문서 관리 정보
+    msds_version = db.Column(db.String(20))  # MSDS 버전
+    revision_date = db.Column(db.Date)  # 개정일자
+    prepared_by = db.Column(db.String(100))  # 작성자
+    last_updated = db.Column(db.Date)  # 최종수정일
+    expiry_date = db.Column(db.Date)  # 유효기간
+    document_path = db.Column(db.String(500))  # MSDS 문서 파일 경로
+    
+    # 상태 및 메타데이터
+    status = db.Column(db.Enum('ACTIVE', 'EXPIRED', 'UNDER_REVIEW'), default='ACTIVE')
+    approval_status = db.Column(db.Enum('PENDING', 'APPROVED', 'REJECTED'), default='PENDING')
+    approved_by = db.Column(db.String(100))  # 승인자
+    approved_date = db.Column(db.Date)  # 승인일자
+    
+    # 위험도 평가
+    hazard_level = db.Column(db.Enum('LOW', 'MEDIUM', 'HIGH', 'VERY_HIGH'), default='MEDIUM')
+    risk_assessment_score = db.Column(db.Integer)  # 위험도 점수 (1-100)
+    
+    # 사용량 추적
+    annual_usage_amount = db.Column(db.Numeric(10, 2))  # 연간 사용량
+    usage_unit = db.Column(db.String(20))  # 사용량 단위 (kg, L, etc.)
+    inventory_amount = db.Column(db.Numeric(10, 2))  # 보관량
+    
+    # 감사 정보
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_by = db.Column(db.String(100))
+    updated_by = db.Column(db.String(100))
+    
+    # 인덱스
+    __table_args__ = (
+        Index('idx_msds_chemical_name', 'chemical_name'),
+        Index('idx_msds_cas_number', 'cas_number'),
+        Index('idx_msds_hazard_level', 'hazard_level'),
+        Index('idx_msds_status', 'status'),
+        Index('idx_msds_usage_dept', 'usage_department'),
+        Index('idx_msds_expiry', 'expiry_date'),
+    )
+    
+    def __repr__(self):
+        return f'<SafeworkMsds {self.chemical_name} ({self.cas_number})>'
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'chemical_name': self.chemical_name,
+            'cas_number': self.cas_number,
+            'product_name': self.product_name,
+            'supplier': self.supplier,
+            'supplier_contact': self.supplier_contact,
+            'hazard_classification': self.hazard_classification,
+            'signal_word': self.signal_word,
+            'hazard_level': self.hazard_level,
+            'usage_department': self.usage_department,
+            'storage_location': self.storage_location,
+            'status': self.status,
+            'approval_status': self.approval_status,
+            'revision_date': self.revision_date.isoformat() if self.revision_date else None,
+            'expiry_date': self.expiry_date.isoformat() if self.expiry_date else None,
+            'last_updated': self.last_updated.isoformat() if self.last_updated else None,
+            'msds_version': self.msds_version,
+            'risk_assessment_score': self.risk_assessment_score,
+            'annual_usage_amount': float(self.annual_usage_amount) if self.annual_usage_amount else None,
+            'inventory_amount': float(self.inventory_amount) if self.inventory_amount else None,
+            'usage_unit': self.usage_unit
+        }
+    
+    def to_summary_dict(self):
+        """간단한 요약 정보만 반환"""
+        return {
+            'id': self.id,
+            'chemical_name': self.chemical_name,
+            'cas_number': self.cas_number,
+            'hazard_level': self.hazard_level,
+            'usage_department': self.usage_department,
+            'status': self.status,
+            'expiry_date': self.expiry_date.isoformat() if self.expiry_date else None
+        }
+    
+    @property
+    def is_expired(self):
+        """MSDS가 만료되었는지 확인"""
+        if not self.expiry_date:
+            return False
+        return datetime.now().date() > self.expiry_date
+    
+    @property
+    def is_expiring_soon(self, days=30):
+        """만료 예정인지 확인 (기본 30일 전)"""
+        if not self.expiry_date:
+            return False
+        from datetime import timedelta
+        warning_date = datetime.now().date() + timedelta(days=days)
+        return self.expiry_date <= warning_date

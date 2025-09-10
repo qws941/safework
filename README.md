@@ -23,6 +23,13 @@
   - 보안 강화된 환경변수 설정
   - 모니터링 라벨 및 메타데이터 추가
 
+- 🧪 **MSDS 통합 관리 시스템** 🆕
+  - 물질안전보건자료(MSDS) 완전 디지털화 시스템
+  - 13개 전문화된 MSDS API 엔드포인트
+  - 화학물질 위험도 평가 및 자동 알림 시스템
+  - 유효기간 추적 및 승인 워크플로우
+  - 응급처치 매뉴얼 및 법적 준수 관리
+
 ### Phase 5 - 13개 SafeWork 관리자 패널 완성 (2024-08-30)
 - 🎯 **완전한 관리자 패널 구현**
   - 20개 SafeWork 전용 템플릿 완성
@@ -256,6 +263,23 @@ registry.jclee.me/safework/redis:latest   # Redis 캐시 (포트 6379)
 | `/api/documents/popular` | 인기 문서 API | JSON 배열 |
 | `/api/documents/categories` | 카테고리 목록 | JSON 배열 |
 | `/api/surveys/stats` | 설문 통계 API | JSON (001_count, 002_count) |
+
+### 🧪 MSDS API 엔드포인트 (v2) 🆕
+| 경로 | 설명 | 응답 형식 |
+|------|------|------|
+| `/api/safework/v2/msds` | MSDS 목록 조회/등록 | JSON (GET/POST) |
+| `/api/safework/v2/msds/<int:id>` | 개별 MSDS 조회/수정/삭제 | JSON (GET/PUT/DELETE) |
+| `/api/safework/v2/msds/search` | MSDS 고급 검색 | JSON (화학물질명, CAS번호, 위험도별) |
+| `/api/safework/v2/msds/alerts` | MSDS 알림 조회 | JSON (만료예정, 승인대기, 위험물질) |
+| `/api/safework/v2/msds/statistics` | MSDS 통계 | JSON (위험도별, 상태별, 만료현황) |
+| `/api/safework/v2/msds/<int:id>/approve` | MSDS 승인 처리 | JSON (승인/반려 상태 변경) |
+| `/api/safework/v2/msds/export` | MSDS 데이터 내보내기 | Excel/PDF 형식 |
+| `/api/safework/v2/msds/bulk-upload` | MSDS 일괄 업로드 | JSON (Excel 파일 처리) |
+| `/api/safework/v2/msds/categories` | MSDS 카테고리 관리 | JSON (화학물질 분류) |
+| `/api/safework/v2/msds/<int:id>/history` | MSDS 변경 이력 | JSON (수정/승인 이력) |
+| `/api/safework/v2/msds/compliance-check` | 법적 준수 검사 | JSON (규정 준수 현황) |
+| `/api/safework/v2/msds/emergency-procedures` | 응급처치 정보 조회 | JSON (화학물질별 응급처치) |
+| `/api/safework/v2/msds/expiry-notifications` | 만료 알림 설정 | JSON (알림 설정/해제) |
 
 ## 👤 계정 정보
 
@@ -710,6 +734,7 @@ python app/migrate.py rollback --version 002
 2. `002_create_admin_user.py`: 관리자 계정 생성 ✅
 3. `003_optimize_performance.py`: 성능 최적화 ✅
 4. `004_add_document_management.py`: 문서 관리 시스템 테이블 ✅
+5. `003_create_msds_table.py`: MSDS 관리 시스템 테이블 ✅ 🆕
 
 **MySQL 호환성 개선사항:**
 - `CREATE INDEX IF NOT EXISTS` → INFORMATION_SCHEMA 조회 후 생성

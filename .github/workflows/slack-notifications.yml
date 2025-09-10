@@ -1,0 +1,198 @@
+name: SafeWork Slack Notifications
+
+on:
+  issues:
+    types: [opened, closed, assigned, labeled]
+  pull_request:
+    types: [opened, closed, merged, ready_for_review]
+  workflow_run:
+    workflows: ["Deploy to Production", "SafeWork Claude AI - Issues & PRs", "SafeWork Claude AI - Comments"]
+    types: [completed]
+  push:
+    branches: [master, main]
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+  actions: read
+
+jobs:
+  slack-notification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+      - name: Determine notification type
+        id: notification
+        run: |
+          echo "Determining notification context..."
+          
+          case "${{ github.event_name }}" in
+            "issues")
+              case "${{ github.event.action }}" in
+                "opened")
+                  echo "title=🐛 새 이슈 등록" >> $GITHUB_OUTPUT
+                  echo "message=이슈 #${{ github.event.issue.number }}: ${{ github.event.issue.title }}" >> $GITHUB_OUTPUT
+                  echo "color=warning" >> $GITHUB_OUTPUT
+                  echo "url=${{ github.event.issue.html_url }}" >> $GITHUB_OUTPUT
+                  ;;
+                "closed")
+                  echo "title=✅ 이슈 해결완료" >> $GITHUB_OUTPUT
+                  echo "message=이슈 #${{ github.event.issue.number }}: ${{ github.event.issue.title }}" >> $GITHUB_OUTPUT
+                  echo "color=good" >> $GITHUB_OUTPUT
+                  echo "url=${{ github.event.issue.html_url }}" >> $GITHUB_OUTPUT
+                  ;;
+                "assigned")
+                  echo "title=👤 이슈 담당자 지정" >> $GITHUB_OUTPUT
+                  echo "message=이슈 #${{ github.event.issue.number }} → ${{ github.event.assignee.login }}" >> $GITHUB_OUTPUT
+                  echo "color=good" >> $GITHUB_OUTPUT
+                  echo "url=${{ github.event.issue.html_url }}" >> $GITHUB_OUTPUT
+                  ;;
+                "labeled")
+                  echo "title=🏷️ 이슈 라벨 추가" >> $GITHUB_OUTPUT
+                  echo "message=이슈 #${{ github.event.issue.number }}: ${{ github.event.label.name }}" >> $GITHUB_OUTPUT
+                  echo "color=#439FE0" >> $GITHUB_OUTPUT
+                  echo "url=${{ github.event.issue.html_url }}" >> $GITHUB_OUTPUT
+                  ;;
+              esac
+              ;;
+            "pull_request")
+              case "${{ github.event.action }}" in
+                "opened")
+                  echo "title=🔄 새 PR 생성" >> $GITHUB_OUTPUT
+                  echo "message=PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}" >> $GITHUB_OUTPUT
+                  echo "color=warning" >> $GITHUB_OUTPUT
+                  echo "url=${{ github.event.pull_request.html_url }}" >> $GITHUB_OUTPUT
+                  ;;
+                "closed")
+                  if [ "${{ github.event.pull_request.merged }}" == "true" ]; then
+                    echo "title=🎉 PR 병합 완료" >> $GITHUB_OUTPUT
+                    echo "message=PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}" >> $GITHUB_OUTPUT
+                    echo "color=good" >> $GITHUB_OUTPUT
+                  else
+                    echo "title=❌ PR 닫힘" >> $GITHUB_OUTPUT
+                    echo "message=PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}" >> $GITHUB_OUTPUT
+                    echo "color=danger" >> $GITHUB_OUTPUT
+                  fi
+                  echo "url=${{ github.event.pull_request.html_url }}" >> $GITHUB_OUTPUT
+                  ;;
+                "ready_for_review")
+                  echo "title=👀 PR 리뷰 요청" >> $GITHUB_OUTPUT
+                  echo "message=PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}" >> $GITHUB_OUTPUT
+                  echo "color=warning" >> $GITHUB_OUTPUT
+                  echo "url=${{ github.event.pull_request.html_url }}" >> $GITHUB_OUTPUT
+                  ;;
+              esac
+              ;;
+            "workflow_run")
+              if [ "${{ github.event.workflow_run.conclusion }}" == "success" ]; then
+                echo "title=✅ 워크플로우 성공" >> $GITHUB_OUTPUT
+                echo "message=${{ github.event.workflow_run.name }} - ${{ github.event.workflow_run.head_branch }}" >> $GITHUB_OUTPUT
+                echo "color=good" >> $GITHUB_OUTPUT
+              elif [ "${{ github.event.workflow_run.conclusion }}" == "failure" ]; then
+                echo "title=❌ 워크플로우 실패" >> $GITHUB_OUTPUT
+                echo "message=${{ github.event.workflow_run.name }} - ${{ github.event.workflow_run.head_branch }}" >> $GITHUB_OUTPUT
+                echo "color=danger" >> $GITHUB_OUTPUT
+              fi
+              echo "url=${{ github.event.workflow_run.html_url }}" >> $GITHUB_OUTPUT
+              ;;
+            "push")
+              echo "title=📤 코드 푸시" >> $GITHUB_OUTPUT
+              echo "message=${{ github.ref_name }} 브랜치에 ${{ github.event.commits | length }}개 커밋" >> $GITHUB_OUTPUT
+              echo "color=good" >> $GITHUB_OUTPUT
+              echo "url=${{ github.event.compare }}" >> $GITHUB_OUTPUT
+              ;;
+          esac
+
+      - name: Send Slack notification
+        if: steps.notification.outputs.title != ''
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          custom_payload: |
+            {
+              "text": "${{ steps.notification.outputs.title }}",
+              "attachments": [
+                {
+                  "color": "${{ steps.notification.outputs.color }}",
+                  "fields": [
+                    {
+                      "title": "SafeWork Repository",
+                      "value": "${{ steps.notification.outputs.message }}",
+                      "short": false
+                    },
+                    {
+                      "title": "Repository",
+                      "value": "${{ github.repository }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Actor",
+                      "value": "${{ github.actor }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Link",
+                      "value": "<${{ steps.notification.outputs.url || github.event.repository.html_url }}|View Details>",
+                      "short": false
+                    }
+                  ],
+                  "footer": "SafeWork GitHub Actions",
+                  "ts": ${{ github.event.head_commit.timestamp && github.event.head_commit.timestamp || 'null' }}
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: https://hooks.slack.com/services/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
+
+  slack-deployment-status:
+    if: github.event_name == 'workflow_run' && contains(github.event.workflow_run.name, 'Deploy')
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    
+    steps:
+      - name: Send deployment notification
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          custom_payload: |
+            {
+              "text": "${{ github.event.workflow_run.conclusion == 'success' && '🚀 SafeWork 배포 완료' || '💥 SafeWork 배포 실패' }}",
+              "attachments": [
+                {
+                  "color": "${{ github.event.workflow_run.conclusion == 'success' && 'good' || 'danger' }}",
+                  "fields": [
+                    {
+                      "title": "배포 환경",
+                      "value": "${{ contains(github.event.workflow_run.head_branch, 'master') && 'Production' || 'Staging' }}",
+                      "short": true
+                    },
+                    {
+                      "title": "브랜치",
+                      "value": "${{ github.event.workflow_run.head_branch }}",
+                      "short": true
+                    },
+                    {
+                      "title": "실행 시간",
+                      "value": "${{ github.event.workflow_run.run_attempt }}차 시도",
+                      "short": true
+                    },
+                    {
+                      "title": "상태",
+                      "value": "${{ github.event.workflow_run.conclusion }}",
+                      "short": true
+                    },
+                    {
+                      "title": "워크플로우",
+                      "value": "<${{ github.event.workflow_run.html_url }}|${{ github.event.workflow_run.name }}>",
+                      "short": false
+                    }
+                  ],
+                  "footer": "SafeWork 자동 배포 시스템",
+                  "ts": ${{ github.event.workflow_run.created_at && github.event.workflow_run.created_at || 'null' }}
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: https://hooks.slack.com/services/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

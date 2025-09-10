@@ -134,3 +134,51 @@ jobs:
           echo "SafeWork Claude AI 작업 완료"
           echo "이벤트: ${{ github.event_name }}"
           echo "상태: ${{ steps.claude.conclusion }}"
+
+      - name: Send Slack notification
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          custom_payload: |
+            {
+              "text": "${{ steps.claude.conclusion == 'success' && '🤖 Claude AI 작업 완료' || '⚠️ Claude AI 작업 이슈' }}",
+              "attachments": [
+                {
+                  "color": "${{ steps.claude.conclusion == 'success' && 'good' || 'warning' }}",
+                  "fields": [
+                    {
+                      "title": "워크플로우",
+                      "value": "SafeWork Claude AI - Comments",
+                      "short": true
+                    },
+                    {
+                      "title": "이벤트",
+                      "value": "${{ github.event_name }}",
+                      "short": true
+                    },
+                    {
+                      "title": "상태",
+                      "value": "${{ steps.claude.conclusion }}",
+                      "short": true
+                    },
+                    {
+                      "title": "실행자",
+                      "value": "${{ github.actor }}",
+                      "short": true
+                    },
+                    ${{ github.event_name == 'issue_comment' && format('{"title": "이슈", "value": "<{0}|#{1}>", "short": false},', github.event.issue.html_url, github.event.issue.number) || '' }}
+                    ${{ github.event_name == 'pull_request_review_comment' && format('{"title": "PR", "value": "<{0}|#{1}>", "short": false},', github.event.pull_request.html_url, github.event.pull_request.number) || '' }}
+                    {
+                      "title": "Repository",
+                      "value": "<${{ github.event.repository.html_url }}|${{ github.repository }}>",
+                      "short": false
+                    }
+                  ],
+                  "footer": "SafeWork Claude AI System",
+                  "ts": ${{ github.event.repository.updated_at && github.event.repository.updated_at || 'null' }}
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: https://hooks.slack.com/services/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
