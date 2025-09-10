@@ -18,11 +18,21 @@ def get_or_create_company(name):
     if not name or name.strip() == "":
         # 기본 회사 생성 또는 찾기
         name = "기타"
+    
     company = Company.query.filter_by(name=name).first()
     if not company:
-        company = Company(name=name, is_active=True)
-        db.session.add(company)
-        db.session.flush()  # ID 할당을 위해 flush
+        try:
+            company = Company(name=name, is_active=True)
+            db.session.add(company)
+            db.session.flush()  # ID 할당을 위해 flush
+        except Exception as e:
+            # Unique 제약 조건 위반시 롤백하고 재조회
+            db.session.rollback()
+            company = Company.query.filter_by(name=name).first()
+            if not company:
+                # 여전히 찾을 수 없으면 에러 발생
+                current_app.logger.error(f"Failed to get or create company '{name}': {str(e)}")
+                raise e
     return company.id
 
 
@@ -31,11 +41,21 @@ def get_or_create_process(name):
     if not name or name.strip() == "":
         # 기본 공정 생성 또는 찾기
         name = "기타"
+    
     process = Process.query.filter_by(name=name).first()
     if not process:
-        process = Process(name=name, is_active=True)
-        db.session.add(process)
-        db.session.flush()  # ID 할당을 위해 flush
+        try:
+            process = Process(name=name, is_active=True)
+            db.session.add(process)
+            db.session.flush()  # ID 할당을 위해 flush
+        except Exception as e:
+            # Unique 제약 조건 위반시 롤백하고 재조회
+            db.session.rollback()
+            process = Process.query.filter_by(name=name).first()
+            if not process:
+                # 여전히 찾을 수 없으면 에러 발생
+                current_app.logger.error(f"Failed to get or create process '{name}': {str(e)}")
+                raise e
     return process.id
 
 
@@ -44,11 +64,21 @@ def get_or_create_role(title):
     if not title or title.strip() == "":
         # 기본 역할 생성 또는 찾기
         title = "기타"
+    
     role = Role.query.filter_by(title=title).first()
     if not role:
-        role = Role(title=title, is_active=True)
-        db.session.add(role)
-        db.session.flush()  # ID 할당을 위해 flush
+        try:
+            role = Role(title=title, is_active=True)
+            db.session.add(role)
+            db.session.flush()  # ID 할당을 위해 flush
+        except Exception as e:
+            # Unique 제약 조건 위반시 롤백하고 재조회
+            db.session.rollback()
+            role = Role.query.filter_by(title=title).first()
+            if not role:
+                # 여전히 찾을 수 없으면 에러 발생
+                current_app.logger.error(f"Failed to get or create role '{title}': {str(e)}")
+                raise e
     return role.id
 
 
