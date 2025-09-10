@@ -221,11 +221,11 @@ $.ajaxSetup({
 
 ## Claude Code Automation System
 
-### Workflow Architecture (5 Specialized Pipelines)
+### Workflow Architecture (12+ Specialized Pipelines)
 
-**Core AI Engine:**
+**Core AI Engine with Container Log Analysis:**
 ```yaml
-# claude-code-action.yml - Claude Code Action v1
+# safework-claude-main.yml - Enhanced Claude Code Action v1 with Real-time Container Analysis
 uses: anthropics/claude-code-action@v1
 with:
   claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -234,12 +234,26 @@ with:
   use_commit_signing: false
 ```
 
+**Advanced Error Detection Pipeline:**
+- **Container Log Analysis**: Real-time Docker container log collection and error pattern detection
+- **Automated Error Resolution**: Claude automatically fixes detected issues and commits solutions
+- **Gunicorn Error Detection**: Specific patterns for `gunicorn.errors.HaltServer`, `Worker failed to boot`
+- **Import Error Detection**: Python module import failures and dependency issues
+- **Database Connection Monitoring**: MySQL connection and initialization problems
+
 **Supporting Workflows:**
-- `main_deploy.yml` - Production deployment + Watchtower API
-- `security-monitoring.yml` - Security + PHI protection scans
-- `performance-monitoring.yml` - MySQL/Redis performance testing
-- `documentation-sync.yml` - API docs auto-generation  
+- `deploy.yml` - Production deployment with container log analysis
+- `safework-claude-main.yml` - AI automation with real-time error detection  
+- `safework-claude-issues.yml` - GitHub issues processing
+- `safework-pr-review.yml` - Pull request automated reviews
+- `safework-issue-triage.yml` - Issue classification and prioritization
+- `safework-ci-autofix.yml` - Continuous integration auto-fixes
+- `claude-code-review.yml` - Code quality reviews
 - `issue-labeling.yml` - Automatic issue categorization
+- `auto-issue-detection.yml` - Automated issue creation from errors
+- `slack-notifications.yml` - Real-time Slack notifications
+- `notifications.yml` - Multi-channel notification system
+- `documentation-sync.yml` - API docs auto-generation
 
 ### Context-Aware Processing
 
@@ -289,6 +303,63 @@ Result: Targeted processing with full context
 # Parallel urgent-issue-handler for P0-CRITICAL issues
 Keywords: '긴급', 'urgent', 'critical', '중단', '작동 안'
 Result: Immediate P0 escalation + auto-labeling
+```
+
+### Container Error Detection & Auto-Resolution System
+
+**Real-time Error Detection Pipeline:**
+The system automatically analyzes container logs during deployment and in response to issues/comments, detecting critical patterns and triggering immediate automated fixes.
+
+**Detected Error Patterns:**
+```bash
+# Gunicorn Worker Failures
+Pattern: "gunicorn.errors.HaltServer"
+Action: → Flask app import path verification and correction
+
+# Worker Boot Failures  
+Pattern: "Worker failed to boot"
+Action: → Dependencies and environment variable validation
+
+# Python Import Errors
+Pattern: "ImportError|ModuleNotFoundError" 
+Action: → requirements.txt audit and missing package installation
+
+# Database Connection Issues
+Pattern: "OperationalError|Connection refused"
+Action: → MySQL connection settings and initialization verification
+```
+
+**Automated Resolution Workflow:**
+```mermaid
+graph TD
+    A[Container Error Detected] --> B[Log Pattern Analysis]
+    B --> C{Error Type Classification}
+    C -->|Gunicorn| D[Flask App Import Fix]
+    C -->|Dependencies| E[Requirements.txt Update]
+    C -->|Database| F[MySQL Config Fix]
+    C -->|Environment| G[ENV Variables Fix]
+    D --> H[Auto-commit & Deploy]
+    E --> H
+    F --> H 
+    G --> H
+    H --> I[Verification & Monitoring]
+```
+
+**Container Log Collection:**
+- **Real-time Collection**: `docker logs --tail=50` during CI/CD
+- **Error Pattern Matching**: Automated detection of known failure signatures
+- **Artifact Storage**: Container logs saved as GitHub Actions artifacts (7-day retention)
+- **Context Injection**: Error details automatically passed to Claude for resolution
+
+**Pre-start Validation System (app/start.sh):**
+```bash
+# Enhanced startup validation
+🔍 Pre-start validation...
+📋 Environment check: FLASK_CONFIG, APP_PORT, MYSQL_HOST, REDIS_HOST
+🐍 Python import test: Flask app creation verification
+🗄️ Database connection test: MySQL connectivity and table validation
+✅ All systems validated → Gunicorn startup
+❌ Validation failed → Detailed error reporting & exit
 ```
 
 ## Code Patterns and Standards
@@ -373,12 +444,46 @@ ADMIN_PASSWORD=safework2024
 /survey/002_submit                 # Health checkup form
 ```
 
+## Enhanced Automation & Self-Healing System
+
+### Automated Error Detection & Resolution
+SafeWork now includes an advanced self-healing system that automatically detects and resolves common deployment and runtime issues without human intervention.
+
+**Key Features:**
+- **Real-time Container Log Analysis**: Monitors Docker containers for error patterns during deployment
+- **Automated Code Fixes**: Claude automatically identifies root causes and commits fixes
+- **Pre-start Validation**: Comprehensive system checks before application startup
+- **Progressive Health Checks**: Multi-retry health verification with intelligent wait times
+- **Container Log Artifacts**: Automatic preservation of error logs for analysis
+
+**Self-Healing Capabilities:**
+```bash
+# Automatic detection and resolution of:
+✅ Gunicorn worker boot failures
+✅ Python import and dependency errors  
+✅ MySQL connection and initialization issues
+✅ Environment variable misconfigurations
+✅ Flask application factory problems
+```
+
+**Claude Code Action Integration:**
+- **Context-Aware Processing**: Automatically analyzes container errors and provides targeted solutions
+- **Domain Expertise**: Specialized knowledge of SafeWork industrial safety system
+- **Korean Language Support**: Automatic Korean responses for Korean content
+- **Emergency Prioritization**: P0-critical issues get immediate attention
+
 ## Production Guidelines
 
 ### Core Requirements
 **Database:** MySQL 8.0, UTF8MB4, transactions + rollback, `kst_now()` timezone  
 **Security:** CSRF global, `@login_required`, audit logging, rate limiting  
 **Performance:** Redis caching, DB indexing, lazy loading, pagination (20/page)
+
+### Automation Requirements
+**Container Monitoring:** Real-time log analysis enabled, error pattern detection active
+**Claude Integration:** OAuth token configured, automated issue processing enabled
+**Self-Healing:** Pre-start validation active, progressive health checks configured
+**Error Recovery:** Automated rollback capability, container restart policies optimized
 
 ## Troubleshooting
 
@@ -432,33 +537,59 @@ claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
 ### Deployment Pipeline Issues
 
-**Docker & Watchtower:**
+**Automated Error Detection & Resolution:**
+The system now automatically detects and resolves most common deployment issues. Manual intervention is typically only needed for complex or unknown errors.
+
+**Container Log Analysis (Automated):**
+```bash
+# Real-time error detection during deployment
+🔍 SafeWork 컨테이너 로그 분석 시작...
+📦 실행 중인 SafeWork 컨테이너 발견
+📋 최근 컨테이너 로그 수집 중...
+
+# Automatic error pattern detection
+⚠️ 발견된 오류들:
+❌ gunicorn.errors.HaltServer 감지
+❌ Worker failed to boot 감지
+→ Claude가 자동으로 근본 원인 분석 및 수정
+```
+
+**Manual Diagnostics (When Needed):**
 ```bash
 # Check container status
 docker-compose ps
 
-# Verify Watchtower API
-curl -H "Authorization: Bearer $WATCHTOWER_TOKEN" \
-     -X POST https://watchtower.jclee.me/v1/update
+# Check recent container logs (automated in CI/CD)
+docker logs --tail=50 safework-app
 
 # Test registry connectivity  
 docker pull registry.jclee.me/safework/app:latest
 
-# Database connection test
-docker-compose exec app python -c "from models import db; print(db.engine.execute('SELECT 1'))"
+# Database connection test (automated in start.sh)
+docker-compose exec app python -c "
+from app import create_app
+app = create_app()
+with app.app_context():
+    from models import db
+    result = db.engine.execute(db.text('SELECT 1'))
+    print('Database connection: OK')
+"
 ```
 
-**Common Deployment Failures:**
+**Common Issues & Automated Solutions:**
 ```bash
+# Gunicorn Worker Failures → Automatically Fixed
+# Issue: gunicorn.errors.HaltServer: Worker failed to boot
+# Auto-fix: Flask app import path verification, dependencies check, environment validation
+
 # Registry authentication failed
 # Solution: Verify REGISTRY_PASSWORD secret
 
-# Watchtower update failed  
-# Solution: Check WATCHTOWER_HTTP_API_TOKEN format
+# Health check timeout → Automated Retry
+# Auto-behavior: 5 retries with progressive wait times (10s → 30s)
 
-# Health check timeout
-# Solution: Increase timeout in main_deploy.yml
-HEALTH_CHECK_TIMEOUT: 30
+# Container restart loops → Pre-start Validation
+# Auto-prevention: Enhanced start.sh validation catches errors before Gunicorn starts
 ```
 
 ### Quick Fixes
