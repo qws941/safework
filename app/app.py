@@ -79,6 +79,10 @@ def create_app(config_name=None):
     app.register_blueprint(health_bp)
     app.register_blueprint(document_bp, url_prefix="/documents")
     app.register_blueprint(document_admin_bp, url_prefix="/admin/documents")
+    
+    # CSRF 특정 경로 면제 설정
+    from routes.survey import musculoskeletal_symptom_survey
+    csrf.exempt(musculoskeletal_symptom_survey)
 
     # SafeWork API routes (v2.0)
     try:

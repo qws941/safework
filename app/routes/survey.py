@@ -2,9 +2,10 @@ import json
 from datetime import datetime
 
 from flask import (Blueprint, current_app, flash, jsonify, redirect,
-                   render_template, request, url_for)
+                   render_template, request, url_for, session)
 from flask_login import current_user, login_required
-from flask_wtf.csrf import generate_csrf, CSRFProtect, exempt
+from flask_wtf.csrf import generate_csrf, CSRFProtect, validate_csrf
+from flask_wtf import FlaskForm
 
 # SurveyForm removed - using direct HTML forms now
 from models import AuditLog, Survey, Company, Process, Role, db
@@ -58,7 +59,6 @@ def new():
 
 
 @survey_bp.route("/001_musculoskeletal_symptom_survey", methods=["GET", "POST"])
-@exempt
 def musculoskeletal_symptom_survey():
     """근골격계 증상조사표 (001) - 로그인 불필요"""
     # Check if accessed via direct URL (kiosk mode)
