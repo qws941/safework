@@ -22,7 +22,7 @@ try:
     # Test database connection
     with app.app_context():
         from models import db
-        db.engine.execute(db.text('SELECT 1'))
+        db.session.execute(db.text('SELECT 1'))
         print('✅ Database connection: SUCCESS')
         
 except Exception as e:
