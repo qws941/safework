@@ -230,47 +230,24 @@ jobs:
     needs: [pre-validation, build-and-push]
     if: needs.pre-validation.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     
     steps:
-      - name: Restart SafeWork Containers
+      - name: Skip Watchtower - Manual Container Restart Required
         run: |
-          echo "🔄 SafeWork 프로덕션 컨테이너 재시작..."
-          
-          # Watchtower API를 사용해서 특정 컨테이너만 업데이트
-          response=$(curl -s -w "%{http_code}" \
-            -H "Authorization: Bearer ${{ env.WATCHTOWER_HTTP_API_TOKEN }}" \
-            -X POST \
-            "https://${{ env.WATCHTOWER_HOST }}/v1/update" \
-            --max-time 30)
-          
-          http_code="${response: -3}"
-          
-          if [ "$http_code" -eq 200 ] || [ "$http_code" -eq 202 ]; then
-            echo "✅ 컨테이너 재시작 요청 성공 (HTTP $http_code)"
-            echo "⏳ 컨테이너 재시작 완료 대기 중... (5분)"
-            
-            # 더 긴 대기 시간과 단계적 확인
-            for i in {1..5}; do
-              echo "⏳ 대기 중... ($i/5분)"
-              sleep 60
-              
-              # 중간에 헬스체크
-              if [ $i -eq 3 ]; then
-                echo "🔍 중간 헬스체크..."
-                test_response=$(curl -s -o /dev/null -w "%{http_code}" "https://safework.jclee.me/health" --max-time 10 || echo "000")
-                echo "📋 중간 상태: HTTP $test_response"
-              fi
-            done
-            
-            echo "✅ 컨테이너 재시작 대기 완료"
-          else
-            echo "⚠️ Watchtower API 오류 (HTTP $http_code). 수동 재시작 필요"
-            echo "📋 응답: $response"
-            # API 실패시에도 대기시간 제공 (수동 재시작 가능)
-            echo "⏳ 수동 재시작을 위한 대기시간..."
-            sleep 180  # 3분 대기
-          fi
+          echo "🚫 Watchtower 무한재시작 문제로 인한 긴급 비활성화"
+          echo "📦 Docker 이미지 빌드 완료:"
+          echo "  - registry.jclee.me/safework/app:latest"
+          echo "  - registry.jclee.me/safework/mysql:latest" 
+          echo "  - registry.jclee.me/safework/redis:latest"
+          echo ""
+          echo "⚠️ 수동 컨테이너 재시작 필요:"
+          echo "1. SSH 접속: ssh user@safework.jclee.me"
+          echo "2. 컨테이너 재시작: docker-compose down && docker-compose up -d"
+          echo "3. 이미지 업데이트: docker-compose pull && docker-compose up -d"
+          echo ""
+          echo "⏳ 수동 재시작을 위한 대기시간 (3분)..."
+          sleep 180
 
   health-verification:
     needs: [pre-validation, build-and-push, container-restart]
