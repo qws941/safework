@@ -19,11 +19,43 @@ try:
     app = create_app()
     print('✅ Flask app creation: SUCCESS')
     
-    # Test database connection
+    # Test database connection and create default users
     with app.app_context():
-        from models import db
+        from models import db, User
         db.session.execute(db.text('SELECT 1'))
         print('✅ Database connection: SUCCESS')
+        
+        # Create default anonymous user if not exists
+        anon = User.query.filter_by(id=1).first()
+        if not anon:
+            anon = User(
+                id=1,
+                username='anonymous',
+                email='anonymous@safework.com',
+                is_admin=False,
+            )
+            anon.set_password('anonymous_password_2024')
+            db.session.add(anon)
+            db.session.commit()
+            print('✅ Anonymous user created')
+        else:
+            print('✅ Anonymous user exists')
+
+        # Create default admin user if not exists
+        import os
+        admin = User.query.filter_by(username='admin').first()
+        if not admin:
+            admin = User(
+                username=os.environ.get('ADMIN_USERNAME', 'admin'),
+                email='admin@safework.com',
+                is_admin=True,
+            )
+            admin.set_password(os.environ.get('ADMIN_PASSWORD', 'safework2024'))
+            db.session.add(admin)
+            db.session.commit()
+            print('✅ Admin user created')
+        else:
+            print('✅ Admin user exists')
         
 except Exception as e:
     print(f'❌ Pre-start error: {e}')

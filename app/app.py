@@ -93,45 +93,9 @@ def create_app(config_name=None):
     except ImportError as e:
         app.logger.warning(f"SafeWork API v2.0 not loaded: {e}")
 
-    # Database connection check (tables are created by MySQL image init.sql)
-    with app.app_context():
-        import time
-
-        for i in range(30):  # Try for 30 seconds
-            try:
-                # Just test database connection, tables are already created by init.sql
-                with db.engine.connect() as conn:
-                    conn.execute(db.text("SELECT 1"))
-                break
-            except Exception as e:
-                if i == 29:  # Last attempt
-                    raise
-                time.sleep(1)
-
-        # Create default anonymous user if not exists
-        anon = User.query.filter_by(id=1).first()
-        if not anon:
-            anon = User(
-                id=1,
-                username="anonymous",
-                email="anonymous@safework.com",
-                is_admin=False,
-            )
-            anon.set_password("anonymous_password_2024")
-            db.session.add(anon)
-            db.session.commit()
-
-        # Create default admin user if not exists
-        admin = User.query.filter_by(username="admin").first()
-        if not admin:
-            admin = User(
-                username=app.config["ADMIN_USERNAME"],
-                email="admin@safework.com",
-                is_admin=True,
-            )
-            admin.set_password(app.config["ADMIN_PASSWORD"])
-            db.session.add(admin)
-            db.session.commit()
+    # Database initialization moved to start.sh script for better container startup handling
+    # The database connection check and user creation is now handled in start.sh
+    # This prevents Flask app creation from failing during container initialization
 
     # Error handlers
     @app.errorhandler(404)
