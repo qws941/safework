@@ -226,21 +226,42 @@ jobs:
           sarif_file: 'trivy-results.sarif'
         continue-on-error: true
 
-# Watchtower job removed - direct health verification instead
+  container-restart:
+    needs: [pre-validation, build-and-push]
+    if: needs.pre-validation.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Restart SafeWork Containers
+        run: |
+          echo "🔄 SafeWork 프로덕션 컨테이너 재시작..."
+          
+          # Watchtower API를 사용해서 특정 컨테이너만 업데이트
+          response=$(curl -s -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ env.WATCHTOWER_HTTP_API_TOKEN }}" \
+            -X POST \
+            "https://${{ env.WATCHTOWER_HOST }}/v1/update" \
+            --max-time 30)
+          
+          http_code="${response: -3}"
+          
+          if [ "$http_code" -eq 200 ] || [ "$http_code" -eq 202 ]; then
+            echo "✅ 컨테이너 재시작 요청 성공 (HTTP $http_code)"
+            echo "⏳ 컨테이너 재시작 완료 대기 중..."
+            sleep 120  # 2분 대기
+          else
+            echo "⚠️ Watchtower API 오류 (HTTP $http_code). 수동 재시작 필요"
+            echo "📋 응답: $response"
+          fi
 
   health-verification:
-    needs: [pre-validation, build-and-push]
+    needs: [pre-validation, build-and-push, container-restart]
     if: needs.pre-validation.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     
     steps:
-      - name: Wait for Container Restart
-        run: |
-          echo "⏳ 컨테이너 재시작 대기 중..."
-          echo "🔄 Docker 이미지 업데이트 후 컨테이너 재시작을 기다립니다..."
-          sleep 60
-          
       - name: Comprehensive Health Check
         run: |
           echo "🏥 SafeWork 시스템 종합 헬스 체크 시작..."
@@ -341,7 +362,7 @@ jobs:
           cat /tmp/deployment_record.json | jq .
 
   notification:
-    needs: [pre-validation, build-and-push, health-verification]
+    needs: [pre-validation, build-and-push, container-restart, health-verification]
     if: always() && needs.pre-validation.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
