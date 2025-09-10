@@ -226,81 +226,21 @@ jobs:
           sarif_file: 'trivy-results.sarif'
         continue-on-error: true
 
-  watchtower-update:
-    needs: [pre-validation, build-and-push]
-    if: needs.pre-validation.outputs.should_deploy == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    
-    steps:
-      - name: Trigger Watchtower Update
-        run: |
-          echo "🔄 Watchtower 업데이트 트리거 중..."
-          
-          # Watchtower HTTP API 호출
-          RESPONSE=$(curl -s -w "%{http_code}" \
-            -H "Authorization: Bearer ${{ env.WATCHTOWER_HTTP_API_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -X POST \
-            https://${{ env.WATCHTOWER_HOST }}/v1/update \
-            -o /tmp/watchtower_response.json)
-          
-          HTTP_CODE="${RESPONSE: -3}"
-          
-          if [ "$HTTP_CODE" -eq 200 ] || [ "$HTTP_CODE" -eq 202 ]; then
-            echo "✅ Watchtower 업데이트 성공 (HTTP $HTTP_CODE)"
-            if [ -f /tmp/watchtower_response.json ]; then
-              echo "📋 응답:"
-              cat /tmp/watchtower_response.json | jq . 2>/dev/null || cat /tmp/watchtower_response.json
-            fi
-          else
-            echo "⚠️ Watchtower 업데이트 실패 (HTTP $HTTP_CODE)"
-            if [ -f /tmp/watchtower_response.json ]; then
-              echo "📋 오류 응답:"
-              cat /tmp/watchtower_response.json
-            fi
-            exit 1
-          fi
-          
-          echo "⏳ SafeWork 서비스 업데이트 대기 중..."
-          sleep 30
-
-      - name: Wait for Service Update
-        run: |
-          echo "⏳ SafeWork 서비스 업데이트 완료 대기 중..."
-          
-          MAX_WAIT=300  # 5 minutes
-          WAIT_INTERVAL=10
-          ELAPSED=0
-          
-          while [ $ELAPSED -lt $MAX_WAIT ]; do
-            echo "🔍 서비스 상태 확인 중... (${ELAPSED}s/${MAX_WAIT}s)"
-            
-            # Check if containers are updated
-            CONTAINER_STATUS=$(curl -s -f https://safework.jclee.me/health 2>/dev/null || echo "failed")
-            
-            if [ "$CONTAINER_STATUS" != "failed" ]; then
-              echo "✅ SafeWork 서비스 업데이트 완료"
-              echo "📊 헬스 체크 응답: $CONTAINER_STATUS"
-              break
-            fi
-            
-            sleep $WAIT_INTERVAL
-            ELAPSED=$((ELAPSED + WAIT_INTERVAL))
-          done
-          
-          if [ $ELAPSED -ge $MAX_WAIT ]; then
-            echo "⚠️ 서비스 업데이트 시간 초과"
-            exit 1
-          fi
+# Watchtower job removed - direct health verification instead
 
   health-verification:
-    needs: [pre-validation, build-and-push, watchtower-update]
+    needs: [pre-validation, build-and-push]
     if: needs.pre-validation.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     
     steps:
+      - name: Wait for Container Restart
+        run: |
+          echo "⏳ 컨테이너 재시작 대기 중..."
+          echo "🔄 Docker 이미지 업데이트 후 컨테이너 재시작을 기다립니다..."
+          sleep 60
+          
       - name: Comprehensive Health Check
         run: |
           echo "🏥 SafeWork 시스템 종합 헬스 체크 시작..."
@@ -401,7 +341,7 @@ jobs:
           cat /tmp/deployment_record.json | jq .
 
   notification:
-    needs: [pre-validation, build-and-push, watchtower-update, health-verification]
+    needs: [pre-validation, build-and-push, health-verification]
     if: always() && needs.pre-validation.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
