@@ -4,7 +4,7 @@ from datetime import datetime
 from flask import (Blueprint, current_app, flash, jsonify, redirect,
                    render_template, request, url_for)
 from flask_login import current_user, login_required
-from flask_wtf.csrf import generate_csrf, exempt
+from flask_wtf.csrf import generate_csrf
 
 # SurveyForm removed - using direct HTML forms now
 from models import AuditLog, Survey, Company, Process, Role, db
@@ -58,7 +58,6 @@ def new():
 
 
 @survey_bp.route("/001_musculoskeletal_symptom_survey", methods=["GET", "POST"])
-@exempt
 def musculoskeletal_symptom_survey():
     """근골격계 증상조사표 (001) - 로그인 불필요"""
     # Check if accessed via direct URL (kiosk mode)

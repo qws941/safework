@@ -31,6 +31,9 @@ def create_app(config_name=None):
     # Initialize CSRF Protection
     csrf = CSRFProtect(app)
     
+    # Exempt survey routes from CSRF protection
+    csrf.exempt("survey.musculoskeletal_symptom_survey")
+    
     # Add CSRF token to template context
     @app.context_processor
     def inject_csrf_token():
