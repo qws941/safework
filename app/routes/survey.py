@@ -6,9 +6,45 @@ from flask import (Blueprint, current_app, flash, jsonify, redirect,
 from flask_login import current_user, login_required
 
 # SurveyForm removed - using direct HTML forms now
-from models import AuditLog, Survey, db
+from models import AuditLog, Survey, Company, Process, Role, db
 
 survey_bp = Blueprint("survey", __name__)
+
+
+def get_or_create_company(name):
+    """회사명으로 Company 객체 찾기 또는 생성"""
+    if not name:
+        return None
+    company = Company.query.filter_by(name=name).first()
+    if not company:
+        company = Company(name=name, is_active=True)
+        db.session.add(company)
+        db.session.flush()  # ID 할당을 위해 flush
+    return company.id
+
+
+def get_or_create_process(name):
+    """공정명으로 Process 객체 찾기 또는 생성"""
+    if not name:
+        return None
+    process = Process.query.filter_by(name=name).first()
+    if not process:
+        process = Process(name=name, is_active=True)
+        db.session.add(process)
+        db.session.flush()  # ID 할당을 위해 flush
+    return process.id
+
+
+def get_or_create_role(title):
+    """직위/역할로 Role 객체 찾기 또는 생성"""
+    if not title:
+        return None
+    role = Role.query.filter_by(title=title).first()
+    if not role:
+        role = Role(title=title, is_active=True)
+        db.session.add(role)
+        db.session.flush()  # ID 할당을 위해 flush
+    return role.id
 
 
 @survey_bp.route("/new", methods=["GET", "POST"])
@@ -63,6 +99,11 @@ def musculoskeletal_symptom_survey():
                 'consequence_other': detail.get('consequence_other')
             }
 
+        # 회사, 공정, 역할 처리
+        company_name = request.form.get("company_custom") if request.form.get("company") == "__custom__" else request.form.get("company")
+        process_name = request.form.get("process_custom") if request.form.get("process") == "__custom__" else request.form.get("process")
+        role_name = request.form.get("role_custom") if request.form.get("role") == "__custom__" else request.form.get("role")
+
         survey = Survey(
             user_id=user_id,
             form_type="001_musculoskeletal_symptom_survey",
@@ -72,9 +113,9 @@ def musculoskeletal_symptom_survey():
             gender=request.form.get("gender"),
             work_years=request.form.get("work_years", type=int),
             work_months=request.form.get("work_months", type=int),
-            company=request.form.get("company_custom") if request.form.get("company") == "__custom__" else request.form.get("company"),
-            process=request.form.get("process_custom") if request.form.get("process") == "__custom__" else request.form.get("process"),
-            role=request.form.get("role_custom") if request.form.get("role") == "__custom__" else request.form.get("role"),
+            company_id=get_or_create_company(company_name),
+            process_id=get_or_create_process(process_name),
+            role_id=get_or_create_role(role_name),
             marriage_status=request.form.get("marriage_status"),
             # 현재하고 있는 작업
             current_work_details=request.form.get("current_work_details"),
