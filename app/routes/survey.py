@@ -128,6 +128,8 @@ def musculoskeletal_symptom_survey():
             leg_data=symptom_data_dict.get('다리/발', {}),
             ip_address=request.remote_addr,
             status="submitted",
+            reviewed_by=None,
+            reviewed_at=None,
         )
 
         # 추가 증상 데이터를 JSON으로 저장 - 임시 비활성화 (DB 컬럼 없음)
@@ -201,6 +203,8 @@ def new_employee_health_checkup_form():
             medication_history=request.form.get("medication_history"),
             allergy_history=request.form.get("allergy_history"),
             # 추가 필드는 필요시 확장
+            reviewed_by=None,
+            reviewed_at=None,
         )
 
         db.session.add(survey)
@@ -436,6 +440,8 @@ def api_submit():
             # symptoms_data=data.get("symptoms_data"),  # 임시 비활성화
             ip_address=request.remote_addr,
             status="submitted",
+            reviewed_by=None,
+            reviewed_at=None,
         )
 
         db.session.add(survey)
