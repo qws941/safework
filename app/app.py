@@ -79,10 +79,6 @@ def create_app(config_name=None):
     app.register_blueprint(health_bp)
     app.register_blueprint(document_bp, url_prefix="/documents")
     app.register_blueprint(document_admin_bp, url_prefix="/admin/documents")
-    
-    # CSRF 예외 처리 - blueprint 등록 후 수행
-    csrf.exempt(survey_bp)
-
 
     # SafeWork API routes (v2.0)
     try:
