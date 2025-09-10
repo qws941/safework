@@ -122,10 +122,10 @@ def musculoskeletal_symptom_survey():
             # JSON 증상 데이터 저장
             neck_data=symptom_data_dict.get('목', {}),
             shoulder_data=symptom_data_dict.get('어깨', {}),
-            arm_data=symptom_data_dict.get('팔_팔꿈치', {}),
-            hand_data=symptom_data_dict.get('손_손목_손가락', {}),
+            arm_data=symptom_data_dict.get('팔/팔꿈치', {}),
+            hand_data=symptom_data_dict.get('손/손목/손가락', {}),
             waist_data=symptom_data_dict.get('허리', {}),
-            leg_data=symptom_data_dict.get('다리_발', {}),
+            leg_data=symptom_data_dict.get('다리/발', {}),
             ip_address=request.remote_addr,
             status="submitted",
         )
