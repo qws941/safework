@@ -1,0 +1,127 @@
+name: 🤖 Claude Post-Deployment Assistant
+
+on:
+  workflow_run:
+    workflows: ["🚀 Deploy SafeWork"]
+    types: [completed]
+  schedule:
+    # Run every 30 minutes to monitor deployment health
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: 'Deployment scenario to handle'
+        required: true
+        default: 'health-check'
+        type: choice
+        options:
+          - 'health-check'
+          - 'error-analysis'
+          - 'performance-check'
+          - 'security-audit'
+          - 'database-health'
+
+jobs:
+  claude-post-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🤖 Claude Post-Deployment Analysis
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          track_progress: true
+          prompt: |
+            REPO: ${{ github.repository }}
+            DEPLOYMENT SCENARIO: ${{ github.event.inputs.scenario || 'health-check' }}
+            WORKFLOW STATUS: ${{ github.event.workflow_run.conclusion || 'manual' }}
+
+            🤖 **SafeWork 배포 후 자동 분석 및 처리**
+            
+            배포 후 시스템 상태를 분석하고 필요한 조치를 취해주세요.
+            MCP 도구들을 적극적으로 활용하여 체계적으로 분석해주세요.
+
+            **1. 시스템 건강성 체크**
+            ```
+            - SafeWork 애플리케이션 상태 확인 (https://safework.jclee.me/health)
+            - 설문조사 기능 정상 작동 확인
+            - 데이터베이스 연결 및 성능 체크
+            - Redis 캐시 상태 확인
+            - Docker 컨테이너 리소스 사용량
+            ```
+
+            **2. 오류 분석 및 자동 해결**
+            ```
+            - 애플리케이션 로그 분석
+            - 500/404 오류 패턴 감지
+            - 데이터베이스 연결 오류 진단
+            - 성능 병목 지점 파악
+            - 자동 수정 가능한 이슈들 해결
+            ```
+
+            **3. 보안 및 컴플라이언스 검증**
+            ```
+            - SSL/TLS 인증서 상태
+            - 개인정보보호 정책 준수
+            - 산업안전보건 데이터 보안
+            - 액세스 로그 모니터링
+            ```
+
+            **MCP 도구 활용 지시:**
+            1. **mcp__serena**: 코드베이스 분석 및 수정
+               - 프로젝트 활성화: `mcp__serena__activate_project('.')`
+               - 심볼 검색: `mcp__serena__find_symbol()`  
+               - 코드 수정: `mcp__serena__replace_symbol_body()`
+
+            2. **mcp__sequential-thinking**: 복잡한 문제 분석
+               - 단계적 사고: `mcp__sequential-thinking__sequentialthinking()`
+               - 문제 분해 및 해결 전략 수립
+
+            3. **mcp__shrimp-task-manager**: 작업 관리 및 계획
+               - 작업 분석: `mcp__shrimp-task-manager__analyze_task()`
+               - 작업 분할: `mcp__shrimp-task-manager__split_tasks()`
+               - 진행상황 추적: `mcp__shrimp-task-manager__list_tasks()`
+
+            **자동 실행 시나리오:**
+            
+            🔍 **health-check**: 전체 시스템 건강성 검사
+            - 모든 엔드포인트 응답 시간 체크
+            - 데이터베이스 쿼리 성능 측정
+            - 메모리/CPU 사용률 분석
+
+            🚨 **error-analysis**: 오류 패턴 분석 및 해결
+            - 로그 파일에서 오류 패턴 추출
+            - 근본 원인 분석 및 해결방안 제시
+            - 자동 수정 가능한 코드 문제 해결
+
+            ⚡ **performance-check**: 성능 최적화
+            - 느린 쿼리 식별 및 최적화
+            - 캐시 히트율 분석
+            - 응답 시간 개선 방안 제시
+
+            🔐 **security-audit**: 보안 감사
+            - 취약점 스캔 및 분석
+            - 보안 설정 검증
+            - 보안 패치 필요성 평가
+
+            🗄️ **database-health**: 데이터베이스 건강성
+            - 마이그레이션 상태 확인
+            - 데이터 무결성 검증
+            - 백업 상태 점검
+
+            모든 분석 결과를 바탕으로 필요한 경우 자동으로 이슈를 생성하거나
+            수정 PR을 만들어주세요.
+
+          claude_args: |
+            --allowedTools "mcp__serena__*,mcp__sequential-thinking__*,mcp__shrimp-task-manager__*,mcp__github__*,Bash(curl:*),Bash(docker:*),Bash(gh:*),Bash(git:*)"
