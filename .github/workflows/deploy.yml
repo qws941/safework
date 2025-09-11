@@ -175,30 +175,14 @@ jobs:
           
           # Test connectivity between containers
           echo "Testing container connectivity..."
-          docker exec test-app python -c "
-import psycopg2
-import redis
-try:
-    # Test PostgreSQL connection
-    conn = psycopg2.connect(
-        host='host.docker.internal', 
-        port=5432,
-        database='${{ secrets.POSTGRES_DB }}',
-        user='${{ secrets.POSTGRES_USER }}',
-        password='${{ secrets.POSTGRES_PASSWORD }}'
-    )
-    print('PostgreSQL connection: OK')
-    conn.close()
-    
-    # Test Redis connection
-    r = redis.Redis(host='host.docker.internal', port=6379)
-    r.ping()
-    print('Redis connection: OK')
-    
-except Exception as e:
-    print(f'Connection test failed: {e}')
-    exit(1)
-          " || echo "Connection test completed with warnings"
+          
+          # Test PostgreSQL connectivity
+          docker exec test-app pg_isready -h host.docker.internal -p 5432 || echo "PostgreSQL connection test warning"
+          
+          # Test Redis connectivity  
+          docker exec test-app redis-cli -h host.docker.internal -p 6379 ping || echo "Redis connection test warning"
+          
+          echo "Container connectivity test completed"
           
           # Cleanup test containers
           docker stop test-postgres test-redis test-app || true
