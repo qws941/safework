@@ -143,10 +143,6 @@ class SurveyModel(db.Model):
     def __repr__(self):
         return f"<Survey {self.name or 'Anonymous'} - {self.form_type}>"
 
-# Aliases for backward compatibility
-Survey = SurveyModel
-SurveyStatistics = SurveyStatisticsModel
-AuditLog = AuditLogModel
 
 
 class SurveyStatisticsModel(db.Model):
@@ -365,3 +361,8 @@ class MSDSUsageRecordModel(db.Model):
 MSDS = MSDSModel
 MSDSComponent = MSDSComponentModel  
 MSDSUsageRecord = MSDSUsageRecordModel
+
+# Core Model Aliases for backward compatibility
+Survey = SurveyModel
+SurveyStatistics = SurveyStatisticsModel
+AuditLog = AuditLogModel
