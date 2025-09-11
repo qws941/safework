@@ -81,11 +81,17 @@ try:
 
         # Create default admin user if not exists
         import os
-        admin = User.query.filter_by(username='admin').first()
+        admin_username = os.environ.get('ADMIN_USERNAME', 'admin')
+        admin_email = 'admin@safework.com'
+        
+        admin = User.query.filter(
+            (User.username == admin_username) | (User.email == admin_email)
+        ).first()
+        
         if not admin:
             admin = User(
-                username=os.environ.get('ADMIN_USERNAME', 'admin'),
-                email='admin@safework.com',
+                username=admin_username,
+                email=admin_email,
                 is_admin=True,
             )
             admin.set_password(os.environ.get('ADMIN_PASSWORD', 'safework2024'))
@@ -93,7 +99,7 @@ try:
             db.session.commit()
             print('✅ Admin user created')
         else:
-            print('✅ Admin user exists')
+            print('✅ Admin user exists (username or email found)')
         
 except Exception as e:
     print(f'❌ Pre-start error: {e}')
