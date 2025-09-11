@@ -1,14 +1,17 @@
 # Production Environment Configuration
 name: production
-description: SafeWork 프로덕션환경 수동 승인 배포
+description: SafeWork Production Environment Manual Approval Deployment
 
-# 환경 변수
+# Environment Variables
 environment:
   FLASK_CONFIG: production
   SECRET_KEY: "{{ secrets.PRODUCTION_SECRET_KEY }}"
-  MYSQL_HOST: safework-mysql-prod
-  MYSQL_DATABASE: safework_prod_db
-  REDIS_HOST: safework-redis-prod
+  POSTGRES_HOST: safework2-postgres
+  POSTGRES_PORT: 4546
+  POSTGRES_DATABASE: safework_db
+  POSTGRES_USER: safework
+  REDIS_HOST: safework2-redis
+  REDIS_PORT: 4547
   
 # 배포 전략
 deployment:

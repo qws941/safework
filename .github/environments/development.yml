@@ -1,14 +1,17 @@
 # Development Environment Configuration
 name: development
-description: SafeWork 개발환경 자동 배포
+description: SafeWork Development Environment Auto Deployment
 
-# 환경 변수
+# Environment Variables
 environment:
   FLASK_CONFIG: development
   SECRET_KEY: safework-dev-secret-key-2024
-  MYSQL_HOST: safework-mysql-dev
-  MYSQL_DATABASE: safework_dev_db
-  REDIS_HOST: safework-redis-dev
+  POSTGRES_HOST: safework2-postgres
+  POSTGRES_PORT: 4546
+  POSTGRES_DATABASE: safework_db
+  POSTGRES_USER: safework
+  REDIS_HOST: safework2-redis
+  REDIS_PORT: 4547
   
 # 배포 전략
 deployment:

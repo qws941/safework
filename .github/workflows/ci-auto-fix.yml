@@ -1,12 +1,17 @@
 name: 🔧 CI Auto-Fix
 
+# Prevent duplicate workflow execution
+concurrency:
+  group: ci-auto-fix-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [ main, master, develop ]
   pull_request:
     branches: [ main, master, develop ]
   schedule:
-    - cron: '0 2 * * *'  # Daily at 2 AM KST
+    - cron: '0 2 * * 1'  # Weekly on Monday at 2 AM KST
   workflow_dispatch:
     inputs:
       fix_type:
@@ -44,11 +49,13 @@ jobs:
         run: |
           cd app
           export FLASK_CONFIG=testing
-          export MYSQL_HOST=127.0.0.1
-          export MYSQL_DATABASE=safework_test
-          export MYSQL_USER=safework_test
-          export MYSQL_PASSWORD=safework_test
+          export POSTGRES_HOST=127.0.0.1
+          export POSTGRES_PORT=5432
+          export POSTGRES_DATABASE=safework_test
+          export POSTGRES_USER=safework_test
+          export POSTGRES_PASSWORD=safework_test
           export REDIS_HOST=127.0.0.1
+          export REDIS_PORT=6379
           
           # Basic application test
           python -c "
@@ -143,7 +150,7 @@ jobs:
             - Dependency upgrade plans
 
             **Project Context:**
-            SafeWork is a Flask 3.0+ based industrial health and safety management system using independent Docker containers (MySQL, Redis, App) with Dockerfile-based configuration and GitHub Secrets for production.
+            SafeWork is a Flask 3.0+ based industrial health and safety management system using independent Docker containers (PostgreSQL, Redis, App) with Dockerfile-based configuration and GitHub Secrets for production.
 
             **Response Language:** Please respond in Korean for user communication.
           claude_args: |
@@ -192,5 +199,5 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## 🏥 Project: SafeWork Industrial Health & Safety Management" >> $GITHUB_STEP_SUMMARY
           echo "- **Framework:** Flask 3.0+" >> $GITHUB_STEP_SUMMARY
-          echo "- **Database:** MySQL 8.0, Redis" >> $GITHUB_STEP_SUMMARY
+          echo "- **Database:** PostgreSQL 15, Redis" >> $GITHUB_STEP_SUMMARY
           echo "- **Infrastructure:** Docker, Private Registry" >> $GITHUB_STEP_SUMMARY
