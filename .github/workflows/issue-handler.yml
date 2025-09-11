@@ -1,5 +1,10 @@
 name: 🤖 Issue Handler
 
+# Prevent duplicate workflow execution
+concurrency:
+  group: issue-handler-${{ github.event.issue.number || inputs.issue_number }}
+  cancel-in-progress: false
+
 on:
   issues:
     types: [opened, edited, labeled, assigned]
@@ -26,7 +31,14 @@ permissions:
   contents: write
   issues: write
   pull-requests: write
-  actions: read
+  actions: write
+  checks: write
+  repository-projects: write
+  security-events: write
+  statuses: write
+  deployments: write
+  pages: write
+  metadata: read
 
 jobs:
   issue-processor:

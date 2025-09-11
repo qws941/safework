@@ -1,5 +1,10 @@
 name: 📊 Operational Log Analysis
 
+# Prevent duplicate workflow execution
+concurrency:
+  group: log-analysis-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   schedule:
     - cron: '0 */6 * * *'  # Every 6 hours

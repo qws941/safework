@@ -1,5 +1,10 @@
 name: 🚀 Deploy Pipeline
 
+# Prevent duplicate workflow execution
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main, master, develop]
@@ -36,10 +41,19 @@ env:
   PORTAINER_URL: ${{ secrets.PORTAINER_URL || 'https://portainer.jclee.me' }}
 
 permissions:
-  contents: read
+  contents: write
   packages: write
-  actions: read
+  actions: write
   id-token: write
+  issues: write
+  pull-requests: write
+  repository-projects: write
+  security-events: write
+  statuses: write
+  checks: write
+  deployments: write
+  pages: write
+  metadata: read
 
 jobs:
   # Phase 1: Build and Test
