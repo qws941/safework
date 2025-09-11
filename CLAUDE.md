@@ -40,9 +40,9 @@ docker run -d --name safework2-app --network safework2-network -p 4545:4545 \
   registry.jclee.me/safework2-app:latest
 
 # Container management
-docker logs -f safework2-app            # View application logs
+docker logs -f safework-app            # View application logs
 docker ps                              # Check running containers
-docker stop safework2-app safework2-postgres safework2-redis  # Stop all services
+docker stop safework-app safework-postgres safework-redis  # Stop all services
 
 # Development with code changes (mount local code)
 docker run -d --name safework2-app-dev --network safework2-network -p 4545:4545 \
@@ -308,14 +308,14 @@ def safework_workers():
 The project uses a sophisticated 8-workflow GitHub Actions system with Claude AI integration:
 
 **Core Workflows:**
-- **🚀 Deploy Pipeline**: Main deployment workflow (from temp_blacklist template)
-- **🤖 Claude Code Assistant**: AI-powered code assistance with `@claude` mentions
+- **🚀 Deploy Pipeline**: Watchtower-based deployment with independent container support
+- **🤖 Claude Code Assistant**: AI-powered code assistance with MCP integration (ThinkMCP, ShrimpMCP, SerenaMCP)
 - **🎯 Issue Handler**: Intelligent issue triage and auto-labeling
 - **🔍 PR Review**: Comprehensive PR analysis with progress tracking
 - **🤖 CI Auto-Fix**: Automatic CI failure detection and repair
 - **🔄 Dependency Auto-Update**: Automated dependency management
 - **📊 Operational Log Analysis**: Container log monitoring via Portainer API
-- **🔍 PR Auto Review**: Additional PR review automation
+- **🔍 PR Auto Review**: Additional PR review automation with Korean language support
 
 **Deployment Triggers:**
 1. Push to `master` branch triggers all workflows
@@ -328,11 +328,12 @@ The project uses a sophisticated 8-workflow GitHub Actions system with Claude AI
 - **Registry**: registry.jclee.me (credentials in GitHub secrets)
 - **Production**: https://safework.jclee.me
 - **Development**: https://safework-dev.jclee.me  
-- **Portainer**: portainer.jclee.me (Container management via API)
+- **Portainer**: portainer.jclee.me (Container management and log viewing via API)
+- **Watchtower**: watchtower.jclee.me (Automatic container deployment via HTTP API)
 - **Images**: 
-  - registry.jclee.me/safework2-app:latest
-  - registry.jclee.me/safework2-postgres:latest
-  - registry.jclee.me/safework2-redis:latest
+  - registry.jclee.me/safework/app:latest
+  - registry.jclee.me/safework/postgres:latest
+  - registry.jclee.me/safework/redis:latest
 
 ### Independent Container Architecture
 SafeWork uses **completely independent Docker containers** with no docker-compose dependency:
@@ -345,19 +346,23 @@ SafeWork uses **completely independent Docker containers** with no docker-compos
 ### Required GitHub Secrets
 ```bash
 # Core deployment secrets
-REGISTRY_PASSWORD=<password>             # Docker registry auth (registry.jclee.me)
-PORTAINER_API_TOKEN=<token>              # Portainer API access
-PORTAINER_ENDPOINT_ID=1                  # Portainer endpoint ID (default: 1)
+APP_NAME=safework                        # Application name for container naming
+REGISTRY_HOST=registry.jclee.me         # Docker registry host
+REGISTRY_USER=admin                     # Registry username  
+REGISTRY_PASSWORD=<password>             # Docker registry auth
+WATCHTOWER_HTTP_API_TOKEN=<token>        # Watchtower HTTP API token
+WATCHTOWER_URL=https://watchtower.jclee.me # Watchtower API URL
 
 # Database credentials
 POSTGRES_PASSWORD=<password>             # PostgreSQL password
-REDIS_PASSWORD=<password>                # Redis password
+POSTGRES_DB=safework_db                  # Database name
+POSTGRES_USER=safework                   # Database username
 SECRET_KEY=<secret>                      # Flask secret key
 
 # Environment URLs
 PRD_URL=https://safework.jclee.me       # Production URL
 DEV_URL=https://safework-dev.jclee.me   # Development URL
-PORTAINER_URL=https://portainer.jclee.me # Portainer URL
+PORTAINER_URL=https://portainer.jclee.me # Portainer URL (log viewing only)
 
 # Claude AI Integration (CRITICAL for workflows)
 CLAUDE_CODE_OAUTH_TOKEN=<token>          # Claude Code automation
@@ -389,9 +394,18 @@ Claude automatically detects and fixes:
 - `gunicorn.errors.HaltServer` → Flask app import path verification
 - `Worker failed to boot` → Dependencies and environment validation  
 - `ImportError|ModuleNotFoundError` → requirements.txt audit
+- `ImportError: cannot import name 'AuditLog' from 'models'` → **CRITICAL**: Missing model aliases in models.py
 - `OperationalError` → PostgreSQL connection settings verification
 - `'field_name' is an invalid keyword argument for Survey` → Model field mapping errors
 - PostgreSQL connection timeout → Increase DB_CONNECTION_RETRIES (currently 60) and DB_CONNECTION_DELAY (3s)
+
+**Critical Model Alias Fix Applied:**
+```python
+# Required aliases at end of models.py for backward compatibility
+Survey = SurveyModel
+SurveyStatistics = SurveyStatisticsModel  
+AuditLog = AuditLogModel
+```
 
 ### Troubleshooting Commands
 ```bash
@@ -468,35 +482,96 @@ ADMIN_USERNAME=admin
 ADMIN_PASSWORD=safework2024
 ```
 
-## Operational Log Monitoring
+## Claude Code 자동화 모니터링 시스템
 
-### Portainer API Integration
-SafeWork includes automated operational log monitoring through Portainer API:
+### Portainer API 기반 컨테이너 로그 감시
+SafeWork는 **실시간 컨테이너 로그 감시**와 **자동 에러 감지** 시스템을 포함합니다:
 
 ```bash
-# Portainer API Configuration
+# Portainer API 설정
 PORTAINER_URL=https://portainer.jclee.me
-PORTAINER_TOKEN=ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=
+PORTAINER_API_TOKEN=ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=
+PORTAINER_ENDPOINT_ID=3                  # Portainer endpoint ID
 
-# Monitored Applications
-SAFEWORK_PROD_URL=safework.jclee.me      # Production monitoring
-SAFEWORK_DEV_URL=safework-dev.jclee.me   # Development monitoring
+# 모니터링 대상 컨테이너
+SAFEWORK_CONTAINERS=[
+  "safework-app",      # Flask application container
+  "safework-postgres", # PostgreSQL database container  
+  "safework-redis"     # Redis cache container
+]
+
+# 모니터링 URL
+SAFEWORK_PROD_URL=https://safework.jclee.me      # Production monitoring
+SAFEWORK_DEV_URL=https://safework-dev.jclee.me   # Development monitoring
 ```
 
-### Automated Log Analysis
-- **Schedule**: Every 6 hours via GitHub Actions
-- **Container Log Collection**: Real-time log retrieval from running containers
-- **Claude Code Analysis**: AI-powered error pattern detection and performance analysis
-- **Korean Language Reports**: Operational insights and recommendations in Korean
-- **GitHub Issue Creation**: Automatic issue creation for critical problems
+### 실시간 에러 로그 감지 및 자동 이슈 등록
+**🚨 Critical Error Detection Patterns:**
+```python
+# 감지 대상 에러 패턴
+ERROR_PATTERNS = [
+    "ImportError|ModuleNotFoundError",     # Python import errors
+    "OperationalError.*database",          # Database connection errors
+    "gunicorn.errors.HaltServer",         # Gunicorn server errors
+    "Worker failed to boot",              # Worker process failures
+    "500 Internal Server Error",          # HTTP 500 errors
+    "CRITICAL|FATAL",                     # Critical log levels
+    "Exception in.*survey",               # Survey system errors
+    "PostgreSQL.*connection.*failed",      # Database connectivity
+    "Redis.*connection.*failed",          # Cache connectivity
+    "Memory usage.*90%",                  # High memory usage
+    "Disk usage.*90%"                     # High disk usage
+]
+```
 
-### Log Analysis Features
-1. **Container Health Monitoring**: Flask app, PostgreSQL, Redis container status
-2. **Performance Metrics**: Response times, database query performance, cache hit rates
-3. **Error Pattern Detection**: Application errors, database timeouts, security alerts
-4. **Security Monitoring**: Authentication failures, suspicious access patterns
-5. **Business Logic Health**: Survey form submissions, admin panel usage patterns
-6. **Claude AI Analysis**: Automated log analysis with Korean language reports via GitHub Actions
+### 자동화된 로그 분석 및 이슈 생성
+- **감시 주기**: 5분마다 실시간 로그 수집
+- **에러 감지**: 패턴 매칭 기반 즉시 감지
+- **자동 이슈 등록**: GitHub Issues API를 통한 자동 생성
+- **Claude AI 분석**: 에러 원인 분석 및 해결책 제안
+- **한국어 보고서**: 한국어로 된 상세 분석 보고서
+- **Slack 알림**: 즉시 Slack 채널 알림 발송
+
+### GitHub Actions 워크플로우 자동화
+**📊 Operational Log Analysis 워크플로우:**
+```yaml
+# .github/workflows/operational-log-analysis.yml
+name: 📊 Operational Log Analysis
+on:
+  schedule:
+    - cron: '*/5 * * * *'  # Every 5 minutes
+  workflow_dispatch:
+
+jobs:
+  log-monitoring:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🔍 Fetch Container Logs via Portainer API
+        run: |
+          # Portainer API를 통한 실시간 로그 수집
+          # 에러 패턴 감지 및 분석
+          # 임계 에러 감지시 GitHub Issue 자동 생성
+          
+      - name: 🤖 Claude AI Error Analysis
+        uses: anthropics/claude-code-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          anthropic_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            컨테이너 로그를 분석하여 에러 원인과 해결책을 제시해주세요:
+            - 에러 패턴 식별 및 분류
+            - 근본 원인 분석 (RCA)
+            - 즉시 조치사항 및 장기 해결책
+            - 예방책 및 모니터링 개선안
+```
+
+### 고급 로그 분석 기능
+1. **🔍 실시간 컨테이너 상태 모니터링**: CPU, 메모리, 디스크 사용률
+2. **⚡ 성능 메트릭 추적**: 응답시간, 데이터베이스 쿼리 성능, 캐시 적중률
+3. **🚨 에러 패턴 감지**: 애플리케이션 오류, 데이터베이스 타임아웃, 보안 경고
+4. **🛡️ 보안 모니터링**: 인증 실패, 의심스러운 접근 패턴 감지
+5. **📊 비즈니스 로직 건강성**: 설문 제출률, 관리 패널 사용 패턴
+6. **🤖 Claude AI 자동 분석**: 한국어 분석 보고서 및 GitHub Actions 연동
 
 ## Key API Endpoints
 ```bash

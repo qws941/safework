@@ -184,9 +184,18 @@ jobs:
           
           echo "Container connectivity test completed"
           
-          # Cleanup test containers
-          docker stop test-postgres test-redis test-app || true
-          docker rm test-postgres test-redis test-app || true
+          # Keep containers running for log analysis on error
+          if [[ "${GITHUB_ACTIONS_DEBUG:-false}" == "true" ]]; then
+            echo "🔍 DEBUG MODE: Keeping containers running for log analysis"
+            echo "Container logs available via:"
+            echo "  docker logs test-postgres"
+            echo "  docker logs test-redis"
+            echo "  docker logs test-app"
+          else
+            # Cleanup test containers in normal mode
+            docker stop test-postgres test-redis test-app || true
+            docker rm test-postgres test-redis test-app || true
+          fi
           
           echo "results=success" >> $GITHUB_OUTPUT
           echo "build_status=success" >> $GITHUB_OUTPUT
@@ -276,33 +285,73 @@ jobs:
           
           echo "❌ Health check failed after 15 attempts"
           echo "health_status=unhealthy" >> $GITHUB_OUTPUT
+          
+          # Keep containers running for log analysis
+          echo "🔍 Containers remain running for log analysis:"
+          echo "  - Access Portainer: https://portainer.jclee.me"
+          echo "  - Container logs: ${{ env.APP_NAME }}-postgres, ${{ env.APP_NAME }}-redis, ${{ env.APP_NAME }}-app"
+          echo "  - Production URL: ${{ env.PRD_URL }}"
+          
           exit 1
 
-      - name: 🔄 Automatic Rollback on Failure
+      - name: 🔍 Container Debug Information
         if: failure()
         run: |
-          echo "🚨 Deployment failure detected - Rolling back via Watchtower..."
+          echo "🔍 Container Debug Information for Log Analysis:"
           
-          # SafeWork container rollback via Watchtower
+          # Wait for containers to fully start
+          sleep 30
+          
+          echo "📋 Container Status via Watchtower API:"
           if [[ -n "${{ secrets.WATCHTOWER_HTTP_API_TOKEN }}" ]]; then
-            echo "📡 Executing rollback via Watchtower HTTP API..."
-            ROLLBACK_RESPONSE=$(curl -X POST \
+            CONTAINER_STATUS=$(curl -s \
               -H "Authorization: Bearer ${{ secrets.WATCHTOWER_HTTP_API_TOKEN }}" \
-              -H "Content-Type: application/json" \
-              -d "{\"containers\": [\"${{ env.APP_NAME }}-postgres\", \"${{ env.APP_NAME }}-redis\", \"${{ env.APP_NAME }}-app\"], \"rollback\": true}" \
-              "${{ env.WATCHTOWER_URL }}/v1/update" \
-              -w "%{http_code}" -s)
+              "${{ env.WATCHTOWER_URL }}/v1/containers" || echo "API call failed")
+            echo "$CONTAINER_STATUS"
+          fi
+          
+          echo ""
+          echo "🏥 Direct Health Check Results:"
+          echo "App Health: $(curl -s -o /dev/null -w '%{http_code}' '${{ env.PRD_URL }}/health' || echo 'unreachable')"
+          echo "App Status: $(curl -s '${{ env.PRD_URL }}/health' || echo 'connection failed')"
+          
+          echo ""
+          echo "📊 Container Log Analysis Available via Portainer:"
+          echo "- Portainer URL: https://portainer.jclee.me"
+          echo "- Target containers: ${{ env.APP_NAME }}-postgres, ${{ env.APP_NAME }}-redis, ${{ env.APP_NAME }}-app"
+          echo "- Production URL: ${{ env.PRD_URL }}"
+
+      - name: 🔄 Optional Rollback (Manual Control)
+        if: failure()
+        run: |
+          echo "🚨 Deployment failure detected"
+          
+          # Optional rollback - can be disabled for debugging
+          if [[ "${AUTO_ROLLBACK_DISABLED:-false}" != "true" ]]; then
+            echo "📡 Executing automatic rollback via Watchtower..."
             
-            ROLLBACK_CODE="${ROLLBACK_RESPONSE: -3}"
-            echo "Rollback response code: $ROLLBACK_CODE"
-            
-            if [[ "$ROLLBACK_CODE" == "200" || "$ROLLBACK_CODE" == "202" ]]; then
-              echo "✅ Watchtower rollback successful"
+            if [[ -n "${{ secrets.WATCHTOWER_HTTP_API_TOKEN }}" ]]; then
+              ROLLBACK_RESPONSE=$(curl -X POST \
+                -H "Authorization: Bearer ${{ secrets.WATCHTOWER_HTTP_API_TOKEN }}" \
+                -H "Content-Type: application/json" \
+                -d "{\"containers\": [\"${{ env.APP_NAME }}-postgres\", \"${{ env.APP_NAME }}-redis\", \"${{ env.APP_NAME }}-app\"], \"rollback\": true}" \
+                "${{ env.WATCHTOWER_URL }}/v1/update" \
+                -w "%{http_code}" -s)
+              
+              ROLLBACK_CODE="${ROLLBACK_RESPONSE: -3}"
+              echo "Rollback response code: $ROLLBACK_CODE"
+              
+              if [[ "$ROLLBACK_CODE" == "200" || "$ROLLBACK_CODE" == "202" ]]; then
+                echo "✅ Watchtower rollback successful"
+              else
+                echo "⚠️ Watchtower rollback failed: $ROLLBACK_CODE"
+              fi
             else
-              echo "⚠️ Watchtower rollback failed: $ROLLBACK_CODE"
+              echo "⚠️ WATCHTOWER_HTTP_API_TOKEN not configured"
             fi
           else
-            echo "⚠️ WATCHTOWER_HTTP_API_TOKEN not configured - rollback unavailable"
+            echo "🔍 AUTO_ROLLBACK_DISABLED=true - Containers kept running for log analysis"
+            echo "📊 Manual rollback available via Watchtower: ${{ env.WATCHTOWER_URL }}"
           fi
           
           echo "🔄 Rollback process completed"
