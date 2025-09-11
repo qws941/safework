@@ -143,6 +143,9 @@ class SurveyModel(db.Model):
     def __repr__(self):
         return f"<Survey {self.name or 'Anonymous'} - {self.form_type}>"
 
+# Alias for backward compatibility
+Survey = SurveyModel
+
 
 class SurveyStatisticsModel(db.Model):
     """Survey Statistics Caching Model"""
@@ -355,3 +358,8 @@ class MSDSUsageRecordModel(db.Model):
     
     def __repr__(self):
         return f"<MSDSUsage {self.msds_id} on {self.usage_date}>"
+
+# MSDS Model Aliases for import compatibility
+MSDS = MSDSModel
+MSDSComponent = MSDSComponentModel  
+MSDSUsageRecord = MSDSUsageRecordModel

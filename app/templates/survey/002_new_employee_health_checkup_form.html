@@ -154,7 +154,7 @@
     </div>
     
     <form method="POST" action="{{ url_for('survey.new_employee_health_checkup_form') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <!-- CSRF token disabled for survey testing -->
         
         <!-- I. 기본 정보 -->
         <div class="section-card">

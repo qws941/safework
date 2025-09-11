@@ -145,19 +145,21 @@ def musculoskeletal_symptom_survey():
         process_name = request.form.get("process_custom") if request.form.get("process") == "__custom__" else request.form.get("process")
         role_name = request.form.get("role_custom") if request.form.get("role") == "__custom__" else request.form.get("role")
 
-        # 500 오류 수정을 위한 간단한 Survey 생성 (임시)
+        # 데이터베이스 스키마에 맞춘 Survey 생성
         survey = Survey(
             user_id=user_id,
             form_type="001",
-            # 기본 필수 정보만
+            # 실제 DB 필드만 사용
             name=request.form.get("name") or "익명",
             age=request.form.get("age", type=int) or 30,
-            gender=request.form.get("gender") or "male",
-            company_id=get_or_create_company(company_name),
-            process_id=get_or_create_process(process_name),
-            role_id=get_or_create_role(role_name),
-            # 근골격계 증상 여부 (기본값)
-            has_symptoms=request.form.get("current_symptom") == "예"
+            gender=request.form.get("gender") or "male", 
+            department=request.form.get("department"),
+            position=request.form.get("position"),
+            employee_number=request.form.get("employee_number"),
+            # 근골격계 증상 여부
+            has_symptoms=request.form.get("current_symptom") == "예",
+            work_years=request.form.get("work_years", type=int),
+            work_months=request.form.get("work_months", type=int)
         )
 
         # 추가 증상 데이터를 JSON으로 저장 - 임시 비활성화 (DB 컬럼 없음)
@@ -219,14 +221,14 @@ def new_employee_health_checkup_form():
 
         survey = Survey(
             user_id=user_id,
-            form_type="002_new_employee_health_checkup",  # 양식 타입 구분
+            form_type="002",  # 양식 타입 구분
             employee_number=request.form.get("employee_number"),
             name=request.form.get("name"),
             department=request.form.get("department"),
             position=request.form.get("position"),
             age=request.form.get("age", type=int),
             gender=request.form.get("gender"),
-            work_years=request.form.get("work_years", type=float),
+            work_years=request.form.get("work_years", type=int),
             work_months=request.form.get("work_months", type=int),
             # 기본 건강 정보
             height_cm=request.form.get("height_cm", type=float),
@@ -235,10 +237,7 @@ def new_employee_health_checkup_form():
             # 기존 질병 이력
             existing_conditions=request.form.get("existing_conditions"),
             medication_history=request.form.get("medication_history"),
-            allergy_history=request.form.get("allergy_history"),
-            # 추가 필드는 필요시 확장
-            reviewed_by=None,
-            reviewed_at=None,
+            allergy_history=request.form.get("allergy_history")
         )
 
         db.session.add(survey)
