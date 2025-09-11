@@ -82,8 +82,6 @@ jobs:
           anthropic_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           trigger_phrase: "@claude"
           track_progress: true
-          max_iterations: 5
-          auto_commit: false
           prompt: |
             🤖 **Advanced SafeWork Claude Code Assistant with MCP Integration**
             

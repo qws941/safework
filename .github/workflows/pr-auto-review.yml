@@ -72,7 +72,7 @@ jobs:
           
           **프로젝트 컨텍스트:**
           - SafeWork Flask 3.0+ 애플리케이션 (산업 안전 관리 시스템)
-          - 독립 컨테이너 아키텍처: safework-postgres (4546), safework-redis (4547), safework-app (4545)
+          - 독립 컨테이너 아키텍처: safework-postgres (4544, safework-redis (4546), safework-app (4545))
           - 핵심 기능: 건강 설문조사 (001/002), SafeWork 관리, 문서 관리, RESTful API v2
           - 기술 스택: Flask 3.0+, SQLAlchemy 2.0, PostgreSQL, Redis, Bootstrap 4.6
           

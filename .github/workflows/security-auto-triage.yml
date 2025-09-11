@@ -64,8 +64,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           anthropic_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           track_progress: true
-          max_iterations: 3
-          auto_commit: false
+          trigger_phrase: "@claude"
           prompt: |
             🛡️ **SafeWork 보안 자동 트리아지 및 산업안전 컴플라이언스 시스템**
             

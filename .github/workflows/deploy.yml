@@ -438,8 +438,6 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           anthropic_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           track_progress: true
-          max_iterations: 5
-          auto_commit: false
           prompt: |
             🚀 **SafeWork 고급 배포 후 분석 및 최적화 엔진**
             
