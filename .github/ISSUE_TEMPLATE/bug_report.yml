@@ -1,70 +1,97 @@
-name: 🐛 문제 신고하기
-description: 시스템이 이상하게 작동할 때 알려주세요
-title: "[문제] "
-labels: ["bug", "new", "claude-ready"]
-assignees:
-  - qws941
+name: 🐛 Bug Report
+description: Report system issues or unexpected behavior
+title: "[BUG] "
+labels: ["bug", "needs-triage", "claude-ready"]
+assignees: []
 
 body:
   - type: markdown
     attributes:
       value: |
-        ## 🤖 Claude가 자동으로 해결해드립니다!
-        문제를 알려주시면 즉시 분석하고 수정합니다.
+        ## 🤖 Automated Issue Resolution
+        Claude will automatically analyze and fix reported issues.
 
   - type: dropdown
-    id: area
+    id: component
     attributes:
-      label: 📍 어디가 문제인가요?
-      description: 문제가 생긴 곳을 선택해주세요
+      label: 📍 Component
+      description: Which component has the issue?
       options:
-        - 001 근골격계 설문조사
-        - 002 신규직원 건강검진
-        - 관리자 페이지
-        - 로그인 화면
-        - 데이터 저장/조회
-        - 엑셀 다운로드
-        - 기타
+        - "🏥 001 Musculoskeletal Survey"
+        - "🩺 002 New Employee Health Check"
+        - "⚙️ Admin Dashboard"
+        - "🔐 Authentication"
+        - "💾 Database Operations"
+        - "📊 Reports & Analytics"
+        - "🐳 Container Infrastructure"
+        - "⚡ API Endpoints"
+        - "📱 Frontend UI"
+        - "🔧 Other"
     validations:
       required: true
 
   - type: textarea
-    id: problem
+    id: description
     attributes:
-      label: 💬 무슨 문제가 있나요?
-      description: 편하게 말씀해주세요. 기술 용어 몰라도 됩니다!
+      label: 🐛 Bug Description
+      description: Describe what happened and what you expected
       placeholder: |
-        예시:
-        - "제출 버튼 눌러도 반응이 없어요"
-        - "데이터가 저장이 안 되는 것 같아요"
-        - "화면이 깨져서 보여요"
+        Example:
+        - Submit button doesn't respond when clicked
+        - Data isn't being saved properly
+        - Page layout is broken on mobile
+        - Error message appears during form submission
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 🔄 Steps to Reproduce
+      description: How can we reproduce this issue?
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. Fill out '...'
+        4. See error
     validations:
       required: true
 
   - type: dropdown
-    id: urgency
+    id: severity
     attributes:
-      label: ⏰ 얼마나 급한가요?
+      label: ⚠️ Severity
+      description: How critical is this issue?
       options:
-        - 🔴 지금 당장! (업무 못함)
-        - 🟠 오늘 안에 (중요 기능)
-        - 🟡 이번 주 안에 (불편함)
-        - 🟢 천천히 (개선 사항)
+        - "🔴 Critical (System unusable)"
+        - "🟠 High (Important feature broken)"
+        - "🟡 Medium (Minor feature issue)"
+        - "🟢 Low (Cosmetic or enhancement)"
       default: 2
     validations:
       required: true
 
   - type: textarea
-    id: screenshot
+    id: environment
     attributes:
-      label: 📸 화면 캡처
-      description: 문제 화면을 캡처해서 붙여넣기(Ctrl+V) 해주세요
-      placeholder: 이미지를 여기에 드래그하거나 붙여넣기
+      label: 🌐 Environment
+      description: Browser, OS, or other relevant environment details
+      placeholder: |
+        - Browser: Chrome 120.0.0.0
+        - OS: Windows 11
+        - Screen Resolution: 1920x1080
+        - Container: safework-app:latest
 
-  - type: checkboxes
-    id: auto-fix
+  - type: textarea
+    id: logs
     attributes:
-      label: 자동 처리 동의
-      options:
-        - label: Claude가 자동으로 수정해도 됩니다
-          required: false
+      label: 📝 Error Logs
+      description: Any error messages or console logs
+      placeholder: Copy and paste any error messages here
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: 📎 Additional Context
+      description: Screenshots, videos, or additional information
+      placeholder: Drag and drop images or paste screenshots here

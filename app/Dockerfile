@@ -4,6 +4,9 @@ FROM python:3.11-slim
 # Set work directory
 WORKDIR /app
 
+# Define volumes for persistent data
+VOLUME ["/app/uploads", "/app/logs", "/app/cache"]
+
 # Set environment variables with secure defaults
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -17,11 +20,11 @@ ENV UPLOAD_FOLDER=/app/uploads
 ENV WTF_CSRF_ENABLED=false
 ENV WTF_CSRF_CHECK_DEFAULT=false
 
-# Database connection settings (container-aware defaults)
-ENV MYSQL_HOST=safework-mysql
-ENV MYSQL_PORT=3306
-ENV MYSQL_USER=safework
-ENV MYSQL_DATABASE=safework_db
+# Database connection settings (PostgreSQL container-aware defaults)
+ENV DB_HOST=safework-postgres
+ENV DB_PORT=5432
+ENV DB_USER=safework
+ENV DB_NAME=safework
 
 # Redis connection settings (container-aware defaults)
 ENV REDIS_HOST=safework-redis
@@ -46,8 +49,9 @@ ENV LOCAL_URL=http://localhost:4545
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         gcc \
-        default-libmysqlclient-dev \
+        libpq-dev \
         pkg-config \
+        curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
@@ -59,8 +63,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY app/ .
 
-# Create upload directory
-RUN mkdir -p /app/uploads
+# Create application directories for volumes
+RUN mkdir -p /app/uploads /app/logs /app/cache
 
 # Create non-root user for security
 RUN adduser --disabled-password --gecos '' appuser \

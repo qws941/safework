@@ -51,7 +51,7 @@ jobs:
         id: portainer-logs
         run: |
           # Portainer API configuration
-          PORTAINER_URL="https://portainer.jclee.me"
+          PORTAINER_URL="${{ secrets.PORTAINER_URL }}"
           PORTAINER_TOKEN="${{ secrets.PORTAINER_API_TOKEN }}"
           
           # SafeWork application endpoints
@@ -199,7 +199,7 @@ jobs:
             **Operational Context:**
             - Production URL: https://safework.jclee.me
             - Development URL: https://safework-dev.jclee.me
-            - Portainer Management: https://portainer.jclee.me
+            - Portainer Management: ${{ secrets.PORTAINER_URL }}
             - Container Architecture: Independent Docker containers (app, mysql, redis)
             - Deployment Method: Watchtower auto-updates with health monitoring
 
@@ -259,7 +259,7 @@ jobs:
           claude_args: |
             --temperature 0.1
             --allowedTools "mcp__serena__*,mcp__github__*,mcp__sequential-thinking__*,mcp__memory__*,mcp__filesystem__*"
-            --systemPrompt "SafeWork 운영 로그 분석 및 시스템 모니터링 전문가. Portainer API를 통해 수집된 실제 컨테이너 로그를 분석하여 성능 최적화, 오류 패턴 분석, 보안 모니터링을 수행하고 시스템 안정성과 성능을 지속적으로 개선합니다. 독립 컨테이너 아키텍처(app, mysql, redis)에 특화된 모니터링과 분석을 제공합니다."
+            --systemPrompt "SafeWork operational log analysis and system monitoring expert. Analyzes real container logs collected via Portainer API to perform performance optimization, error pattern analysis, security monitoring, and continuously improve system stability and performance. Provides specialized monitoring and analysis for independent container architecture (app, mysql, redis)."
 
       - name: 📊 Generate analysis summary
         run: |

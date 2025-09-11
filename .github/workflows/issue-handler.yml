@@ -85,7 +85,7 @@ jobs:
           claude_args: |
             --temperature 0.1
             --allowedTools "mcp__serena__*,mcp__github__*,mcp__sequential-thinking__*,mcp__memory__*"
-            --systemPrompt "SafeWork 프로젝트 이슈 관리 전문가. GitHub Issues를 분석하여 자동으로 분류, 라벨링, 우선순위 설정을 하고 가능한 경우 자동 수정까지 수행합니다."
+            --systemPrompt "SafeWork project issue management expert. Analyzes GitHub Issues to automatically classify, label, prioritize, and perform automatic fixes when possible."
 
   security-escalation:
     name: 🔒 Security Issue Escalation

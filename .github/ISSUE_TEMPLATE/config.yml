@@ -1,8 +1,11 @@
 blank_issues_enabled: false
 contact_links:
-  - name: 💬 빠른 문의
+  - name: 💬 Quick Contact
     url: mailto:qws941@gmail.com
-    about: 급한 문의는 이메일로 연락주세요
-  - name: 📚 사용 설명서
+    about: For urgent inquiries, please contact via email
+  - name: 📚 Documentation
     url: https://github.com/qws941/safework/wiki
-    about: 시스템 사용법을 확인하세요
+    about: Check system usage instructions
+  - name: 🚀 Claude Code Action
+    url: https://claude.ai/code
+    about: Use Claude Code for automated issue resolution

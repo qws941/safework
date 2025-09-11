@@ -1,82 +1,99 @@
-name: ✨ 새 기능 요청
-description: 이런 기능이 있으면 좋겠어요
-title: "[요청] "
-labels: ["enhancement", "new", "claude-ready"]
-assignees:
-  - qws941
+name: ✨ Feature Request
+description: Suggest new features or enhancements
+title: "[FEATURE] "
+labels: ["enhancement", "needs-analysis", "claude-ready"]
+assignees: []
 
 body:
   - type: markdown
     attributes:
       value: |
-        ## 🚀 Claude가 바로 만들어드립니다!
-        원하시는 기능을 말씀해주시면 자동으로 구현합니다.
+        ## 🚀 Automated Feature Implementation
+        Claude will analyze and implement approved feature requests.
 
   - type: dropdown
-    id: area
+    id: category
     attributes:
-      label: 🎯 어디에 필요한가요?
-      description: 기능이 필요한 곳을 선택해주세요
+      label: 🎯 Feature Category
+      description: Which area needs this feature?
       options:
-        - 001 근골격계 설문조사
-        - 002 신규직원 건강검진
-        - 관리자 대시보드
-        - 통계/리포트
-        - 사용자 관리
-        - 데이터 입출력
-        - 전체 시스템
+        - "🏥 001 Musculoskeletal Survey"
+        - "🩺 002 New Employee Health Check"
+        - "📊 Admin Dashboard"
+        - "📈 Analytics & Reporting"
+        - "👥 User Management"
+        - "💾 Data Import/Export"
+        - "🔐 Authentication & Security"
+        - "⚙️ System Configuration"
+        - "🐳 Infrastructure & Deployment"
+        - "🌐 API & Integration"
     validations:
       required: true
 
   - type: textarea
-    id: feature
+    id: description
     attributes:
-      label: 💡 어떤 기능인가요?
-      description: 원하는 대로 편하게 설명해주세요
+      label: 💡 Feature Description
+      description: Describe the feature you'd like to see
       placeholder: |
-        예시:
-        - "설문 결과를 그래프로 보고 싶어요"
-        - "엑셀에서 데이터 한번에 올리고 싶어요"
-        - "관리자 페이지에서 직원 검색 기능이 필요해요"
+        Example:
+        - "Display survey results as interactive charts"
+        - "Bulk import employee data from Excel files"
+        - "Add search functionality to admin panel"
+        - "Export health check results to PDF reports"
     validations:
       required: true
 
   - type: textarea
-    id: why
+    id: problem
     attributes:
-      label: 🤔 왜 필요한가요?
-      description: 이 기능이 있으면 뭐가 좋아지나요?
+      label: 🤔 Problem Statement
+      description: What problem does this feature solve?
       placeholder: |
-        예시:
-        - "매번 하나씩 입력하기 너무 번거로워요"
-        - "한눈에 볼 수 있으면 업무가 빨라질 것 같아요"
+        Example:
+        - "Manual data entry is time-consuming"
+        - "Current reports are hard to understand"
+        - "Finding specific records takes too long"
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: 💭 Proposed Solution
+      description: How do you envision this feature working?
+      placeholder: |
+        Describe the workflow, UI elements, or functionality details
     validations:
       required: false
 
   - type: dropdown
     id: priority
     attributes:
-      label: ⚡ 우선순위
+      label: ⚡ Priority
+      description: How important is this feature?
       options:
-        - 🔴 매우 중요 (없으면 큰일)
-        - 🟠 중요 (빨리 필요)
-        - 🟡 보통 (있으면 좋음)
-        - 🟢 낮음 (언젠가)
+        - "🔴 Critical (Blocking current work)"
+        - "🟠 High (Needed soon)"
+        - "🟡 Medium (Would be helpful)"
+        - "🟢 Low (Nice to have)"
       default: 2
     validations:
       required: true
 
   - type: textarea
-    id: example
+    id: acceptance_criteria
     attributes:
-      label: 📝 참고 화면이나 예시
-      description: 비슷한 기능이나 참고할 만한 것이 있나요?
-      placeholder: 이미지나 링크를 붙여넣어주세요
+      label: ✅ Acceptance Criteria
+      description: How will we know when this feature is complete?
+      placeholder: |
+        - [ ] User can do X
+        - [ ] System responds with Y
+        - [ ] Data is validated for Z
 
-  - type: checkboxes
-    id: auto-implement
+  - type: textarea
+    id: additional_context
     attributes:
-      label: 자동 구현 동의
-      options:
-        - label: Claude가 자동으로 구현해도 됩니다
-          required: false
+      label: 📎 Additional Context
+      description: Screenshots, mockups, references, or related issues
+      placeholder: Add any files, images, or links that help explain the feature

@@ -32,7 +32,7 @@ on:
 env:
   SAFEWORK_DEV_URL: safework-dev.jclee.me
   SAFEWORK_PROD_URL: safework.jclee.me
-  PORTAINER_URL: portainer.jclee.me
+  PORTAINER_URL: ${{ secrets.PORTAINER_URL }}
 
 jobs:
   operational-log-analysis:

@@ -1,16 +1,24 @@
-name: 🚀 SafeWork Deployment Pipeline
+name: 🚀 Enhanced SafeWork Deployment Pipeline
 
 on:
   push:
     branches: [ main, master ]
     paths:
       - 'app/**'
+      - 'src/**'
+      - 'postgres/**'
+      - 'redis/**'
       - 'requirements.txt'
-      - 'docker-compose.yml'
-      - 'Dockerfile'
       - '.github/workflows/deploy.yml'
   workflow_dispatch:
     inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - production
+          - development
       skip_tests:
         description: 'Skip tests'
         required: false
@@ -21,19 +29,14 @@ on:
         required: false
         default: 'false'
         type: boolean
-      deployment_method:
-        description: 'Deployment method'
-        required: false
-        default: 'watchtower'
-        type: choice
-        options:
-          - 'watchtower'
-          - 'portainer'
 
 permissions:
   contents: read
   packages: write
   actions: read
+
+env:
+  APP_NAME: ${{ github.event.repository.name }}
 
 jobs:
   # === Build and Test Phase ===
@@ -42,25 +45,29 @@ jobs:
     runs-on: ubuntu-latest
     
     services:
-      mysql:
-        image: mysql:8.0
+      postgres:
+        image: postgres:15
         env:
-          MYSQL_ROOT_PASSWORD: safework_test_root
-          MYSQL_DATABASE: safework_test
-          MYSQL_USER: safework_test
-          MYSQL_PASSWORD: safework_test
+          POSTGRES_PASSWORD: safework_test_password
+          POSTGRES_DB: safework_test
+          POSTGRES_USER: safework_test
         ports:
-          - 3306:3306
+          - 5432:5432
         options: >-
-          --health-cmd="mysqladmin ping"
+          --health-cmd="pg_isready -U safework_test"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=3
 
       redis:
-        image: redis:7.0
+        image: redis:7-alpine
         ports:
           - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
 
     steps:
       - name: 📥 Checkout repository
@@ -81,18 +88,20 @@ jobs:
         run: |
           cd app
           export FLASK_CONFIG=testing
-          export MYSQL_HOST=127.0.0.1
-          export MYSQL_DATABASE=safework_test
-          export MYSQL_USER=safework_test
-          export MYSQL_PASSWORD=safework_test
+          export DB_HOST=127.0.0.1
+          export DB_PORT=5432
+          export DB_NAME=safework_test
+          export DB_USER=safework_test
+          export DB_PASSWORD=safework_test_password
           export REDIS_HOST=127.0.0.1
+          export REDIS_PORT=6379
           
           # Wait for services
           for i in {1..30}; do
-            if mysqladmin ping -h127.0.0.1 -usafework_test -psafework_test --silent; then
+            if pg_isready -h 127.0.0.1 -p 5432 -U safework_test; then
               break
             fi
-            echo "Waiting for MySQL..."
+            echo "Waiting for PostgreSQL..."
             sleep 2
           done
           
@@ -109,37 +118,49 @@ jobs:
       - name: 🔐 Login to Docker Registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ secrets.DOCKER_REGISTRY_URL || 'registry.jclee.me' }}
-          username: ${{ secrets.DOCKER_REGISTRY_USER || 'admin' }}
+          registry: ${{ secrets.DOCKER_REGISTRY_URL }}
+          username: ${{ secrets.DOCKER_REGISTRY_USER }}
           password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
 
-      - name: 🏗️ Build and push Docker images
+      - name: 🏗️ Build Individual Docker Images
         env:
-          APP_NAME: ${{ secrets.APP_NAME || 'safework' }}
-          REGISTRY_URL: ${{ secrets.DOCKER_REGISTRY_URL || 'registry.jclee.me' }}
+          REGISTRY_URL: ${{ secrets.DOCKER_REGISTRY_URL }}
         run: |
-          # Build and tag images
-          docker-compose build
+          # Set environment variables based on target
+          if [[ "${{ github.event.inputs.environment }}" == "production" ]]; then
+            echo "TARGET_URL=${{ secrets.PROD_URL || 'safework.jclee.me' }}" >> $GITHUB_ENV
+          else
+            echo "TARGET_URL=${{ secrets.DEV_URL || 'safework-dev.jclee.me' }}" >> $GITHUB_ENV
+          fi
           
-          # Tag with timestamp and latest
-          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-          docker tag ${APP_NAME}-app:latest ${REGISTRY_URL}/${APP_NAME}/app:$TIMESTAMP
-          docker tag ${APP_NAME}-app:latest ${REGISTRY_URL}/${APP_NAME}/app:latest
-          docker tag ${APP_NAME}-mysql:latest ${REGISTRY_URL}/${APP_NAME}/mysql:latest
-          docker tag ${APP_NAME}-redis:latest ${REGISTRY_URL}/${APP_NAME}/redis:latest
+          # Build each service independently from their respective directories
+          echo "🏗️ Building Application image from /app..."
+          docker build -t ${REGISTRY_URL}/${{ env.APP_NAME }}/app:${{ github.sha }} ./app
+          docker tag ${REGISTRY_URL}/${{ env.APP_NAME }}/app:${{ github.sha }} ${REGISTRY_URL}/${{ env.APP_NAME }}/app:latest
           
-          # Push to registry
-          docker push ${REGISTRY_URL}/${APP_NAME}/app:$TIMESTAMP
-          docker push ${REGISTRY_URL}/${APP_NAME}/app:latest
-          docker push ${REGISTRY_URL}/${APP_NAME}/mysql:latest
-          docker push ${REGISTRY_URL}/${APP_NAME}/redis:latest
+          echo "🏗️ Building PostgreSQL image from /postgres..."
+          docker build -t ${REGISTRY_URL}/${{ env.APP_NAME }}/postgres:${{ github.sha }} ./postgres
+          docker tag ${REGISTRY_URL}/${{ env.APP_NAME }}/postgres:${{ github.sha }} ${REGISTRY_URL}/${{ env.APP_NAME }}/postgres:latest
           
-          echo "✅ Docker images built and pushed successfully"
-          echo "🏷️ Tagged with: $TIMESTAMP, latest"
+          echo "🏗️ Building Redis image from /redis..."
+          docker build -t ${REGISTRY_URL}/${{ env.APP_NAME }}/redis:${{ github.sha }} ./redis
+          docker tag ${REGISTRY_URL}/${{ env.APP_NAME }}/redis:${{ github.sha }} ${REGISTRY_URL}/${{ env.APP_NAME }}/redis:latest
+          
+          # Push all images
+          echo "📤 Pushing images to registry..."
+          docker push ${REGISTRY_URL}/${{ env.APP_NAME }}/app:${{ github.sha }}
+          docker push ${REGISTRY_URL}/${{ env.APP_NAME }}/app:latest
+          docker push ${REGISTRY_URL}/${{ env.APP_NAME }}/postgres:${{ github.sha }}
+          docker push ${REGISTRY_URL}/${{ env.APP_NAME }}/postgres:latest
+          docker push ${REGISTRY_URL}/${{ env.APP_NAME }}/redis:${{ github.sha }}
+          docker push ${REGISTRY_URL}/${{ env.APP_NAME }}/redis:latest
+          
+          echo "✅ All Docker images built and pushed successfully"
+          echo "🏷️ Tagged with: ${{ github.sha }}, latest"
 
   # === Deployment Phase ===
   deploy:
-    name: 🚀 Deploy to Production
+    name: 🚀 Deploy Individual Containers via Portainer API
     runs-on: ubuntu-latest
     needs: build-test
     if: always() && (needs.build-test.result == 'success' || inputs.force_deploy == 'true')
@@ -148,8 +169,19 @@ jobs:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🔄 Trigger Watchtower Deployment
-        if: ${{ inputs.deployment_method != 'portainer' }}
+      - name: 🌐 Set Target Environment
+        run: |
+          if [[ "${{ github.event.inputs.environment }}" == "production" ]]; then
+            echo "TARGET_URL=${{ secrets.PROD_URL || 'safework.jclee.me' }}" >> $GITHUB_ENV
+          else
+            echo "TARGET_URL=${{ secrets.DEV_URL || 'safework-dev.jclee.me' }}" >> $GITHUB_ENV
+          fi
+
+      - name: 🔄 Deploy via Portainer API
+        env:
+          PORTAINER_URL: ${{ secrets.PORTAINER_URL }}
+          PORTAINER_API_TOKEN: ${{ secrets.PORTAINER_API_TOKEN }}
+          REGISTRY_URL: ${{ secrets.DOCKER_REGISTRY_URL }}
         env:
           APP_NAME: ${{ secrets.APP_NAME || 'safework' }}
           WATCHTOWER_URL: ${{ secrets.WATCHTOWER_URL || 'watchtower.jclee.me' }}
@@ -164,7 +196,7 @@ jobs:
       - name: 🐳 Portainer Webhook Deployment
         if: ${{ inputs.deployment_method == 'portainer' }}
         env:
-          PORTAINER_URL: ${{ secrets.PORTAINER_URL || 'portainer.jclee.me' }}
+          PORTAINER_URL: ${{ secrets.PORTAINER_URL }}
           PORTAINER_API_TOKEN: ${{ secrets.PORTAINER_API_TOKEN }}
         run: |
           echo "🐳 Triggering Portainer deployment via API..."

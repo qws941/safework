@@ -149,7 +149,7 @@ jobs:
           claude_args: |
             --temperature 0.1
             --allowedTools "mcp__serena__*,mcp__github__*,mcp__sequential-thinking__*,mcp__memory__*"
-            --systemPrompt "SafeWork Flask 애플리케이션 CI/CD 자동화 전문가. 코드 품질과 보안을 자동으로 개선하고, 복잡한 문제는 GitHub Issues로 추적 관리합니다."
+            --systemPrompt "SafeWork Flask application CI/CD automation expert. Automatically improves code quality and security, and tracks complex issues through GitHub Issues."
 
       - name: 💾 Commit auto-fixes
         run: |

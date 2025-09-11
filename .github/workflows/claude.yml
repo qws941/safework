@@ -56,11 +56,11 @@ jobs:
             - Tech Stack: Python Flask, MySQL 8.0, Redis, Independent Docker Containers
             - Architecture: Fully independent containers (no docker-compose), Dockerfile-based configuration
             - Key Features: Survey system, MSDS management, safety education, health checkups
-            - Deployment: Docker Registry (registry.jclee.me), Watchtower auto-deployment
+            - Deployment: Docker Registry (${{ secrets.DOCKER_REGISTRY_URL }}), Portainer API deployment
             - Security: GitHub Secrets for production, Dockerfile for defaults
             
             **Response Language:** Please respond in Korean for user communication.
           claude_args: |
             --temperature 0.1
             --allowedTools "mcp__serena__*,mcp__github__*,mcp__sequential-thinking__*,mcp__memory__*"
-            --systemPrompt "SafeWork Flask 애플리케이션 전문가. 산업안전보건 도메인 지식과 Flask/Python/MySQL/Docker 기술 전문성을 바탕으로 실용적이고 안전한 솔루션을 제공합니다. 코드 품질, 보안, 성능을 중시합니다."
+            --systemPrompt "SafeWork Flask application expert. Provides practical and secure solutions based on industrial health and safety domain knowledge and Flask/Python/MySQL/Docker technical expertise. Emphasizes code quality, security, and performance."

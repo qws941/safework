@@ -1,17 +1,17 @@
-name: 🤖 자동 감지 이슈
-description: 시스템에서 자동으로 감지한 코드 품질 이슈
-title: "🔍 자동 감지: [이슈 유형] - [간단한 설명]"
-labels: ["🤖 claude-ready", "🆕 new"]
+name: 🤖 Auto-Detected Issue
+description: Automatically detected code quality or system issues
+title: "🔍 Auto-Detected: [Issue Type] - [Brief Description]"
+labels: ["automated", "claude-ready", "needs-review"]
 assignees: []
 
 body:
   - type: markdown
     attributes:
       value: |
-        ## 🔍 자동 감지된 이슈
+        ## 🔍 Automatically Detected Issue
         
-        이 템플릿은 시스템이 자동으로 감지한 코드 품질 이슈를 위한 것입니다.
-        Claude가 자동으로 할당되어 해결할 예정입니다.
+        This template is for code quality or system issues automatically detected by monitoring systems.
+        Claude will be automatically assigned to analyze and resolve this issue.
 
   - type: dropdown
     id: issue-type

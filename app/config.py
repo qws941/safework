@@ -11,19 +11,20 @@ class Config:
         "dev-only-key-CHANGE-IN-PRODUCTION-" + str(hash("safework"))[:16]
     )
 
-    # Database
-    MYSQL_HOST = os.environ.get("MYSQL_HOST", "safework-mysql")
-    MYSQL_PORT = int(os.environ.get("MYSQL_PORT", 3306))
-    MYSQL_USER = os.environ.get("MYSQL_USER", "safework")
-    MYSQL_PASSWORD = os.environ.get("MYSQL_PASSWORD", "CHANGE_ME_MYSQL_USER")
-    MYSQL_DATABASE = os.environ.get("MYSQL_DATABASE", "safework_db")
+    # Database (PostgreSQL)
+    DB_HOST = os.environ.get("DB_HOST", "safework-postgres")
+    DB_PORT = int(os.environ.get("DB_PORT", 5432))
+    DB_USER = os.environ.get("DB_USER", "safework")
+    DB_PASSWORD = os.environ.get("DB_PASSWORD", "CHANGE_ME_DB_PASSWORD")
+    DB_NAME = os.environ.get("DB_NAME", "safework")
 
-    SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DATABASE}?charset=utf8mb4"
+    SQLALCHEMY_DATABASE_URI = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_size": 10,
         "pool_recycle": 3600,
         "pool_pre_ping": True,
+        "client_encoding": "utf8",
     }
 
     # Redis
@@ -132,11 +133,23 @@ class TestingConfig(Config):
     """Testing configuration"""
 
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
+    # Use PostgreSQL for testing with environment variables or fallback
+    DB_HOST = os.environ.get("DB_HOST", "127.0.0.1")
+    DB_PORT = int(os.environ.get("DB_PORT", 5432))
+    DB_USER = os.environ.get("DB_USER", "safework_test")
+    DB_PASSWORD = os.environ.get("DB_PASSWORD", "safework_test_password")
+    DB_NAME = os.environ.get("DB_NAME", "safework_test")
+    
+    SQLALCHEMY_DATABASE_URI = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     WTF_CSRF_ENABLED = False
     
-    # Override engine options for SQLite compatibility
-    SQLALCHEMY_ENGINE_OPTIONS = {}
+    # PostgreSQL connection options for testing
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_size": 5,
+        "pool_recycle": 1800,
+        "pool_pre_ping": True,
+        "client_encoding": "utf8",
+    }
 
 
 config = {

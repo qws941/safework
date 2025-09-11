@@ -80,7 +80,7 @@ def health_check():
         "version": current_app.config.get('APP_VERSION', '3.0.0'),
         "services": services_status,
         "independent_deployment": {
-            "mysql_container": services_status["database"] == "connected",
+            "postgres_container": services_status["database"] == "connected",
             "redis_container": services_status["redis"] == "connected", 
             "app_container": True,
             "watchtower_enabled": True

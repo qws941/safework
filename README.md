@@ -1,6 +1,8 @@
-# SafeWork - 산업안전보건 관리 시스템
+# SafeWork - Industrial Health & Safety Management System
 
-근골격계 증상조사표(001) 및 신규입사자 건강검진(002)을 포함한 완성된 산업안전보건 관리 플랫폼 (v3.1.0)
+## 🌟 **Enterprise-Grade Architecture - Independent Container Deployment**
+
+A comprehensive industrial health and safety management platform featuring musculoskeletal symptom surveys (001) and new employee health checkups (002), built with modern cloud-native architecture.
 
 ## 🆕 최신 업데이트 (v3.2.1) - CSRF 토큰 & 500 에러 완전 해결, 슬랙 연동 완료
 
@@ -139,24 +141,25 @@
 - 📁 **문서 관리**: 안전 관련 문서 중앙화
 - 🛡️ **헬스 모니터링**: 실시간 시스템 상태 확인
 
-## 🛠️ 기술 스택
+## 🛠️ Technology Stack
 
-- **Backend**: Python Flask 3.0+
-- **Database**: MySQL 8.0 with Migration System
-- **Cache**: Redis 7.0
-- **Container**: Docker with Multi-platform Support
+- **Backend**: Python Flask 3.0+ (Python 3.9+), SQLAlchemy ORM 2.0
+- **Database**: PostgreSQL 15+ (UTF8), Redis 7.0
+- **Frontend**: Bootstrap 4.6, jQuery 3.6, FontAwesome 5.15
+- **Container**: Independent Docker Architecture (No Compose)
+- **Deployment**: GitHub Actions, Portainer API, Auto-deployment
 - **Registry**: registry.jclee.me (Private Registry)
 - **CI/CD**: GitHub Actions with Advanced Pipelines
 - **Security**: Trivy, Bandit, Safety, Semgrep
 - **Quality**: Black, Flake8, Pylint, MyPy
-- **Monitoring**: Health Checks, Performance Testing
+- **Monitoring**: Real-time Health Checks, Auto-restart Policies
 
-## 📦 Docker 이미지
+## 📦 Docker Images
 
 ```
-registry.jclee.me/safework/app:latest     # 메인 애플리케이션 (포트 4545)
-registry.jclee.me/safework/mysql:latest   # MySQL 데이터베이스 (포트 3306)
-registry.jclee.me/safework/redis:latest   # Redis 캐시 (포트 6379)
+registry.jclee.me/safework/app:latest       # Main Application (Port 4545)
+registry.jclee.me/safework/postgres:latest  # PostgreSQL Database (Port 5432)
+registry.jclee.me/safework/redis:latest     # Redis Cache (Port 6379)
 ```
 
 ## 🌐 주요 서비스 엔드포인트

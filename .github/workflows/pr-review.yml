@@ -144,7 +144,7 @@ jobs:
           claude_args: |
             --temperature 0.1
             --allowedTools "mcp__serena__*,mcp__github__*,mcp__sequential-thinking__*,mcp__memory__*"
-            --systemPrompt "SafeWork Flask 애플리케이션 코드 리뷰 전문가. 코드 품질, 보안, 성능, 아키텍처 관점에서 종합적인 리뷰를 제공하고 구체적인 개선 방안을 제시합니다."
+            --systemPrompt "SafeWork Flask application code review expert. Provides comprehensive reviews from code quality, security, performance, and architecture perspectives and suggests specific improvement measures."
 
   security-scan:
     name: 🔒 Security Scan
