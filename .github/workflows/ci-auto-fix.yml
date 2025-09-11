@@ -68,45 +68,62 @@ jobs:
           echo "Services: safework2-postgres:4546, safework2-redis:4547, safework2-app:4545" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
           
-      - name: 🔍 Analyze failure and apply auto-fix
-        run: |
-          claude code --dir . << 'EOF'
-          🚨 CRITICAL AUTO-FIX MISSION: SafeWork CI/CD Pipeline Failure
-
-          **Context**: CI/CD pipeline failed. Need aggressive automated repair with IMMEDIATE action.
-
-          **Fix Strategy**: ${{ github.event.inputs.fix_strategy || 'quick' }}
-
-          **Repository Info**:
-          - SafeWork Flask application with PostgreSQL migration from MySQL
-          - Independent container architecture: safework2-postgres (4546), safework2-redis (4547), safework2-app (4545)
-          - GitHub Actions deployment via Portainer API
-          - Main database: safework_db with safework user
-
-          **AGGRESSIVE AUTO-FIX PROTOCOL**:
-          1. **Immediate Analysis**: Check recent workflow failures, container builds, database configs
-          2. **Direct File Editing**: Fix errors in-place without backup files
-          3. **Zero Delay Commit**: Immediately commit all fixes with descriptive messages
-          4. **Force Push**: Push to trigger new deployment pipeline
-          5. **Monitoring**: Track deployment success/failure
-
-          **Common Issues to Fix**:
-          - Docker build failures (COPY path mismatches, missing requirements.txt)
-          - PostgreSQL connection issues (host names, credentials, ports)
-          - GitHub Actions syntax errors (YAML formatting, permissions)
-          - Environment variable mismatches (PostgreSQL vs MySQL configs)
-          - Portainer API endpoint configurations
-
-          **STRICT GUIDELINES**:
-          - Fix files directly, no intermediate copies
-          - Use exact container names: safework2-postgres, safework2-redis, safework2-app
-          - PostgreSQL port 4546, Redis port 4547, App port 4545
-          - Database name: safework_db, user: safework
-          - Commit immediately after each fix
-          - Korean error messages in commit descriptions where appropriate
-
-          Execute aggressive automated repair NOW. 실패한 파이프라인을 즉시 수정하세요.
-          EOF
+      - name: 🔍 Intelligent CI Failure Auto-Fix
+        uses: anthropics/claude-code-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          anthropic_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          enable_progress: true
+          system_prompt: |
+            You are Claude Code specialized in CI/CD failure auto-repair for SafeWork industrial safety management system.
+            
+            **Auto-Fix Capabilities:**
+            - Docker build errors (COPY paths, dependencies)
+            - YAML syntax errors in workflows
+            - Environment variable misconfigurations
+            - PostgreSQL connection issues
+            - Python dependency conflicts
+            - Code style violations (Black, Flake8)
+            
+            **SafeWork Architecture:**
+            - Independent containers: safework2-postgres:4546, safework2-redis:4547, safework2-app:4545
+            - Database: PostgreSQL safework_db with safework user
+            - Flask 3.0+ with SQLAlchemy 2.0
+            - Korean industrial safety management context
+            
+            **Fix Strategy Levels:**
+            - quick: Immediate syntax/config fixes
+            - comprehensive: Deep analysis with testing
+            - experimental: Advanced ML-guided repairs
+            
+            **Safety Protocols:**
+            - Never modify core business logic without explicit approval
+            - Preserve data integrity and security configurations
+            - Maintain Korean language support and KST timezone
+            - Follow industrial safety compliance requirements
+          prompt: |
+            🚨 **SafeWork CI/CD 파이프라인 자동 복구**
+            
+            **실패 컨텍스트:**
+            - 전략: ${{ github.event.inputs.fix_strategy || 'quick' }}
+            - 브랜치: ${{ github.ref_name }}
+            - 커밋: ${{ github.sha }}
+            
+            **자동 수정 프로토콜:**
+            1. 최근 워크플로우 실패 로그 분석
+            2. 일반적인 오류 패턴 식별
+            3. 안전한 자동 수정 적용
+            4. 수정 내용 검증
+            5. 새로운 배포 파이프라인 트리거
+            
+            **주요 수정 대상:**
+            - Docker 빌드 오류 (COPY 경로, requirements.txt)
+            - PostgreSQL 연결 설정 (호스트명, 포트, 자격증명)
+            - GitHub Actions YAML 문법 오류
+            - 환경 변수 불일치
+            - Python 의존성 충돌
+            
+            즉시 자동 복구를 시작하고 한국어로 진행 상황을 보고해주세요.
           
       - name: 📈 Report execution metrics
         if: always()

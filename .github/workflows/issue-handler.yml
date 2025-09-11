@@ -62,90 +62,63 @@ jobs:
             echo "priority=normal" >> $GITHUB_OUTPUT
           fi
           
-      - name: 🧠 Setup Claude Code
-        run: |
-          curl -fsSL https://claude.ai/install.sh | bash
-          echo "${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}" | claude auth
-          
-      - name: 🎯 Claude Issue Analysis
-        run: |
-          claude code --dir . << 'EOF'
-          🎯 **SafeWork 이슈 분석 및 처리 요청**
-          
-          **프로젝트 컨텍스트:**
-          - SafeWork Flask 3.0+ 애플리케이션 (산업 안전 관리 시스템)
-          - 독립 컨테이너 아키텍처: safework2-postgres (4546), safework2-redis (4547), safework2-app (4545)
-          - 데이터베이스: PostgreSQL (safework_db, safework 사용자)
-          - 주요 기능: 건강 설문조사, SafeWork 관리, 문서 관리, RESTful API v2
-          
-          **이슈 정보:**
-          - 이슈 번호: ${{ steps.context.outputs.issue_number }}
-          - 제목: "${{ steps.context.outputs.issue_title }}"
-          - 작성자: ${{ steps.context.outputs.issue_author }}
-          - 우선순위: ${{ steps.context.outputs.priority }}
-          - 라벨: ${{ steps.context.outputs.issue_labels }}
-          - 이벤트: ${{ steps.context.outputs.event_type }}
-          
-          **이슈 내용:**
-          ```
-          ${{ github.event.issue.body || github.event.comment.body }}
-          ```
-          
-          **분석 및 처리 지침:**
-          
-          1. **이슈 분석**:
-             - 문제 유형 식별 (버그, 기능 요청, 개선사항, 질문)
-             - 영향 범위 평가 (프론트엔드, 백엔드, 데이터베이스, 인프라)
-             - 우선순위 재평가 (critical, high, medium, low)
-          
-          2. **자동 해결 가능성 검토**:
-             - 코드 수정으로 해결 가능한 문제인지 판단
-             - 설정 변경이나 환경 변수 조정으로 해결 가능한지 확인
-             - 문서 업데이트나 가이드 제공으로 해결 가능한지 검토
-          
-          3. **즉시 실행 가능한 작업**:
-             - 버그 수정: 코드 수정 및 테스트
-             - 설정 문제: 환경 변수나 설정 파일 수정
-             - 문서 업데이트: README.md, CLAUDE.md 등 업데이트
-             - 의존성 문제: requirements.txt 수정
-          
-          4. **응답 생성**:
-             - 이슈에 대한 명확한 분석 결과
-             - 해결 방법 제시 (즉시 실행 또는 단계별 가이드)
-             - 필요한 경우 추가 정보 요청
-             - 한국어로 친근하고 전문적인 응답
-          
-          **특별 처리 규칙:**
-          
-          🚨 **Critical/High Priority**:
-          - 즉시 코드 수정 실행
-          - 배포 파이프라인 트리거
-          - 상세한 해결 과정 보고
-          
-          🔧 **Bug Reports**:
-          - 재현 가능한 버그는 즉시 수정
-          - 로그 분석 및 원인 파악
-          - 테스트 케이스 추가
-          
-          💡 **Feature Requests**:
-          - 구현 가능성 평가
-          - 아키텍처 영향도 분석
-          - 구현 계획 제시
-          
-          ❓ **Questions**:
-          - 명확하고 상세한 답변 제공
-          - 관련 문서나 코드 예제 제시
-          - 추가 학습 자료 제공
-          
-          **행동 지침:**
-          - 가능한 한 즉시 해결
-          - 해결할 수 없는 경우 명확한 이유 설명
-          - 대안 솔루션 제시
-          - 사용자 친화적인 한국어 응답
-          - 필요시 GitHub 이슈에 직접 댓글 작성
-          
-          이제 이슈를 분석하고 적절한 처리를 시작해주세요.
-          EOF
+      - name: 🎯 Claude Issue Triage & Analysis
+        uses: anthropics/claude-code-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          anthropic_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          trigger_phrases: ""  # Always run for qualified issues
+          system_prompt: |
+            You are Claude Code for SafeWork industrial safety management system.
+            Perform intelligent issue triage and resolution.
+            
+            **Triage Categories:**
+            - bug: 🐛 Functional issues, errors, crashes
+            - enhancement: ✨ Feature requests, improvements  
+            - security: 🔒 Security vulnerabilities, auth issues
+            - documentation: 📝 Docs updates, guides, README
+            - performance: ⚡ Slow queries, memory leaks, optimization
+            - database: 🗄️ PostgreSQL, migration, schema issues
+            - frontend: 🎨 UI/UX, Bootstrap, JavaScript issues
+            - api: 🔌 REST API, endpoints, integration issues
+            - deployment: 🚀 Docker, CI/CD, container issues
+            - survey: 📋 Health survey forms (001/002) specific
+            - safework: 🏭 SafeWork admin panels, safety features
+            - question: ❓ General questions, help needed
+            
+            **Priority Levels:**
+            - critical: 🚨 Service down, data loss, security breach
+            - high: ⚠️ Major functionality broken, many users affected
+            - medium: 📊 Minor bugs, moderate impact
+            - low: 🔧 Cosmetic issues, nice-to-have features
+            
+            **Auto-Resolution Capability:**
+            - Simple configuration fixes
+            - Documentation updates  
+            - Code style improvements
+            - Basic bug fixes
+            - Environment variable adjustments
+          prompt: |
+            /label-issue ISSUE_NUMBER: ${{ github.event.issue.number || 'N/A' }}
+            
+            🎯 **SafeWork 이슈 자동 트리아지 및 분석**
+            
+            **이슈 정보:**
+            - 제목: "${{ github.event.issue.title || 'N/A' }}"  
+            - 작성자: ${{ github.event.issue.user.login || 'N/A' }}
+            - 현재 라벨: ${{ join(github.event.issue.labels.*.name, ', ') }}
+            
+            **이슈 내용:**
+            ```
+            ${{ github.event.issue.body || github.event.comment.body }}
+            ```
+            
+            **작업 지시:**
+            1. 이슈를 분석하고 적절한 라벨 자동 할당
+            2. 우선순위 결정 (critical/high/medium/low)
+            3. 가능한 경우 즉시 해결 시도
+            4. 한국어로 분석 결과 및 해결 방안 제시
+            5. 추가 정보 필요 시 질문 생성
           
       - name: 📊 Issue Processing Summary
         if: always()
