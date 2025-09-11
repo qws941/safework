@@ -82,6 +82,8 @@ jobs:
           registry: ${{ env.REGISTRY_HOST }}
           username: ${{ env.REGISTRY_USER }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
+        continue-on-error: false
+        timeout-minutes: 5
 
       # Metadata for PostgreSQL image
       - name: 📋 Extract PostgreSQL Metadata
@@ -132,6 +134,7 @@ jobs:
             POSTGRES_DB=${{ secrets.POSTGRES_DB || 'safework_db' }}
             POSTGRES_USER=${{ secrets.POSTGRES_USER || 'safework' }}
             POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD || 'safework2024' }}
+        timeout-minutes: 15
 
       # Build Redis image
       - name: 🔨 Build Redis Image
@@ -151,6 +154,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
+        timeout-minutes: 10
 
       # Build Flask App image
       - name: 🔨 Build Flask App Image
@@ -178,6 +182,7 @@ jobs:
             POSTGRES_USER=safework
             REDIS_HOST=safework2-redis
             REDIS_PORT=6379
+        timeout-minutes: 20
 
       - name: 🧪 Run Tests
         id: test
@@ -237,7 +242,18 @@ jobs:
             exit 1
           fi
           
-          echo "✅ Environment validation passed"
+          if [ -z "$PORTAINER_URL" ]; then
+            echo "❌ PORTAINER_URL is not set"
+            exit 1
+          fi
+          
+          # Test Portainer API connectivity
+          if ! curl -f -s "$PORTAINER_URL/api/status" > /dev/null; then
+            echo "❌ Cannot connect to Portainer API at $PORTAINER_URL"
+            exit 1
+          fi
+          
+          echo "✅ Environment validation and connectivity check passed"
           
           # Function to ensure network exists
           ensure_network() {

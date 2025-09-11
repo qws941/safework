@@ -1,0 +1,136 @@
+name: 🔍 Debug Workflow
+
+# Debug workflow to diagnose deployment issues
+concurrency:
+  group: debug-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  workflow_dispatch:
+    inputs:
+      debug_type:
+        description: 'Type of debug to run'
+        required: true
+        default: 'environment'
+        type: choice
+        options:
+          - 'environment'
+          - 'connectivity'
+          - 'build-context'
+          - 'secrets-check'
+
+permissions:
+  contents: read
+
+jobs:
+  debug:
+    name: 🔍 Debug Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: 📂 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🌍 Environment Debug
+        if: ${{ inputs.debug_type == 'environment' }}
+        run: |
+          echo "## 🌍 Environment Variables" >> $GITHUB_STEP_SUMMARY
+          echo "- Registry Host: ${{ secrets.REGISTRY_HOST || 'registry.jclee.me' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Registry User: ${{ secrets.REGISTRY_USER || 'admin' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Portainer URL: ${{ secrets.PORTAINER_URL || 'https://portainer.jclee.me' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- App Name: ${{ github.event.repository.name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- GitHub Ref: ${{ github.ref }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Runner OS: ${{ runner.os }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: 🔗 Connectivity Debug
+        if: ${{ inputs.debug_type == 'connectivity' }}
+        run: |
+          echo "## 🔗 Connectivity Tests" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Test registry connectivity
+          if curl -f -s --max-time 10 https://registry.jclee.me/v2/ > /dev/null; then
+            echo "✅ Registry connectivity: OK" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Registry connectivity: FAILED" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Test Portainer connectivity
+          if curl -f -s --max-time 10 https://portainer.jclee.me/api/status > /dev/null; then
+            echo "✅ Portainer connectivity: OK" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Portainer connectivity: FAILED" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: 📁 Build Context Debug
+        if: ${{ inputs.debug_type == 'build-context' }}
+        run: |
+          echo "## 📁 Build Context Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Check directory structure
+          echo "### Directory Structure:" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          ls -la >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          
+          # Check Dockerfile existence
+          echo "### Dockerfile Check:" >> $GITHUB_STEP_SUMMARY
+          if [ -f "./app/Dockerfile" ]; then
+            echo "✅ app/Dockerfile exists" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ app/Dockerfile missing" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ -f "./postgres/Dockerfile" ]; then
+            echo "✅ postgres/Dockerfile exists" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ postgres/Dockerfile missing" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ -f "./redis/Dockerfile" ]; then
+            echo "✅ redis/Dockerfile exists" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ redis/Dockerfile missing" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: 🔐 Secrets Check
+        if: ${{ inputs.debug_type == 'secrets-check' }}
+        run: |
+          echo "## 🔐 Secrets Configuration Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Check if required secrets are set (without revealing values)
+          if [ -n "${{ secrets.REGISTRY_PASSWORD }}" ]; then
+            echo "✅ REGISTRY_PASSWORD is set" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ REGISTRY_PASSWORD is missing" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ -n "${{ secrets.PORTAINER_API_TOKEN }}" ]; then
+            echo "✅ PORTAINER_API_TOKEN is set" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ PORTAINER_API_TOKEN is missing" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ -n "${{ secrets.POSTGRES_PASSWORD }}" ]; then
+            echo "✅ POSTGRES_PASSWORD is set" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ POSTGRES_PASSWORD is missing" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ -n "${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}" ]; then
+            echo "✅ CLAUDE_CODE_OAUTH_TOKEN is set" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ CLAUDE_CODE_OAUTH_TOKEN is missing" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: 📋 Debug Summary
+        run: |
+          echo "# 🔍 Debug Analysis Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Debug Type:** ${{ inputs.debug_type }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Use this information to diagnose workflow failures." >> $GITHUB_STEP_SUMMARY
