@@ -7,6 +7,18 @@ SET CHARACTER SET utf8mb4;
 
 -- ====== 핵심 테이블 생성 ======
 
+-- 업체명 마스터 테이블
+CREATE TABLE IF NOT EXISTS companies (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    is_active BOOLEAN DEFAULT TRUE,
+    display_order INT DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_companies_name (name),
+    KEY idx_companies_active (is_active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- 사용자 테이블
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -315,8 +327,7 @@ INSERT INTO migrations (version, description, filename, checksum, executed_at, e
 ON DUPLICATE KEY UPDATE description=VALUES(description);
 
 -- 성능 최적화를 위한 추가 인덱스
-CREATE INDEX IF NOT EXISTS idx_departments_name ON departments(name);
-CREATE INDEX IF NOT EXISTS idx_system_settings_key ON system_settings(setting_key);
+-- MySQL 8.0에서는 CREATE INDEX IF NOT EXISTS를 지원하지 않으므로 테이블 생성 시 KEY로 정의됨
 
 -- 분석을 위한 VIEW 생성
 CREATE OR REPLACE VIEW survey_summary AS
@@ -671,6 +682,14 @@ CREATE TABLE IF NOT EXISTS safework_health_plans (
     INDEX idx_plan_type (plan_type),
     INDEX idx_department (department)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 기본 업체 데이터 삽입
+INSERT IGNORE INTO companies (id, name, is_active, display_order) VALUES 
+(1, '직영팀', TRUE, 1),
+(2, '협력업체A', TRUE, 2),  
+(3, '협력업체B', TRUE, 3),
+(4, '외주업체', TRUE, 4),
+(5, '기타', TRUE, 5);
 
 -- 테스트용 SafeWork 데이터 삽입
 INSERT IGNORE INTO safework_workers (employee_number, name, department, position, hire_date, gender, blood_type, phone, email) VALUES 
