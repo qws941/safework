@@ -65,7 +65,7 @@ jobs:
           echo "Triggered by: ${{ github.event_name }}" >> $GITHUB_OUTPUT
           echo "Fix strategy: ${{ github.event.inputs.fix_strategy || 'quick' }}" >> $GITHUB_OUTPUT
           echo "Architecture: Independent containers (PostgreSQL, Redis, Flask)" >> $GITHUB_OUTPUT
-          echo "Services: safework2-postgres:4546, safework2-redis:4547, safework2-app:4545" >> $GITHUB_OUTPUT
+          echo "Services: safework-postgres:4546, safework-redis:4547, safework-app:4545" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
           
       - name: 🔍 Intelligent CI Failure Auto-Fix

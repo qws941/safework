@@ -126,7 +126,7 @@ jobs:
             
             **프로젝트 컨텍스트:**
             - SafeWork Flask 3.0+ 애플리케이션 (산업 안전 관리 시스템)
-            - 독립 컨테이너 아키텍처: safework2-postgres (4546), safework2-redis (4547), safework2-app (4545)
+            - 독립 컨테이너 아키텍처: safework-postgres (4546), safework-redis (4547), safework-app (4545)
             - 프로덕션: https://safework.jclee.me
             - 개발: https://safework-dev.jclee.me
             

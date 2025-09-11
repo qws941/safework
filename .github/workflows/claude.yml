@@ -57,7 +57,7 @@ jobs:
           echo "event_type=${{ github.event_name }}" >> $GITHUB_OUTPUT
           echo "repository=SafeWork Flask Application" >> $GITHUB_OUTPUT
           echo "architecture=Independent containers (PostgreSQL, Redis, Flask)" >> $GITHUB_OUTPUT
-          echo "services=safework2-postgres:4546, safework2-redis:4547, safework2-app:4545" >> $GITHUB_OUTPUT
+          echo "services=safework-postgres:4546, safework-redis:4547, safework-app:4545" >> $GITHUB_OUTPUT
           
           if [ "${{ github.event_name }}" = "workflow_run" ]; then
             echo "mode=failure_analysis" >> $GITHUB_OUTPUT
@@ -80,7 +80,7 @@ jobs:
             
             **Project Context:**
             - Flask 3.0+ with SQLAlchemy 2.0, PostgreSQL, Redis
-            - Independent container architecture: safework2-postgres (4546), safework2-redis (4547), safework2-app (4545)
+            - Independent container architecture: safework-postgres (4546), safework-redis (4547), safework-app (4545)
             - Korean industrial safety management system for construction/industrial environments
             - Core features: Health surveys (001/002), SafeWork admin panels, document management, RESTful API v2
             
