@@ -1,0 +1,375 @@
+name: 🔄 Continuous SafeWork Optimization & Monitoring
+
+on:
+  schedule:
+    # Run every 4 hours during business hours (KST)
+    - cron: '0 1,5,9,13,17,21 * * *'
+  push:
+    branches: [ master ]
+    paths:
+      - 'app/**'
+      - 'docker-compose.yml'
+      - 'requirements.txt'
+  workflow_dispatch:
+    inputs:
+      optimization_type:
+        description: 'Optimization focus'
+        required: true
+        default: 'performance'
+        type: choice
+        options:
+          - 'performance'
+          - 'security' 
+          - 'reliability'
+          - 'user-experience'
+          - 'comprehensive'
+      severity_level:
+        description: 'Issue severity threshold'
+        required: true
+        default: 'medium'
+        type: choice
+        options:
+          - 'critical'
+          - 'high'
+          - 'medium'
+          - 'low'
+
+env:
+  SAFEWORK_DEV_URL: safework-dev.jclee.me
+  SAFEWORK_PROD_URL: safework.jclee.me
+
+jobs:
+  # === Continuous Monitoring Phase ===
+  system-health-monitoring:
+    name: 🏥 System Health Monitoring
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔍 Advanced System Health Analysis
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          track_progress: true
+          prompt: |
+            🏥 **SafeWork Continuous System Health Monitoring**
+            
+            OPTIMIZATION_TYPE: ${{ github.event.inputs.optimization_type || 'performance' }}
+            SEVERITY_THRESHOLD: ${{ github.event.inputs.severity_level || 'medium' }}
+            DEV_URL: https://${{ env.SAFEWORK_DEV_URL }}
+            PROD_URL: https://${{ env.SAFEWORK_PROD_URL }}
+            
+            Perform continuous health monitoring and proactive issue detection for SafeWork application.
+            
+            **Health Monitoring Framework:**
+            
+            🔍 **Real-time Health Checks**
+            - Application endpoint availability and response times
+            - Database connection health and query performance
+            - Redis cache efficiency and hit rates
+            - Container resource utilization monitoring
+            - Error rate trending and anomaly detection
+            
+            ⚡ **Performance Monitoring**
+            - Response time analysis and SLA compliance
+            - Database slow query identification
+            - Memory leak detection and prevention
+            - CPU usage patterns and optimization opportunities
+            - Network latency analysis and CDN optimization
+            
+            🔒 **Security Monitoring**
+            - Authentication failure pattern analysis
+            - Potential SQL injection attempt detection
+            - File upload security validation
+            - Dependency vulnerability scanning
+            - Access pattern anomaly detection
+            
+            🛠️ **Proactive Issue Detection**
+            - Predictive failure analysis based on trends
+            - Capacity planning and scaling recommendations
+            - Code quality degradation detection
+            - Configuration drift identification
+            - Performance regression detection
+            
+            **MCP Tools Strategy:**
+            - Use `mcp__serena__*` for deep codebase analysis
+            - Use `mcp__sequential-thinking__*` for trend analysis
+            - Use `mcp__shrimp-task-manager__*` for issue prioritization
+            - Use `mcp__github__*` for automated issue creation
+            - Use `mcp__memory__*` for pattern learning and historical comparison
+            - Use `mcp__exa__*` for industry best practice research
+            
+            **Optimization Priorities by Type:**
+            
+            🚀 **performance**: Response times, database queries, caching, resource utilization
+            🔒 **security**: Vulnerability patching, authentication hardening, input validation
+            🛡️ **reliability**: Error handling, failover mechanisms, data consistency
+            👥 **user-experience**: UI/UX improvements, accessibility, mobile optimization
+            🌟 **comprehensive**: All aspects with balanced priority scoring
+            
+            Generate proactive recommendations and create GitHub issues for critical findings.
+            Provide Korean summaries for operational staff.
+
+          claude_args: |
+            --model claude-sonnet-4-20250514
+            --maxTokens 16384
+            --temperature 0.2
+            --allowedTools "mcp__serena__*,mcp__sequential-thinking__*,mcp__shrimp-task-manager__*,mcp__github__*,mcp__memory__*,mcp__exa__*,mcp__playwright__*,Bash(curl:*),Bash(docker:*),Bash(mysql:*)"
+            --systemPrompt "Proactive system monitoring specialist. Focus on early issue detection, performance optimization, and reliability improvements. Generate actionable insights with clear priorities and measurable success criteria."
+
+  # === Intelligent Issue Resolution ===
+  automated-issue-resolution:
+    name: 🤖 AI-Powered Issue Resolution
+    runs-on: ubuntu-latest
+    needs: system-health-monitoring
+    if: always()
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🧠 Intelligent Issue Analysis & Auto-Resolution
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          track_progress: true
+          prompt: |
+            🤖 **SafeWork Intelligent Issue Resolution System**
+            
+            HEALTH_MONITORING_RESULTS: ${{ needs.system-health-monitoring.outputs.result }}
+            OPTIMIZATION_TYPE: ${{ github.event.inputs.optimization_type || 'performance' }}
+            
+            Analyze identified issues and implement automated resolutions where safe and appropriate.
+            
+            **Auto-Resolution Capabilities:**
+            
+            🔧 **Code Quality Issues**
+            - ESLint errors and warnings auto-fixing
+            - Import organization and dead code removal
+            - Security vulnerability patching (low-risk)
+            - Documentation generation and updates
+            
+            🗄️ **Database Optimizations**
+            - Index creation for slow queries
+            - Query optimization suggestions
+            - Connection pool tuning recommendations
+            - Cache configuration improvements
+            
+            🐳 **Container Optimizations**
+            - Resource limit adjustments
+            - Multi-stage build optimizations
+            - Health check improvements
+            - Log rotation and cleanup
+            
+            ⚙️ **Configuration Enhancements**
+            - Environment variable optimization
+            - Security header improvements
+            - Performance tuning parameters
+            - Monitoring and alerting setup
+            
+            **Safety Framework:**
+            - Only implement changes with <5% risk score
+            - Create backup/rollback procedures
+            - Test changes in development environment first
+            - Generate detailed change documentation
+            - Require approval for production changes
+            
+            **MCP Tools for Resolution:**
+            - `mcp__serena__*`: Code analysis and modification
+            - `mcp__eslint__*`: Code quality improvements
+            - `mcp__code-runner__*`: Validation and testing
+            - `mcp__github__*`: PR creation and issue management
+            - `mcp__shrimp-task-manager__*`: Change planning and tracking
+            
+            Implement safe optimizations and create detailed reports of all changes made.
+
+          claude_args: |
+            --model claude-sonnet-4-20250514
+            --maxTokens 20480
+            --temperature 0.1
+            --allowedTools "mcp__serena__*,mcp__eslint__*,mcp__code-runner__*,mcp__github__*,mcp__shrimp-task-manager__*,mcp__sequential-thinking__*,mcp__memory__*"
+            --systemPrompt "Intelligent automation specialist with focus on safe, incremental improvements. Prioritize low-risk, high-impact optimizations. Always provide rollback procedures and detailed change documentation."
+
+  # === Performance Benchmarking ===
+  performance-benchmarking:
+    name: 📊 Performance Benchmarking & Analysis
+    runs-on: ubuntu-latest
+    needs: [system-health-monitoring]
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: ⚡ Advanced Performance Analysis
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          track_progress: true
+          prompt: |
+            📊 **SafeWork Performance Benchmarking & Optimization**
+            
+            DEV_URL: https://${{ env.SAFEWORK_DEV_URL }}
+            PROD_URL: https://${{ env.SAFEWORK_PROD_URL }}
+            
+            Conduct comprehensive performance analysis and benchmarking with actionable optimization recommendations.
+            
+            **Performance Testing Framework:**
+            
+            🔥 **Load Testing Scenarios**
+            - Survey submission load testing (concurrent users: 10, 50, 100)
+            - Admin dashboard performance under load
+            - MSDS system stress testing
+            - Database connection pool saturation testing
+            - Static asset delivery optimization
+            
+            📈 **Performance Metrics Collection**
+            - Response time percentiles (P50, P95, P99)
+            - Throughput (requests per second)
+            - Error rate under load
+            - Resource utilization (CPU, memory, disk)
+            - Database query performance analysis
+            
+            🎯 **Optimization Targets**
+            - Survey endpoints: <500ms P95 response time
+            - Admin dashboard: <1000ms initial load
+            - API endpoints: <200ms P95 response time
+            - Database queries: <100ms average
+            - Memory usage: <80% container limit
+            
+            **Benchmarking Commands:**
+            ```bash
+            # Load testing survey endpoints
+            ab -n 1000 -c 10 "${PROD_URL}/survey/001_musculoskeletal_symptom_survey"
+            ab -n 1000 -c 10 "${PROD_URL}/survey/002_new_employee_health_checkup_form"
+            
+            # Admin dashboard performance
+            curl -w "@curl-format.txt" -s "${PROD_URL}/admin/dashboard"
+            
+            # Database performance analysis
+            docker exec safework-mysql mysql -e "SHOW PROCESSLIST;"
+            docker exec safework-mysql mysql -e "SHOW STATUS LIKE 'Slow_queries';"
+            ```
+            
+            **MCP Tools for Analysis:**
+            - Use `mcp__sequential-thinking__*` for systematic performance analysis
+            - Use `mcp__shrimp-task-manager__*` for optimization task planning  
+            - Use `mcp__memory__*` for historical performance comparison
+            - Use `mcp__github__*` for performance issue tracking
+            
+            Generate performance improvement roadmap with prioritized optimizations.
+
+          claude_args: |
+            --model claude-sonnet-4-20250514
+            --maxTokens 18432
+            --temperature 0.2
+            --allowedTools "mcp__sequential-thinking__*,mcp__shrimp-task-manager__*,mcp__memory__*,mcp__github__*,mcp__playwright__*,Bash(curl:*),Bash(ab:*),Bash(wrk:*),Bash(docker:*)"
+            --systemPrompt "Performance engineering specialist with expertise in Flask/Python optimization, database tuning, and load testing. Focus on measurable improvements and practical optimization strategies."
+
+  # === Report Generation & Notifications ===
+  generate-optimization-report:
+    name: 📋 Optimization Report & Notifications
+    runs-on: ubuntu-latest
+    needs: [system-health-monitoring, automated-issue-resolution, performance-benchmarking]
+    if: always()
+    
+    steps:
+      - name: 📊 Generate Comprehensive Report
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          track_progress: true
+          prompt: |
+            📋 **SafeWork Continuous Optimization Report Generation**
+            
+            HEALTH_STATUS: ${{ needs.system-health-monitoring.result }}
+            RESOLUTION_STATUS: ${{ needs.automated-issue-resolution.result }}
+            PERFORMANCE_STATUS: ${{ needs.performance-benchmarking.result }}
+            
+            Generate comprehensive optimization report with actionable insights and next steps.
+            
+            **Report Structure:**
+            
+            📈 **Executive Summary** (Korean + English)
+            - System health score and key metrics
+            - Critical issues resolved and pending
+            - Performance improvements achieved
+            - Security enhancements implemented
+            - Next optimization cycle recommendations
+            
+            🔍 **Detailed Analysis**
+            - Health monitoring findings with trend analysis
+            - Performance benchmarking results with historical comparison
+            - Security posture assessment
+            - Code quality metrics and improvements
+            - Infrastructure optimization opportunities
+            
+            ✅ **Completed Optimizations**
+            - Auto-resolved issues with impact metrics
+            - Performance improvements with before/after data  
+            - Security enhancements implemented
+            - Configuration optimizations applied
+            
+            🎯 **Action Items & Roadmap**
+            - High-priority issues requiring manual intervention
+            - Medium-term optimization opportunities
+            - Long-term architectural improvements
+            - Resource allocation recommendations
+            
+            **GitHub Integration:**
+            - Create issues for critical problems
+            - Update existing issues with progress
+            - Generate milestone planning
+            - Archive resolved optimization tasks
+            
+            **Korean Summary for Operations Team:**
+            시스템 최적화 결과를 한국어로 요약하여 운영팀이 쉽게 이해할 수 있도록 제공.
+            
+            Generate actionable recommendations with clear priorities and success metrics.
+
+          claude_args: |
+            --model claude-sonnet-4-20250514
+            --maxTokens 24576
+            --temperature 0.3
+            --allowedTools "mcp__sequential-thinking__*,mcp__github__*,mcp__shrimp-task-manager__*,mcp__memory__*,mcp__exa__*"
+            --systemPrompt "Technical documentation specialist and project coordinator. Create comprehensive, actionable reports with clear metrics, priorities, and next steps. Provide both technical details and executive summaries."
+
+      - name: 📱 Optimization Report Notification
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          channel: '#safework-optimization'
+          custom_payload: |
+            {
+              "attachments": [{
+                "color": "${{ contains(needs.*.result, 'failure') && 'danger' || 'good' }}",
+                "title": "🔄 SafeWork Continuous Optimization Report",
+                "fields": [
+                  {
+                    "title": "Optimization Type",
+                    "value": "${{ github.event.inputs.optimization_type || 'performance' }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Health Monitoring",
+                    "value": "${{ needs.system-health-monitoring.result }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Issue Resolution", 
+                    "value": "${{ needs.automated-issue-resolution.result }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Performance Analysis",
+                    "value": "${{ needs.performance-benchmarking.result }}",
+                    "short": true
+                  }
+                ],
+                "footer": "SafeWork Continuous Optimization System"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

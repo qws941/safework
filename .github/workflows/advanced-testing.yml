@@ -203,8 +203,11 @@ jobs:
             and provide actionable optimization recommendations.
 
           claude_args: |
-            --model claude-opus-4-1-20250805
-            --allowedTools "mcp__serena__*,mcp__sequential-thinking__*,mcp__shrimp-task-manager__*,mcp__github__*,mcp__exa__*,Bash(curl:*),Bash(grep:*),Bash(find:*)"
+            --model claude-sonnet-4-20250514
+            --maxTokens 16384
+            --temperature 0.1
+            --allowedTools "mcp__serena__*,mcp__sequential-thinking__*,mcp__shrimp-task-manager__*,mcp__github__*,mcp__exa__*,mcp__memory__*,mcp__eslint__*,mcp__code-runner__*,Bash(curl:*),Bash(grep:*),Bash(find:*),Bash(python:*),Bash(npm:*),Bash(docker:*)"
+            --systemPrompt "Advanced SafeWork system analyst and optimizer. Prioritize critical error resolution, performance optimization, and system reliability. Use Korean for user-facing messages."
 
   # === Phase 2: Automated Testing Suite ===
   automated-testing:
@@ -335,8 +338,11 @@ jobs:
             Generate comprehensive test report with specific recommendations for issues found.
 
           claude_args: |
-            --model claude-opus-4-1-20250805
-            --allowedTools "mcp__sequential-thinking__*,mcp__shrimp-task-manager__*,mcp__github__*,Bash(curl:*)"
+            --model claude-sonnet-4-20250514
+            --maxTokens 12288
+            --temperature 0.2
+            --allowedTools "mcp__sequential-thinking__*,mcp__shrimp-task-manager__*,mcp__github__*,mcp__playwright__*,mcp__memory__*,Bash(curl:*),Bash(wget:*),Bash(ab:*),Bash(siege:*)"
+            --systemPrompt "Live environment testing specialist. Focus on real-world usage scenarios, performance benchmarking, and user experience validation. Report critical issues immediately."
 
   # === Phase 4: Performance Optimization ===
   performance-optimization:
@@ -378,8 +384,11 @@ jobs:
             Implement safe, proven optimizations and provide detailed performance improvement reports.
 
           claude_args: |
-            --model claude-opus-4-1-20250805
-            --allowedTools "mcp__serena__*,mcp__shrimp-task-manager__*,mcp__sequential-thinking__*"
+            --model claude-sonnet-4-20250514
+            --maxTokens 20480
+            --temperature 0.1
+            --allowedTools "mcp__serena__*,mcp__shrimp-task-manager__*,mcp__sequential-thinking__*,mcp__memory__*,mcp__eslint__*,mcp__code-runner__*,mcp__exa__*,Bash(python:*),Bash(npm:*),Bash(docker:*),Bash(mysql:*)"
+            --systemPrompt "Performance optimization expert for Flask/Python applications. Focus on database query optimization, caching strategies, container efficiency, and code performance. Implement safe, proven optimizations with measurable results."
 
   # === Phase 5: Final Report & Recommendations ===
   final-optimization-report:
@@ -422,8 +431,11 @@ jobs:
             Generate actionable insights and create GitHub issues for any remaining critical problems.
 
           claude_args: |
-            --model claude-opus-4-1-20250805
-            --allowedTools "mcp__sequential-thinking__*,mcp__github__*,mcp__shrimp-task-manager__*"
+            --model claude-sonnet-4-20250514
+            --maxTokens 24576
+            --temperature 0.3
+            --allowedTools "mcp__sequential-thinking__*,mcp__github__*,mcp__shrimp-task-manager__*,mcp__memory__*,mcp__exa__*,mcp__brave-search__*"
+            --systemPrompt "Technical report specialist and project coordinator. Generate comprehensive, actionable reports with clear priorities, metrics, and next steps. Create GitHub issues for follow-up tasks. Use data-driven insights and industry best practices."
 
       - name: 📱 Testing Completion Notification
         if: always()

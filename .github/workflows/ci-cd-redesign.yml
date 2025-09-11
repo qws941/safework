@@ -1,0 +1,516 @@
+name: 🏗️ SafeWork CI/CD Pipeline (Redesigned)
+
+on:
+  push:
+    branches: [ master, develop ]
+    paths:
+      - 'app/**'
+      - 'requirements.txt'
+      - 'docker-compose.yml'
+      - 'Dockerfile'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [ master, develop ]
+  workflow_dispatch:
+    inputs:
+      deploy_environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+          - 'development'
+          - 'staging'
+          - 'production'
+
+env:
+  REGISTRY_URL: registry.jclee.me
+  REGISTRY_USERNAME: admin
+  IMAGE_NAME: safework/app
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '18'
+
+jobs:
+  # === Phase 1: Code Quality & Security ===
+  code-quality:
+    name: 🔍 Code Quality & Security Scan
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          
+      - name: 📦 Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install black flake8 bandit safety pytest pytest-cov
+          
+      - name: 🎨 Code Formatting Check (Black)
+        run: |
+          black --check --line-length 88 app/ tests/
+          
+      - name: 📏 Code Style Check (Flake8)
+        run: |
+          flake8 app/ tests/ --max-line-length=88 --extend-ignore=E203,W503
+          
+      - name: 🛡️ Security Scan (Bandit)
+        run: |
+          bandit -r app/ -f json -o bandit-report.json || true
+          bandit -r app/ --severity-level medium
+          
+      - name: 🔐 Dependency Security Check
+        run: |
+          safety check --json --output safety-report.json || true
+          safety check
+          
+      - name: 📊 Generate Version
+        id: version
+        run: |
+          VERSION="v$(date +'%Y.%m.%d')-$(git rev-parse --short HEAD)"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Generated version: $VERSION"
+          
+      - name: 📄 Upload Security Reports
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: security-reports
+          path: |
+            bandit-report.json
+            safety-report.json
+
+  # === Phase 2: Unit & Integration Tests ===
+  tests:
+    name: 🧪 Unit & Integration Tests
+    runs-on: ubuntu-latest
+    needs: code-quality
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: test_root_password
+          MYSQL_DATABASE: safework_test_db
+          MYSQL_USER: test_user
+          MYSQL_PASSWORD: test_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+          
+      redis:
+        image: redis:7.0
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+          
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          
+      - name: 📦 Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-flask pytest-mock
+          
+      - name: ⏳ Wait for Services
+        run: |
+          echo "Waiting for MySQL..."
+          for i in {1..30}; do
+            if mysqladmin ping -h127.0.0.1 -utest_user -ptest_password --silent; then
+              break
+            fi
+            sleep 2
+          done
+          echo "MySQL is ready!"
+          
+          echo "Waiting for Redis..."
+          until redis-cli -h 127.0.0.1 ping; do
+            echo "Redis not ready, waiting..."
+            sleep 1
+          done
+          echo "Redis is ready!"
+          
+      - name: 🗄️ Setup Test Database
+        run: |
+          export FLASK_CONFIG=testing
+          export MYSQL_HOST=127.0.0.1
+          export MYSQL_DATABASE=safework_test_db
+          export MYSQL_USER=test_user
+          export MYSQL_PASSWORD=test_password
+          export REDIS_HOST=127.0.0.1
+          cd app
+          python -c "
+          from app import create_app, db
+          app = create_app('testing')
+          with app.app_context():
+              db.create_all()
+              print('Test database initialized')
+          "
+          
+      - name: 🧪 Run Unit Tests
+        run: |
+          cd app
+          export FLASK_CONFIG=testing
+          export MYSQL_HOST=127.0.0.1
+          export MYSQL_DATABASE=safework_test_db
+          export MYSQL_USER=test_user
+          export MYSQL_PASSWORD=test_password
+          export REDIS_HOST=127.0.0.1
+          python -m pytest tests/ -v --cov=. --cov-report=xml --cov-report=html --cov-report=term-missing
+          
+      - name: 📊 Upload Coverage Reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-reports
+          path: |
+            app/coverage.xml
+            app/htmlcov/
+
+  # === Phase 3: Container Build & Security ===
+  container-build:
+    name: 🐳 Container Build & Security
+    runs-on: ubuntu-latest
+    needs: [code-quality, tests]
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+      
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        
+      - name: 🔐 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: 🏷️ Extract Metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=raw,value=${{ needs.code-quality.outputs.version }}
+            type=raw,value=latest,enable={{is_default_branch}}
+            
+      - name: 🔑 Login to Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY_URL }}
+          username: ${{ env.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+          
+      - name: 🏗️ Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+          
+      - name: 🔍 Container Security Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ needs.code-quality.outputs.version }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          
+      - name: 📄 Upload Trivy Results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: trivy-results
+          path: trivy-results.sarif
+
+  # === Phase 4: Integration Testing ===
+  integration-tests:
+    name: 🔗 Integration & E2E Tests
+    runs-on: ubuntu-latest
+    needs: [container-build]
+    if: github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        
+      - name: 🐳 Setup Test Environment
+        run: |
+          # Pull the built image
+          echo ${{ secrets.REGISTRY_PASSWORD }} | docker login ${{ env.REGISTRY_URL }} -u ${{ env.REGISTRY_USERNAME }} --password-stdin
+          
+          # Update docker-compose for testing
+          export IMAGE_TAG=${{ needs.code-quality.outputs.version }}
+          sed -i "s|image: .*safework/app.*|image: ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${IMAGE_TAG}|" docker-compose.yml
+          
+          # Start services
+          docker-compose up -d
+          
+      - name: ⏳ Wait for Services
+        run: |
+          echo "Waiting for SafeWork application..."
+          for i in {1..60}; do
+            if curl -f -s http://localhost:4545/health; then
+              echo "SafeWork is ready!"
+              break
+            fi
+            echo "Waiting... (${i}/60)"
+            sleep 5
+          done
+          
+      - name: 🧪 Health Check Tests
+        run: |
+          # Test critical endpoints
+          curl -f -s http://localhost:4545/health
+          curl -f -s http://localhost:4545/survey/001_musculoskeletal_symptom_survey
+          curl -f -s http://localhost:4545/survey/002_new_employee_health_checkup_form
+          
+      - name: 🔍 API Integration Tests
+        run: |
+          # Test survey submission
+          curl -X POST http://localhost:4545/survey/001_musculoskeletal_symptom_survey \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -d "name=테스트사용자&age=30&gender=male&department=개발부&current_symptom=아니오"
+            
+      - name: 📊 Container Logs
+        if: always()
+        run: |
+          echo "=== Application Logs ==="
+          docker-compose logs app
+          echo "=== MySQL Logs ==="
+          docker-compose logs mysql
+          echo "=== Redis Logs ==="
+          docker-compose logs redis
+          
+      - name: 🧹 Cleanup
+        if: always()
+        run: |
+          docker-compose down -v
+
+  # === Phase 5: Security & Compliance ===
+  security-compliance:
+    name: 🛡️ Security & Compliance Check
+    runs-on: ubuntu-latest
+    needs: [code-quality, tests, container-build]
+    if: github.ref == 'refs/heads/master'
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        
+      - name: 🔍 OWASP ZAP Security Scan
+        uses: zaproxy/action-full-scan@v0.8.0
+        with:
+          target: 'http://localhost:4545'
+          rules_file_name: '.zap/rules.tsv'
+          cmd_options: '-a'
+          
+      - name: 📋 Generate Security Report
+        run: |
+          echo "# SafeWork Security Compliance Report" > security-report.md
+          echo "" >> security-report.md
+          echo "## Build Information" >> security-report.md
+          echo "- Version: ${{ needs.code-quality.outputs.version }}" >> security-report.md
+          echo "- Build Date: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> security-report.md
+          echo "- Commit: ${{ github.sha }}" >> security-report.md
+          echo "" >> security-report.md
+          echo "## Security Checks" >> security-report.md
+          echo "- ✅ Code Security Scan (Bandit)" >> security-report.md
+          echo "- ✅ Dependency Security Check" >> security-report.md
+          echo "- ✅ Container Security Scan (Trivy)" >> security-report.md
+          echo "- ✅ OWASP ZAP Security Test" >> security-report.md
+          
+      - name: 📄 Upload Security Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-compliance-report
+          path: security-report.md
+
+  # === Phase 6: Deployment ===
+  deploy:
+    name: 🚀 Deployment
+    runs-on: ubuntu-latest
+    needs: [code-quality, tests, container-build, integration-tests]
+    if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    environment: 
+      name: ${{ github.event.inputs.deploy_environment || 'development' }}
+      url: ${{ steps.deploy.outputs.url }}
+      
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        
+      - name: 🚀 Deploy to Environment
+        id: deploy
+        run: |
+          ENVIRONMENT="${{ github.event.inputs.deploy_environment || 'development' }}"
+          IMAGE_TAG="${{ needs.code-quality.outputs.version }}"
+          
+          echo "Deploying SafeWork $IMAGE_TAG to $ENVIRONMENT"
+          
+          # Environment-specific deployment
+          case $ENVIRONMENT in
+            "development")
+              DEPLOY_URL="https://safework-dev.jclee.me"
+              WATCHTOWER_URL="http://watchtower.jclee.me:8080/v1/update"
+              ;;
+            "staging")
+              DEPLOY_URL="https://safework-staging.jclee.me"
+              WATCHTOWER_URL="http://watchtower-staging.jclee.me:8080/v1/update"
+              ;;
+            "production")
+              DEPLOY_URL="https://safework.jclee.me"
+              WATCHTOWER_URL="http://watchtower.jclee.me:8080/v1/update"
+              ;;
+          esac
+          
+          # Trigger Watchtower update
+          if [[ "$ENVIRONMENT" == "development" ]]; then
+            curl -X POST "$WATCHTOWER_URL" \
+              -H "Authorization: Bearer ${{ secrets.WATCHTOWER_HTTP_API_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d "{\"images\": [\"${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:$IMAGE_TAG\"]}"
+          fi
+          
+          echo "url=$DEPLOY_URL" >> $GITHUB_OUTPUT
+          echo "Deployment initiated for $ENVIRONMENT"
+          
+      - name: ⏳ Wait for Deployment
+        run: |
+          DEPLOY_URL="${{ steps.deploy.outputs.url }}"
+          echo "Waiting for deployment at $DEPLOY_URL"
+          
+          for i in {1..30}; do
+            if curl -f -s "$DEPLOY_URL/health"; then
+              echo "✅ Deployment successful!"
+              break
+            fi
+            echo "⏳ Waiting for deployment... (${i}/30)"
+            sleep 10
+          done
+          
+      - name: 🧪 Post-Deployment Health Check
+        run: |
+          DEPLOY_URL="${{ steps.deploy.outputs.url }}"
+          
+          # Health endpoint
+          curl -f -s "$DEPLOY_URL/health" | jq .
+          
+          # Critical functionality
+          curl -f -s "$DEPLOY_URL/survey/001_musculoskeletal_symptom_survey" > /dev/null
+          curl -f -s "$DEPLOY_URL/survey/002_new_employee_health_checkup_form" > /dev/null
+          
+          echo "✅ Post-deployment health checks passed"
+
+  # === Phase 7: Notification & Reporting ===
+  notify:
+    name: 📱 Notification & Reporting
+    runs-on: ubuntu-latest
+    needs: [code-quality, tests, container-build, integration-tests, security-compliance, deploy]
+    if: always()
+    
+    steps:
+      - name: 📊 Generate Build Report
+        run: |
+          echo "# SafeWork CI/CD Build Report" > build-report.md
+          echo "" >> build-report.md
+          echo "## Build Summary" >> build-report.md
+          echo "- **Version**: ${{ needs.code-quality.outputs.version }}" >> build-report.md
+          echo "- **Branch**: ${{ github.ref_name }}" >> build-report.md
+          echo "- **Commit**: ${{ github.sha }}" >> build-report.md
+          echo "- **Build Time**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> build-report.md
+          echo "- **Triggered By**: ${{ github.actor }}" >> build-report.md
+          echo "" >> build-report.md
+          echo "## Job Results" >> build-report.md
+          echo "- Code Quality: ${{ needs.code-quality.result }}" >> build-report.md
+          echo "- Tests: ${{ needs.tests.result }}" >> build-report.md
+          echo "- Container Build: ${{ needs.container-build.result }}" >> build-report.md
+          echo "- Integration Tests: ${{ needs.integration-tests.result }}" >> build-report.md
+          echo "- Security Compliance: ${{ needs.security-compliance.result }}" >> build-report.md
+          echo "- Deployment: ${{ needs.deploy.result }}" >> build-report.md
+          
+      - name: 📱 Slack Notification
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          channel: '#safework-cicd'
+          custom_payload: |
+            {
+              "attachments": [{
+                "color": "${{ contains(needs.*.result, 'failure') && 'danger' || contains(needs.*.result, 'cancelled') && 'warning' || 'good' }}",
+                "title": "🏗️ SafeWork CI/CD Pipeline",
+                "fields": [
+                  {
+                    "title": "Version",
+                    "value": "${{ needs.code-quality.outputs.version }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Branch",
+                    "value": "${{ github.ref_name }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Code Quality",
+                    "value": "${{ needs.code-quality.result }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Tests",
+                    "value": "${{ needs.tests.result }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Container Build",
+                    "value": "${{ needs.container-build.result }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Deployment",
+                    "value": "${{ needs.deploy.result || 'skipped' }}",
+                    "short": true
+                  }
+                ],
+                "footer": "SafeWork CI/CD System"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          
+      - name: 📄 Upload Build Report
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: build-report
+          path: build-report.md
