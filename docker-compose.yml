@@ -11,12 +11,6 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    deploy:
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 3
-        window: 120s
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-safework2024root}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-safework_db}
@@ -29,7 +23,7 @@ services:
       - mysql_data:/var/lib/mysql
       - mysql_logs:/var/log/mysql
     ports:
-      - "3307:3306"
+      - "4543:3306"
     networks:
       - safework-net
     healthcheck:
@@ -49,12 +43,6 @@ services:
       options:
         max-size: "5m"
         max-file: "2"
-    deploy:
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 3
-        window: 120s
     environment:
       REDIS_REPLICATION_MODE: master
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
@@ -62,7 +50,7 @@ services:
     volumes:
       - redis_data:/data
     ports:
-      - "6380:6379"
+      - "4544:6379"
     networks:
       - safework-net
     healthcheck:
@@ -82,12 +70,6 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
-    deploy:
-      restart_policy:
-        condition: on-failure
-        delay: 10s
-        max_attempts: 5
-        window: 300s
     depends_on:
       mysql:
         condition: service_healthy
@@ -128,8 +110,6 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s
-    labels:
-      - "com.centurylinklabs.watchtower.enable=true"
 
 
 volumes:
