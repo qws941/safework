@@ -199,26 +199,26 @@ jobs:
             exit 1
           fi
           
-          # 컨테이너 재시작 (Independent Container 방식)
+          # 컨테이너 재시작 (Independent Container 방식) - 올바른 endpoint와 컨테이너명 사용
           echo "📦 SafeWork PostgreSQL 컨테이너 업데이트..."
           curl -X POST \
             -H "X-API-Key: $API_KEY" \
             -H "Content-Type: application/json" \
-            "$PORTAINER_URL/api/endpoints/1/docker/containers/safework-postgres/restart" \
+            "$PORTAINER_URL/api/endpoints/3/docker/containers/blacklist-postgres/restart" \
             || echo "⚠️ PostgreSQL 컨테이너 재시작 실패"
           
           echo "📦 SafeWork Redis 컨테이너 업데이트..."  
           curl -X POST \
             -H "X-API-Key: $API_KEY" \
             -H "Content-Type: application/json" \
-            "$PORTAINER_URL/api/endpoints/1/docker/containers/safework-redis/restart" \
+            "$PORTAINER_URL/api/endpoints/3/docker/containers/blacklist-redis/restart" \
             || echo "⚠️ Redis 컨테이너 재시작 실패"
           
           echo "📦 SafeWork App 컨테이너 업데이트..."
           curl -X POST \
             -H "X-API-Key: $API_KEY" \
             -H "Content-Type: application/json" \
-            "$PORTAINER_URL/api/endpoints/1/docker/containers/safework-app/restart" \
+            "$PORTAINER_URL/api/endpoints/3/docker/containers/blacklist-app/restart" \
             || echo "⚠️ App 컨테이너 재시작 실패"
           
           # 배포 대기
