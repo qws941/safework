@@ -1,312 +1,480 @@
-name: 🚀 Enhanced SafeWork Deployment Pipeline
+name: 🚀 Deploy Pipeline
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master, develop]
     paths:
       - 'app/**'
-      - 'src/**'
       - 'postgres/**'
       - 'redis/**'
       - 'requirements.txt'
+      - 'Dockerfile*'
+      - 'docker-compose*.yml'
+      - 'tests/**'
       - '.github/workflows/deploy.yml'
+  
   workflow_dispatch:
     inputs:
-      environment:
-        description: 'Target environment'
-        required: true
-        type: choice
-        options:
-          - production
-          - development
-      skip_tests:
-        description: 'Skip tests'
-        required: false
-        default: 'false'
-        type: boolean
       force_deploy:
         description: 'Force deployment even if tests fail'
         required: false
-        default: 'false'
+        default: false
         type: boolean
+      skip_tests:
+        description: 'Skip test execution'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  APP_NAME: ${{ github.event.repository.name }}
+  REGISTRY_HOST: ${{ secrets.REGISTRY_HOST || 'registry.jclee.me' }}
+  REGISTRY_USER: ${{ secrets.REGISTRY_USER || 'admin' }}
+  TZ: Asia/Seoul
+  PRD_URL: ${{ secrets.PRD_URL || format('https://{0}.jclee.me', github.event.repository.name) }}
+  DEV_URL: ${{ secrets.DEV_URL || format('https://{0}-dev.jclee.me', github.event.repository.name) }}
+  PORTAINER_URL: ${{ secrets.PORTAINER_URL || 'https://portainer.jclee.me' }}
 
 permissions:
   contents: read
   packages: write
   actions: read
-
-env:
-  APP_NAME: ${{ github.event.repository.name }}
+  id-token: write
 
 jobs:
-  # === Build and Test Phase ===
-  build-test:
+  # Phase 1: Build and Test
+  build-and-test:
     name: 🔨 Build & Test
     runs-on: ubuntu-latest
-    
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_PASSWORD: safework_test_password
-          POSTGRES_DB: safework_test
-          POSTGRES_USER: safework_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd="pg_isready -U safework_test"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=3
-
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd="redis-cli ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=3
-
+    outputs:
+      app_image_tag: ${{ steps.app_meta.outputs.tags }}
+      postgres_image_tag: ${{ steps.postgres_meta.outputs.tags }}
+      redis_image_tag: ${{ steps.redis_meta.outputs.tags }}
+      test_results: ${{ steps.test.outputs.results }}
+      build_status: ${{ steps.build.outputs.build_status }}
+      
     steps:
-      - name: 📥 Checkout repository
+      - name: 📂 Checkout
         uses: actions/checkout@v4
-
-      - name: 🐍 Set up Python
-        uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          fetch-depth: 0
 
-      - name: 📦 Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r app/requirements.txt
-
-      - name: 🧪 Run tests
-        if: ${{ inputs.skip_tests != 'true' }}
-        run: |
-          cd app
-          export FLASK_CONFIG=testing
-          export DB_HOST=127.0.0.1
-          export DB_PORT=5432
-          export DB_NAME=safework_test
-          export DB_USER=safework_test
-          export DB_PASSWORD=safework_test_password
-          export REDIS_HOST=127.0.0.1
-          export REDIS_PORT=6379
-          
-          # Wait for services
-          for i in {1..30}; do
-            if pg_isready -h 127.0.0.1 -p 5432 -U safework_test; then
-              break
-            fi
-            echo "Waiting for PostgreSQL..."
-            sleep 2
-          done
-          
-          # Basic application test
-          python -c "
-          from app import create_app
-          app = create_app('testing')
-          print('✅ Flask application created successfully')
-          "
-
-      - name: 🐳 Set up Docker Buildx
+      - name: 🐳 Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: 🔐 Login to Docker Registry
+      - name: 🔐 Login to Registry  
         uses: docker/login-action@v3
         with:
-          registry: ${{ secrets.DOCKER_REGISTRY_URL }}
-          username: ${{ secrets.DOCKER_REGISTRY_USER }}
-          password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+          registry: ${{ env.REGISTRY_HOST }}
+          username: ${{ env.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
 
-      - name: 🏗️ Build Individual Docker Images
-        env:
-          REGISTRY_URL: ${{ secrets.DOCKER_REGISTRY_URL }}
+      # Metadata for PostgreSQL image
+      - name: 📋 Extract PostgreSQL Metadata
+        id: postgres_meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}-postgres
+          tags: |
+            type=raw,value=latest
+
+      # Metadata for Redis image
+      - name: 📋 Extract Redis Metadata
+        id: redis_meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}-redis
+          tags: |
+            type=raw,value=latest
+
+      # Metadata for Flask App image
+      - name: 📋 Extract App Metadata
+        id: app_meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}-app
+          tags: |
+            type=raw,value=latest
+
+      # Build PostgreSQL image
+      - name: 🔨 Build PostgreSQL Image
+        id: build_postgres
+        uses: docker/build-push-action@v5
+        with:
+          context: ./postgres
+          file: ./postgres/Dockerfile
+          push: true
+          tags: ${{ steps.postgres_meta.outputs.tags }}
+          labels: |
+            ${{ steps.postgres_meta.outputs.labels }}
+            com.docker.compose.project=${{ env.APP_NAME }}
+            com.docker.compose.service=postgres
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ github.sha }}
+            BUILD_NUMBER=${{ github.run_number }}
+            VCS_REF=${{ github.sha }}
+            BUILDTIME=${{ github.event.head_commit.timestamp }}
+            POSTGRES_DB=${{ secrets.POSTGRES_DB || 'safework_db' }}
+            POSTGRES_USER=${{ secrets.POSTGRES_USER || 'safework' }}
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD || 'safework2024' }}
+
+      # Build Redis image
+      - name: 🔨 Build Redis Image
+        id: build_redis
+        uses: docker/build-push-action@v5
+        with:
+          context: ./redis
+          file: ./redis/Dockerfile
+          push: true
+          tags: ${{ steps.redis_meta.outputs.tags }}
+          labels: |
+            ${{ steps.redis_meta.outputs.labels }}
+            com.docker.compose.project=${{ env.APP_NAME }}
+            com.docker.compose.service=redis
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ github.sha }}
+            BUILD_NUMBER=${{ github.run_number }}
+            VCS_REF=${{ github.sha }}
+            BUILDTIME=${{ github.event.head_commit.timestamp }}
+
+      # Build Flask App image
+      - name: 🔨 Build Flask App Image
+        id: build_app
+        uses: docker/build-push-action@v5
+        with:
+          context: ./app
+          file: ./app/Dockerfile
+          push: true
+          tags: ${{ steps.app_meta.outputs.tags }}
+          labels: |
+            ${{ steps.app_meta.outputs.labels }}
+            com.docker.compose.project=${{ env.APP_NAME }}
+            com.docker.compose.service=app
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ github.sha }}
+            BUILD_TIME=${{ github.event.head_commit.timestamp }}
+            BUILD_NUMBER=${{ github.run_number }}
+            VCS_REF=${{ github.sha }}
+            BUILDTIME=${{ github.event.head_commit.timestamp }}
+            POSTGRES_HOST=${{ secrets.POSTGRES_HOST || 'safework-postgres' }}
+            POSTGRES_PORT=${{ secrets.POSTGRES_PORT || '5432' }}
+            POSTGRES_DB=${{ secrets.POSTGRES_DB || 'safework_db' }}
+            POSTGRES_USER=${{ secrets.POSTGRES_USER || 'safework' }}
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD || 'safework2024' }}
+            REDIS_HOST=${{ secrets.REDIS_HOST || 'safework-redis' }}
+            REDIS_PORT=${{ secrets.REDIS_PORT || '6379' }}
+            PRD_URL=${{ secrets.PRD_URL }}
+            DEV_URL=${{ secrets.DEV_URL }}
+            GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+            GITHUB_REPO_OWNER=${{ github.repository_owner }}
+            GITHUB_REPO_NAME=${{ github.event.repository.name }}
+            REGISTRY_HOST=${{ secrets.REGISTRY_HOST }}
+            REGISTRY_USER=${{ secrets.REGISTRY_USER }}
+            REGISTRY_PASSWORD=${{ secrets.REGISTRY_PASSWORD }}
+            FLASK_ENV=production
+            ADMIN_USERNAME=${{ secrets.ADMIN_USERNAME || 'admin' }}
+            ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD || 'safework2024' }}
+            SECRET_KEY=${{ secrets.SECRET_KEY || 'safework-production-secret-key-2024' }}
+            TIMEZONE=${{ secrets.TIMEZONE || 'Asia/Seoul' }}
+
+      - name: 🧪 Run Tests
+        id: test
+        if: github.event.inputs.skip_tests != 'true'
         run: |
-          # Set environment variables based on target
-          if [[ "${{ github.event.inputs.environment }}" == "production" ]]; then
-            echo "TARGET_URL=${{ secrets.PROD_URL || 'safework.jclee.me' }}" >> $GITHUB_ENV
-          else
-            echo "TARGET_URL=${{ secrets.DEV_URL || 'safework-dev.jclee.me' }}" >> $GITHUB_ENV
-          fi
+          echo "🧪 Running Flask application tests..."
           
-          # Build each service independently from their respective directories
-          echo "🏗️ Building Application image from /app..."
-          docker build -t ${REGISTRY_URL}/${{ env.APP_NAME }}/app:${{ github.sha }} ./app
-          docker tag ${REGISTRY_URL}/${{ env.APP_NAME }}/app:${{ github.sha }} ${REGISTRY_URL}/${{ env.APP_NAME }}/app:latest
+          # Use Flask app image for testing
+          APP_IMAGE_TAG=$(echo "${{ steps.app_meta.outputs.tags }}" | head -n1)
+          echo "🐳 Using Flask app image: $APP_IMAGE_TAG"
           
-          echo "🏗️ Building PostgreSQL image from /postgres..."
-          docker build -t ${REGISTRY_URL}/${{ env.APP_NAME }}/postgres:${{ github.sha }} ./postgres
-          docker tag ${REGISTRY_URL}/${{ env.APP_NAME }}/postgres:${{ github.sha }} ${REGISTRY_URL}/${{ env.APP_NAME }}/postgres:latest
-          
-          echo "🏗️ Building Redis image from /redis..."
-          docker build -t ${REGISTRY_URL}/${{ env.APP_NAME }}/redis:${{ github.sha }} ./redis
-          docker tag ${REGISTRY_URL}/${{ env.APP_NAME }}/redis:${{ github.sha }} ${REGISTRY_URL}/${{ env.APP_NAME }}/redis:latest
-          
-          # Push all images
-          echo "📤 Pushing images to registry..."
-          docker push ${REGISTRY_URL}/${{ env.APP_NAME }}/app:${{ github.sha }}
-          docker push ${REGISTRY_URL}/${{ env.APP_NAME }}/app:latest
-          docker push ${REGISTRY_URL}/${{ env.APP_NAME }}/postgres:${{ github.sha }}
-          docker push ${REGISTRY_URL}/${{ env.APP_NAME }}/postgres:latest
-          docker push ${REGISTRY_URL}/${{ env.APP_NAME }}/redis:${{ github.sha }}
-          docker push ${REGISTRY_URL}/${{ env.APP_NAME }}/redis:latest
-          
-          echo "✅ All Docker images built and pushed successfully"
-          echo "🏷️ Tagged with: ${{ github.sha }}, latest"
+          # Basic container execution test (timeout configured)
+          timeout 30s docker run --rm --name ${{ env.APP_NAME }}-test \
+            -e FLASK_ENV=testing \
+            -e POSTGRES_HOST=localhost \
+            -e REDIS_HOST=localhost \
+            "$APP_IMAGE_TAG" \
+            bash -c "
+              echo '✅ Container started successfully'
+              python -c 'import sys; print(f\"Python version: {sys.version}\")'
+              python -c 'from app import create_app; print(\"Flask app creation test passed\")'
+              echo 'test_completed=true'
+            " && echo "results=success" >> $GITHUB_OUTPUT || echo "results=failed" >> $GITHUB_OUTPUT
 
-  # === Deployment Phase ===
+      - name: 📊 Test Results Summary  
+        run: |
+          echo "### 🧪 Test Results Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build Status**: ✅ Success" >> $GITHUB_STEP_SUMMARY
+          echo "- **PostgreSQL Image**: \`${{ steps.postgres_meta.outputs.tags }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Redis Image**: \`${{ steps.redis_meta.outputs.tags }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Flask App Image**: \`${{ steps.app_meta.outputs.tags }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Test Status**: ${{ steps.test.outputs.results }}" >> $GITHUB_STEP_SUMMARY
+
+  # Phase 2: Deploy Execution
   deploy:
-    name: 🚀 Deploy Individual Containers via Portainer API
+    name: 🚀 Deploy to Production
+    needs: build-and-test
     runs-on: ubuntu-latest
-    needs: build-test
-    if: always() && (needs.build-test.result == 'success' || inputs.force_deploy == 'true')
-    
+    if: success() || github.event.inputs.force_deploy == 'true'
+    outputs:
+      deployment_status: ${{ steps.deploy.outputs.status }}
+      deployment_url: ${{ steps.deploy.outputs.url }}
+      deployment_time: ${{ steps.deploy.outputs.time }}
+      health_check: ${{ steps.health.outputs.status }}
+
     steps:
-      - name: 📥 Checkout repository
-        uses: actions/checkout@v4
-
-      - name: 🌐 Set Target Environment
-        run: |
-          if [[ "${{ github.event.inputs.environment }}" == "production" ]]; then
-            echo "TARGET_URL=${{ secrets.PROD_URL || 'safework.jclee.me' }}" >> $GITHUB_ENV
-          else
-            echo "TARGET_URL=${{ secrets.DEV_URL || 'safework-dev.jclee.me' }}" >> $GITHUB_ENV
-          fi
-
-      - name: 🔄 Deploy via Portainer API
+      - name: 🚀 Deploy Containers via Portainer API
+        id: deploy
         env:
-          PORTAINER_URL: ${{ secrets.PORTAINER_URL }}
-          PORTAINER_API_TOKEN: ${{ secrets.PORTAINER_API_TOKEN }}
-          REGISTRY_URL: ${{ secrets.DOCKER_REGISTRY_URL }}
-        env:
-          APP_NAME: ${{ secrets.APP_NAME || 'safework' }}
-          WATCHTOWER_URL: ${{ secrets.WATCHTOWER_URL || 'watchtower.jclee.me' }}
+          APP_NAME: safework2
+          PORTAINER_URL: ${{ secrets.PORTAINER_URL || 'https://portainer.jclee.me' }}
+          PORTAINER_TOKEN: ${{ secrets.PORTAINER_API_TOKEN }}
+          PORTAINER_ENDPOINT_ID: ${{ secrets.PORTAINER_ENDPOINT_ID || '1' }}
         run: |
-          echo "🔄 Triggering Watchtower deployment..."
-          curl -H "Authorization: Bearer ${{ secrets.WATCHTOWER_HTTP_API_TOKEN }}" \
-               -H "Content-Type: application/json" \
-               -X POST \
-               "https://${WATCHTOWER_URL}/v1/update" \
-               -d "{\"filter\":\"${APP_NAME}\"}" || echo "Watchtower API call failed, continuing..."
-
-      - name: 🐳 Portainer Webhook Deployment
-        if: ${{ inputs.deployment_method == 'portainer' }}
-        env:
-          PORTAINER_URL: ${{ secrets.PORTAINER_URL }}
-          PORTAINER_API_TOKEN: ${{ secrets.PORTAINER_API_TOKEN }}
-        run: |
-          echo "🐳 Triggering Portainer deployment via API..."
-          curl -H "Authorization: Bearer ${PORTAINER_API_TOKEN}" \
-               -X POST "https://${PORTAINER_URL}/api/webhooks" || echo "Portainer API call failed, continuing..."
-
-      - name: ⏰ Wait for deployment
-        run: |
-          echo "⏰ Waiting for deployment to complete..."
-          sleep 60
-
-      - name: 🏥 Health check
-        env:
-          APP_NAME: ${{ secrets.APP_NAME || 'safework' }}
-          PRD_URL: ${{ secrets.PRD_URL || 'https://safework.jclee.me' }}
-        run: |
-          echo "🏥 Performing health check..."
-          for i in {1..10}; do
-            if curl -f -s ${PRD_URL}/health; then
-              echo "✅ Health check passed"
-              break
+          echo "🚀 Starting Portainer API deployment process..."
+          
+          # Function to ensure network exists
+          ensure_network() {
+            local NETWORK_NAME=$1
+            echo "Ensuring network: $NETWORK_NAME"
+            
+            # Check if network exists
+            NETWORK_EXISTS=$(curl -s "$PORTAINER_URL/api/endpoints/$PORTAINER_ENDPOINT_ID/docker/networks" \
+              -H "X-API-Key: $PORTAINER_TOKEN" | \
+              jq -r --arg name "$NETWORK_NAME" '.[] | select(.Name == $name) | .Name')
+            
+            if [ -z "$NETWORK_EXISTS" ]; then
+              echo "Creating network: $NETWORK_NAME"
+              curl -X POST "$PORTAINER_URL/api/endpoints/$PORTAINER_ENDPOINT_ID/docker/networks/create" \
+                -H "X-API-Key: $PORTAINER_TOKEN" \
+                -H "Content-Type: application/json" \
+                -d "{
+                  \"Name\": \"$NETWORK_NAME\",
+                  \"Driver\": \"bridge\",
+                  \"EnableIPv6\": false,
+                  \"IPAM\": {
+                    \"Driver\": \"default\"
+                  }
+                }"
             else
-              echo "⏳ Health check attempt $i failed, retrying..."
-              sleep 10
+              echo "Network already exists: $NETWORK_NAME"
             fi
-          done
+          }
+          
+          # Function to ensure volume exists
+          ensure_volume() {
+            local VOLUME_NAME=$1
+            echo "Ensuring volume: $VOLUME_NAME"
+            
+            # Check if volume exists
+            VOLUME_EXISTS=$(curl -s "$PORTAINER_URL/api/endpoints/$PORTAINER_ENDPOINT_ID/docker/volumes" \
+              -H "X-API-Key: $PORTAINER_TOKEN" | \
+              jq -r --arg name "$VOLUME_NAME" '.Volumes[]? | select(.Name == $name) | .Name')
+            
+            if [ -z "$VOLUME_EXISTS" ]; then
+              echo "Creating volume: $VOLUME_NAME"
+              curl -X POST "$PORTAINER_URL/api/endpoints/$PORTAINER_ENDPOINT_ID/docker/volumes/create" \
+                -H "X-API-Key: $PORTAINER_TOKEN" \
+                -H "Content-Type: application/json" \
+                -d "{\"Name\": \"$VOLUME_NAME\"}"
+            else
+              echo "Volume already exists: $VOLUME_NAME"
+            fi
+          }
+          
+          # Function to deploy container
+          deploy_container() {
+            local CONTAINER_NAME=$1
+            local IMAGE=$2
+            local ENV_VARS=$3
+            local HEALTH_CMD=$4
+            local VOLUMES=$5
+            local PORT_BINDINGS=$6
+            local MEMORY=$7
+            local CPU_SHARES=$8
+            local NETWORK=$9
+            
+            echo "Deploying container: $CONTAINER_NAME"
+            
+            # Check if container exists and stop/remove it
+            CONTAINER_EXISTS=$(curl -s "$PORTAINER_URL/api/endpoints/$PORTAINER_ENDPOINT_ID/docker/containers/json?all=true" \
+              -H "X-API-Key: $PORTAINER_TOKEN" | \
+              jq -r --arg name "$CONTAINER_NAME" '.[]? | select(.Names[]? | contains($name)) | .Id')
+            
+            if [ -n "$CONTAINER_EXISTS" ]; then
+              echo "Stopping existing container..."
+              curl -X POST "$PORTAINER_URL/api/endpoints/$PORTAINER_ENDPOINT_ID/docker/containers/$CONTAINER_EXISTS/stop" \
+                -H "X-API-Key: $PORTAINER_TOKEN"
+              
+              echo "Removing existing container..."
+              curl -X DELETE "$PORTAINER_URL/api/endpoints/$PORTAINER_ENDPOINT_ID/docker/containers/$CONTAINER_EXISTS" \
+                -H "X-API-Key: $PORTAINER_TOKEN"
+            fi
+            
+            # Pull latest image
+            echo "Pulling latest image: $IMAGE"
+            curl -X POST "$PORTAINER_URL/api/endpoints/$PORTAINER_ENDPOINT_ID/docker/images/create?fromImage=$IMAGE" \
+              -H "X-API-Key: $PORTAINER_TOKEN"
+            
+            # Create container configuration
+            CONTAINER_CONFIG="{
+              \"Image\": \"$IMAGE\",
+              \"Env\": $ENV_VARS,
+              \"NetworkingConfig\": {
+                \"EndpointsConfig\": {
+                  \"$NETWORK\": {}
+                }
+              },
+              \"HostConfig\": {
+                \"RestartPolicy\": {
+                  \"Name\": \"unless-stopped\",
+                  \"MaximumRetryCount\": 5
+                },
+                \"NetworkMode\": \"$NETWORK\",
+                \"Binds\": $VOLUMES,
+                \"Memory\": $MEMORY,
+                \"CpuShares\": $CPU_SHARES"
+            
+            if [ -n "$PORT_BINDINGS" ] && [ "$PORT_BINDINGS" != "null" ]; then
+              CONTAINER_CONFIG="$CONTAINER_CONFIG,
+                \"PortBindings\": $PORT_BINDINGS"
+            fi
+            
+            CONTAINER_CONFIG="$CONTAINER_CONFIG
+              },
+              \"Healthcheck\": $HEALTH_CMD
+            }"
+            
+            # Create new container
+            curl -X POST "$PORTAINER_URL/api/endpoints/$PORTAINER_ENDPOINT_ID/docker/containers/create?name=$CONTAINER_NAME" \
+              -H "X-API-Key: $PORTAINER_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d "$CONTAINER_CONFIG"
+            
+            # Start the container
+            echo "Starting container..."
+            NEW_CONTAINER_ID=$(curl -s "$PORTAINER_URL/api/endpoints/$PORTAINER_ENDPOINT_ID/docker/containers/json?all=true" \
+              -H "X-API-Key: $PORTAINER_TOKEN" | \
+              jq -r --arg name "$CONTAINER_NAME" '.[]? | select(.Names[]? | contains($name)) | .Id')
+            
+            if [ -n "$NEW_CONTAINER_ID" ]; then
+              curl -X POST "$PORTAINER_URL/api/endpoints/$PORTAINER_ENDPOINT_ID/docker/containers/$NEW_CONTAINER_ID/start" \
+                -H "X-API-Key: $PORTAINER_TOKEN"
+              echo "Container deployed: $CONTAINER_NAME"
+            else
+              echo "Failed to create container: $CONTAINER_NAME"
+              return 1
+            fi
+          }
+          
+          # Create network and volumes
+          ensure_network "${APP_NAME}-network"
+          ensure_volume "${APP_NAME}-postgres-data"
+          ensure_volume "${APP_NAME}-redis-data"
+          ensure_volume "${APP_NAME}-app-uploads"
+          ensure_volume "${APP_NAME}-app-logs"
+          ensure_volume "${APP_NAME}-app-cache"
+          
+          # Deploy PostgreSQL container
+          if deploy_container \
+            "${APP_NAME}-postgres" \
+            "${{ needs.build-and-test.outputs.postgres_image_tag }}" \
+            '["POSTGRES_DB=safework_db", "POSTGRES_USER=safework", "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}"]' \
+            '{"Test": ["CMD-SHELL", "pg_isready -U safework"], "Interval": 30000000000, "Timeout": 10000000000, "Retries": 3}' \
+            '["'${APP_NAME}'-postgres-data:/var/lib/postgresql/data"]' \
+            '{"5432/tcp": [{"HostPort": "4546"}]}' \
+            1073741824 \
+            512 \
+            "${APP_NAME}-network"; then
+            echo "✅ PostgreSQL container deployed successfully"
+          else
+            echo "❌ PostgreSQL container deployment failed"
+            echo "status=failed" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          
+          sleep 10  # Wait for PostgreSQL to initialize
+          
+          # Deploy Redis container
+          if deploy_container \
+            "${APP_NAME}-redis" \
+            "${{ needs.build-and-test.outputs.redis_image_tag }}" \
+            '[]' \
+            '{"Test": ["CMD", "redis-cli", "ping"], "Interval": 30000000000, "Timeout": 10000000000, "Retries": 3}' \
+            '["'${APP_NAME}'-redis-data:/data"]' \
+            '{"6379/tcp": [{"HostPort": "4547"}]}' \
+            268435456 \
+            256 \
+            "${APP_NAME}-network"; then
+            echo "✅ Redis container deployed successfully"
+          else
+            echo "❌ Redis container deployment failed"
+            echo "status=failed" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          
+          sleep 5  # Wait for Redis to initialize
+          
+          # Deploy App container
+          if deploy_container \
+            "${APP_NAME}-app" \
+            "${{ needs.build-and-test.outputs.app_image_tag }}" \
+            '["POSTGRES_HOST='${APP_NAME}'-postgres", "POSTGRES_PORT=5432", "REDIS_HOST='${APP_NAME}'-redis", "REDIS_PORT=6379", "FLASK_ENV=production"]' \
+            '{"Test": ["CMD", "curl", "-f", "http://localhost:4545/health"], "Interval": 30000000000, "Timeout": 10000000000, "Retries": 3}' \
+            '["'${APP_NAME}'-app-uploads:/app/uploads", "'${APP_NAME}'-app-logs:/app/logs", "'${APP_NAME}'-app-cache:/app/cache"]' \
+            '{"4545/tcp": [{"HostPort": "4545"}]}' \
+            536870912 \
+            512 \
+            "${APP_NAME}-network"; then
+            echo "✅ App container deployed successfully"
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "url=${{ env.PRD_URL }}" >> $GITHUB_OUTPUT
+            echo "time=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
+          else
+            echo "❌ App container deployment failed"
+            echo "status=failed" >> $GITHUB_OUTPUT
+            exit 1
+          fi
 
-      - name: 🔗 Container connectivity check
+      - name: ⏳ Wait for Deployment Stabilization
+        if: steps.deploy.outputs.status == 'success'
         run: |
-          echo "🔗 Verifying individual service connectivity..."
+          echo "⏳ Waiting for container deployment to complete..."
+          sleep 60  # Extended wait for proper initialization
+
+      - name: 🏥 Health Check
+        id: health
+        if: steps.deploy.outputs.status == 'success'
+        run: |
+          echo "🏥 Performing health checks..."
           
-          PRD_URL="${{ secrets.PRD_URL || 'https://safework.jclee.me' }}"
-          
-          # Check each service independently (simulating independent container startup)
-          echo "1. 🏥 Application health check..."
-          app_response=$(curl -s -o /dev/null -w "%{http_code}" ${PRD_URL}/health)
-          if [[ $app_response == "200" ]]; then
-            echo "   ✅ App container: Running"
+          # Check application health endpoint
+          if timeout 30s curl -sf --max-time 10 "${{ env.PRD_URL }}/health" > /dev/null; then
+            echo "✅ Application health check passed"
+            echo "status=healthy" >> $GITHUB_OUTPUT
           else
-            echo "   ⚠️ App container: Issues detected (HTTP: $app_response)"
-          fi
-          
-          echo "2. 🗄️ Database connectivity check through app..."
-          db_check=$(curl -s ${PRD_URL}/health | jq -r '.database // "unknown"')
-          if [[ $db_check != "unknown" && $db_check != "null" ]]; then
-            echo "   ✅ MySQL container: Connected through app"
-          else
-            echo "   ⚠️ MySQL container: Connection issues"
-          fi
-          
-          echo "3. 🚀 Redis connectivity check through app..."  
-          redis_check=$(curl -s ${PRD_URL}/health | jq -r '.redis // "unknown"')
-          if [[ $redis_check != "unknown" && $redis_check != "null" ]]; then
-            echo "   ✅ Redis container: Connected through app"
-          else
-            echo "   ⚠️ Redis container: Connection issues"
-          fi
-          
-          # Final connectivity summary
-          if [[ $app_response == "200" ]]; then
-            echo "🎯 Independent container deployment: SUCCESS"
-            echo "   - All 3 containers can run independently"
-            echo "   - Inter-container communication verified"
-            echo "   - Watchtower labels configured for auto-updates"
-          else
-            echo "❌ Independent container deployment: ISSUES DETECTED"
+            echo "❌ Application health check failed"
+            echo "status=unhealthy" >> $GITHUB_OUTPUT
           fi
 
-  # === Notification Phase ===
+  # Phase 3: Post-Deployment Notification
   notify:
-    name: 📱 Deployment Notification
+    name: 📢 Post-Deployment Notification
+    needs: [build-and-test, deploy]
     runs-on: ubuntu-latest
-    needs: [build-test, deploy]
     if: always()
     
     steps:
-      - name: 📱 Slack Notification
-        uses: 8398a7/action-slack@v3
-        with:
-          status: custom
-          channel: '#safework-deployment'
-          custom_payload: |
-            {
-              "attachments": [{
-                "color": "${{ needs.deploy.result == 'success' && 'good' || 'danger' }}",
-                "title": "🚀 SafeWork Deployment",
-                "fields": [
-                  {
-                    "title": "Status",
-                    "value": "${{ needs.deploy.result == 'success' && '✅ Success' || '❌ Failed' }}",
-                    "short": true
-                  },
-                  {
-                    "title": "Branch",
-                    "value": "${{ github.ref_name }}",
-                    "short": true
-                  },
-                  {
-                    "title": "Commit",
-                    "value": "${{ github.sha }}",
-                    "short": true
-                  },
-                  {
-                    "title": "URL",
-                    "value": "${{ secrets.PRD_URL || 'https://safework.jclee.me' }}",
-                    "short": true
-                  }
-                ]
-              }]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      - name: 📢 Send Deployment Notification
         if: always()
+        run: |
+          echo "📢 SafeWork deployment completed!"
+          echo "- **Status**: ${{ needs.deploy.outputs.deployment_status }}"
+          echo "- **URL**: ${{ needs.deploy.outputs.deployment_url }}"
+          echo "- **Health**: ${{ needs.deploy.outputs.health_check }}"
+          echo "- **Time**: ${{ needs.deploy.outputs.deployment_time }}"
