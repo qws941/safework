@@ -1,184 +1,418 @@
-name: 🚀 Deploy SafeWork
+name: 🚀 SafeWork Deployment & Monitoring
 
 on:
   push:
-    branches: [master, main]
-    paths:
-      - 'app/**'
-      - 'docker-compose.yml'
-      - 'requirements.txt'
-      - 'Dockerfile'
-      - '.github/workflows/deploy-safework.yml'
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
   workflow_dispatch:
     inputs:
-      environment:
-        description: 'Deployment environment'
+      deployment_target:
+        description: 'Deployment target'
         required: true
-        default: 'production'
+        default: 'development'
         type: choice
         options:
-          - 'production'
           - 'development'
+          - 'production'
+      analysis_type:
+        description: 'Post-deployment analysis type'
+        required: true
+        default: 'comprehensive'
+        type: choice
+        options:
+          - 'comprehensive'
+          - 'health-check-only'
+          - 'log-analysis-only'
+          - 'performance-monitoring'
+
+env:
+  REGISTRY_URL: registry.jclee.me
+  IMAGE_NAME: safework/app
+  DEV_URL: safework-dev.jclee.me
+  PROD_URL: safework.jclee.me
+  PORTAINER_URL: portainer.jclee.me
 
 jobs:
-  security-scan:
-    name: 🔒 Security Scan
+  # === Phase 1: Build and Deploy ===
+  build-and-deploy:
+    name: 🚀 Build & Deploy SafeWork
     runs-on: ubuntu-latest
-    steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v4
-
-      - name: 🐍 Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: 🔍 Install security tools
-        run: |
-          pip install bandit safety trivy
-
-      - name: 🛡️ Run Bandit security scan
-        run: |
-          bandit -r app/ -f json -o bandit-report.json || true
-          echo "Bandit scan completed"
-
-      - name: 🔐 Check for known vulnerabilities
-        run: |
-          safety check --json --output safety-report.json || true
-          echo "Safety check completed"
-
-      - name: 📊 Upload security reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: security-reports
-          path: |
-            bandit-report.json
-            safety-report.json
-
-  build-and-push:
-    name: 🏗️ Build & Push Images
-    runs-on: ubuntu-latest
-    needs: security-scan
     outputs:
-      image-tag: ${{ steps.meta.outputs.tags }}
-      
+      deployment_url: ${{ steps.deploy.outputs.deployment_url }}
+      image_tag: ${{ steps.build.outputs.image_tag }}
+    
     steps:
-      - name: 📥 Checkout code
+      - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🏷️ Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: registry.jclee.me/safework/app
-          tags: |
-            type=ref,event=branch
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
+      - name: 🐳 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: 🔐 Login to Registry
+      - name: 🔑 Log in to Container Registry
         uses: docker/login-action@v3
         with:
-          registry: registry.jclee.me
+          registry: ${{ env.REGISTRY_URL }}
           username: admin
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
-      - name: 🏗️ Build and push Docker image
+      - name: 🏷️ Generate image tags
+        id: build
+        run: |
+          COMMIT_SHA=${GITHUB_SHA::8}
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          IMAGE_TAG="build-${GITHUB_RUN_NUMBER}-${COMMIT_SHA}"
+          
+          echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "full_image=${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG}" >> $GITHUB_OUTPUT
+
+      - name: 🔨 Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: |
+            ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ steps.build.outputs.image_tag }}
+            ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:latest
           platforms: linux/amd64
 
-  deploy-to-watchtower:
-    name: 🚀 Deploy via Watchtower
-    runs-on: ubuntu-latest
-    needs: build-and-push
-    environment: ${{ github.event.inputs.environment || 'production' }}
-    
-    steps:
-      - name: 🔄 Trigger Watchtower Update
+      - name: 🚀 Deploy to target environment
+        id: deploy
         run: |
-          # Watchtower will automatically pull and update the latest image
-          curl -X POST "${{ secrets.WATCHTOWER_HTTP_API_TOKEN }}/update" \
-            -H "Authorization: Bearer ${{ secrets.WATCHTOWER_API_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "images": ["registry.jclee.me/safework/app:latest"],
-              "cleanup": true
-            }' || echo "Watchtower update triggered"
+          if [[ "${{ github.event.inputs.deployment_target }}" == "production" || "${{ github.ref }}" == "refs/heads/main" || "${{ github.ref }}" == "refs/heads/master" ]]; then
+            DEPLOYMENT_URL="https://${{ env.PROD_URL }}"
+            echo "Deploying to Production: $DEPLOYMENT_URL"
+            curl -X POST "${{ secrets.WATCHTOWER_PROD_URL }}/v1/update" \
+              -H "Authorization: Bearer ${{ secrets.WATCHTOWER_HTTP_API_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d "{\"image\": \"${{ steps.build.outputs.full_image }}\"}"
+          else
+            DEPLOYMENT_URL="https://${{ env.DEV_URL }}"
+            echo "Deploying to Development: $DEPLOYMENT_URL"
+            curl -X POST "${{ secrets.WATCHTOWER_DEV_URL }}/v1/update" \
+              -H "Authorization: Bearer ${{ secrets.WATCHTOWER_HTTP_API_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d "{\"image\": \"${{ steps.build.outputs.full_image }}\"}"
+          fi
+          
+          echo "deployment_url=${DEPLOYMENT_URL}" >> $GITHUB_OUTPUT
 
       - name: ⏳ Wait for deployment
-        run: |
-          echo "Waiting 30 seconds for container update..."
-          sleep 30
+        run: sleep 45
 
-      - name: 🏥 Health check
+      - name: 🏥 Basic health check
         run: |
-          max_attempts=10
-          attempt=1
-          
-          while [ $attempt -le $max_attempts ]; do
-            echo "Health check attempt $attempt/$max_attempts"
-            
-            if curl -f -s https://safework.jclee.me/health > /dev/null; then
-              echo "✅ SafeWork is healthy!"
-              curl -s https://safework.jclee.me/health | jq .
+          for i in {1..10}; do
+            if curl -f -s "${{ steps.deploy.outputs.deployment_url }}/health"; then
+              echo "✅ Deployment health check passed"
               exit 0
-            else
-              echo "❌ Health check failed, retrying in 10 seconds..."
-              sleep 10
-              attempt=$((attempt + 1))
             fi
+            echo "Waiting for service to be ready... (attempt $i/10)"
+            sleep 15
           done
-          
-          echo "❌ Health check failed after $max_attempts attempts"
+          echo "❌ Health check failed"
           exit 1
 
-  notify-deployment:
-    name: 📢 Notify Deployment
+  # === Phase 2: Post-Deployment Analysis with Claude ===
+  post-deployment-analysis:
+    name: 🤖 Claude Post-Deployment Analysis
     runs-on: ubuntu-latest
-    needs: [build-and-push, deploy-to-watchtower]
+    needs: build-and-deploy
     if: always()
     
     steps:
-      - name: 📨 Send deployment notification
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🤖 SafeWork Deployment Analysis & Monitoring
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          track_progress: true
+          prompt: |
+            REPO: ${{ github.repository }}
+            DEPLOYMENT_URL: ${{ needs.build-and-deploy.outputs.deployment_url }}
+            IMAGE_TAG: ${{ needs.build-and-deploy.outputs.image_tag }}
+            PORTAINER_URL: https://${{ env.PORTAINER_URL }}
+            ANALYSIS_TYPE: ${{ github.event.inputs.analysis_type || 'comprehensive' }}
+            
+            🚀 **SafeWork Post-Deployment Analysis & Monitoring**
+            
+            Please perform comprehensive analysis and monitoring for the recently completed SafeWork deployment.
+            All API calls should be handled dynamically using environment variables without hardcoding.
+
+            **1. Deployment Status Verification**
+            ```
+            - Application health check status analysis
+            - Key endpoint responsiveness testing
+            - Database connection and performance verification
+            - Redis cache status verification
+            - Survey functionality operational confirmation
+            ```
+
+            **2. Container Monitoring via Portainer API**
+            ```
+            - Container status and resource usage analysis
+            - Log pattern analysis and anomaly detection
+            - Memory/CPU usage pattern monitoring
+            - Network connectivity status verification
+            - Volume mount and data persistence verification
+            ```
+
+            **3. Application Log Analysis**
+            ```
+            - Application startup log analysis
+            - Error log pattern identification
+            - Performance bottleneck detection
+            - User access pattern analysis
+            - Security-related log review
+            ```
+
+            **4. Feature-specific Operation Verification**
+            ```
+            - Survey system (001/002 forms) verification
+            - SafeWork admin panel accessibility verification
+            - Document management system status check
+            - User authentication and authorization verification
+            - MSDS management system verification (latest feature)
+            ```
+
+            **MCP Tools Usage Instructions:**
+            1. **mcp__serena__***: Codebase analysis and structure understanding
+               - `mcp__serena__activate_project('.')`
+               - `mcp__serena__list_dir('.', recursive=True)`
+               - `mcp__serena__get_symbols_overview()`
+
+            2. **mcp__sequential-thinking__sequentialthinking**: Step-by-step analysis
+               - Proceed in order: Deployment verification → Log analysis → Performance evaluation → Security check
+
+            3. **mcp__shrimp-task-manager__***: Task planning for identified issues
+               - `mcp__shrimp-task-manager__plan_task()`: Problem resolution planning
+               - `mcp__shrimp-task-manager__split_tasks()`: Complex problem decomposition
+               - `mcp__shrimp-task-manager__analyze_task()`: Technical analysis execution
+
+            **API Call Examples (No Hardcoding):**
+            ```bash
+            # Portainer API calls - using environment variables
+            PORTAINER_TOKEN="${{ secrets.PORTAINER_API_TOKEN }}"
+            PORTAINER_BASE_URL="https://${{ env.PORTAINER_URL }}"
+            
+            # Container status check
+            curl -H "Authorization: Bearer ${PORTAINER_TOKEN}" \
+                 "${PORTAINER_BASE_URL}/api/endpoints/1/docker/containers/json"
+            
+            # Application health check
+            curl -f "${{ needs.build-and-deploy.outputs.deployment_url }}/health"
+            
+            # Admin dashboard accessibility check
+            curl -f "${{ needs.build-and-deploy.outputs.deployment_url }}/admin/dashboard"
+            ```
+
+            **Analysis Scenario Processing:**
+
+            🔍 **comprehensive**: Complete system comprehensive analysis
+            - All component status inspection
+            - Performance metrics collection and analysis
+            - Security status review
+            - User experience verification
+            - Improvement recommendations
+
+            🏥 **health-check-only**: Health check focused analysis
+            - Core service availability verification
+            - Response time measurement
+            - Database connection verification
+            - Basic functionality operation verification
+
+            📊 **log-analysis-only**: Log-focused analysis
+            - Error log pattern analysis
+            - Performance metrics extraction
+            - User activity patterns
+            - System event tracking
+
+            ⚡ **performance-monitoring**: Performance-focused analysis
+            - Response time analysis
+            - Resource usage monitoring
+            - Bottleneck identification
+            - Scalability assessment
+
+            **Final Deliverables:**
+            1. Comprehensive deployment status report
+            2. Automatic GitHub Issue creation for identified issues (if needed)
+            3. Performance improvement recommendations
+            4. Improvement suggestions for next deployment
+
+            Perform all analysis systematically using MCP tools,
+            automatically handle immediately resolvable issues,
+            and provide detailed solution plans for complex problems.
+
+          claude_args: |
+            --model claude-opus-4-1-20250805
+            --allowedTools "mcp__serena__*,mcp__sequential-thinking__*,mcp__shrimp-task-manager__*,mcp__github__*,mcp__exa__*,mcp__brave-search__*,Bash(curl:*),Bash(jq:*),Bash(grep:*),Bash(awk:*),Bash(sort:*),Bash(docker:*)"
+
+  # === Phase 3: Performance & Load Testing ===
+  performance-testing:
+    name: ⚡ Performance & Load Testing
+    runs-on: ubuntu-latest
+    needs: build-and-deploy
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+
+      - name: 🚀 Create performance test script
+        run: |
+          cat > performance-test.js << 'EOF'
+          import http from 'k6/http';
+          import { check, sleep } from 'k6';
+          
+          export let options = {
+            stages: [
+              { duration: '2m', target: 10 },
+              { duration: '5m', target: 50 },
+              { duration: '2m', target: 0 },
+            ],
+          };
+          
+          const BASE_URL = '${{ needs.build-and-deploy.outputs.deployment_url }}';
+          
+          export default function () {
+            // Health check
+            let healthResponse = http.get(`${BASE_URL}/health`);
+            check(healthResponse, {
+              'health check status is 200': (r) => r.status === 200,
+              'health check response time < 500ms': (r) => r.timings.duration < 500,
+            });
+            
+            // Main page
+            let mainResponse = http.get(BASE_URL);
+            check(mainResponse, {
+              'main page status is 200': (r) => r.status === 200,
+              'main page response time < 2000ms': (r) => r.timings.duration < 2000,
+            });
+            
+            // Survey page
+            let surveyResponse = http.get(`${BASE_URL}/survey/001_musculoskeletal_symptom_survey`);
+            check(surveyResponse, {
+              'survey page status is 200': (r) => r.status === 200,
+            });
+            
+            sleep(1);
+          }
+          EOF
+
+      - name: 🏃‍♂️ Run performance tests
+        run: |
+          k6 run performance-test.js --out json=performance-results.json
+
+      - name: 📊 Upload performance results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: performance-test-results
+          path: performance-results.json
+
+  # === Phase 4: Deployment Notification & Monitoring ===
+  deployment-notification:
+    name: 📱 Deployment Notification & Monitoring Setup
+    runs-on: ubuntu-latest
+    needs: [build-and-deploy, post-deployment-analysis, performance-testing]
+    if: always()
+    
+    steps:
+      - name: 🤖 Deployment Status Analysis
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          track_progress: true
+          prompt: |
+            🚀 **SafeWork Deployment Complete - Status Summary & Monitoring Setup**
+            
+            DEPLOYMENT_URL: ${{ needs.build-and-deploy.outputs.deployment_url }}
+            BUILD_STATUS: ${{ needs.build-and-deploy.result }}
+            ANALYSIS_STATUS: ${{ needs.post-deployment-analysis.result }}
+            PERFORMANCE_STATUS: ${{ needs.performance-testing.result }}
+            
+            Deployment has been completed. Please synthesize the results of the entire deployment process
+            to generate status reports and set up continuous monitoring.
+
+            **MCP Tools Usage:**
+            1. **mcp__shrimp-task-manager__plan_task()**: Plan follow-up monitoring tasks
+            2. **mcp__sequential-thinking__sequentialthinking()**: Systematic deployment result analysis  
+            3. **mcp__github__create_issue()**: Create issues for identified problems (if needed)
+
+            **Analysis Content:**
+            1. Deployment success/failure status summary
+            2. Performance test result analysis
+            3. Identified issues and improvements
+            4. Recommendations for next deployment
+            5. Continuous monitoring setup plan
+
+            Based on results, provide summary information for Slack notification messages,
+            and automatically create GitHub Issues when necessary.
+
+          claude_args: |
+            --model claude-opus-4-1-20250805
+            --allowedTools "mcp__shrimp-task-manager__*,mcp__sequential-thinking__*,mcp__github__*"
+
+      - name: 📱 Slack notification
+        if: always()
         uses: 8398a7/action-slack@v3
-        if: env.SLACK_WEBHOOK_URL
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         with:
           status: custom
+          channel: '#safework-deployments'
           custom_payload: |
             {
-              "text": "${{ needs.deploy-to-watchtower.result == 'success' && '🚀 SafeWork 배포 완료' || '⚠️ SafeWork 배포 실패' }}",
-              "attachments": [
-                {
-                  "color": "${{ needs.deploy-to-watchtower.result == 'success' && 'good' || 'danger' }}",
-                  "fields": [
-                    {
-                      "title": "Repository",
-                      "value": "${{ github.repository }}",
-                      "short": true
-                    },
-                    {
-                      "title": "Environment", 
-                      "value": "${{ github.event.inputs.environment || 'production' }}",
-                      "short": true
-                    },
-                    {
-                      "title": "Commit",
-                      "value": "<${{ github.event.head_commit.url }}|${{ github.event.head_commit.id }}>",
-                      "short": true
-                    },
-                    {
-                      "title": "Author",
-                      "value": "${{ github.event.head_commit.author.name }}",
-                      "short": true
-                    }
-                  ]
-                }
-              ]
+              "attachments": [{
+                "color": "${{ needs.build-and-deploy.result == 'success' && 'good' || 'danger' }}",
+                "title": "🚀 SafeWork Deployment ${{ needs.build-and-deploy.result == 'success' && 'Completed' || 'Failed' }}",
+                "fields": [
+                  {
+                    "title": "Environment",
+                    "value": "${{ needs.build-and-deploy.outputs.deployment_url }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Image Tag",
+                    "value": "${{ needs.build-and-deploy.outputs.image_tag }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Build Status",
+                    "value": "${{ needs.build-and-deploy.result }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Analysis Status", 
+                    "value": "${{ needs.post-deployment-analysis.result }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Performance Test",
+                    "value": "${{ needs.performance-testing.result || 'Skipped' }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Triggered By",
+                    "value": "${{ github.actor }}",
+                    "short": true
+                  }
+                ],
+                "footer": "SafeWork CI/CD Pipeline",
+                "ts": "${{ github.event.head_commit.timestamp }}"
+              }]
             }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+environment:
+  name: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+  url: ${{ needs.build-and-deploy.outputs.deployment_url }}

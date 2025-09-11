@@ -10,7 +10,7 @@ from openpyxl import Workbook
 from sqlalchemy import and_, func, or_, text
 
 from forms import AdminFilterForm
-from models import AuditLog, Survey, SurveyStatistics, User, Process, db
+from models import AuditLog, Survey, SurveyStatistics, User, Process, db, MSDSModel, MSDSComponentModel, MSDSUsageRecordModel
 try:
     from models_safework_v2 import (
         SafeworkWorker, SafeworkHealthCheck, SafeworkMedicalVisit,
@@ -1219,3 +1219,238 @@ def safework_departments():
         }
     ]
     return render_template("admin/safework_departments.html", department_stats=department_stats)
+
+
+# === MSDS Management Routes ===
+
+@admin_bp.route("/msds")
+@admin_required
+def msds_dashboard():
+    """MSDS 관리 대시보드"""
+    # 통계 데이터
+    total_msds = MSDSModel.query.count()
+    active_msds = MSDSModel.query.filter_by(status='active').count()
+    special_management_count = MSDSModel.query.filter_by(is_special_management=True).count()
+    expired_msds = MSDSModel.query.filter(
+        MSDSModel.next_review_date < datetime.now()
+    ).count()
+    
+    # 최근 등록된 MSDS
+    recent_msds = MSDSModel.query.order_by(MSDSModel.created_at.desc()).limit(10).all()
+    
+    # 특별관리물질 목록
+    special_substances = MSDSModel.query.filter_by(is_special_management=True).all()
+    
+    stats = {
+        'total_msds': total_msds,
+        'active_msds': active_msds,
+        'special_management_count': special_management_count,
+        'expired_msds': expired_msds
+    }
+    
+    return render_template("admin/msds_dashboard.html", 
+                         stats=stats, 
+                         recent_msds=recent_msds,
+                         special_substances=special_substances)
+
+
+@admin_bp.route("/msds/list")
+@admin_required
+def msds_list():
+    """MSDS 목록 관리"""
+    page = request.args.get('page', 1, type=int)
+    search = request.args.get('search', '', type=str)
+    status_filter = request.args.get('status', 'all', type=str)
+    special_filter = request.args.get('special', 'all', type=str)
+    
+    query = MSDSModel.query
+    
+    # 검색 필터
+    if search:
+        query = query.filter(
+            or_(
+                MSDSModel.substance_name.ilike(f'%{search}%'),
+                MSDSModel.cas_number.ilike(f'%{search}%'),
+                MSDSModel.manufacturer.ilike(f'%{search}%')
+            )
+        )
+    
+    # 상태 필터
+    if status_filter != 'all':
+        query = query.filter(MSDSModel.status == status_filter)
+    
+    # 특별관리물질 필터
+    if special_filter == 'yes':
+        query = query.filter(MSDSModel.is_special_management == True)
+    elif special_filter == 'no':
+        query = query.filter(MSDSModel.is_special_management == False)
+    
+    pagination = query.order_by(MSDSModel.created_at.desc()).paginate(
+        page=page, per_page=20, error_out=False
+    )
+    
+    return render_template("admin/msds_list.html", 
+                         pagination=pagination,
+                         search=search,
+                         status_filter=status_filter,
+                         special_filter=special_filter)
+
+
+@admin_bp.route("/msds/create", methods=['GET', 'POST'])
+@admin_required
+def msds_create():
+    """MSDS 등록"""
+    if request.method == 'POST':
+        try:
+            # 기본 정보 수집
+            msds = MSDSModel(
+                substance_name=request.form.get('substance_name'),
+                cas_number=request.form.get('cas_number'),
+                manufacturer=request.form.get('manufacturer'),
+                supplier=request.form.get('supplier'),
+                msds_number=request.form.get('msds_number'),
+                signal_word=request.form.get('signal_word'),
+                is_special_management=request.form.get('is_special_management') == 'on',
+                special_management_type=request.form.get('special_management_type'),
+                notes=request.form.get('notes')
+            )
+            
+            # 개정일자 처리
+            revision_date_str = request.form.get('revision_date')
+            if revision_date_str:
+                msds.revision_date = datetime.strptime(revision_date_str, '%Y-%m-%d').date()
+            
+            # GHS 그림문자 처리 (체크박스)
+            ghs_pictograms = []
+            for pictogram in ['explosive', 'flammable', 'oxidizing', 'compressed_gas', 'corrosive', 'toxic', 'harmful', 'health_hazard', 'environmental_hazard']:
+                if request.form.get(f'ghs_{pictogram}'):
+                    ghs_pictograms.append(pictogram)
+            msds.ghs_pictograms = ghs_pictograms
+            
+            # 유해성 분류 처리
+            hazard_classification = []
+            hazard_class = request.form.get('hazard_class')
+            hazard_category = request.form.get('hazard_category')
+            if hazard_class and hazard_category:
+                hazard_classification.append({
+                    'class': hazard_class,
+                    'category': hazard_category
+                })
+            msds.hazard_classification = hazard_classification
+            
+            db.session.add(msds)
+            db.session.commit()
+            
+            # 성분 정보 추가
+            component_names = request.form.getlist('component_name[]')
+            component_cas = request.form.getlist('component_cas[]')
+            component_concentrations = request.form.getlist('component_concentration[]')
+            
+            for i, name in enumerate(component_names):
+                if name.strip():
+                    component = MSDSComponentModel(
+                        msds_id=msds.id,
+                        component_name=name,
+                        cas_number=component_cas[i] if i < len(component_cas) else '',
+                        concentration_exact=float(component_concentrations[i]) if i < len(component_concentrations) and component_concentrations[i] else None
+                    )
+                    db.session.add(component)
+            
+            db.session.commit()
+            
+            flash('MSDS가 성공적으로 등록되었습니다.', 'success')
+            return redirect(url_for('admin.msds_list'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'MSDS 등록 중 오류가 발생했습니다: {str(e)}', 'error')
+    
+    return render_template("admin/msds_create.html")
+
+
+@admin_bp.route("/msds/<int:msds_id>")
+@admin_required
+def msds_detail(msds_id):
+    """MSDS 상세 정보"""
+    msds = MSDSModel.query.get_or_404(msds_id)
+    components = MSDSComponentModel.query.filter_by(msds_id=msds_id).all()
+    usage_records = MSDSUsageRecordModel.query.filter_by(msds_id=msds_id).order_by(MSDSUsageRecordModel.usage_date.desc()).all()
+    
+    return render_template("admin/msds_detail.html", 
+                         msds=msds, 
+                         components=components, 
+                         usage_records=usage_records)
+
+
+@admin_bp.route("/msds/<int:msds_id>/edit", methods=['GET', 'POST'])
+@admin_required
+def msds_edit(msds_id):
+    """MSDS 수정"""
+    msds = MSDSModel.query.get_or_404(msds_id)
+    
+    if request.method == 'POST':
+        try:
+            # 기본 정보 업데이트
+            msds.substance_name = request.form.get('substance_name')
+            msds.cas_number = request.form.get('cas_number')
+            msds.manufacturer = request.form.get('manufacturer')
+            msds.supplier = request.form.get('supplier')
+            msds.msds_number = request.form.get('msds_number')
+            msds.signal_word = request.form.get('signal_word')
+            msds.is_special_management = request.form.get('is_special_management') == 'on'
+            msds.special_management_type = request.form.get('special_management_type')
+            msds.notes = request.form.get('notes')
+            msds.status = request.form.get('status', 'active')
+            
+            # 개정일자 처리
+            revision_date_str = request.form.get('revision_date')
+            if revision_date_str:
+                msds.revision_date = datetime.strptime(revision_date_str, '%Y-%m-%d').date()
+            
+            db.session.commit()
+            flash('MSDS가 성공적으로 수정되었습니다.', 'success')
+            return redirect(url_for('admin.msds_detail', msds_id=msds_id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'MSDS 수정 중 오류가 발생했습니다: {str(e)}', 'error')
+    
+    components = MSDSComponentModel.query.filter_by(msds_id=msds_id).all()
+    return render_template("admin/msds_edit.html", msds=msds, components=components)
+
+
+@admin_bp.route("/msds/<int:msds_id>/usage", methods=['POST'])
+@admin_required
+def msds_add_usage(msds_id):
+    """MSDS 사용 기록 추가"""
+    msds = MSDSModel.query.get_or_404(msds_id)
+    
+    try:
+        usage_record = MSDSUsageRecordModel(
+            msds_id=msds_id,
+            user_id=current_user.id,
+            workplace_area=request.form.get('workplace_area'),
+            usage_purpose=request.form.get('usage_purpose'),
+            quantity_used=float(request.form.get('quantity_used', 0)),
+            quantity_unit=request.form.get('quantity_unit'),
+            safety_measures=request.form.get('safety_measures'),
+            notes=request.form.get('notes')
+        )
+        
+        # PPE 사용 정보
+        ppe_items = []
+        for ppe in ['gloves', 'goggles', 'mask', 'apron', 'boots']:
+            if request.form.get(f'ppe_{ppe}'):
+                ppe_items.append(ppe)
+        usage_record.ppe_used = ppe_items
+        
+        db.session.add(usage_record)
+        db.session.commit()
+        
+        flash('사용 기록이 추가되었습니다.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'사용 기록 추가 중 오류가 발생했습니다: {str(e)}', 'error')
+    
+    return redirect(url_for('admin.msds_detail', msds_id=msds_id))

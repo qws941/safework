@@ -1,0 +1,303 @@
+{% extends "base.html" %}
+
+{% block title %}MSDS 목록 관리 - SafeWork{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-2 p-0">
+            {% include 'admin/admin_sidebar.html' %}
+        </div>
+        
+        <div class="col-md-10" style="margin-left: 250px;">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-list-ul"></i> MSDS 목록 관리</h2>
+                <div class="btn-group">
+                    <a href="{{ url_for('admin.msds_create') }}" class="btn btn-primary">
+                        <i class="bi bi-plus"></i> 새 MSDS 등록
+                    </a>
+                    <a href="{{ url_for('admin.msds_dashboard') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-speedometer2"></i> 대시보드
+                    </a>
+                </div>
+            </div>
+
+            <!-- 검색 및 필터 -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="search" class="form-label">검색</label>
+                            <input type="text" class="form-control" id="search" name="search" 
+                                   value="{{ search }}" placeholder="화학물질명, CAS번호, 제조업체">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="status" class="form-label">상태</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="all" {% if status_filter == 'all' %}selected{% endif %}>전체</option>
+                                <option value="active" {% if status_filter == 'active' %}selected{% endif %}>활성</option>
+                                <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>비활성</option>
+                                <option value="expired" {% if status_filter == 'expired' %}selected{% endif %}>만료</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="special" class="form-label">특별관리</label>
+                            <select class="form-select" id="special" name="special">
+                                <option value="all" {% if special_filter == 'all' %}selected{% endif %}>전체</option>
+                                <option value="yes" {% if special_filter == 'yes' %}selected{% endif %}>특별관리물질</option>
+                                <option value="no" {% if special_filter == 'no' %}selected{% endif %}>일반물질</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label>&nbsp;</label>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-outline-primary">
+                                    <i class="bi bi-search"></i> 검색
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <label>&nbsp;</label>
+                            <div class="d-grid">
+                                <a href="{{ url_for('admin.msds_list') }}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-arrow-clockwise"></i> 초기화
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- MSDS 목록 -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>
+                        <i class="bi bi-clipboard-data"></i> 
+                        MSDS 목록 
+                        <span class="badge bg-primary">{{ pagination.total }}건</span>
+                    </span>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-secondary" id="export-excel">
+                            <i class="bi bi-file-earmark-excel"></i> Excel 내보내기
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th width="5%">
+                                        <input type="checkbox" id="select-all">
+                                    </th>
+                                    <th width="20%">화학물질명</th>
+                                    <th width="15%">CAS 번호</th>
+                                    <th width="15%">제조업체</th>
+                                    <th width="10%">신호어</th>
+                                    <th width="10%">상태</th>
+                                    <th width="10%">등록일</th>
+                                    <th width="15%">관리</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for msds in pagination.items %}
+                                <tr>
+                                    <td>
+                                        <input type="checkbox" class="select-item" value="{{ msds.id }}">
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <strong>{{ msds.substance_name }}</strong>
+                                            {% if msds.is_special_management %}
+                                                <span class="badge bg-warning text-dark ms-1">특별관리</span>
+                                            {% endif %}
+                                        </div>
+                                        {% if msds.special_management_type %}
+                                            <small class="text-muted">{{ msds.special_management_type }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ msds.cas_number or '-' }}</td>
+                                    <td>{{ msds.manufacturer or '-' }}</td>
+                                    <td>
+                                        {% if msds.signal_word == '위험' %}
+                                            <span class="badge bg-danger">위험</span>
+                                        {% elif msds.signal_word == '경고' %}
+                                            <span class="badge bg-warning text-dark">경고</span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if msds.status == 'active' %}
+                                            <span class="badge bg-success">활성</span>
+                                        {% elif msds.status == 'inactive' %}
+                                            <span class="badge bg-secondary">비활성</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">만료</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {{ msds.created_at.strftime('%Y-%m-%d') if msds.created_at else '-' }}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ url_for('admin.msds_detail', msds_id=msds.id) }}" 
+                                               class="btn btn-outline-info" title="상세 보기">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a href="{{ url_for('admin.msds_edit', msds_id=msds.id) }}" 
+                                               class="btn btn-outline-primary" title="수정">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <button class="btn btn-outline-danger delete-btn" 
+                                                    data-id="{{ msds.id }}" 
+                                                    data-name="{{ msds.substance_name }}" title="삭제">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="8" class="text-center py-4">
+                                        <div class="text-muted">
+                                            <i class="bi bi-inbox display-1"></i>
+                                            <p class="mt-2">검색 조건에 맞는 MSDS가 없습니다.</p>
+                                            <a href="{{ url_for('admin.msds_create') }}" class="btn btn-primary">
+                                                <i class="bi bi-plus"></i> 첫 MSDS 등록하기
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- 페이지네이션 -->
+                    {% if pagination.pages > 1 %}
+                    <nav aria-label="MSDS 목록 페이지네이션">
+                        <ul class="pagination justify-content-center">
+                            {% if pagination.has_prev %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('admin.msds_list', page=pagination.prev_num, search=search, status=status_filter, special=special_filter) }}">
+                                        <i class="bi bi-chevron-left"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+                            
+                            {% for page_num in pagination.iter_pages() %}
+                                {% if page_num %}
+                                    {% if page_num != pagination.page %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="{{ url_for('admin.msds_list', page=page_num, search=search, status=status_filter, special=special_filter) }}">
+                                                {{ page_num }}
+                                            </a>
+                                        </li>
+                                    {% else %}
+                                        <li class="page-item active">
+                                            <span class="page-link">{{ page_num }}</span>
+                                        </li>
+                                    {% endif %}
+                                {% else %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link">...</span>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if pagination.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('admin.msds_list', page=pagination.next_num, search=search, status=status_filter, special=special_filter) }}">
+                                        <i class="bi bi-chevron-right"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 삭제 확인 모달 -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">MSDS 삭제 확인</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong id="delete-name"></strong>을(를) 정말 삭제하시겠습니까?</p>
+                <p class="text-danger"><i class="bi bi-exclamation-triangle"></i> 이 작업은 되돌릴 수 없습니다.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <button type="button" class="btn btn-danger" id="confirm-delete">삭제</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    let deleteId = null;
+    
+    // 전체 선택/해제
+    $('#select-all').change(function() {
+        $('.select-item').prop('checked', $(this).is(':checked'));
+    });
+    
+    // 개별 선택 시 전체 선택 체크박스 상태 업데이트
+    $('.select-item').change(function() {
+        const totalItems = $('.select-item').length;
+        const checkedItems = $('.select-item:checked').length;
+        $('#select-all').prop('checked', totalItems === checkedItems);
+    });
+    
+    // 삭제 버튼 클릭
+    $('.delete-btn').click(function() {
+        deleteId = $(this).data('id');
+        $('#delete-name').text($(this).data('name'));
+        $('#deleteModal').modal('show');
+    });
+    
+    // 삭제 확인
+    $('#confirm-delete').click(function() {
+        if (deleteId) {
+            // AJAX로 삭제 요청
+            $.ajax({
+                url: `/admin/msds/${deleteId}/delete`,
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                success: function(response) {
+                    if (response.success) {
+                        location.reload();
+                    } else {
+                        alert('삭제 중 오류가 발생했습니다: ' + response.message);
+                    }
+                },
+                error: function() {
+                    alert('삭제 중 오류가 발생했습니다.');
+                }
+            });
+        }
+        $('#deleteModal').modal('hide');
+    });
+    
+    // Excel 내보내기
+    $('#export-excel').click(function() {
+        const searchParams = new URLSearchParams(window.location.search);
+        searchParams.append('export', 'excel');
+        window.location.href = `{{ url_for('admin.msds_list') }}?${searchParams.toString()}`;
+    });
+});
+</script>
+{% endblock %}

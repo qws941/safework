@@ -58,128 +58,94 @@ class User(UserMixin, db.Model):
         return f"<User {self.username}>"
 
 
-class Survey(db.Model):
-    """근골격계 증상조사표 모델 - PDF 기준"""
+class SurveyModel(db.Model):
+    """Unified Survey Model - Based on Actual Database Schema"""
 
     __tablename__ = "surveys"
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-
-    # 양식 구분 필드 추가
-    form_type = db.Column(db.String(50))  # 001_musculoskeletal, 002_new_employee 등
-
-    # I. 기본 정보
-    name = db.Column(db.String(100), nullable=False)
-    age = db.Column(db.Integer, nullable=False)
-    gender = db.Column(db.String(10))  # 남/여
-    work_years = db.Column(db.Integer)  # 현 직장경력 (년)
-    work_months = db.Column(db.Integer)  # 현 직장경력 (개월)
     
-    # 건설업 맞춤 필드 (외래키)
-    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False)  # 업체명
-    process_id = db.Column(db.Integer, db.ForeignKey("processes.id"), nullable=False)  # 공정명
-    role_id = db.Column(db.Integer, db.ForeignKey("roles.id"), nullable=False)  # 직위/역할
+    # 양식 구분 필드
+    form_type = db.Column(db.String(50), nullable=False)
     
-    marriage_status = db.Column(db.String(10))  # 기혼/미혼
+    # 기본 정보
+    name = db.Column(db.String(50))
+    department = db.Column(db.String(50))
+    position = db.Column(db.String(50))
+    employee_id = db.Column(db.String(20))
+    gender = db.Column(db.String(10))
+    age = db.Column(db.Integer)
+    years_of_service = db.Column(db.Integer)
+    employment_type = db.Column(db.String(20))
+    employee_number = db.Column(db.String(50))
+    hire_date = db.Column(db.Date)
     
-    # 관계 정의
-    company = db.relationship("Company", backref="surveys")
-    process = db.relationship("Process", backref="surveys")
-    role = db.relationship("Role", backref="surveys")
-
-    # 현재하고 있는 작업
-    current_work_details = db.Column(db.Text)  # 작업내용
-    current_work_years = db.Column(db.Integer)  # 작업기간(년)
-    current_work_months = db.Column(db.Integer)  # 작업기간(개월)
-
-    # 1일 근무시간 및 휴식
+    # 신체 정보
+    height_cm = db.Column(db.Numeric(5, 1))
+    weight_kg = db.Column(db.Numeric(5, 1))
+    blood_type = db.Column(db.String(10))
+    vision_left = db.Column(db.Numeric(3, 1))
+    vision_right = db.Column(db.Numeric(3, 1))
+    hearing_left = db.Column(db.String(20))
+    hearing_right = db.Column(db.String(20))
+    blood_pressure = db.Column(db.String(20))
+    
+    # 건강 정보
+    existing_conditions = db.Column(db.Text)
+    medication_history = db.Column(db.Text)
+    allergy_history = db.Column(db.Text)
+    surgery_history = db.Column(db.Text)
+    family_history = db.Column(db.Text)
+    
+    # 생활 습관
+    smoking_status = db.Column(db.String(20))
+    smoking_amount = db.Column(db.String(50))
+    drinking_status = db.Column(db.String(20))
+    drinking_amount = db.Column(db.String(50))
+    exercise_habits = db.Column(db.Text)
+    sleep_hours = db.Column(db.String(20))
+    
+    # 추가 정보
+    physical_limitations = db.Column(db.Text)
+    emergency_contact = db.Column(db.String(100))
+    special_considerations = db.Column(db.Text)
+    
+    # 업무 정보
+    work_area = db.Column(db.String(100))
     work_hours_per_day = db.Column(db.Integer)
-    break_time_minutes = db.Column(db.Integer)  # 휴식시간(분)
-    break_frequency = db.Column(db.Integer)  # 휴식횟수
-
-    # 현작업 하기 전 작업
-    previous_work_details = db.Column(db.Text)
-    previous_work_years = db.Column(db.Integer)
-    previous_work_months = db.Column(db.Integer)
-
-    # 1. 여가 및 취미활동 (체크박스)
-    hobby_computer = db.Column(db.Boolean, default=False)
-    hobby_instrument = db.Column(db.Boolean, default=False)  # 악기연주
-    hobby_knitting = db.Column(db.Boolean, default=False)  # 뜨개질/자수/붓글씨
-    hobby_racket_sports = db.Column(db.Boolean, default=False)  # 테니스/배드민턴/스쿼시
-    hobby_ball_sports = db.Column(db.Boolean, default=False)  # 축구/족구/농구/스키
-    hobby_none = db.Column(db.Boolean, default=False)  # 해당사항 없음
-
-    # 2. 가사노동시간
-    housework_hours = db.Column(db.String(50))  # 거의안함/1시간미만/1-2시간/2-3시간/3시간이상
-
-    # 3. 진단받은 질병
-    disease_rheumatoid = db.Column(db.Boolean, default=False)  # 류머티스 관절염
-    disease_diabetes = db.Column(db.Boolean, default=False)  # 당뇨병
-    disease_lupus = db.Column(db.Boolean, default=False)  # 루프스병
-    disease_gout = db.Column(db.Boolean, default=False)  # 통풍
-    disease_alcoholism = db.Column(db.Boolean, default=False)  # 알코올중독
-    disease_status = db.Column(db.String(20))  # 완치/치료나 관찰 중
-
-    # 4. 과거 사고 여부
-    past_accident = db.Column(db.Boolean, default=False)
-    accident_hand = db.Column(db.Boolean, default=False)
-    accident_arm = db.Column(db.Boolean, default=False)
-    accident_shoulder = db.Column(db.Boolean, default=False)
-    accident_neck = db.Column(db.Boolean, default=False)
-    accident_waist = db.Column(db.Boolean, default=False)
-    accident_leg = db.Column(db.Boolean, default=False)
-
-    # 5. 육체적 부담 정도
-    physical_burden = db.Column(db.String(30))  # 전혀힘들지않음/견딜만함/약간힘듦/매우힘듦
-
-    # II. 근골격계 증상 (지난 1년 동안)
-    # 통증 경험 여부
-    has_symptoms = db.Column(db.Boolean, default=False)
-
-    # 각 부위별 데이터 (JSON으로 상세 정보 저장)
-    # 목
-    neck_data = db.Column(db.JSON)
-    # 어깨
-    shoulder_data = db.Column(db.JSON)
-    # 팔/팔꿈치
-    arm_data = db.Column(db.JSON)
-    # 손/손목/손가락
-    hand_data = db.Column(db.JSON)
-    # 허리
-    waist_data = db.Column(db.JSON)
-    # 다리/발
-    leg_data = db.Column(db.JSON)
+    weekly_work_days = db.Column(db.Integer)
+    shift_type = db.Column(db.String(20))
+    physical_demand_level = db.Column(db.String(20))
+    job_satisfaction_score = db.Column(db.Integer)
+    stress_level = db.Column(db.String(20))
+    workplace_safety_rating = db.Column(db.Integer)
     
-
-
-    # 각 JSON 필드는 다음 구조를 가짐:
-    # {
-    #   "side": "오른쪽/왼쪽/양쪽",
-    #   "duration": "1일미만/1일-1주일/1주일-1달/1달-6개월/6개월이상",
-    #   "severity": "약한통증/중간통증/심한통증/매우심한통증",
-    #   "frequency": "6개월에1번/2-3달에1번/1달에1번/1주일에1번/매일",
-    #   "last_week": true/false,
-    #   "treatment": ["병원치료", "약국치료", "병가산재", "작업전환", "없음"]
-    # }
-
+    # 설문 응답 데이터 (JSON)
+    responses = db.Column(db.JSON)
+    symptoms_data = db.Column(db.JSON)
+    
     # 메타데이터
     submission_date = db.Column(db.DateTime, default=kst_now)
-    ip_address = db.Column(db.String(45))
     status = db.Column(db.String(20), default="submitted")
-    reviewed_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
-    reviewed_at = db.Column(db.DateTime)
-
+    notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=kst_now)
     updated_at = db.Column(db.DateTime, default=kst_now, onupdate=kst_now)
+    
+    # 추가 필드 (Foreign Keys)
+    company_id = db.Column(db.Integer)
+    process_id = db.Column(db.Integer)
+    role_id = db.Column(db.Integer)
+    has_symptoms = db.Column(db.Boolean, default=False)
+    work_years = db.Column(db.Integer)
+    work_months = db.Column(db.Integer)
 
     def __repr__(self):
-        return f"<Survey {self.name} - {self.submission_date}>"
+        return f"<Survey {self.name or 'Anonymous'} - {self.form_type}>"
 
 
-class SurveyStatistics(db.Model):
-    """통계 데이터 캐싱용 모델"""
+class SurveyStatisticsModel(db.Model):
+    """Survey Statistics Caching Model"""
 
     __tablename__ = "survey_statistics"
 
@@ -223,8 +189,8 @@ class SurveyStatistics(db.Model):
         return f"<SurveyStatistics {self.stat_date}>"
 
 
-class AuditLog(db.Model):
-    """감사 로그"""
+class AuditLogModel(db.Model):
+    """Audit Log Model"""
 
     __tablename__ = "audit_logs"
 
@@ -244,8 +210,8 @@ class AuditLog(db.Model):
 
 # === 건설업 마스터 데이터 모델 === 
 
-class Company(db.Model):
-    """업체명 마스터 테이블"""
+class CompanyModel(db.Model):
+    """Company Master Table"""
     __tablename__ = "companies"
     
     id = db.Column(db.Integer, primary_key=True)
@@ -260,8 +226,8 @@ class Company(db.Model):
         return f"<Company {self.name}>"
 
 
-class Process(db.Model):
-    """공정명 마스터 테이블"""
+class ProcessModel(db.Model):
+    """Process Master Table"""
     __tablename__ = "processes"
     
     id = db.Column(db.Integer, primary_key=True)
@@ -277,8 +243,8 @@ class Process(db.Model):
         return f"<Process {self.name}>"
 
 
-class Role(db.Model):
-    """직위/역할 마스터 테이블"""
+class RoleModel(db.Model):
+    """Role Master Table"""
     __tablename__ = "roles"
     
     id = db.Column(db.Integer, primary_key=True)
@@ -292,3 +258,100 @@ class Role(db.Model):
     
     def __repr__(self):
         return f"<Role {self.title}>"
+
+
+# === MSDS Management System Models ===
+
+class MSDSModel(db.Model):
+    """MSDS (Material Safety Data Sheet) Master Table"""
+    __tablename__ = "msds"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    substance_name = db.Column(db.String(200), nullable=False)  # 화학물질명
+    cas_number = db.Column(db.String(50))  # CAS 번호
+    manufacturer = db.Column(db.String(200))  # 제조업체
+    supplier = db.Column(db.String(200))  # 공급업체
+    
+    # MSDS 문서 정보
+    msds_number = db.Column(db.String(100))  # MSDS 문서번호
+    revision_date = db.Column(db.Date)  # 개정일자
+    
+    # 분류 정보
+    hazard_classification = db.Column(db.JSON)  # 유해성 분류 (JSON)
+    ghs_pictograms = db.Column(db.JSON)  # GHS 그림문자 (JSON)
+    signal_word = db.Column(db.String(50))  # 신호어 (위험/경고)
+    
+    # 특별관리물질 여부
+    is_special_management = db.Column(db.Boolean, default=False)
+    special_management_type = db.Column(db.String(100))  # 특별관리 유형
+    
+    # 문서 첨부
+    msds_file_path = db.Column(db.String(500))  # MSDS 파일 경로
+    msds_image_path = db.Column(db.String(500))  # MSDS 이미지 경로
+    ocr_extracted_text = db.Column(db.Text)  # OCR 추출 텍스트
+    
+    # 메타데이터
+    registration_date = db.Column(db.DateTime, default=kst_now)
+    last_review_date = db.Column(db.DateTime)
+    next_review_date = db.Column(db.DateTime)
+    status = db.Column(db.String(20), default="active")  # active/inactive/expired
+    notes = db.Column(db.Text)
+    
+    created_at = db.Column(db.DateTime, default=kst_now)
+    updated_at = db.Column(db.DateTime, default=kst_now, onupdate=kst_now)
+    
+    # Relationships
+    components = db.relationship("MSDSComponentModel", backref="msds", lazy="dynamic", cascade="all, delete-orphan")
+    usage_records = db.relationship("MSDSUsageRecordModel", backref="msds", lazy="dynamic")
+    
+    def __repr__(self):
+        return f"<MSDS {self.substance_name}>"
+
+
+class MSDSComponentModel(db.Model):
+    """MSDS Chemical Component Details"""
+    __tablename__ = "msds_components"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    msds_id = db.Column(db.Integer, db.ForeignKey("msds.id"), nullable=False)
+    
+    component_name = db.Column(db.String(200), nullable=False)  # 성분명
+    cas_number = db.Column(db.String(50))  # CAS 번호
+    concentration_min = db.Column(db.Numeric(5, 2))  # 최소 농도 (%)
+    concentration_max = db.Column(db.Numeric(5, 2))  # 최대 농도 (%)
+    concentration_exact = db.Column(db.Numeric(5, 2))  # 정확한 농도 (%)
+    
+    # 유해성 정보
+    hazard_statements = db.Column(db.JSON)  # 유해문구 (JSON)
+    precautionary_statements = db.Column(db.JSON)  # 예방조치문구 (JSON)
+    
+    created_at = db.Column(db.DateTime, default=kst_now)
+    updated_at = db.Column(db.DateTime, default=kst_now, onupdate=kst_now)
+    
+    def __repr__(self):
+        return f"<MSDSComponent {self.component_name}>"
+
+
+class MSDSUsageRecordModel(db.Model):
+    """MSDS Usage Tracking"""
+    __tablename__ = "msds_usage_records"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    msds_id = db.Column(db.Integer, db.ForeignKey("msds.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    
+    usage_date = db.Column(db.DateTime, default=kst_now)
+    workplace_area = db.Column(db.String(100))  # 사용 작업장
+    usage_purpose = db.Column(db.String(200))  # 사용 목적
+    quantity_used = db.Column(db.Numeric(10, 2))  # 사용량
+    quantity_unit = db.Column(db.String(20))  # 단위 (kg, L, etc.)
+    
+    # 안전조치 정보
+    ppe_used = db.Column(db.JSON)  # 사용한 보호구 (JSON)
+    safety_measures = db.Column(db.Text)  # 안전조치사항
+    
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=kst_now)
+    
+    def __repr__(self):
+        return f"<MSDSUsage {self.msds_id} on {self.usage_date}>"
