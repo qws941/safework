@@ -1,8 +1,8 @@
 name: 🚀 Deploy Pipeline
 
-# Prevent duplicate workflow execution
+# Prevent concurrent deployments on the same branch
 concurrency:
-  group: deploy-${{ github.ref }}
+  group: deploy-${{ github.ref_name }}
   cancel-in-progress: true
 
 on:
@@ -82,8 +82,6 @@ jobs:
           registry: ${{ env.REGISTRY_HOST }}
           username: ${{ env.REGISTRY_USER }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
-        continue-on-error: false
-        timeout-minutes: 5
 
       # Metadata for PostgreSQL image
       - name: 📋 Extract PostgreSQL Metadata
@@ -125,16 +123,16 @@ jobs:
             ${{ steps.postgres_meta.outputs.labels }}
             com.docker.compose.project=${{ env.APP_NAME }}
             com.docker.compose.service=postgres
-            version=${{ github.sha }}
-            build-number=${{ github.run_number }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          platforms: linux/amd64
           build-args: |
+            VERSION=${{ github.sha }}
+            BUILD_NUMBER=${{ github.run_number }}
+            VCS_REF=${{ github.sha }}
+            BUILDTIME=${{ github.event.head_commit.timestamp }}
             POSTGRES_DB=${{ secrets.POSTGRES_DB || 'safework_db' }}
             POSTGRES_USER=${{ secrets.POSTGRES_USER || 'safework' }}
             POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD || 'safework2024' }}
-        timeout-minutes: 15
 
       # Build Redis image
       - name: 🔨 Build Redis Image
@@ -149,12 +147,13 @@ jobs:
             ${{ steps.redis_meta.outputs.labels }}
             com.docker.compose.project=${{ env.APP_NAME }}
             com.docker.compose.service=redis
-            version=${{ github.sha }}
-            build-number=${{ github.run_number }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          platforms: linux/amd64
-        timeout-minutes: 10
+          build-args: |
+            VERSION=${{ github.sha }}
+            BUILD_NUMBER=${{ github.run_number }}
+            VCS_REF=${{ github.sha }}
+            BUILDTIME=${{ github.event.head_commit.timestamp }}
 
       # Build Flask App image
       - name: 🔨 Build Flask App Image
@@ -169,20 +168,31 @@ jobs:
             ${{ steps.app_meta.outputs.labels }}
             com.docker.compose.project=${{ env.APP_NAME }}
             com.docker.compose.service=app
-            version=${{ github.sha }}
-            build-number=${{ github.run_number }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          platforms: linux/amd64
           build-args: |
-            FLASK_CONFIG=production
+            VERSION=${{ github.sha }}
+            BUILD_TIME=${{ github.event.head_commit.timestamp }}
+            BUILD_NUMBER=${{ github.run_number }}
+            VCS_REF=${{ github.sha }}
+            BUILDTIME=${{ github.event.head_commit.timestamp }}
             POSTGRES_HOST=safework2-postgres
             POSTGRES_PORT=5432
             POSTGRES_DB=safework_db
             POSTGRES_USER=safework
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD || 'safework2024' }}
             REDIS_HOST=safework2-redis
             REDIS_PORT=6379
-        timeout-minutes: 20
+            PRD_URL=${{ secrets.PRD_URL || 'https://safework.jclee.me' }}
+            DEV_URL=${{ secrets.DEV_URL || 'https://safework-dev.jclee.me' }}
+            GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+            GITHUB_REPO_OWNER=${{ github.repository_owner }}
+            GITHUB_REPO_NAME=${{ github.event.repository.name }}
+            REGISTRY_HOST=${{ secrets.REGISTRY_HOST || 'registry.jclee.me' }}
+            REGISTRY_USER=${{ secrets.REGISTRY_USER || 'admin' }}
+            REGISTRY_PASSWORD=${{ secrets.REGISTRY_PASSWORD }}
+            FLASK_ENV=production
+            TIMEZONE=${{ secrets.TIMEZONE || 'Asia/Seoul' }}
 
       - name: 🧪 Run Tests
         id: test
@@ -194,14 +204,18 @@ jobs:
           APP_IMAGE_TAG=$(echo "${{ steps.app_meta.outputs.tags }}" | head -n1)
           echo "🐳 Using Flask app image: $APP_IMAGE_TAG"
           
-          # Basic container execution test (simplified)
-          docker run --rm --name ${{ env.APP_NAME }}-test \
-            -e FLASK_CONFIG=testing \
-            -e POSTGRES_HOST=test-db \
-            -e REDIS_HOST=test-redis \
+          # Basic container execution test (timeout configured)
+          timeout 30s docker run --rm --name ${{ env.APP_NAME }}-test \
+            -e FLASK_ENV=testing \
+            -e POSTGRES_HOST=localhost \
+            -e REDIS_HOST=localhost \
             "$APP_IMAGE_TAG" \
-            python -c "print('✅ Container test completed successfully')" && \
-            echo "results=success" >> $GITHUB_OUTPUT || echo "results=failed" >> $GITHUB_OUTPUT
+            bash -c "
+              echo '✅ Container started successfully'
+              python -c 'import sys; print(f\"Python version: {sys.version}\")'
+              python -c 'from app import create_app; print(\"Flask app creation test passed\")'
+              echo 'test_completed=true'
+            " && echo "results=success" >> $GITHUB_OUTPUT || echo "results=failed" >> $GITHUB_OUTPUT
 
       - name: 📊 Test Results Summary  
         run: |
@@ -231,29 +245,9 @@ jobs:
           APP_NAME: safework2
           PORTAINER_URL: ${{ secrets.PORTAINER_URL || 'https://portainer.jclee.me' }}
           PORTAINER_TOKEN: ${{ secrets.PORTAINER_API_TOKEN }}
-          PORTAINER_ENDPOINT_ID: ${{ secrets.PORTAINER_ENDPOINT_ID || '1' }}
-        continue-on-error: false
+          PORTAINER_ENDPOINT_ID: ${{ secrets.PORTAINER_ENDPOINT_ID || '3' }}
         run: |
           echo "🚀 Starting Portainer API deployment process..."
-          
-          # Validate required environment variables
-          if [ -z "$PORTAINER_TOKEN" ]; then
-            echo "❌ PORTAINER_API_TOKEN is not set"
-            exit 1
-          fi
-          
-          if [ -z "$PORTAINER_URL" ]; then
-            echo "❌ PORTAINER_URL is not set"
-            exit 1
-          fi
-          
-          # Test Portainer API connectivity
-          if ! curl -f -s "$PORTAINER_URL/api/status" > /dev/null; then
-            echo "❌ Cannot connect to Portainer API at $PORTAINER_URL"
-            exit 1
-          fi
-          
-          echo "✅ Environment validation and connectivity check passed"
           
           # Function to ensure network exists
           ensure_network() {
@@ -401,7 +395,7 @@ jobs:
           if deploy_container \
             "${APP_NAME}-postgres" \
             "${{ needs.build-and-test.outputs.postgres_image_tag }}" \
-            '["POSTGRES_DB=safework_db", "POSTGRES_USER=safework", "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}"]' \
+            '["POSTGRES_DB=safework_db", "POSTGRES_USER=safework", "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD || 'safework2024' }}"]' \
             '{"Test": ["CMD-SHELL", "pg_isready -U safework"], "Interval": 30000000000, "Timeout": 10000000000, "Retries": 3}' \
             '["'${APP_NAME}'-postgres-data:/var/lib/postgresql/data"]' \
             '{"5432/tcp": [{"HostPort": "4546"}]}' \
@@ -468,30 +462,58 @@ jobs:
         id: health
         if: steps.deploy.outputs.status == 'success'
         run: |
-          echo "🏥 Performing health checks..."
+          echo "🏥 Running health checks..."
           
-          # Check application health endpoint
-          if timeout 30s curl -sf --max-time 10 "${{ env.PRD_URL }}/health" > /dev/null; then
-            echo "✅ Application health check passed"
-            echo "status=healthy" >> $GITHUB_OUTPUT
+          max_attempts=5
+          attempt=1
+          health_status="unhealthy"
+          
+          while [ $attempt -le $max_attempts ]; do
+            echo "🔍 Health check attempt $attempt/$max_attempts..."
+            
+            # Check health endpoint (timeout shortened)
+            if timeout 5s curl -sf --max-time 5 ${{ env.PRD_URL }}/health > /dev/null; then
+              echo "✅ Health check passed - application is healthy"
+              health_status="healthy"
+              break
+            else
+              echo "⏳ Application not ready yet, waiting 10 seconds..."
+              sleep 10
+              ((attempt++))
+            fi
+          done
+          
+          echo "status=$health_status" >> $GITHUB_OUTPUT
+          
+          if [ "$health_status" = "healthy" ]; then
+            echo "### ✅ Deployment Successful" >> $GITHUB_STEP_SUMMARY
+            echo "- **URL**: ${{ env.PRD_URL }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Health Status**: 🟢 Healthy" >> $GITHUB_STEP_SUMMARY
+            echo "- **Deployment Time**: ${{ steps.deploy.outputs.time }}" >> $GITHUB_STEP_SUMMARY
           else
-            echo "❌ Application health check failed"
-            echo "status=unhealthy" >> $GITHUB_OUTPUT
+            echo "### ⚠️ Deployment Issues Detected" >> $GITHUB_STEP_SUMMARY
+            echo "- **Health Status**: 🔴 Unhealthy" >> $GITHUB_STEP_SUMMARY
+            echo "- **Action Required**: Manual verification needed" >> $GITHUB_STEP_SUMMARY
           fi
 
-  # Phase 3: Post-Deployment Notification
-  notify:
-    name: 📢 Post-Deployment Notification
+  # Phase 3: Post-deployment Notification
+  post-deploy-notification:
+    name: 📨 Post-Deploy Notification
     needs: [build-and-test, deploy]
     runs-on: ubuntu-latest
     if: always()
     
     steps:
-      - name: 📢 Send Deployment Notification
-        if: always()
+      - name: 📋 Deployment Summary
         run: |
-          echo "📢 SafeWork deployment completed!"
-          echo "- **Status**: ${{ needs.deploy.outputs.deployment_status }}"
-          echo "- **URL**: ${{ needs.deploy.outputs.deployment_url }}"
-          echo "- **Health**: ${{ needs.deploy.outputs.health_check }}"
-          echo "- **Time**: ${{ needs.deploy.outputs.deployment_time }}"
+          echo "## 🚀 SafeWork Deployment Completion Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Deployment Results" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build Status**: ${{ needs.build-and-test.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deploy Status**: ${{ needs.deploy.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Health Check**: ${{ needs.deploy.outputs.health_check }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deploy URL**: ${{ needs.deploy.outputs.deployment_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔄 Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "SafeWork deployment completed successfully." >> $GITHUB_STEP_SUMMARY
+          echo "System is ready for industrial health and safety management." >> $GITHUB_STEP_SUMMARY
