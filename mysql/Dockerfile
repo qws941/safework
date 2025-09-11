@@ -45,8 +45,8 @@ RUN echo "[mysqld]" > /etc/mysql/conf.d/safework.cnf && \
     echo "[mysql]" >> /etc/mysql/conf.d/safework.cnf && \
     echo "default-character-set=utf8mb4" >> /etc/mysql/conf.d/safework.cnf
 
-# 초기화 SQL 스크립트
-COPY init.sql /docker-entrypoint-initdb.d/
+# 초기화 SQL 스크립트 (조건부 복사)
+COPY init.sql /docker-entrypoint-initdb.d/ 2>/dev/null || echo "No init.sql found, using default setup"
 
 # 로그 디렉토리 생성
 RUN mkdir -p /var/log/mysql && \

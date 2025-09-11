@@ -1,0 +1,36 @@
+# Redis Docker Ignore - Optimize Build Context
+
+# Development files
+.env
+.env.example
+*.md
+docs/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Logs and temporary files
+*.log
+logs/
+*.tmp
+tmp/
+
+# Docker
+.dockerignore
+docker-compose*
+
+# Backup files
+*.bak
+*backup*
+*-old*

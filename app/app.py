@@ -44,11 +44,11 @@ def create_app(config_name=None):
     # Initialize CSRF Protection - TEMPORARILY DISABLED FOR SURVEY TESTING
     # csrf = CSRFProtect(app)
     
-    # Add CSRF token to template context - DISABLED WITH CSRF PROTECTION
-    # @app.context_processor
-    # def inject_csrf_token():
-    #     from flask_wtf.csrf import generate_csrf
-    #     return dict(csrf_token=generate_csrf)
+    # Add CSRF token to template context - DISABLED BUT PROVIDE EMPTY TOKEN FOR COMPATIBILITY
+    @app.context_processor
+    def inject_csrf_token():
+        # CSRF는 비활성화되었지만 템플릿 호환성을 위해 빈 함수 제공
+        return dict(csrf_token=lambda: "")
 
     # Initialize migration manager
     migration_manager = MigrationManager(app)
@@ -123,6 +123,19 @@ def create_app(config_name=None):
     # Context processors
     @app.context_processor
     def inject_config():
+        config_obj = app.config
+        
+        # URL 정보 추가
+        url_info = {
+            "current_url": config_obj.get('DEV_URL') if config_obj.get('FLASK_CONFIG') == 'development' else 
+                          config_obj.get('PRD_URL') if config_obj.get('FLASK_CONFIG') == 'production' else 
+                          config_obj.get('LOCAL_URL', 'http://localhost:4545'),
+            "dev_url": config_obj.get('DEV_URL', 'https://safework-dev.jclee.me'),
+            "prd_url": config_obj.get('PRD_URL', 'https://safework.jclee.me'),
+            "local_url": config_obj.get('LOCAL_URL', 'http://localhost:4545'),
+            "environment": config_obj.get('FLASK_CONFIG', 'development')
+        }
+        
         # 워크플로우에서 생성된 Git 태그 기반 버전 표시
         try:
             import subprocess
@@ -183,6 +196,8 @@ def create_app(config_name=None):
             "start_time": datetime.fromtimestamp(
                 app.start_time, tz=timezone(timedelta(hours=9))
             ).strftime("%Y-%m-%d %H:%M:%S KST"),
+            # URL 정보 템플릿에서 사용 가능
+            "url_info": url_info,
         }
 
     # Audit logging

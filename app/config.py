@@ -15,7 +15,7 @@ class Config:
     MYSQL_HOST = os.environ.get("MYSQL_HOST", "safework-mysql")
     MYSQL_PORT = int(os.environ.get("MYSQL_PORT", 3306))
     MYSQL_USER = os.environ.get("MYSQL_USER", "safework")
-    MYSQL_PASSWORD = os.environ.get("MYSQL_PASSWORD", "safework2024")
+    MYSQL_PASSWORD = os.environ.get("MYSQL_PASSWORD", "CHANGE_ME_MYSQL_USER")
     MYSQL_DATABASE = os.environ.get("MYSQL_DATABASE", "safework_db")
 
     SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DATABASE}?charset=utf8mb4"
@@ -46,6 +46,11 @@ class Config:
     # Application
     APP_NAME = "SafeWork 안전보건 관리시스템"
     ITEMS_PER_PAGE = 20
+    
+    # Environment URLs
+    DEV_URL = os.environ.get("DEV_URL", "https://safework-dev.jclee.me")
+    PRD_URL = os.environ.get("PRD_URL", "https://safework.jclee.me")
+    LOCAL_URL = os.environ.get("LOCAL_URL", "http://localhost:4545")
 
     # Simple version (managed by workflow only)
     @property
@@ -61,10 +66,28 @@ class Config:
             "source": "static",
             "note": "Version managed by GitHub Actions workflow only"
         }
+    
+    def get_current_url(self):
+        """현재 환경에 맞는 URL 반환"""
+        env = os.environ.get("FLASK_CONFIG", "development")
+        if env == "production":
+            return self.PRD_URL
+        elif env == "development":
+            return self.DEV_URL
+        else:
+            return self.LOCAL_URL
+    
+    def get_health_check_url(self):
+        """헬스체크 URL 반환"""
+        return f"{self.get_current_url()}/health"
+    
+    def get_api_base_url(self):
+        """API 베이스 URL 반환"""
+        return f"{self.get_current_url()}/api/safework/v2"
 
     # Admin
     ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
-    ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "safework2024")
+    ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "CHANGE_ME_ADMIN_PASSWORD")
 
     # PDF Form
     PDF_TEMPLATE_PATH = "/app/forms/근골격계_증상조사표.pdf"

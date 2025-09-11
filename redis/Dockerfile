@@ -25,5 +25,8 @@ EXPOSE 6379
 HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \
     CMD redis-cli ping || exit 1
 
+# Copy Redis configuration if exists
+COPY redis.conf /usr/local/etc/redis/redis.conf 2>/dev/null || echo "Using default Redis config"
+
 # Redis 실행 (독립적 구성, 리소스 제한 제거)
-CMD ["redis-server", "--bind", "0.0.0.0", "--appendonly", "yes", "--save", "60", "1"]
+CMD ["redis-server", "/usr/local/etc/redis/redis.conf"]

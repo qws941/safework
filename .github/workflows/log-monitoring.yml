@@ -200,7 +200,6 @@ jobs:
             Focus on actionable insights and automated problem resolution.
 
           claude_args: |
-            --model claude-opus-4-1-20250805
             --allowedTools "mcp__serena__*,mcp__sequential-thinking__*,mcp__shrimp-task-manager__*,mcp__github__*,mcp__exa__*,Bash(curl:*),Bash(jq:*),Bash(grep:*),Bash(awk:*),Bash(date:*)"
 
   container-log-collection:
@@ -247,7 +246,6 @@ jobs:
             Generate detailed container performance report with optimization recommendations.
 
           claude_args: |
-            --model claude-opus-4-1-20250805
             --allowedTools "mcp__sequential-thinking__*,mcp__shrimp-task-manager__*,Bash(curl:*),Bash(jq:*)"
 
   alert-generation:
@@ -286,7 +284,6 @@ jobs:
             Generate comprehensive alert summary with appropriate escalation actions.
 
           claude_args: |
-            --model claude-opus-4-1-20250805
             --allowedTools "mcp__shrimp-task-manager__*,mcp__github__*,mcp__sequential-thinking__*"
 
       - name: 📱 Slack Alert Notification
@@ -329,26 +326,7 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
-      - name: 📧 Critical Alert Email
-        if: needs.operational-log-analysis.result == 'failure'
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 465
-          username: ${{ secrets.SMTP_USERNAME }}
-          password: ${{ secrets.SMTP_PASSWORD }}
-          subject: "🚨 CRITICAL: SafeWork Operational Alert"
-          to: ${{ secrets.CRITICAL_ALERT_EMAIL }}
-          from: SafeWork Monitoring <noreply@jclee.me>
-          body: |
-            CRITICAL ALERT: SafeWork operational monitoring has detected critical issues.
-            
-            Monitoring Scope: ${{ github.event.inputs.monitoring_scope || 'comprehensive' }}
-            Time Range: ${{ github.event.inputs.time_range || '2hours' }}
-            Analysis Status: ${{ needs.operational-log-analysis.result }}
-            
-            Please check the GitHub Actions logs and take immediate corrective action.
-            
-            Repository: ${{ github.repository }}
-            Workflow: ${{ github.workflow }}
-            Run ID: ${{ github.run_id }}
+      # Email notifications removed - using Slack only for simplicity
+      - name: 📧 Critical Alert (Disabled)
+        if: false  # Disabled email notifications
+        run: echo "Email notifications disabled - using Slack only"

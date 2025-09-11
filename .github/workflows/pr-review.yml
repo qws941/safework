@@ -1,0 +1,247 @@
+name: 🔍 PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  pull_request_review:
+    types: [submitted]
+  pull_request_review_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to review'
+        required: true
+        type: number
+      review_type:
+        description: 'Type of review to perform'
+        required: false
+        default: 'comprehensive'
+        type: choice
+        options:
+          - 'comprehensive'
+          - 'security-focused'
+          - 'performance-focused'
+          - 'code-quality'
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  checks: write
+
+jobs:
+  pr-analysis:
+    name: 🔍 Pull Request Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.event.pull_request.draft == false
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 📦 Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f app/requirements.txt ]; then
+            pip install -r app/requirements.txt
+          fi
+
+      - name: 🔍 Get PR changes
+        id: changes
+        run: |
+          echo "files_changed<<EOF" >> $GITHUB_OUTPUT
+          git diff --name-only origin/${{ github.base_ref }}...HEAD >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          
+          echo "lines_changed<<EOF" >> $GITHUB_OUTPUT
+          git diff --stat origin/${{ github.base_ref }}...HEAD >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: 🤖 Claude Code PR Review
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          track_progress: true
+          prompt: |
+            Please comprehensively review the SafeWork project Pull Request.
+
+            **PR Information:**
+            - Repository: ${{ github.repository }}
+            - PR Number: #${{ github.event.pull_request.number || inputs.pr_number }}
+            - Title: "${{ github.event.pull_request.title }}"
+            - Author: ${{ github.event.pull_request.user.login }}
+            - Base Branch: ${{ github.base_ref }}
+            - Head Branch: ${{ github.head_ref }}
+            - Review Type: ${{ inputs.review_type || 'comprehensive' }}
+
+            **Changed Files:**
+            ${{ steps.changes.outputs.files_changed }}
+
+            **Change Statistics:**
+            ${{ steps.changes.outputs.lines_changed }}
+
+            **SafeWork Project Context:**
+            - Flask 3.0+ Industrial Health and Safety Management System
+            - Independent container deployment (MySQL, Redis, App) - no docker-compose
+            - Dockerfile-based configuration with GitHub Secrets
+            - Watchtower automatic updates support
+            - Core features: Survey system, MSDS management, safety education, health checkups
+
+            **Review Perspectives:**
+
+            1. **Code Quality Review:**
+            - PEP 8 compliance and coding style
+            - Function/class design appropriateness
+            - Error handling and exception considerations
+            - Code readability and maintainability
+
+            2. **Security Review:**
+            - Hardcoded sensitive information check
+            - SQL injection, XSS and other security vulnerabilities
+            - Permission verification and access control
+            - Input data validation
+
+            3. **Performance Optimization:**
+            - Database query efficiency
+            - Memory usage optimization
+            - Caching strategy application
+            - Unnecessary computation removal
+
+            4. **Architecture Consistency:**
+            - Existing code pattern adherence
+            - Inter-module dependency management
+            - API design consistency
+            - Flask best practices compliance
+
+            5. **Test Coverage:**
+            - Unit test addition necessity
+            - Integration test considerations
+            - Edge case handling
+
+            6. **Docker/Deployment Impact:**
+            - Dockerfile changes impact
+            - Environment variable configuration appropriateness
+            - Independent container execution compatibility
+
+            **Review Results to Provide:**
+            - 🟢 Approvable changes
+            - 🟡 Improvement recommendations
+            - 🔴 Required fixes
+            - 📝 Specific code improvement suggestions
+            - 🎯 PR merge recommendation status
+
+            **Response Language:** Please write detailed review in Korean and add review comments to GitHub PR.
+          claude_args: |
+            --temperature 0.1
+            --allowedTools "mcp__serena__*,mcp__github__*,mcp__sequential-thinking__*,mcp__memory__*"
+            --systemPrompt "SafeWork Flask 애플리케이션 코드 리뷰 전문가. 코드 품질, 보안, 성능, 아키텍처 관점에서 종합적인 리뷰를 제공하고 구체적인 개선 방안을 제시합니다."
+
+  security-scan:
+    name: 🔒 Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event.pull_request.draft == false
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: 📦 Install security tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install bandit safety
+
+      - name: 🔍 Run Bandit security scan
+        run: |
+          cd app
+          bandit -r . -f json -o ../bandit-results.json || true
+          
+      - name: 🔍 Run Safety dependency scan
+        run: |
+          cd app
+          safety check --json --output ../safety-results.json || true
+
+      - name: 📊 Security Report Summary
+        run: |
+          echo "# 🔒 Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🔍 Bandit Security Analysis" >> $GITHUB_STEP_SUMMARY
+          if [ -f bandit-results.json ]; then
+            echo "\`\`\`json" >> $GITHUB_STEP_SUMMARY
+            cat bandit-results.json >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📦 Safety Dependency Analysis" >> $GITHUB_STEP_SUMMARY
+          if [ -f safety-results.json ]; then
+            echo "\`\`\`json" >> $GITHUB_STEP_SUMMARY
+            cat safety-results.json >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  performance-check:
+    name: ⚡ Performance Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event.pull_request.draft == false && contains(github.event.pull_request.changed_files, 'app/')
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: 📦 Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f app/requirements.txt ]; then
+            pip install -r app/requirements.txt
+          fi
+
+      - name: 📊 Code complexity analysis
+        run: |
+          cd app
+          find . -name "*.py" -exec wc -l {} + | sort -n | tail -10 > ../complexity-report.txt
+          echo "Top 10 largest Python files:" >> ../complexity-report.txt
+          
+      - name: 🔍 Database query analysis
+        run: |
+          echo "Analyzing database queries in changed files..." > db-query-report.txt
+          grep -r "db\." app/ || echo "No direct database queries found" >> db-query-report.txt
+          grep -r "query\|select\|insert\|update\|delete" app/ || echo "No SQL patterns found" >> db-query-report.txt
+
+      - name: 📊 Performance Report Summary
+        run: |
+          echo "# ⚡ Performance Analysis Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Code Complexity" >> $GITHUB_STEP_SUMMARY
+          if [ -f complexity-report.txt ]; then
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            cat complexity-report.txt >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🗄️ Database Query Analysis" >> $GITHUB_STEP_SUMMARY
+          if [ -f db-query-report.txt ]; then
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            cat db-query-report.txt >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          fi

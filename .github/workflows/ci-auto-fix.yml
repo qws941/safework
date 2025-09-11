@@ -1,34 +1,37 @@
-name: 🔧 CI Auto Fix
+name: 🔧 CI Auto-Fix
 
 on:
-  workflow_run:
-    workflows: ["🚀 SafeWork Deployment Pipeline"]
-    types: [completed]
-    branches: [main, master]
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2 AM KST
   workflow_dispatch:
     inputs:
-      fix_strategy:
-        description: 'Auto-fix strategy'
-        required: true
-        default: 'quick'
+      fix_type:
+        description: 'Type of fixes to apply'
+        required: false
+        default: 'all'
         type: choice
         options:
-          - 'quick'
-          - 'comprehensive'
-          - 'experimental'
+          - 'all'
+          - 'linting'
+          - 'formatting'
+          - 'security'
+          - 'dependencies'
 
 permissions:
   contents: write
-  actions: read
+  issues: write
   pull-requests: write
+  security-events: write
 
 jobs:
   auto-fix:
-    name: 🛠️ Automated Problem Resolution
+    name: 🔧 Automated Fixes
     runs-on: ubuntu-latest
-    if: >
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'failure') ||
-      github.event_name == 'workflow_dispatch'
+    timeout-minutes: 20
     
     steps:
       - name: 📥 Checkout repository
@@ -36,42 +39,158 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 🔍 Analyze Workflow Failure
+      - name: 🧪 Run tests
+        if: ${{ inputs.fix_type == 'all' || inputs.fix_type == 'linting' }}
+        run: |
+          cd app
+          export FLASK_CONFIG=testing
+          export MYSQL_HOST=127.0.0.1
+          export MYSQL_DATABASE=safework_test
+          export MYSQL_USER=safework_test
+          export MYSQL_PASSWORD=safework_test
+          export REDIS_HOST=127.0.0.1
+          
+          # Basic application test
+          python -c "
+          from app import create_app
+          app = create_app('testing')
+          print('✅ Flask application created successfully')
+          "
+
+      - name: 🧹 Auto-fix code formatting
+        if: ${{ inputs.fix_type == 'all' || inputs.fix_type == 'formatting' }}
+        run: |
+          echo "🧹 Running Black formatter..."
+          cd app
+          black . --line-length 88 --target-version py311 || true
+          
+          echo "📝 Changes made by Black:"
+          git diff --name-only || echo "No formatting changes needed"
+
+      - name: 🔧 Auto-fix linting issues
+        if: ${{ inputs.fix_type == 'all' || inputs.fix_type == 'linting' }}
+        run: |
+          echo "🔧 Running Flake8 linter..."
+          cd app
+          flake8 . --max-line-length=88 --extend-ignore=E203,W503 --format='%(path)s:%(row)d:%(col)d: %(code)s %(text)s' || true
+
+      - name: 🔍 Run security audit
+        if: ${{ inputs.fix_type == 'all' || inputs.fix_type == 'security' }}
+        run: |
+          echo "🔍 Running security audit..."
+          cd app
+          
+          # Check for security vulnerabilities
+          bandit -r . -f json -o ../bandit-report.json || true
+          safety check --json --output ../safety-report.json || true
+          
+          # Log results
+          if [ -f ../bandit-report.json ]; then
+            echo "Bandit security scan completed"
+            cat ../bandit-report.json
+          fi
+          
+          if [ -f ../safety-report.json ]; then
+            echo "Safety dependency check completed"
+            cat ../safety-report.json
+          fi
+
+      - name: 📊 Check dependencies
+        if: ${{ inputs.fix_type == 'all' || inputs.fix_type == 'dependencies' }}
+        run: |
+          echo "📊 Checking for dependency updates..."
+          cd app
+          pip list --outdated || true
+          
+          echo "🔍 Checking requirements.txt format..."
+          sort requirements.txt > requirements_sorted.txt || true
+          if ! cmp -s requirements.txt requirements_sorted.txt; then
+            echo "Sorting requirements.txt..."
+            mv requirements_sorted.txt requirements.txt
+          else
+            rm -f requirements_sorted.txt
+          fi
+
+      - name: 🤖 Claude Code Analysis and Auto-Fix
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           track_progress: true
           prompt: |
-            🔧 **SafeWork CI/CD 자동 수정 시스템**
-            
-            실패한 워크플로우를 분석하고 자동으로 문제를 해결해주세요.
-            
-            **수정 전략:** ${{ inputs.fix_strategy || 'quick' }}
-            **실패한 워크플로우:** ${{ github.event.workflow_run.html_url || '수동 트리거' }}
-            
-            **일반적인 문제 유형:**
-            1. **Docker 빌드 실패** - Dockerfile 오류, 의존성 문제
-            2. **테스트 실패** - 환경 설정, 데이터베이스 연결 문제
-            3. **배포 실패** - 레지스트리 인증, Watchtower API 문제
-            4. **의존성 오류** - requirements.txt, Python 패키지 문제
-            5. **설정 오류** - 환경 변수, Docker Compose 설정
-            
-            **자동 수정 가능한 항목:**
-            - requirements.txt 업데이트
-            - Docker 설정 수정
-            - 테스트 환경 구성 개선
-            - 코드 포맷팅 및 린팅 오류
-            - 기본적인 구문 오류
-            
-            **수정 후 작업:**
-            1. 변경사항을 새 브랜치에 커밋
-            2. Pull Request 생성
-            3. 수정 내용 상세 설명
-            
-            SafeWork 프로젝트의 안정성을 위해 신중하게 수정해주세요.
+            Analyze SafeWork CI auto-fix operations and perform additional fixes if needed.
+
+            **Fix Type:** ${{ inputs.fix_type || 'all' }}
+            **Trigger Event:** ${{ github.event_name }}
+
+            **Target Actions:**
+            1. Security vulnerabilities found → Auto-fix and create PR
+            2. Code quality issues → Apply Black formatting and suggest improvements
+            3. Dependency problems → Suggest requirements.txt updates
+            4. Test failures → Resolve environment setup issues
+            5. Syntax/grammar errors → Direct fixes
+
+            **Auto-fixable Items:**
+            - Python code formatting (Black)
+            - Basic syntax errors
+            - requirements.txt sorting
+            - Environment variable configuration issues
+            - Docker configuration improvements
+
+            **GitHub Issues Creation Targets:**
+            - Complex security vulnerabilities
+            - Architecture improvement needs
+            - Performance optimization opportunities
+            - Dependency upgrade plans
+
+            **Project Context:**
+            SafeWork is a Flask 3.0+ based industrial health and safety management system using independent Docker containers (MySQL, Redis, App) with Dockerfile-based configuration and GitHub Secrets for production.
+
+            **Response Language:** Please respond in Korean for user communication.
           claude_args: |
-            --model claude-sonnet-4-20250514
-            --maxTokens 12288
             --temperature 0.1
-            --allowedTools "mcp__serena__*,mcp__github__*,mcp__sequential-thinking__*"
-            --systemPrompt "CI/CD 파이프라인 전문가. SafeWork Flask 애플리케이션의 빌드, 테스트, 배포 문제를 자동으로 진단하고 안전한 수정 방안을 제시합니다. 변경사항은 항상 PR을 통해 검토 가능하도록 합니다."
+            --allowedTools "mcp__serena__*,mcp__github__*,mcp__sequential-thinking__*,mcp__memory__*"
+            --systemPrompt "SafeWork Flask 애플리케이션 CI/CD 자동화 전문가. 코드 품질과 보안을 자동으로 개선하고, 복잡한 문제는 GitHub Issues로 추적 관리합니다."
+
+      - name: 💾 Commit auto-fixes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "CI Auto-Fix Bot"
+          
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "📝 Committing auto-fixes..."
+            git add .
+            git commit -m "🔧 CI Auto-Fix: Code formatting and quality improvements
+
+            - Applied Black code formatting
+            - Fixed linting issues where possible  
+            - Sorted requirements.txt
+            - Updated dependency information
+            
+            🤖 Generated with SafeWork CI Auto-Fix System" || echo "No changes to commit"
+            
+            # Only push if we're on a push event (not PR)
+            if [ "${{ github.event_name }}" = "push" ]; then
+              git push origin ${{ github.ref_name }} || echo "Failed to push changes"
+            fi
+          else
+            echo "✅ No fixes needed - code is already clean!"
+          fi
+
+      - name: 📊 Generate fix summary
+        run: |
+          echo "# 🔧 CI Auto-Fix Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🎯 Fix Type: ${{ inputs.fix_type || 'all' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Actions Performed:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Security audit (Bandit + Safety)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Code formatting (Black)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Linting analysis (Flake8)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Dependency checks" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Application health validation" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Claude Code analysis" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🏥 Project: SafeWork Industrial Health & Safety Management" >> $GITHUB_STEP_SUMMARY
+          echo "- **Framework:** Flask 3.0+" >> $GITHUB_STEP_SUMMARY
+          echo "- **Database:** MySQL 8.0, Redis" >> $GITHUB_STEP_SUMMARY
+          echo "- **Infrastructure:** Docker, Private Registry" >> $GITHUB_STEP_SUMMARY

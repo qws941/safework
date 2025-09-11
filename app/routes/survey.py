@@ -452,26 +452,15 @@ def api_submit():
 
     try:
         survey = Survey(
-            user_id=None,  # API 제출은 익명
-            employee_number=data.get("employee_number"),
+            user_id=1,  # API 제출은 익명 사용자 (user_id=1)
+            form_type=data.get("form_type", "001"),
             name=data.get("name"),
-            department=data.get("department"),
-            position=data.get("position"),
             age=data.get("age"),
             gender=data.get("gender"),
-            work_years=data.get("work_years"),
-            work_type=data.get("work_type"),
-            work_hours_per_day=data.get("work_hours_per_day"),
-            break_time_minutes=data.get("break_time_minutes"),
-            neck_pain=data.get("neck_pain", 0),
-            shoulder_pain=data.get("shoulder_pain", 0),
-            arm_pain=data.get("arm_pain", 0),
-            hand_pain=data.get("hand_pain", 0),
-            back_pain=data.get("back_pain", 0),
-            waist_pain=data.get("waist_pain", 0),
-            leg_pain=data.get("leg_pain", 0),
-            # symptoms_data=data.get("symptoms_data"),  # 임시 비활성화
-            ip_address=request.remote_addr,
+            work_years=data.get("work_years", 0),
+            work_months=data.get("work_months", 0),
+            past_accident=data.get("data", {}).get("past_accident", False),
+            has_symptoms=data.get("data", {}).get("has_symptoms", False),
             status="submitted",
             reviewed_by=None,
             reviewed_at=None,

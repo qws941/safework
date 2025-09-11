@@ -1,67 +1,91 @@
-name: 🤖 Automated Issue Handler
+name: 🤖 Issue Handler
 
 on:
   issues:
-    types: [opened, edited, labeled]
+    types: [opened, edited, labeled, assigned]
   issue_comment:
-    types: [created]
+    types: [created, edited]
   workflow_dispatch:
     inputs:
       issue_number:
-        description: 'Issue number to analyze'
+        description: 'Issue number to process'
         required: true
         type: number
+      action_type:
+        description: 'Action to perform'
+        required: false
+        default: 'analyze'
+        type: choice
+        options:
+          - 'analyze'
+          - 'auto-fix'
+          - 'prioritize'
+          - 'close'
 
 permissions:
-  contents: read
+  contents: write
   issues: write
   pull-requests: write
+  actions: read
 
 jobs:
-  issue-analysis:
-    name: 🔍 Issue Analysis & Auto-Response
+  issue-processor:
+    name: 🔍 Issue Processing
     runs-on: ubuntu-latest
-    if: github.event_name == 'issues' || github.event_name == 'issue_comment' || github.event_name == 'workflow_dispatch'
+    timeout-minutes: 15
     
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🤖 SafeWork Issue Analysis
+      - name: 🤖 Claude Code Issue Analysis
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           track_progress: true
           prompt: |
-            🤖 **SafeWork Issue Analysis System**
-            
-            REPOSITORY: ${{ github.repository }}
-            ISSUE_NUMBER: ${{ github.event.issue.number || github.event.inputs.issue_number }}
-            ISSUE_TITLE: "${{ github.event.issue.title }}"
-            ISSUE_BODY: "${{ github.event.issue.body }}"
-            ISSUE_AUTHOR: ${{ github.event.issue.user.login }}
-            
-            SafeWork 산업안전보건 관리 시스템의 GitHub 이슈를 분석하고 자동 응답을 제공해주세요.
-            
-            **프로젝트 컨텍스트:**
-            - SafeWork: Flask 3.0+ 기반 산업안전보건 관리 시스템
-            - 기술 스택: Python Flask, MySQL 8.0, Redis, Docker
-            - 주요 기능: 설문 시스템, MSDS 관리, 안전 교육, 건강 검진
-            - 배포: Docker Registry (registry.jclee.me), Watchtower 자동 배포
-            
-            **분석 및 응답:**
-            1. 이슈 유형 분류 (버그, 기능 요청, 보안, 성능)
-            2. 관련 코드 및 시스템 컴포넌트 식별
-            3. 해결 방안 및 워크어라운드 제시
-            4. 적절한 라벨 및 우선순위 설정
-            
-            **응답 언어:** 한국어로 답변해주세요.
+            Please analyze and process SafeWork GitHub Issues.
+
+            **Issue Information:**
+            - Repository: ${{ github.repository }}
+            - Issue Number: ${{ github.event.issue.number || inputs.issue_number }}
+            - Title: "${{ github.event.issue.title }}"
+            - Author: ${{ github.event.issue.user.login }}
+            - Action: ${{ inputs.action_type || 'analyze' }}
+
+            **Processing Methods:**
+            1. **analyze**: Issue classification and initial analysis, label assignment
+            2. **auto-fix**: Automatic fixes and PR creation when possible
+            3. **prioritize**: Priority evaluation and milestone assignment
+            4. **close**: Issue resolution status check and closure
+
+            **SafeWork Project Context:**
+            - Flask 3.0+ Industrial Health and Safety Management System
+            - Independent container deployment (MySQL, Redis, App)
+            - No docker-compose dependency - Dockerfile-based configuration
+            - Watchtower automatic updates support
+            - Core features: Survey system, MSDS management, safety education, health checkups
+
+            **Auto-processable Issue Types:**
+            - Configuration file modifications (environment variables, Docker settings)
+            - Dependency updates (requirements.txt)
+            - Documentation improvements (README, guides)
+            - Simple bug fixes (typos, link corrections)
+
+            **Issue Label Classifications:**
+            - `bug`: Bug reports
+            - `feature`: New feature requests
+            - `security`: Security-related issues
+            - `performance`: Performance improvements
+            - `documentation`: Documentation-related
+            - `enhancement`: Existing feature improvements
+            - `good-first-issue`: Beginner-friendly
+
+            **Response Language:** Please respond in Korean and add GitHub Issue comments when necessary.
           claude_args: |
-            --model claude-sonnet-4-20250514
-            --maxTokens 4096
             --temperature 0.1
-            --allowedTools "mcp__serena__*,mcp__github__*,mcp__sequential-thinking__*"
-            --systemPrompt "SafeWork Flask 애플리케이션 전문가. 산업안전보건 도메인 지식과 기술 전문성을 바탕으로 실용적인 솔루션을 제공합니다."
+            --allowedTools "mcp__serena__*,mcp__github__*,mcp__sequential-thinking__*,mcp__memory__*"
+            --systemPrompt "SafeWork 프로젝트 이슈 관리 전문가. GitHub Issues를 분석하여 자동으로 분류, 라벨링, 우선순위 설정을 하고 가능한 경우 자동 수정까지 수행합니다."
 
   security-escalation:
     name: 🔒 Security Issue Escalation
@@ -75,24 +99,22 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           track_progress: true
           prompt: |
-            🚨 **SafeWork 보안 이슈 긴급 분석**
+            🚨 **SafeWork Security Issue Emergency Analysis**
             
             ISSUE_NUMBER: ${{ github.event.issue.number }}
             ISSUE_TITLE: "${{ github.event.issue.title }}"
             ISSUE_AUTHOR: ${{ github.event.issue.user.login }}
             
-            SafeWork 시스템의 보안 이슈가 보고되었습니다.
-            즉시 보안 영향도를 분석하고 대응 방안을 제시해주세요.
+            A security issue has been reported in the SafeWork system.
+            Please immediately analyze security impact and provide response measures.
             
-            **보안 분석 항목:**
-            1. 보안 영향도 및 심각도 평가
-            2. 영향받는 시스템 컴포넌트 식별
-            3. 즉시 완화 조치 방안
-            4. 장기 보안 개선 방안
+            **Security Analysis Items:**
+            1. Security impact and severity assessment
+            2. Identify affected system components
+            3. Immediate mitigation measures
+            4. Long-term security improvement plans
             
-            한국어로 상세한 보안 분석 및 대응 계획을 제공해주세요.
+            Please provide detailed security analysis and response plan in Korean.
           claude_args: |
-            --model claude-sonnet-4-20250514
-            --maxTokens 4096
             --temperature 0.1
-            --allowedTools "mcp__shrimp-task-manager__*,mcp__sequential-thinking__*,mcp__github__*"
+            --allowedTools "mcp__serena__*,mcp__sequential-thinking__*,mcp__github__*,mcp__memory__*"
