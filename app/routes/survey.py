@@ -457,13 +457,11 @@ def api_submit():
             name=data.get("name"),
             age=data.get("age"),
             gender=data.get("gender"),
-            work_years=data.get("work_years", 0),
-            work_months=data.get("work_months", 0),
-            past_accident=data.get("data", {}).get("past_accident", False),
-            has_symptoms=data.get("data", {}).get("has_symptoms", False),
-            status="submitted",
-            reviewed_by=None,
-            reviewed_at=None,
+            years_of_service=data.get("years_of_service", 0),
+            employee_number=data.get("employee_number"),
+            department=data.get("department"),
+            position=data.get("position"),
+            employee_id=data.get("employee_id"),
         )
 
         db.session.add(survey)
