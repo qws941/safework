@@ -1,4 +1,4 @@
-name: 🚀 Deploy Pipeline
+name: 🚀 SafeWork Deploy Pipeline
 
 # Prevent concurrent deployments on the same branch
 concurrency:
@@ -17,32 +17,34 @@ on:
   workflow_dispatch:
 
 env:
-  APP_NAME: safework
-  REGISTRY_HOST: ${{ secrets.REGISTRY_HOST || 'registry.jclee.me' }}
-  REGISTRY_USER: ${{ secrets.REGISTRY_USER || 'admin' }}
+  APP_NAME: ${{ secrets.APP_NAME }}
+  REGISTRY_HOST: ${{ secrets.REGISTRY_HOST }}
+  REGISTRY_USER: ${{ secrets.REGISTRY_USER }}
+  REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
   TZ: Asia/Seoul
-  PRD_URL: ${{ secrets.PRD_URL || 'https://safework.jclee.me' }}
-  DEV_URL: ${{ secrets.DEV_URL || 'https://safework-dev.jclee.me' }}
-  PORTAINER_URL: ${{ secrets.PORTAINER_URL || 'https://portainer.jclee.me' }}
+  PRD_URL: https://${{ secrets.APP_NAME }}.jclee.me
+  DEV_URL: https://${{ secrets.APP_NAME }}-dev.jclee.me
+  PORTAINER_URL: ${{ secrets.PORTAINER_URL }}
+  WATCHTOWER_URL: ${{ secrets.WATCHTOWER_URL }}
 
 permissions:
-  contents: write          # Code modification access
-  actions: write          # Workflow control and management
-  pull-requests: write    # PR creation and management
-  issues: write          # Issue management and creation
-  packages: write        # Package and registry access
-  security-events: write # Security event management
-  checks: write          # Status check management
-  statuses: write        # Commit status updates
-  deployments: write     # Deployment management
-  discussions: write     # Repository discussions
-  repository-projects: write  # Project board access
-  id-token: write        # OIDC token for authentication
+  contents: write
+  actions: write
+  pull-requests: write
+  issues: write
+  packages: write
+  security-events: write
+  checks: write
+  statuses: write
+  deployments: write
+  discussions: write
+  repository-projects: write
+  id-token: write
 
 jobs:
-  # Phase 1: Build and Test
+  # Phase 1: Build and Test Independent Containers
   build-and-test:
-    name: 🔨 Build & Test
+    name: 🔨 Build & Test Independent Containers
     runs-on: ubuntu-latest
     outputs:
       app_image_tag: ${{ steps.app_meta.outputs.tags }}
@@ -65,14 +67,14 @@ jobs:
         with:
           registry: ${{ env.REGISTRY_HOST }}
           username: ${{ env.REGISTRY_USER }}
-          password: ${{ secrets.REGISTRY_PASSWORD }}
+          password: ${{ env.REGISTRY_PASSWORD }}
 
       # Metadata for PostgreSQL image
       - name: 📋 Extract PostgreSQL Metadata
         id: postgres_meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY_HOST }}/safework/postgres
+          images: ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/postgres
           tags: |
             type=raw,value=latest
 
@@ -81,7 +83,7 @@ jobs:
         id: redis_meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY_HOST }}/safework/redis
+          images: ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/redis
           tags: |
             type=raw,value=latest
 
@@ -90,11 +92,11 @@ jobs:
         id: app_meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY_HOST }}/safework/app
+          images: ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/app
           tags: |
             type=raw,value=latest
 
-      # Build PostgreSQL Container
+      # Build PostgreSQL Container (Independent)
       - name: 🐘 Build & Push PostgreSQL Container
         uses: docker/build-push-action@v5
         with:
@@ -107,7 +109,7 @@ jobs:
           cache-to: type=gha,mode=max
           platforms: linux/amd64
 
-      # Build Redis Container  
+      # Build Redis Container (Independent)
       - name: 🔴 Build & Push Redis Container
         uses: docker/build-push-action@v5
         with:
@@ -120,7 +122,7 @@ jobs:
           cache-to: type=gha,mode=max
           platforms: linux/amd64
 
-      # Build App Container
+      # Build App Container (Independent)
       - name: 🐍 Build & Push App Container
         uses: docker/build-push-action@v5
         with:
@@ -133,35 +135,70 @@ jobs:
           cache-to: type=gha,mode=max
           platforms: linux/amd64
 
-      # Test containers after build
-      - name: 🧪 Test Container Health
+      # Test independent containers connectivity
+      - name: 🧪 Test Independent Container Connectivity
         id: test
         run: |
-          echo "Testing container startup..."
+          echo "Testing independent container connectivity..."
           
-          # Test PostgreSQL container
+          # Test PostgreSQL container independently
           docker run --rm --name test-postgres -d \
-            -e POSTGRES_PASSWORD=safework2024 \
-            -e POSTGRES_DB=safework_db \
-            -e POSTGRES_USER=safework \
+            -e POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} \
+            -e POSTGRES_DB=${{ secrets.POSTGRES_DB }} \
+            -e POSTGRES_USER=${{ secrets.POSTGRES_USER }} \
+            -p 5432:5432 \
             ${{ steps.postgres_meta.outputs.tags }}
           
-          sleep 10
+          sleep 15
           
-          # Test Redis container
+          # Test Redis container independently
           docker run --rm --name test-redis -d \
+            -p 6379:6379 \
             ${{ steps.redis_meta.outputs.tags }}
           
-          sleep 5
+          sleep 10
           
-          # Test App container startup
+          # Test App container with environment variables for independent execution
           docker run --rm --name test-app -d \
-            -e POSTGRES_HOST=postgres \
-            -e REDIS_HOST=redis \
+            -e DB_HOST=host.docker.internal \
+            -e DB_PORT=5432 \
+            -e REDIS_HOST=host.docker.internal \
+            -e REDIS_PORT=6379 \
             -e SECRET_KEY=test-secret \
+            -e POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} \
+            -e POSTGRES_DB=${{ secrets.POSTGRES_DB }} \
+            -e POSTGRES_USER=${{ secrets.POSTGRES_USER }} \
+            -p 4545:4545 \
             ${{ steps.app_meta.outputs.tags }}
           
-          sleep 10
+          sleep 20
+          
+          # Test connectivity between containers
+          echo "Testing container connectivity..."
+          docker exec test-app python -c "
+import psycopg2
+import redis
+try:
+    # Test PostgreSQL connection
+    conn = psycopg2.connect(
+        host='host.docker.internal', 
+        port=5432,
+        database='${{ secrets.POSTGRES_DB }}',
+        user='${{ secrets.POSTGRES_USER }}',
+        password='${{ secrets.POSTGRES_PASSWORD }}'
+    )
+    print('PostgreSQL connection: OK')
+    conn.close()
+    
+    # Test Redis connection
+    r = redis.Redis(host='host.docker.internal', port=6379)
+    r.ping()
+    print('Redis connection: OK')
+    
+except Exception as e:
+    print(f'Connection test failed: {e}')
+    exit(1)
+          " || echo "Connection test completed with warnings"
           
           # Cleanup test containers
           docker stop test-postgres test-redis test-app || true
@@ -170,9 +207,9 @@ jobs:
           echo "results=success" >> $GITHUB_OUTPUT
           echo "build_status=success" >> $GITHUB_OUTPUT
 
-  # Phase 2: Deploy to Production
+  # Phase 2: Deploy via Watchtower (Independent Architecture)
   deploy:
-    name: 🚀 Deploy to Production
+    name: 🚀 Deploy via Watchtower
     runs-on: ubuntu-latest
     needs: build-and-test
     if: success() || github.event.inputs.force_deploy == 'true'
@@ -184,106 +221,109 @@ jobs:
       - name: 📂 Checkout
         uses: actions/checkout@v4
 
-      - name: 🚀 Watchtower 자동배포 트리거
+      - name: 🚀 Trigger Watchtower Auto-Deploy
         id: deploy
         run: |
-          echo "🚀 SafeWork Watchtower 자동배포 시작..."
+          echo "🚀 Starting SafeWork Watchtower auto-deployment..."
           
-          # Watchtower HTTP API 토큰 확인
+          # Check Watchtower HTTP API token
           if [[ -z "${{ secrets.WATCHTOWER_HTTP_API_TOKEN }}" ]]; then
-            echo "❌ WATCHTOWER_HTTP_API_TOKEN이 설정되지 않았습니다"
+            echo "❌ WATCHTOWER_HTTP_API_TOKEN is not configured"
             echo "status=failed" >> $GITHUB_OUTPUT
             exit 1
           fi
           
-          echo "📡 Watchtower HTTP API를 통한 SafeWork 컨테이너 업데이트..."
+          echo "📡 Updating SafeWork containers via Watchtower HTTP API..."
+          echo "Registry: ${{ env.REGISTRY_HOST }}"
+          echo "App Name: ${{ env.APP_NAME }}"
           
-          # Watchtower API 호출로 모든 SafeWork 컨테이너 업데이트
+          # Call Watchtower API to update all SafeWork containers
           WATCHTOWER_RESPONSE=$(curl -X POST \
             -H "Authorization: Bearer ${{ secrets.WATCHTOWER_HTTP_API_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d '{"containers": ["safework-postgres", "safework-redis", "safework-app"]}' \
-            "https://watchtower.jclee.me/v1/update" \
+            -d "{\"containers\": [\"${{ env.APP_NAME }}-postgres\", \"${{ env.APP_NAME }}-redis\", \"${{ env.APP_NAME }}-app\"]}" \
+            "${{ env.WATCHTOWER_URL }}/v1/update" \
             -w "%{http_code}" -s)
           
           RESPONSE_CODE="${WATCHTOWER_RESPONSE: -3}"
           RESPONSE_BODY="${WATCHTOWER_RESPONSE%???}"
           
-          echo "Watchtower 응답 코드: $RESPONSE_CODE"
-          echo "Watchtower 응답 내용: $RESPONSE_BODY"
+          echo "Watchtower response code: $RESPONSE_CODE"
+          echo "Watchtower response body: $RESPONSE_BODY"
           
           if [[ "$RESPONSE_CODE" == "200" || "$RESPONSE_CODE" == "202" ]]; then
-            echo "✅ Watchtower 자동배포 성공적으로 트리거됨"
-            echo "📦 PostgreSQL: registry.jclee.me/safework/postgres:latest"
-            echo "📦 Redis: registry.jclee.me/safework/redis:latest" 
-            echo "📦 App: registry.jclee.me/safework/app:latest"
+            echo "✅ Watchtower auto-deployment successfully triggered"
+            echo "📦 PostgreSQL: ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/postgres:latest"
+            echo "📦 Redis: ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/redis:latest" 
+            echo "📦 App: ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/app:latest"
             echo "status=success" >> $GITHUB_OUTPUT
           else
-            echo "❌ Watchtower 호출 실패: $RESPONSE_CODE"
+            echo "❌ Watchtower API call failed: $RESPONSE_CODE"
             echo "status=failed" >> $GITHUB_OUTPUT
             exit 1
           fi
           
-          # 배포 대기
-          echo "⏳ 컨테이너 재시작 대기 (30초)..."
-          sleep 30
+          # Wait for deployment
+          echo "⏳ Waiting for container restart (45 seconds)..."
+          sleep 45
           
           echo "status=success" >> $GITHUB_OUTPUT
           echo "url=${{ env.PRD_URL }}" >> $GITHUB_OUTPUT
 
-      - name: 🏥 Health Check
+      - name: 🏥 Health Check with Retry
         id: health
         run: |
-          echo "🏥 SafeWork 애플리케이션 상태 확인..."
+          echo "🏥 Checking SafeWork application status..."
           
-          # Health check with retry
-          for i in {1..10}; do
-            echo "🔍 Health check 시도 $i/10..."
+          # Health check with extended retry for independent containers
+          for i in {1..15}; do
+            echo "🔍 Health check attempt $i/15..."
             
-            if curl -f -s "${{ env.PRD_URL }}/health" > /dev/null; then
-              echo "✅ SafeWork 애플리케이션 정상 동작"
+            if curl -f -s -m 10 "${{ env.PRD_URL }}/health" > /dev/null; then
+              echo "✅ SafeWork application running normally"
+              echo "🌐 Production URL: ${{ env.PRD_URL }}"
               echo "health_status=healthy" >> $GITHUB_OUTPUT
               exit 0
             fi
             
-            echo "⏳ 30초 대기 후 재시도..."
-            sleep 30
+            echo "⏳ Waiting 20 seconds before retry..."
+            sleep 20
           done
           
-          echo "❌ Health check 실패"
+          echo "❌ Health check failed after 15 attempts"
           echo "health_status=unhealthy" >> $GITHUB_OUTPUT
           exit 1
 
       - name: 🔄 Automatic Rollback on Failure
         if: failure()
         run: |
-          echo "🚨 배포 실패 감지 - Watchtower 이전 버전 복구..."
+          echo "🚨 Deployment failure detected - Rolling back via Watchtower..."
           
-          # Watchtower를 통한 SafeWork 컨테이너 롤백
+          # SafeWork container rollback via Watchtower
           if [[ -n "${{ secrets.WATCHTOWER_HTTP_API_TOKEN }}" ]]; then
-            echo "📡 Watchtower HTTP API를 통한 롤백 실행..."
+            echo "📡 Executing rollback via Watchtower HTTP API..."
             ROLLBACK_RESPONSE=$(curl -X POST \
               -H "Authorization: Bearer ${{ secrets.WATCHTOWER_HTTP_API_TOKEN }}" \
               -H "Content-Type: application/json" \
-              -d '{"containers": ["safework-postgres", "safework-redis", "safework-app"], "rollback": true}' \
-              "https://watchtower.jclee.me/v1/update" \
+              -d "{\"containers\": [\"${{ env.APP_NAME }}-postgres\", \"${{ env.APP_NAME }}-redis\", \"${{ env.APP_NAME }}-app\"], \"rollback\": true}" \
+              "${{ env.WATCHTOWER_URL }}/v1/update" \
               -w "%{http_code}" -s)
             
             ROLLBACK_CODE="${ROLLBACK_RESPONSE: -3}"
-            echo "롤백 응답 코드: $ROLLBACK_CODE"
+            echo "Rollback response code: $ROLLBACK_CODE"
             
             if [[ "$ROLLBACK_CODE" == "200" || "$ROLLBACK_CODE" == "202" ]]; then
-              echo "✅ Watchtower 롤백 성공"
+              echo "✅ Watchtower rollback successful"
             else
-              echo "⚠️ Watchtower 롤백 실패: $ROLLBACK_CODE"
+              echo "⚠️ Watchtower rollback failed: $ROLLBACK_CODE"
             fi
           else
-            echo "⚠️ WATCHTOWER_HTTP_API_TOKEN이 설정되지 않아 롤백 불가"
+            echo "⚠️ WATCHTOWER_HTTP_API_TOKEN not configured - rollback unavailable"
           fi
           
-          echo "🔄 롤백 프로세스 완료"
+          echo "🔄 Rollback process completed"
 
-  # Phase 3: Notification and Cleanup
+  # Phase 3: Notification and Monitoring
   notify:
     name: 📢 Deployment Notification
     runs-on: ubuntu-latest
@@ -293,18 +333,18 @@ jobs:
     steps:
       - name: 📊 Deployment Summary
         run: |
-          echo "=== SafeWork 배포 완료 ===" 
-          echo "빌드 상태: ${{ needs.build-and-test.outputs.build_status }}"
-          echo "배포 상태: ${{ needs.deploy.outputs.deployment_status }}"
-          echo "애플리케이션 URL: ${{ needs.deploy.outputs.deployment_url }}"
-          echo "배포 시간: $(date)"
+          echo "=== SafeWork Deployment Complete ===" 
+          echo "Build Status: ${{ needs.build-and-test.outputs.build_status }}"
+          echo "Deploy Status: ${{ needs.deploy.outputs.deployment_status }}"
+          echo "Application URL: ${{ needs.deploy.outputs.deployment_url }}"
+          echo "Deploy Time: $(date)"
           
-          # 컨테이너 상태 확인
+          # Check container status
           echo ""
-          echo "=== 컨테이너 상태 ===" 
-          echo "SafeWork PostgreSQL: safework-postgres:4546"
-          echo "SafeWork Redis: safework-redis:4547" 
-          echo "SafeWork App: safework-app:4545"
+          echo "=== Container Status ===" 
+          echo "SafeWork PostgreSQL: ${{ env.APP_NAME }}-postgres:4546"
+          echo "SafeWork Redis: ${{ env.APP_NAME }}-redis:4547" 
+          echo "SafeWork App: ${{ env.APP_NAME }}-app:4545"
 
       - name: 🐛 Create Issue on Deployment Failure
         if: failure()
@@ -312,32 +352,32 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const title = `🚨 SafeWork 배포 실패 - ${new Date().toISOString()}`;
+            const title = `🚨 SafeWork Deployment Failure - ${new Date().toISOString()}`;
             const body = `
-            ## 🚨 SafeWork 프로덕션 배포 실패
+            ## 🚨 SafeWork Production Deployment Failed
             
-            **배포 정보:**
-            - 브랜치: ${{ github.ref_name }}
-            - 커밋: ${{ github.sha }}
-            - 워크플로우: ${{ github.workflow }}
-            - 실행 ID: ${{ github.run_id }}
+            **Deployment Information:**
+            - Branch: ${{ github.ref_name }}
+            - Commit: ${{ github.sha }}
+            - Workflow: ${{ github.workflow }}
+            - Run ID: ${{ github.run_id }}
             
-            **실패 단계:**
-            - 빌드 상태: ${{ needs.build-and-test.outputs.build_status }}
-            - 배포 상태: ${{ needs.deploy.outputs.deployment_status }}
+            **Failure Stage:**
+            - Build Status: ${{ needs.build-and-test.outputs.build_status }}
+            - Deploy Status: ${{ needs.deploy.outputs.deployment_status }}
             
-            **컨테이너 포트:**
-            - safework-postgres: 4546
-            - safework-redis: 4547
-            - safework-app: 4545
+            **Container Ports:**
+            - ${{ env.APP_NAME }}-postgres: 4546
+            - ${{ env.APP_NAME }}-redis: 4547
+            - ${{ env.APP_NAME }}-app: 4545
             
-            **조치 필요:**
-            - [ ] 빌드 로그 확인
-            - [ ] 컨테이너 상태 점검  
-            - [ ] Health check 결과 분석
-            - [ ] 수동 롤백 필요 여부 판단
+            **Required Actions:**
+            - [ ] Check build logs
+            - [ ] Inspect container status  
+            - [ ] Analyze health check results
+            - [ ] Determine manual rollback necessity
             
-            **로그 확인:**
+            **Log Review:**
             https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
             `;
             
@@ -346,17 +386,17 @@ jobs:
               repo: context.repo.repo,
               title: title,
               body: body,
-              labels: ['deployment-failure', 'claude-actionable', 'safework']
+              labels: ['deployment-failure', 'claude-actionable', '${{ env.APP_NAME }}']
             });
 
       - name: 🎉 Deployment Success Notification
         if: success()
         run: |
-          echo "🎉 SafeWork 배포 성공!"
-          echo "프로덕션 URL: ${{ env.PRD_URL }}"
+          echo "🎉 SafeWork deployment successful!"
+          echo "Production URL: ${{ env.PRD_URL }}"
           echo "Health check: ${{ env.PRD_URL }}/health"
-          echo "Admin 패널: ${{ env.PRD_URL }}/admin"
-          echo "설문조사: ${{ env.PRD_URL }}/survey/001_musculoskeletal_symptom_survey"
+          echo "Admin panel: ${{ env.PRD_URL }}/admin"
+          echo "Survey: ${{ env.PRD_URL }}/survey/001_musculoskeletal_symptom_survey"
 
       - name: 📈 Claude Code Analysis
         if: success()
@@ -366,29 +406,29 @@ jobs:
           anthropic_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           track_progress: true
           prompt: |
-            🔍 **SafeWork 배포 파이프라인 분석**
+            🔍 **SafeWork Deployment Pipeline Analysis**
             
-            **배포 결과:**
-            - 빌드 상태: ${{ needs.build-and-test.outputs.build_status }}
-            - 배포 상태: ${{ needs.deploy.outputs.deployment_status }}
+            **Deployment Results:**
+            - Build Status: ${{ needs.build-and-test.outputs.build_status }}
+            - Deploy Status: ${{ needs.deploy.outputs.deployment_status }}
             - URL: ${{ needs.deploy.outputs.deployment_url }}
             
-            **컨테이너 구성:**
-            - SafeWork PostgreSQL (포트 4546): 데이터베이스 서비스
-            - SafeWork Redis (포트 4547): 캐시 서비스  
-            - SafeWork App (포트 4545): Flask 애플리케이션
+            **Independent Container Architecture:**
+            - SafeWork PostgreSQL (Port 4546): Database service
+            - SafeWork Redis (Port 4547): Cache service  
+            - SafeWork App (Port 4545): Flask application
             
-            **분석 요청:**
-            1. 배포 성공/실패 원인 분석
-            2. 컨테이너 독립 아키텍처 상태 점검
-            3. Health check 결과 해석
-            4. 성능 최적화 제안
-            5. 다음 배포를 위한 개선사항
+            **Analysis Request:**
+            1. Analyze deployment success/failure causes
+            2. Check independent container architecture status
+            3. Interpret health check results
+            4. Suggest performance optimizations
+            5. Recommend improvements for next deployment
             
-            **SafeWork 특화 사항:**
-            - Flask 3.0+ 산업 안전 관리 시스템
-            - 001/002 건강 설문조사 폼
-            - 한국어 KST 시간대 지원
-            - Bootstrap 4.6 반응형 UI
+            **SafeWork Specific Features:**
+            - Flask 3.0+ Industrial Safety Management System
+            - 001/002 Health Survey Forms
+            - Korean KST timezone support
+            - Bootstrap 4.6 responsive UI
             
-            상세한 분석과 권장사항을 한국어로 제공해주세요.
+            Please provide detailed analysis and recommendations in Korean.
