@@ -47,13 +47,10 @@ permissions:
   id-token: write
   issues: write
   pull-requests: write
-  repository-projects: write
   security-events: write
   statuses: write
   checks: write
   deployments: write
-  pages: write
-  metadata: read
 
 jobs:
   # Phase 1: Build and Test
