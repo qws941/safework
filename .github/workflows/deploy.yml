@@ -199,27 +199,58 @@ jobs:
             exit 1
           fi
           
-          # 컨테이너 재시작 (Independent Container 방식) - 올바른 endpoint와 컨테이너명 사용
-          echo "📦 SafeWork PostgreSQL 컨테이너 업데이트..."
-          curl -X POST \
-            -H "X-API-Key: $API_KEY" \
-            -H "Content-Type: application/json" \
-            "$PORTAINER_URL/api/endpoints/3/docker/containers/safework-postgres/restart" \
-            || echo "⚠️ PostgreSQL 컨테이너 재시작 실패"
+          # Registry 로그인 (컨테이너 생성을 위해)
+          echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login registry.jclee.me -u admin --password-stdin
           
-          echo "📦 SafeWork Redis 컨테이너 업데이트..."  
-          curl -X POST \
-            -H "X-API-Key: $API_KEY" \
-            -H "Content-Type: application/json" \
-            "$PORTAINER_URL/api/endpoints/3/docker/containers/safework-redis/restart" \
-            || echo "⚠️ Redis 컨테이너 재시작 실패"
+          # SafeWork 컨테이너 배포 (생성 또는 재시작)
+          echo "📦 SafeWork PostgreSQL 컨테이너 배포..."
+          # 컨테이너가 존재하는지 확인하고 재시작, 없으면 새로 생성
+          if curl -s -H "X-API-Key: $API_KEY" "$PORTAINER_URL/api/endpoints/3/docker/containers/safework-postgres/json" > /dev/null 2>&1; then
+            echo "  🔄 기존 PostgreSQL 컨테이너 재시작..."
+            curl -X POST -H "X-API-Key: $API_KEY" "$PORTAINER_URL/api/endpoints/3/docker/containers/safework-postgres/restart" || echo "⚠️ 재시작 실패"
+          else
+            echo "  🆕 새로운 PostgreSQL 컨테이너 생성..."
+            docker run -d --name safework-postgres \
+              --network bridge \
+              -p 4546:5432 \
+              -e POSTGRES_DB=safework_db \
+              -e POSTGRES_USER=safework \
+              -e POSTGRES_PASSWORD=safework2024 \
+              -e TZ=Asia/Seoul \
+              --restart unless-stopped \
+              registry.jclee.me/safework/postgres:latest || echo "⚠️ 생성 실패"
+          fi
           
-          echo "📦 SafeWork App 컨테이너 업데이트..."
-          curl -X POST \
-            -H "X-API-Key: $API_KEY" \
-            -H "Content-Type: application/json" \
-            "$PORTAINER_URL/api/endpoints/3/docker/containers/safework-app/restart" \
-            || echo "⚠️ App 컨테이너 재시작 실패"
+          echo "📦 SafeWork Redis 컨테이너 배포..."  
+          if curl -s -H "X-API-Key: $API_KEY" "$PORTAINER_URL/api/endpoints/3/docker/containers/safework-redis/json" > /dev/null 2>&1; then
+            echo "  🔄 기존 Redis 컨테이너 재시작..."
+            curl -X POST -H "X-API-Key: $API_KEY" "$PORTAINER_URL/api/endpoints/3/docker/containers/safework-redis/restart" || echo "⚠️ 재시작 실패"
+          else
+            echo "  🆕 새로운 Redis 컨테이너 생성..."
+            docker run -d --name safework-redis \
+              --network bridge \
+              -p 4547:6379 \
+              -e TZ=Asia/Seoul \
+              --restart unless-stopped \
+              registry.jclee.me/safework/redis:latest || echo "⚠️ 생성 실패"
+          fi
+          
+          echo "📦 SafeWork App 컨테이너 배포..."
+          if curl -s -H "X-API-Key: $API_KEY" "$PORTAINER_URL/api/endpoints/3/docker/containers/safework-app/json" > /dev/null 2>&1; then
+            echo "  🔄 기존 App 컨테이너 재시작..."
+            curl -X POST -H "X-API-Key: $API_KEY" "$PORTAINER_URL/api/endpoints/3/docker/containers/safework-app/restart" || echo "⚠️ 재시작 실패"
+          else
+            echo "  🆕 새로운 App 컨테이너 생성..."
+            docker run -d --name safework-app \
+              --network bridge \
+              -p 4545:4545 \
+              -e DB_HOST=safework-postgres \
+              -e REDIS_HOST=safework-redis \
+              -e TZ=Asia/Seoul \
+              -e FLASK_CONFIG=production \
+              --restart unless-stopped \
+              registry.jclee.me/safework/app:latest || echo "⚠️ 생성 실패"
+          fi
           
           # 배포 대기
           echo "⏳ 컨테이너 재시작 대기 (30초)..."
