@@ -4,106 +4,124 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-SafeWork is an industrial health and safety management system built with Flask 3.0+. It manages workplace health surveys (001 Musculoskeletal, 002 New Employee Health), medical checkups, and comprehensive safety administration for construction environments.
+SafeWork is an industrial health and safety management system built with Flask 3.0+ for Korean construction/industrial environments. It manages workplace health surveys, medical records, and comprehensive safety administration.
 
 **Core Features:**
-- 001/002 Survey forms with conditional logic and JSON data storage  
-- 13 specialized SafeWork admin panels (Workers, Health Checks, Medical Visits, Medications, etc.)
-- Document management system with version control
-- Anonymous survey submission (user_id=1)
-- RESTful API (v2) for external integrations
-- Advanced Claude Code automation system
+- **Survey System**: 001 Musculoskeletal & 002 New Employee health forms with conditional JavaScript logic
+- **SafeWork Admin**: 13 specialized management panels (Workers, Health Checks, MSDS, Safety Education, etc.)
+- **Document Management**: Version-controlled document system with access logging
+- **Anonymous Submissions**: Public survey access with user_id=1 fallback
+- **RESTful API v2**: External system integrations via `/api/safework/v2/*`
+- **Claude Automation**: AI-powered issue processing and deployment
 
 **Tech Stack:** 
-- Backend: Python Flask 3.0+, SQLAlchemy 2.0, MySQL 8.0, Redis 5.0
-- Frontend: Bootstrap 4.6, jQuery, Font Awesome
-- Infrastructure: Docker, GitHub Actions, Private Registry (registry.jclee.me), Watchtower
-- Korean Localization: KST timezone, Korean UI text
+- Backend: Flask 3.0+, SQLAlchemy 2.0, MySQL 8.0, Redis 5.0
+- Frontend: Bootstrap 4.6, jQuery, responsive design
+- Infrastructure: Docker, Private Registry (registry.jclee.me), Watchtower auto-deployment
+- Localization: KST timezone (`kst_now()` function), Korean UI/error messages
 
 ## Development Commands
 
-### Essential Commands
+### Essential Setup
 ```bash
-# Start Development Environment
-docker-compose up -d                    # Start all services (app, mysql, redis)
-docker-compose exec app bash            # Enter app container
+# Start all services (app port 4545, mysql 4543, redis 4544)
+docker-compose up -d                    
+docker-compose exec app bash           # Enter app container
 
-# Access Points
-# - Main app: http://localhost:4545
-# - Admin panel: http://localhost:4545/admin (check env vars for credentials)
-# - Health check: http://localhost:4545/health
-
-# Database Management
-python migrate.py status              # Check migration status
-python migrate.py migrate            # Apply migrations
+# Database management (from app directory)
+python migrate.py status               # Check migration status
+python migrate.py migrate              # Apply migrations  
 python migrate.py create "Description" # Create new migration
 
-# Testing & Quality (Note: test files may not be present yet)
-pytest                               # Run tests when available
-pytest --cov=. --cov-report=html    # Coverage report (target: 80%+)
+# Testing (target: 80%+ coverage)
+pytest                                 # Run test suite
+pytest --cov=. --cov-report=html      # Coverage report
 
-# Container Management
-docker-compose logs -f app           # View logs
-docker-compose down                  # Stop services
+# Container management  
+docker-compose logs -f app             # View application logs
+docker-compose down                    # Stop all services
 ```
+
+### Access Points & Credentials
+- **Main app**: http://localhost:4545
+- **Admin panel**: http://localhost:4545/admin (admin/safework2024)
+- **Health check**: http://localhost:4545/health  
+- **Migration UI**: http://localhost:4545/migration/status
+- **Production URLs**: 
+  - Dev: safework-dev.jclee.me (192.168.50.100)
+  - Production: safework.jclee.me (192.168.50.215)
 
 ## Architecture Overview
 
-### Core Flask Application (app/app.py)
-- **Factory Pattern**: `create_app()` with config-based initialization
-- **Extensions**: SQLAlchemy, Flask-Login, Flask-Migrate, Redis
-- **CSRF**: Currently disabled for survey testing (`WTF_CSRF_ENABLED = False`)
-- **Blueprints**: 8 modular route handlers registered automatically
-
-### Model Architecture  
+### Flask Application Factory (app/app.py)
 ```python
-# Core Models (models.py)
-- User: Authentication with Flask-Login integration
-- Survey: Unified table for 001/002 forms with JSON data storage  
-- AuditLog: System activity tracking
-- kst_now(): Consistent KST timezone function
-
-# SafeWork Models (models_safework.py + models_safework_v2.py) 
-- 13+ specialized tables for industrial safety management
-- safework_workers, safework_health_checks, safework_medications, etc.
-
-# Document Models (models_document.py)
-- Document management with version control and access logging
+def create_app(config_name=None):
+    # Factory pattern with config-based initialization
+    # Extensions: SQLAlchemy, Flask-Login, Flask-Migrate, Redis
+    # CSRF: Currently disabled (WTF_CSRF_ENABLED = False)
+    # Blueprints: 8 modular route handlers auto-registered
 ```
 
-### Database Design Patterns
-**Survey System**: Single table with discriminator
+### Model Architecture & Database Design
+**Core Models (models.py):**
+- `User`: Flask-Login authentication integration
+- `Survey`: Unified table for 001/002 forms using `form_type` discriminator + JSON `data` field
+- `AuditLog`: System activity tracking
+- `kst_now()`: Consistent KST timezone function for all timestamps
+
+**SafeWork Models (models_safework.py + models_safework_v2.py):**
+- 13+ specialized tables: `safework_workers`, `safework_health_checks`, `safework_medications`, etc.
+- Industrial safety management domain models
+
+**Document Models (models_document.py):**
+- `Document`, `DocumentVersion`, `DocumentAccessLog`: Version control with access tracking
+
+**Key Database Patterns:**
 ```sql
-surveys.form_type = '001' | '002'  # Form type identifier
-surveys.data (JSON)               # Flexible form data storage
+-- Survey system with discriminator
+surveys.form_type = '001' | '002'  -- Form type identifier
+surveys.data (JSON)               -- Flexible form field storage
+
+-- Anonymous submissions
+user_id = 1  -- Special user for anonymous form submissions
+
+-- Korean localization
+created_at = kst_now()  -- Always use KST timezone
 ```
 
-**Korean Localization**: 
-- `kst_now()` function for consistent KST timezone
-- Korean UI text and error messages
-- Anonymous submissions use `user_id=1`
-
-### Route Organization
+### Route Organization & Blueprint Structure
 ```
 app/routes/
-├── main.py               # Homepage and general routes
+├── main.py               # Homepage, general routes
 ├── auth.py              # Authentication (login/register/logout)
-├── survey.py            # 001/002 form handling and submissions  
+├── survey.py            # 001/002 form handling, conditional logic
 ├── admin.py             # Admin dashboard + 13 SafeWork panels
-├── document.py/document_admin.py  # Document management
+├── document.py          # Public document access
+├── document_admin.py    # Document management admin
 ├── api_safework_v2.py   # RESTful API endpoints
-├── health.py            # System health monitoring
+├── health.py            # System health monitoring (/health)
 └── migration.py         # Database migration web interface
 ```
 
-## Development Patterns
+### Critical Frontend Patterns
+**JavaScript ID Matching (Critical for Survey Forms):**
+```javascript
+// HTML/JS ID matching is critical for conditional logic
+// HTML: <div id="accident_parts_section">
+// JS: document.getElementById('accident_parts_section')  // Must match exactly
 
-### SafeWork Development Flow
+// Survey data structure stored as JSON
+// Example: { past_accident: true, past_accident_details: [{ part: "손/손가락/손목", status: "완치" }] }
+
+// CSRF currently disabled for survey testing
+// When re-enabled: xhr.setRequestHeader("X-CSRFToken", csrf_token);
+```
+
+**SafeWork Admin Panel Pattern:**
 ```python
 # 1. Model Definition (models_safework.py)
 class SafeworkWorker(db.Model):
     __tablename__ = "safework_workers"
-    # Add fields, relationships
 
 # 2. API Endpoint (api_safework_v2.py)
 @api_safework_bp.route('/workers', methods=['GET', 'POST']) 
@@ -118,77 +136,72 @@ def safework_workers():
     # Bootstrap 4.6 + jQuery AJAX integration
 ```
 
-### Critical JavaScript Patterns
-```javascript  
-// ID matching is critical for conditional logic
-// HTML: <div id="accident_parts_section">
-// JS: document.getElementById('accident_parts_section')  // Must match exactly
-
-// Survey data stored as JSON structures
-// Example: { past_accident: true, past_accident_details: [{ part: "손/손가락/손목", status: "완치" }] }
-
-// CSRF currently disabled for survey testing
-// When re-enabled: xhr.setRequestHeader("X-CSRFToken", csrf_token);
-```
-
-## Deployment System
+## Deployment & Infrastructure
 
 ### Automated CI/CD Pipeline
 Push to `master` branch triggers automated deployment:
-1. Security scanning (Trivy, Bandit, Safety)
-2. Code quality checks (Black, Flake8, Pylint) 
-3. Test suite execution (pytest)
-4. Docker image build and push to registry.jclee.me
-5. Watchtower auto-deployment
+1. **Security scanning**: Trivy, Bandit, Safety
+2. **Code quality checks**: Black, Flake8, Pylint 
+3. **Test suite execution**: pytest
+4. **Docker image build**: Multi-platform builds pushed to registry.jclee.me
+5. **Watchtower deployment**: Automatic container updates via API
 
-### Infrastructure
-- **Registry:** registry.jclee.me (credentials in GitHub secrets)
-- **Production:** https://safework.jclee.me
-- **Watchtower:** watchtower.jclee.me
-- **Portainer:** portainer.jclee.me (webhook URL in deployment config)
-- **Images:** safework/app:latest, safework/mysql:latest, safework/redis:latest
+### Infrastructure Components
+- **Registry**: registry.jclee.me (credentials in GitHub secrets)
+- **Production**: https://safework.jclee.me (192.168.50.215)
+- **Development**: https://safework-dev.jclee.me (192.168.50.100)
+- **Watchtower**: watchtower.jclee.me (HTTP API for deployment triggers)
+- **Images**: safework/app:latest, safework/mysql:latest, safework/redis:latest
 
 ### Required GitHub Secrets
 ```bash
 CLAUDE_CODE_OAUTH_TOKEN=<token>          # Claude Code automation
 REGISTRY_PASSWORD=<registry_password>    # Docker registry auth
-WATCHTOWER_HTTP_API_TOKEN=<token>        # Watchtower API
-PORTAINER_WEBHOOK_URL=<webhook_url>      # Portainer deployment webhook
+WATCHTOWER_HTTP_API_TOKEN=<token>        # Watchtower API deployment
 ```
-
-## Claude Code Automation
-
-### Core Automation Features
-- **Issue Processing**: Automatic analysis and resolution of GitHub issues
-- **PR Reviews**: Automated code review and quality checks
-- **Container Error Detection**: Real-time log analysis with automatic fixes
-- **Korean Language Support**: Automatic Korean responses for Korean content
-- **Domain Expertise**: SafeWork industrial safety system specialization
 
 ### Key Workflows (.github/workflows/)
 ```bash
 # Primary automation
+deploy.yml                   # Watchtower-based automated deployment
 safework-claude-main.yml     # Main Claude AI processing
-safework-claude-issues.yml   # Issue handling
-safework-pr-review.yml       # Pull request reviews
-deploy.yml                   # Automated deployment
+safework-claude-issues.yml   # GitHub issue handling
 
 # Supporting workflows
 auto-issue-detection.yml     # Error-triggered issue creation
 safework-ci-autofix.yml     # CI auto-fixes
-notifications.yml           # Slack/Discord notifications
+notifications.yml           # Slack/Discord deployment notifications
 ```
 
-### Error Detection Patterns
+## Error Detection & Resolution
+
+### Common Container Issues
 Claude automatically detects and fixes:
-- `gunicorn.errors.HaltServer` → Flask app import verification
-- `Worker failed to boot` → Dependencies and environment validation
+- `gunicorn.errors.HaltServer` → Flask app import path verification
+- `Worker failed to boot` → Dependencies and environment validation  
 - `ImportError|ModuleNotFoundError` → requirements.txt audit
-- `OperationalError` → MySQL connection verification
+- `OperationalError` → MySQL connection settings verification
 
-## Code Standards & Patterns
+### Troubleshooting Commands
+```bash
+# Container status
+docker-compose ps                                    # Check container status
+docker-compose logs -f app                          # View application logs
+docker pull registry.jclee.me/safework/app:latest  # Update to latest image
 
-### Error Handling
+# Database management
+python migrate.py status                            # Check migration status
+docker-compose exec app python migrate.py migrate  # Run migrations
+
+# Survey form debugging
+# - Verify HTML/JavaScript ID matching (critical for conditional logic)
+# - Ensure user_id=1 exists for anonymous submissions
+# - Use kst_now() consistently for Korean timezone
+```
+
+## Development Patterns & Standards
+
+### Error Handling Pattern
 ```python
 try:
     db.session.commit()
@@ -199,7 +212,7 @@ except Exception as e:
     app.logger.error(f"Database error: {e}")
 ```
 
-### Template Structure
+### Template Inheritance
 ```html
 {% extends "admin/base_admin.html" %}
 {% block content %}
@@ -210,96 +223,60 @@ except Exception as e:
 {% endblock %}
 ```
 
-## Testing & Configuration
-
-### Test Setup
-- **Location**: `app/tests/` (may need to be created)
-- **Coverage**: Target 80%+  
-- **Command**: `pytest --cov=. --cov-report=html`
-- **Development**: Black, Flake8 for code quality (handled by CI/CD)
-
-### Key Environment Variables
+### Environment Variables
 ```bash
-DATABASE_URL=mysql+pymysql://safework:safework2024@mysql:3306/safework_db
-REDIS_HOST=safework-redis
+# Core application settings
+FLASK_CONFIG=production                # Environment mode
 SECRET_KEY=safework-production-secret-key-2024
-FLASK_CONFIG=production
-TZ=Asia/Seoul
+TZ=Asia/Seoul                         # Korean timezone
+
+# Database connection
+MYSQL_HOST=safework-mysql             # Container name
+MYSQL_DATABASE=safework_db
+MYSQL_USER=safework
+MYSQL_PASSWORD=safework2024
+
+# Redis cache
+REDIS_HOST=safework-redis             # Container name  
+REDIS_PORT=6379
+
+# Admin credentials
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=safework2024
 ```
 
-### Important API Endpoints  
+## Key API Endpoints
 ```bash
-# Admin access
-/admin/dashboard                   # Main admin dashboard
-/admin/safework                   # SafeWork management hub
+# Core endpoints
+/health                                    # System health check (JSON)
+/                                         # Main homepage
 
-# Survey forms  
-/survey/001_musculoskeletal_symptom_survey   # Anonymous form
-/survey/002_new_employee_health_checkup_form # Anonymous form
+# Survey forms (anonymous access)
+/survey/001_musculoskeletal_symptom_survey     # Anonymous form
+/survey/002_new_employee_health_checkup_form   # Anonymous form
 
-# API endpoints
-/api/safework/v2/workers          # Worker CRUD
-/api/safework/v2/health-checks    # Health records
-/health                           # System health check
+# Admin access (login required)
+/admin/dashboard                              # Main admin dashboard
+/admin/safework                              # SafeWork management hub
+
+# RESTful API v2
+/api/safework/v2/workers                     # Worker CRUD operations
+/api/safework/v2/health-checks               # Health record management
+/api/safework/v2/medications                 # Medicine inventory CRUD
 ```
 
 ## Production Guidelines
 
-### Database
-- MySQL 8.0 with UTF8MB4 charset
-- Use `kst_now()` for consistent KST timezone  
-- Transaction-based operations with rollback
-- Anonymous submissions use `user_id=1`
+### Database Best Practices
+- MySQL 8.0 with UTF8MB4 charset for Korean text support
+- Use `kst_now()` for all timestamp operations (consistent KST timezone)
+- Transaction-based operations with rollback for data integrity
+- Anonymous submissions always use `user_id=1`
 
-### Security
-- `@login_required` for admin routes
-- CSRF currently disabled for survey testing
-- Audit logging for all operations
-- Rate limiting on survey submissions
-
-### Performance  
+### Security & Performance
+- `@login_required` decorator for all admin routes
+- CSRF protection currently disabled for survey testing
+- Audit logging enabled for all administrative operations
 - Redis caching for frequently accessed data
-- Database indexing on key lookups
-- Pagination (20 items per page)
-- Lazy loading for relationships
-
-## Troubleshooting
-
-### Common Issues
-```bash
-# Container reboot loops (registry auth issue)
-# If services keep rebooting, check registry authentication:
-curl -X POST https://portainer.jclee.me/api/webhooks/e44fb174-65cf-4567-a110-1913c77b725d
-# Error "no basic auth credentials" means Portainer needs registry login
-
-# Container issues
-docker-compose ps                                    # Check container status
-docker-compose logs -f app                          # View application logs
-docker pull registry.jclee.me/safework/app:latest  # Update to latest image
-
-# Database issues  
-python migrate.py status                            # Check migration status
-docker-compose exec app python migrate.py migrate  # Run migrations
-
-# Survey form issues
-# - Check HTML/JavaScript ID matching (critical for conditional logic)
-# - Verify user_id=1 exists for anonymous submissions
-# - Use kst_now() consistently for Korean timezone
-
-# Authentication issues
-# - Admin login: ${ADMIN_USERNAME}/${ADMIN_PASSWORD}
-# - CSRF currently disabled for survey testing
-# - Check GitHub secrets for Claude Code automation
-```
-
-### Claude Code Automation
-```bash
-# Missing token error
-/install-github-app  # Run in Claude Code terminal to setup
-
-# Correct workflow configuration  
-track_progress: ${{ github.event_name != 'workflow_dispatch' }}
-claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-```
+- Database indexing on key lookup fields
+- Pagination (20 items per page) for large datasets

@@ -70,11 +70,6 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     environment:
       PYTHONUNBUFFERED: 1
       PYTHONDONTWRITEBYTECODE: 1

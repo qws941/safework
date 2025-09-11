@@ -21,9 +21,9 @@ RUN apk add --no-cache tzdata && \
 # 포트 노출
 EXPOSE 6379
 
-# 헬스체크
-HEALTHCHECK --interval=15s --timeout=5s --retries=5 --start-period=10s \
+# 헬스체크 개선 (독립성 보장)
+HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \
     CMD redis-cli ping || exit 1
 
-# Redis 실행 (기본 설정 사용)
-CMD ["redis-server", "--bind", "0.0.0.0", "--appendonly", "yes"]
+# Redis 실행 (독립적 구성, 리소스 제한 제거)
+CMD ["redis-server", "--bind", "0.0.0.0", "--appendonly", "yes", "--save", "60", "1"]

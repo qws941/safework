@@ -78,8 +78,8 @@ USER safework
 # 포트 노출
 EXPOSE 4545
 
-# 헬스체크 (개선된 버전)
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+# 헬스체크 개선 (독립성 보장, 리소스 제한 제거)
+HEALTHCHECK --interval=20s --timeout=10s --start-period=60s --retries=5 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:4545/health')" || exit 1
 
 # 마이그레이션을 포함한 애플리케이션 실행

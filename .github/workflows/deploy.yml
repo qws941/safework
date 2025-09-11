@@ -50,6 +50,14 @@ env:
   HEALTH_CHECK_RETRIES: 5
   HEALTH_CHECK_TIMEOUT: 60
   BUILD_PLATFORMS: linux/amd64
+  
+  # Application Environment Variables (from GitHub Secrets)
+  SECRET_KEY: ${{ secrets.SECRET_KEY }}
+  MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+  MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+  REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+  ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
+  ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
 
 permissions:
   contents: read

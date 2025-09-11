@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-echo "🏗️ Database schema initialized by MySQL image"
-echo "🔍 Pre-start validation..."
+echo "🏗️ SafeWork Application Starting..."
+echo "🔍 Pre-start validation and dependency checks..."
 
 # Environment validation
 echo "📋 Environment check:"
@@ -10,6 +10,44 @@ echo "  - FLASK_CONFIG: $FLASK_CONFIG"
 echo "  - APP_PORT: $APP_PORT"
 echo "  - MYSQL_HOST: $MYSQL_HOST"
 echo "  - REDIS_HOST: $REDIS_HOST"
+
+# Function to wait for service availability
+wait_for_service() {
+    local service_name=$1
+    local host=$2
+    local port=$3
+    local timeout=${4:-60}
+    
+    echo "⏳ Waiting for $service_name ($host:$port) to be ready..."
+    
+    for i in $(seq 1 $timeout); do
+        if timeout 5 bash -c "echo >/dev/tcp/$host/$port" 2>/dev/null; then
+            echo "✅ $service_name is ready!"
+            return 0
+        fi
+        echo "⏳ $service_name not ready yet... ($i/$timeout)"
+        sleep 2
+    done
+    
+    echo "❌ $service_name failed to become ready within ${timeout} attempts"
+    return 1
+}
+
+# Wait for MySQL (with fallback to localhost if MYSQL_HOST is container name)
+if ! wait_for_service "MySQL" "${MYSQL_HOST}" "${MYSQL_PORT:-3306}" 30; then
+    echo "⚠️ MySQL not accessible via ${MYSQL_HOST}, trying localhost..."
+    if ! wait_for_service "MySQL" "localhost" "3306" 10; then
+        echo "❌ MySQL completely unavailable, but continuing (may be external DB)"
+    fi
+fi
+
+# Wait for Redis (with fallback to localhost if REDIS_HOST is container name)
+if ! wait_for_service "Redis" "${REDIS_HOST}" "${REDIS_PORT:-6379}" 30; then
+    echo "⚠️ Redis not accessible via ${REDIS_HOST}, trying localhost..."
+    if ! wait_for_service "Redis" "localhost" "6379" 10; then
+        echo "❌ Redis completely unavailable, but continuing (may be external cache)"
+    fi
+fi
 
 # Python import test
 echo "🐍 Python import test..."

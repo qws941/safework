@@ -55,8 +55,8 @@ RUN mkdir -p /var/log/mysql && \
 # 포트 노출
 EXPOSE 3306
 
-# 헬스체크
-HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \
+# 헬스체크 개선 (독립성 보장, 리소스 제한 제거)
+HEALTHCHECK --interval=20s --timeout=10s --start-period=60s --retries=3 \
     CMD mysqladmin ping -h localhost -u root -p$MYSQL_ROOT_PASSWORD || exit 1
 
 # MySQL 실행
