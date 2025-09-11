@@ -184,104 +184,44 @@ jobs:
       - name: 📂 Checkout
         uses: actions/checkout@v4
 
-      - name: 🚀 Deploy via Portainer API
+      - name: 🚀 Watchtower 자동배포 트리거
         id: deploy
         run: |
-          echo "🚀 SafeWork 프로덕션 배포 시작..."
+          echo "🚀 SafeWork Watchtower 자동배포 시작..."
           
-          # Portainer API 설정
-          PORTAINER_URL="${{ env.PORTAINER_URL }}"
-          API_KEY="${{ secrets.PORTAINER_API_KEY }}"
-          
-          if [[ -z "$API_KEY" ]]; then
-            echo "❌ PORTAINER_API_KEY가 설정되지 않았습니다"
+          # Watchtower HTTP API 토큰 확인
+          if [[ -z "${{ secrets.WATCHTOWER_HTTP_API_TOKEN }}" ]]; then
+            echo "❌ WATCHTOWER_HTTP_API_TOKEN이 설정되지 않았습니다"
             echo "status=failed" >> $GITHUB_OUTPUT
             exit 1
           fi
           
-          # SafeWork 컨테이너 배포 (Portainer API 전용)
-          echo "📦 SafeWork PostgreSQL 컨테이너 배포..."
+          echo "📡 Watchtower HTTP API를 통한 SafeWork 컨테이너 업데이트..."
           
-          # PostgreSQL 컨테이너 확인 및 처리
-          if curl -s -H "X-API-Key: $API_KEY" "$PORTAINER_URL/api/endpoints/3/docker/containers/safework-postgres/json" > /dev/null 2>&1; then
-            echo "  🔄 기존 PostgreSQL 컨테이너 재시작..."
-            curl -X POST -H "X-API-Key: $API_KEY" "$PORTAINER_URL/api/endpoints/3/docker/containers/safework-postgres/restart" || echo "⚠️ 재시작 실패"
+          # Watchtower API 호출로 모든 SafeWork 컨테이너 업데이트
+          WATCHTOWER_RESPONSE=$(curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.WATCHTOWER_HTTP_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"containers": ["safework-postgres", "safework-redis", "safework-app"]}' \
+            "https://watchtower.jclee.me/v1/update" \
+            -w "%{http_code}" -s)
+          
+          RESPONSE_CODE="${WATCHTOWER_RESPONSE: -3}"
+          RESPONSE_BODY="${WATCHTOWER_RESPONSE%???}"
+          
+          echo "Watchtower 응답 코드: $RESPONSE_CODE"
+          echo "Watchtower 응답 내용: $RESPONSE_BODY"
+          
+          if [[ "$RESPONSE_CODE" == "200" || "$RESPONSE_CODE" == "202" ]]; then
+            echo "✅ Watchtower 자동배포 성공적으로 트리거됨"
+            echo "📦 PostgreSQL: registry.jclee.me/safework/postgres:latest"
+            echo "📦 Redis: registry.jclee.me/safework/redis:latest" 
+            echo "📦 App: registry.jclee.me/safework/app:latest"
+            echo "status=success" >> $GITHUB_OUTPUT
           else
-            echo "  🆕 새로운 PostgreSQL 컨테이너 생성 (Portainer API)..."
-            curl -X POST \
-              -H "X-API-Key: $API_KEY" \
-              -H "Content-Type: application/json" \
-              "$PORTAINER_URL/api/endpoints/3/docker/containers/create?name=safework-postgres" \
-              -d '{
-                "Image": "registry.jclee.me/safework/postgres:latest",
-                "Env": [
-                  "POSTGRES_DB=safework_db",
-                  "POSTGRES_USER=safework", 
-                  "POSTGRES_PASSWORD=safework2024",
-                  "TZ=Asia/Seoul"
-                ],
-                "ExposedPorts": { "5432/tcp": {} },
-                "HostConfig": {
-                  "PortBindings": { "5432/tcp": [{ "HostPort": "4546" }] },
-                  "RestartPolicy": { "Name": "unless-stopped" }
-                }
-              }' && \
-            curl -X POST -H "X-API-Key: $API_KEY" "$PORTAINER_URL/api/endpoints/3/docker/containers/safework-postgres/start" || echo "⚠️ 생성/시작 실패"
-          fi
-          
-          echo "📦 SafeWork Redis 컨테이너 배포..."
-          
-          # Redis 컨테이너 확인 및 처리  
-          if curl -s -H "X-API-Key: $API_KEY" "$PORTAINER_URL/api/endpoints/3/docker/containers/safework-redis/json" > /dev/null 2>&1; then
-            echo "  🔄 기존 Redis 컨테이너 재시작..."
-            curl -X POST -H "X-API-Key: $API_KEY" "$PORTAINER_URL/api/endpoints/3/docker/containers/safework-redis/restart" || echo "⚠️ 재시작 실패"
-          else
-            echo "  🆕 새로운 Redis 컨테이너 생성 (Portainer API)..."
-            curl -X POST \
-              -H "X-API-Key: $API_KEY" \
-              -H "Content-Type: application/json" \
-              "$PORTAINER_URL/api/endpoints/3/docker/containers/create?name=safework-redis" \
-              -d '{
-                "Image": "registry.jclee.me/safework/redis:latest",
-                "Env": [ "TZ=Asia/Seoul" ],
-                "ExposedPorts": { "6379/tcp": {} },
-                "HostConfig": {
-                  "PortBindings": { "6379/tcp": [{ "HostPort": "4547" }] },
-                  "RestartPolicy": { "Name": "unless-stopped" }
-                }
-              }' && \
-            curl -X POST -H "X-API-Key: $API_KEY" "$PORTAINER_URL/api/endpoints/3/docker/containers/safework-redis/start" || echo "⚠️ 생성/시작 실패"
-          fi
-          
-          echo "📦 SafeWork App 컨테이너 배포..."
-          
-          # App 컨테이너 확인 및 처리
-          if curl -s -H "X-API-Key: $API_KEY" "$PORTAINER_URL/api/endpoints/3/docker/containers/safework-app/json" > /dev/null 2>&1; then
-            echo "  🔄 기존 App 컨테이너 재시작..."
-            curl -X POST -H "X-API-Key: $API_KEY" "$PORTAINER_URL/api/endpoints/3/docker/containers/safework-app/restart" || echo "⚠️ 재시작 실패"
-          else
-            echo "  🆕 새로운 App 컨테이너 생성 (Portainer API)..."
-            curl -X POST \
-              -H "X-API-Key: $API_KEY" \
-              -H "Content-Type: application/json" \
-              "$PORTAINER_URL/api/endpoints/3/docker/containers/create?name=safework-app" \
-              -d '{
-                "Image": "registry.jclee.me/safework/app:latest",
-                "Env": [
-                  "DB_HOST=192.168.50.215",
-                  "DB_PORT=4546",
-                  "REDIS_HOST=192.168.50.215", 
-                  "REDIS_PORT=4547",
-                  "TZ=Asia/Seoul",
-                  "FLASK_CONFIG=production"
-                ],
-                "ExposedPorts": { "4545/tcp": {} },
-                "HostConfig": {
-                  "PortBindings": { "4545/tcp": [{ "HostPort": "4545" }] },
-                  "RestartPolicy": { "Name": "unless-stopped" }
-                }
-              }' && \
-            curl -X POST -H "X-API-Key: $API_KEY" "$PORTAINER_URL/api/endpoints/3/docker/containers/safework-app/start" || echo "⚠️ 생성/시작 실패"
+            echo "❌ Watchtower 호출 실패: $RESPONSE_CODE"
+            echo "status=failed" >> $GITHUB_OUTPUT
+            exit 1
           fi
           
           # 배포 대기
@@ -317,17 +257,31 @@ jobs:
       - name: 🔄 Automatic Rollback on Failure
         if: failure()
         run: |
-          echo "🚨 배포 실패 감지 - 자동 롤백 시작..."
+          echo "🚨 배포 실패 감지 - Watchtower 이전 버전 복구..."
           
-          # Watchtower를 통한 이전 버전 복구
+          # Watchtower를 통한 SafeWork 컨테이너 롤백
           if [[ -n "${{ secrets.WATCHTOWER_HTTP_API_TOKEN }}" ]]; then
-            curl -X POST \
+            echo "📡 Watchtower HTTP API를 통한 롤백 실행..."
+            ROLLBACK_RESPONSE=$(curl -X POST \
               -H "Authorization: Bearer ${{ secrets.WATCHTOWER_HTTP_API_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d '{"containers": ["safework-postgres", "safework-redis", "safework-app"], "rollback": true}' \
               "https://watchtower.jclee.me/v1/update" \
-              || echo "⚠️ Watchtower 롤백 실패"
+              -w "%{http_code}" -s)
+            
+            ROLLBACK_CODE="${ROLLBACK_RESPONSE: -3}"
+            echo "롤백 응답 코드: $ROLLBACK_CODE"
+            
+            if [[ "$ROLLBACK_CODE" == "200" || "$ROLLBACK_CODE" == "202" ]]; then
+              echo "✅ Watchtower 롤백 성공"
+            else
+              echo "⚠️ Watchtower 롤백 실패: $ROLLBACK_CODE"
+            fi
+          else
+            echo "⚠️ WATCHTOWER_HTTP_API_TOKEN이 설정되지 않아 롤백 불가"
           fi
           
-          echo "🔄 롤백 완료"
+          echo "🔄 롤백 프로세스 완료"
 
   # Phase 3: Notification and Cleanup
   notify:
