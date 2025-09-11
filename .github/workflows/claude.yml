@@ -1,0 +1,66 @@
+name: 🤖 Claude Code Assistant
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened, assigned, labeled]
+  pull_request_review:
+    types: [submitted]
+  pull_request:
+    types: [opened, synchronize, ready_for_review, reopened]
+  workflow_run:
+    workflows: ["🚀 SafeWork Deployment Pipeline"]
+    types: [completed]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  actions: read
+  checks: read
+
+jobs:
+  claude-assistant:
+    name: 🤖 AI Assistant
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    # Only run if comment contains @claude or for specific events
+    if: >
+      github.event_name == 'workflow_run' ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'issues' && github.event.action == 'opened') ||
+      (github.event_name == 'pull_request' && github.event.pull_request.draft == false) ||
+      (github.event_name == 'pull_request_review' && github.event.review.state == 'changes_requested')
+    
+    steps:
+      - name: 🤖 Claude Code Action
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          track_progress: ${{ github.event_name != 'workflow_run' }}
+          prompt: |
+            ${{ 
+              github.event_name == 'workflow_run' && 'SafeWork 배포 워크플로우가 완료되었습니다. 배포 결과를 분석하고 문제가 있다면 해결 방안을 제시해주세요. 필요시 GitHub 이슈를 생성해주세요.' ||
+              github.event_name == 'pull_request' && 'SafeWork Flask 애플리케이션의 Pull Request를 종합적으로 검토해주세요. 코드 품질, 보안, 성능, 테스트 관점에서 분석하고 개선 사항을 제안해주세요.' ||
+              github.event_name == 'issues' && 'SafeWork 프로젝트의 새로운 이슈를 분석해주세요. 문제 해결 방안을 제시하고 필요시 코드 수정을 도와주세요.' ||
+              'SafeWork 프로젝트 관련 질문에 대해 도움을 드리겠습니다. Flask, MySQL, Redis, Docker 환경에서의 산업안전보건 관리 시스템 개발을 지원합니다.'
+            }}
+            
+            **프로젝트 컨텍스트:**
+            - SafeWork: 산업안전보건 관리 시스템 (Flask 3.0+)
+            - 기술 스택: Python Flask, MySQL 8.0, Redis, Docker
+            - 주요 기능: 설문 시스템, MSDS 관리, 안전 교육, 건강 검진
+            - 배포: Docker Registry (registry.jclee.me), Watchtower 자동 배포
+            
+            **응답 언어:** 한국어로 답변해주세요.
+          claude_args: |
+            --model claude-sonnet-4-20250514
+            --maxTokens 8192
+            --temperature 0.1
+            --allowedTools "mcp__serena__*,mcp__github__*,mcp__sequential-thinking__*,mcp__memory__*"
+            --systemPrompt "SafeWork Flask 애플리케이션 전문가. 산업안전보건 도메인 지식과 Flask/Python/MySQL/Docker 기술 전문성을 바탕으로 실용적이고 안전한 솔루션을 제공합니다. 코드 품질, 보안, 성능을 중시합니다."

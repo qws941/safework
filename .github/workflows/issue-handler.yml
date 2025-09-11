@@ -11,17 +11,11 @@ on:
         description: 'Issue number to analyze'
         required: true
         type: number
-      analysis_type:
-        description: 'Analysis type'
-        required: true
-        default: 'comprehensive'
-        type: choice
-        options:
-          - 'comprehensive'
-          - 'bug-report'
-          - 'feature-request'
-          - 'security-issue'
-          - 'performance-issue'
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
 
 jobs:
   issue-analysis:
@@ -33,230 +27,72 @@ jobs:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🤖 Intelligent Issue Analysis
+      - name: 🤖 SafeWork Issue Analysis
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           track_progress: true
           prompt: |
-            🤖 **SafeWork Issue Analysis & Automated Response System**
+            🤖 **SafeWork Issue Analysis System**
             
             REPOSITORY: ${{ github.repository }}
             ISSUE_NUMBER: ${{ github.event.issue.number || github.event.inputs.issue_number }}
             ISSUE_TITLE: "${{ github.event.issue.title }}"
             ISSUE_BODY: "${{ github.event.issue.body }}"
             ISSUE_AUTHOR: ${{ github.event.issue.user.login }}
-            ANALYSIS_TYPE: ${{ github.event.inputs.analysis_type || 'comprehensive' }}
             
-            Please analyze the GitHub issue and provide intelligent automated response and resolution.
-            Focus on SafeWork-specific domain knowledge including Flask application, survey systems,
-            Docker deployment, database management, and MSDS functionality.
-
-            **Issue Analysis Framework:**
-
-            **1. Issue Classification & Triage**
-            ```
-            - Issue type identification (bug, feature, security, performance, documentation)
-            - Severity assessment (critical, high, medium, low)
-            - Component mapping (backend, frontend, database, deployment, security)
-            - Priority scoring based on user impact and system criticality
-            ```
-
-            **2. Context Analysis**
-            ```
-            - Related SafeWork functionality analysis
-            - Similar historical issue patterns
-            - Affected system components identification
-            - Technical complexity assessment
-            ```
-
-            **3. Automated Response Generation**
-            ```
-            - Initial acknowledgment response
-            - Technical analysis and diagnosis
-            - Step-by-step resolution guidance
-            - Workaround suggestions (if applicable)
-            - Additional information requests
-            ```
-
-            **MCP Tools Usage Instructions:**
-            1. **mcp__serena__***: Codebase analysis for issue context
-               - `mcp__serena__activate_project('.')`
-               - `mcp__serena__search_for_pattern()`: Search for related code patterns
-               - `mcp__serena__find_symbol()`: Locate relevant functions/classes
-
-            2. **mcp__sequential-thinking__sequentialthinking**: Systematic issue analysis
-               - Issue understanding → Context gathering → Solution planning → Response crafting
-
-            3. **mcp__shrimp-task-manager__***: Resolution planning
-               - `mcp__shrimp-task-manager__plan_task()`: Create resolution task plan
-               - `mcp__shrimp-task-manager__analyze_task()`: Technical feasibility analysis
-               - `mcp__shrimp-task-manager__split_tasks()`: Break down complex fixes
-
-            4. **mcp__github__***: GitHub interaction
-               - `mcp__github__add_issue_comment()`: Post analysis and response
-               - `mcp__github__update_issue()`: Update labels and status
-               - `mcp__github__search_issues()`: Find similar issues
-
-            **SafeWork-Specific Domain Knowledge:**
-            - Survey system (001 Musculoskeletal, 002 New Employee Health)
-            - Flask application architecture with SQLAlchemy
-            - Docker containerization (app, mysql, redis containers)
-            - Admin panel with 13 specialized management sections
-            - MSDS (Material Safety Data Sheet) management system
-            - Document management with version control
-            - User authentication and role-based access
-            - Database migration system
-            - Watchtower-based deployment
-
-            **Analysis Scenarios:**
-
-            🔍 **comprehensive**: Complete issue analysis and resolution
-            - Full context analysis with codebase search
-            - Technical root cause analysis
-            - Comprehensive resolution plan
-            - Similar issue pattern analysis
-
-            🐛 **bug-report**: Bug-specific analysis
-            - Error reproduction steps analysis
-            - Code path investigation
-            - Fix suggestion and testing guidance
-            - Regression prevention measures
-
-            🚀 **feature-request**: Feature analysis
-            - Feasibility assessment
-            - Implementation complexity analysis
-            - Architecture impact evaluation
-            - Development timeline estimation
-
-            🔒 **security-issue**: Security-focused analysis
-            - Vulnerability assessment
-            - Impact analysis and risk scoring
-            - Immediate mitigation steps
-            - Long-term security improvements
-
-            ⚡ **performance-issue**: Performance analysis
-            - Bottleneck identification
-            - Performance profiling guidance
-            - Optimization recommendations
-            - Monitoring setup suggestions
-
-            **Automated Actions to Perform:**
-            1. Analyze issue content and classify appropriately
-            2. Add relevant labels (bug, feature, security, etc.)
-            3. Set appropriate priority based on impact analysis
-            4. Search codebase for relevant context
-            5. Generate detailed technical response
-            6. Create action items and resolution plan
-            7. Suggest immediate workarounds if applicable
-            8. Set up tracking for resolution progress
-
-            Provide comprehensive analysis with specific, actionable guidance
-            tailored to SafeWork's architecture and domain requirements.
-
+            SafeWork 산업안전보건 관리 시스템의 GitHub 이슈를 분석하고 자동 응답을 제공해주세요.
+            
+            **프로젝트 컨텍스트:**
+            - SafeWork: Flask 3.0+ 기반 산업안전보건 관리 시스템
+            - 기술 스택: Python Flask, MySQL 8.0, Redis, Docker
+            - 주요 기능: 설문 시스템, MSDS 관리, 안전 교육, 건강 검진
+            - 배포: Docker Registry (registry.jclee.me), Watchtower 자동 배포
+            
+            **분석 및 응답:**
+            1. 이슈 유형 분류 (버그, 기능 요청, 보안, 성능)
+            2. 관련 코드 및 시스템 컴포넌트 식별
+            3. 해결 방안 및 워크어라운드 제시
+            4. 적절한 라벨 및 우선순위 설정
+            
+            **응답 언어:** 한국어로 답변해주세요.
           claude_args: |
-            --model claude-opus-4-1-20250805
-            --allowedTools "mcp__serena__*,mcp__sequential-thinking__*,mcp__shrimp-task-manager__*,mcp__github__*,mcp__exa__*"
+            --model claude-sonnet-4-20250514
+            --maxTokens 4096
+            --temperature 0.1
+            --allowedTools "mcp__serena__*,mcp__github__*,mcp__sequential-thinking__*"
+            --systemPrompt "SafeWork Flask 애플리케이션 전문가. 산업안전보건 도메인 지식과 기술 전문성을 바탕으로 실용적인 솔루션을 제공합니다."
 
-  security-issue-escalation:
-    name: 🔒 Security Issue Auto-Escalation
+  security-escalation:
+    name: 🔒 Security Issue Escalation
     runs-on: ubuntu-latest
     if: contains(github.event.issue.labels.*.name, 'security') || contains(github.event.issue.title, 'security') || contains(github.event.issue.title, 'vulnerability')
     
     steps:
-      - name: 🚨 Security Issue Alert
+      - name: 🚨 Security Alert
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           track_progress: true
           prompt: |
-            🚨 **SECURITY ALERT: SafeWork Security Issue Auto-Escalation**
+            🚨 **SafeWork 보안 이슈 긴급 분석**
             
             ISSUE_NUMBER: ${{ github.event.issue.number }}
             ISSUE_TITLE: "${{ github.event.issue.title }}"
             ISSUE_AUTHOR: ${{ github.event.issue.user.login }}
             
-            A potential security issue has been identified in SafeWork.
-            Please perform immediate security assessment and escalation.
-
-            **Security Analysis Tasks:**
-            1. Assess security impact and severity
-            2. Identify affected components and attack vectors
-            3. Generate immediate mitigation steps
-            4. Create security incident response plan
-            5. Prepare detailed security briefing
-
-            **MCP Tools Usage:**
-            - `mcp__shrimp-task-manager__plan_task()`: Security response planning
-            - `mcp__sequential-thinking__sequentialthinking()`: Risk assessment
-            - `mcp__github__update_issue()`: Mark as high priority security issue
-
-            Generate comprehensive security analysis and immediate action plan.
-            This is a high-priority security matter requiring urgent attention.
-
+            SafeWork 시스템의 보안 이슈가 보고되었습니다.
+            즉시 보안 영향도를 분석하고 대응 방안을 제시해주세요.
+            
+            **보안 분석 항목:**
+            1. 보안 영향도 및 심각도 평가
+            2. 영향받는 시스템 컴포넌트 식별
+            3. 즉시 완화 조치 방안
+            4. 장기 보안 개선 방안
+            
+            한국어로 상세한 보안 분석 및 대응 계획을 제공해주세요.
           claude_args: |
-            --model claude-opus-4-1-20250805
+            --model claude-sonnet-4-20250514
+            --maxTokens 4096
+            --temperature 0.1
             --allowedTools "mcp__shrimp-task-manager__*,mcp__sequential-thinking__*,mcp__github__*"
-
-      - name: 📧 Security Alert Notification
-        if: always()
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 465
-          username: ${{ secrets.SMTP_USERNAME }}
-          password: ${{ secrets.SMTP_PASSWORD }}
-          subject: "🚨 URGENT: SafeWork Security Issue #${{ github.event.issue.number }}"
-          to: ${{ secrets.SECURITY_ALERT_EMAIL }}
-          from: SafeWork Security <noreply@jclee.me>
-          body: |
-            URGENT: A security issue has been reported in SafeWork repository.
-            
-            Issue: #${{ github.event.issue.number }}
-            Title: ${{ github.event.issue.title }}
-            Reporter: ${{ github.event.issue.user.login }}
-            URL: ${{ github.event.issue.html_url }}
-            
-            Please review immediately and take appropriate security measures.
-
-  performance-issue-analyzer:
-    name: ⚡ Performance Issue Analyzer  
-    runs-on: ubuntu-latest
-    if: contains(github.event.issue.labels.*.name, 'performance') || contains(github.event.issue.title, 'slow') || contains(github.event.issue.title, 'performance')
-    
-    steps:
-      - name: 📥 Checkout repository
-        uses: actions/checkout@v4
-
-      - name: ⚡ Performance Issue Analysis
-        uses: anthropics/claude-code-action@v1
-        with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          track_progress: true
-          prompt: |
-            ⚡ **SafeWork Performance Issue Deep Analysis**
-            
-            ISSUE_NUMBER: ${{ github.event.issue.number }}
-            ISSUE_CONTENT: "${{ github.event.issue.body }}"
-            
-            A performance issue has been reported. Please conduct thorough analysis
-            focusing on SafeWork's Flask application, database queries, and system bottlenecks.
-
-            **Performance Analysis Framework:**
-            1. Identify potential bottlenecks in codebase
-            2. Analyze database query patterns  
-            3. Review caching strategies (Redis usage)
-            4. Assess container resource allocation
-            5. Examine survey form processing efficiency
-
-            **MCP Tools for Performance Analysis:**
-            - `mcp__serena__search_for_pattern()`: Find slow query patterns
-            - `mcp__serena__find_symbol()`: Analyze suspect functions
-            - `mcp__sequential-thinking__sequentialthinking()`: Systematic bottleneck analysis
-
-            Generate comprehensive performance optimization recommendations
-            with specific code improvements and infrastructure adjustments.
-
-          claude_args: |
-            --model claude-opus-4-1-20250805  
-            --allowedTools "mcp__serena__*,mcp__sequential-thinking__*,mcp__shrimp-task-manager__*,mcp__github__*"
