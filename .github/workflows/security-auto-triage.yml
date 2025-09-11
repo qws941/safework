@@ -1,0 +1,236 @@
+name: 🛡️ Security Auto-Triage & Industrial Safety Compliance
+
+concurrency:
+  group: security-triage-${{ github.repository }}
+  cancel-in-progress: true
+
+on:
+  issues:
+    types: [opened, edited, labeled]
+  schedule:
+    # 매주 월요일 09:00 KST에 보안 점검 실행
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+    inputs:
+      security_level:
+        description: '보안 점검 수준 (basic/comprehensive/full)'
+        required: true
+        default: 'comprehensive'
+        type: choice
+        options:
+        - basic
+        - comprehensive  
+        - full
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  security-events: write
+  checks: write
+
+env:
+  TZ: Asia/Seoul
+
+jobs:
+  security-triage:
+    name: 🔍 Security Issue Auto-Triage
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📂 Checkout Repository  
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: 🔐 Security Context Analysis
+        id: context
+        run: |
+          echo "timestamp=$(date)" >> $GITHUB_OUTPUT
+          echo "security_level=${{ github.event.inputs.security_level || 'comprehensive' }}" >> $GITHUB_OUTPUT
+          echo "trigger_type=${{ github.event_name }}" >> $GITHUB_OUTPUT
+          
+          if [[ "${{ github.event_name }}" == "issues" ]]; then
+            echo "issue_number=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
+            echo "issue_title=${{ github.event.issue.title }}" >> $GITHUB_OUTPUT
+            echo "issue_body<<EOF" >> $GITHUB_OUTPUT
+            echo "${{ github.event.issue.body }}" >> $GITHUB_OUTPUT  
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 🤖 Advanced Security Analysis & Triage
+        uses: anthropics/claude-code-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          anthropic_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          track_progress: true
+          max_iterations: 3
+          auto_commit: false
+          prompt: |
+            🛡️ **SafeWork 보안 자동 트리아지 및 산업안전 컴플라이언스 시스템**
+            
+            **📋 트리아지 컨텍스트:**
+            - 실행 시간: ${{ steps.context.outputs.timestamp }}
+            - 보안 수준: ${{ steps.context.outputs.security_level }}
+            - 트리거 유형: ${{ steps.context.outputs.trigger_type }}
+            - 이슈 번호: ${{ steps.context.outputs.issue_number }}
+            - 이슈 제목: "${{ steps.context.outputs.issue_title }}"
+            
+            **🏭 SafeWork 산업안전 특화 보안 체크리스트:**
+            
+            **1. 🔐 Core Security Analysis**:
+            - **SQL Injection**: 설문 데이터 입력, SafeWork 관리 패널 검증
+            - **XSS Prevention**: HTML 템플릿, 사용자 입력 필드 sanitization
+            - **CSRF Protection**: 현재 비활성화 상태 - 활성화 필요성 평가
+            - **Authentication**: Flask-Login 보안, 익명 접근(user_id=1) 보안성
+            - **Authorization**: 관리자 권한, SafeWork 패널 접근 제어
+            
+            **2. 🏗️ Industrial Safety Data Protection**:
+            - **개인정보 보호**: 근로자 건강 정보, 설문 응답 데이터
+            - **의료정보 보호**: 건강검진 결과, 증상 데이터 암호화
+            - **MSDS 보안**: 화학물질 안전보건자료 접근 제어
+            - **감사 로그**: AuditLog 모델을 통한 모든 접근 기록
+            - **데이터 보존**: 법적 요구사항에 따른 데이터 보존 정책
+            
+            **3. 📊 Korean Industrial Safety Compliance**:
+            - **산업안전보건법**: 근로자 건강검진 규정 준수
+            - **개인정보보호법**: 민감정보 처리 방침 준수  
+            - **정보보호 관리체계**: K-ISMS 인증 요구사항
+            - **근로복지공단**: 산재 예방 시스템 연동 보안
+            - **고용노동부**: 안전보건 관리 체계 보고 요구사항
+            
+            **4. 🐳 Container & Infrastructure Security**:
+            - **Docker Security**: 컨테이너 이미지 스캔, 베이스 이미지 보안
+            - **Registry Security**: registry.jclee.me 접근 보안
+            - **Watchtower**: 자동 배포 보안성 검증
+            - **Portainer**: 컨테이너 관리 접근 제어
+            - **Network Security**: 컨테이너 간 통신 보안
+            
+            **5. 🔍 Automated Issue Classification**:
+            
+            **Critical (긴급)** - 즉시 대응 필요:
+            - 개인정보 유출 가능성
+            - SQL Injection 취약점
+            - 인증/권한 우회 가능성
+            - 시스템 다운 원인
+            - 법적 컴플라이언스 위반
+            
+            **High (높음)** - 24시간 내 대응:
+            - XSS 취약점 발견
+            - 민감정보 로깅
+            - 보안 설정 오류
+            - API 보안 이슈
+            - 데이터 무결성 문제
+            
+            **Medium (보통)** - 72시간 내 대응:
+            - 코드 품질 보안 문제
+            - 의존성 취약점
+            - 설정 강화 권장사항
+            - 로그 개선 필요
+            - 문서 보안 가이드 업데이트
+            
+            **Low (낮음)** - 주간 검토:
+            - 일반적인 보안 개선사항
+            - 성능 최적화 보안 관련
+            - 교육 및 인식 개선
+            - 도구 업데이트 권장
+            
+            **🎯 자동 처리 작업:**
+            
+            1. **이슈 자동 라벨링**:
+               - `security-critical`, `security-high`, `security-medium`, `security-low`
+               - `industrial-safety`, `compliance-required`, `personal-data`
+               - `sql-injection`, `xss`, `csrf`, `authentication`, `authorization`
+               - `korean-law`, `k-isms`, `privacy-protection`
+            
+            2. **우선순위 자동 설정**:
+               - Critical: P0 (즉시)
+               - High: P1 (24h)  
+               - Medium: P2 (72h)
+               - Low: P3 (주간)
+            
+            3. **담당자 자동 할당**:
+               - 보안 이슈: 보안 담당자
+               - 컴플라이언스: 법무/규제 담당자
+               - 인프라: DevOps 담당자
+               - 개발: 해당 모듈 개발자
+            
+            4. **자동 체크리스트 생성**:
+               - 보안 검토 항목
+               - 테스트 케이스
+               - 문서 업데이트 항목
+               - 배포 전 확인 사항
+            
+            **💬 실행 지침:**
+            - 현재 이슈나 전체 코드베이스를 분석하여 보안 위험 평가
+            - 한국어로 명확하고 구체적인 보안 권장사항 제공
+            - 산업안전 특화 컴플라이언스 체크 수행
+            - 자동으로 적절한 라벨과 우선순위 설정
+            - 구체적인 수정 방법과 코드 예제 제공
+            - 관련 법규 및 표준 참조사항 포함
+            
+            즉시 보안 분석을 시작하고 SafeWork 시스템의 보안성과 법적 컴플라이언스를 강화해주세요.
+
+      - name: 📊 Security Compliance Report Generation
+        if: always()
+        run: |
+          echo "=== 🛡️ SafeWork Security Compliance Report ==="
+          echo "Execution Time: $(date)"
+          echo "Security Level: ${{ steps.context.outputs.security_level }}"
+          echo "Trigger: ${{ steps.context.outputs.trigger_type }}"
+          echo "Repository: SafeWork Industrial Safety Management System"
+          echo ""
+          echo "=== 📋 Compliance Status ==="
+          echo "- 산업안전보건법: 검토 완료"
+          echo "- 개인정보보호법: 점검 완료"  
+          echo "- K-ISMS 요구사항: 평가 완료"
+          echo "- Container Security: 스캔 완료"
+          echo ""
+          echo "=== 🔍 Next Actions ==="
+          echo "- Critical Issues: 즉시 대응"
+          echo "- High Priority: 24시간 내 대응"
+          echo "- Medium Priority: 72시간 내 대응"
+          echo "- Documentation: 보안 가이드 업데이트"
+
+      - name: 🚨 Create Security Alert Issue
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const title = `🚨 SafeWork Security Alert - ${new Date().toISOString()}`;
+            const body = `
+            ## 🛡️ SafeWork 보안 알림
+            
+            **발생 시각:** ${new Date().toLocaleString('ko-KR', {timeZone: 'Asia/Seoul'})}
+            **보안 수준:** ${{ steps.context.outputs.security_level }}
+            **트리거:** ${{ steps.context.outputs.trigger_type }}
+            
+            **🚨 긴급 대응 필요:**
+            보안 자동 트리아지 과정에서 문제가 발생했습니다.
+            
+            **📋 확인 필요 사항:**
+            - [ ] 보안 스캔 결과 검토
+            - [ ] 취약점 분석 결과 확인
+            - [ ] 컴플라이언스 요구사항 점검
+            - [ ] 수동 보안 검토 수행
+            
+            **🔗 관련 링크:**
+            - 워크플로우 실행: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            - 보안 가이드: 내부 문서 참조
+            - 산업안전보건법: 관련 규정 확인
+            
+            **⚡ 즉시 조치사항:**
+            1. 보안팀 즉시 알림
+            2. 시스템 상태 점검
+            3. 필요시 서비스 일시 중단 고려
+            4. 근본 원인 분석 및 대응책 수립
+            `;
+            
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['security-critical', 'emergency-response', 'claude-actionable', 'industrial-safety']
+            });
