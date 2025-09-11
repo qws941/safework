@@ -77,48 +77,12 @@ permissions:
   metadata: read
 
 jobs:
-  # Advanced PR Review with template integration
-  pr-review-advanced:
-    if: github.event_name == 'pull_request'
-    uses: ./.github/workflow-templates/claude-pr-review-advanced.yml
-    secrets: inherit
-    with:
-      review_scope: 'full'
-      enable_inline_comments: true
-      security_threshold: 'medium'
-      contributor_type: ${{ github.actor == 'dependabot[bot]' && 'dependabot' || (github.event.pull_request.author_association == 'COLLABORATOR' || github.event.pull_request.author_association == 'MEMBER') && 'internal' || 'external' }}
-
-  # Advanced Issue Analysis with template integration  
-  issue-analysis-advanced:
-    if: github.event_name == 'issues'
-    uses: ./.github/workflow-templates/claude-issue-analysis-advanced.yml
-    secrets: inherit
-    with:
-      analysis_depth: 'standard'
-      auto_assign: false
-      create_action_items: true
-      priority_assessment: true
-
-  # Scheduled maintenance automation
-  maintenance-automation:
-    if: github.event_name == 'schedule'
-    uses: ./.github/workflow-templates/claude-maintenance-automation.yml
-    secrets: inherit
-    with:
-      maintenance_type: 'health-check'
-      auto_create_prs: false
-      notification_level: 'standard'
-      dry_run: false
-
-  # Main Claude assistant for other events
+  # Main Claude assistant for all events
   claude-assistant:
     name: 🤖 AI Assistant
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    if: >
-      github.event_name != 'pull_request' && 
-      github.event_name != 'issues' && 
-      github.event_name != 'schedule'
+    # Run for all events that have valid context
     
     steps:
       - name: 📊 Workflow Initialization
