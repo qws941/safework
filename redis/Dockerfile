@@ -18,17 +18,6 @@ RUN apk add --no-cache tzdata && \
     echo "Asia/Seoul" > /etc/timezone && \
     apk del tzdata
 
-# Redis 설정 파일 복사
-COPY redis.conf /usr/local/etc/redis/redis.conf
-
-# 데이터 디렉토리 생성 및 권한 설정
-RUN mkdir -p /data && \
-    chown redis:redis /data && \
-    chown -R redis:redis /usr/local/etc/redis
-
-# 사용자 전환
-USER redis
-
 # 포트 노출
 EXPOSE 6379
 
@@ -36,5 +25,5 @@ EXPOSE 6379
 HEALTHCHECK --interval=15s --timeout=5s --retries=5 --start-period=10s \
     CMD redis-cli ping || exit 1
 
-# Redis 실행
-CMD ["redis-server", "/usr/local/etc/redis/redis.conf"]
+# Redis 실행 (기본 설정 사용)
+CMD ["redis-server", "--bind", "0.0.0.0", "--appendonly", "yes"]
