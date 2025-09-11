@@ -163,6 +163,26 @@ jobs:
           echo "analysis_type=${{ inputs.analysis_type || 'comprehensive' }}" >> $GITHUB_OUTPUT
           echo "portainer_endpoint=${{ steps.portainer-logs.outputs.portainer_endpoint_id }}" >> $GITHUB_OUTPUT
           echo "log_files_collected=${{ steps.portainer-logs.outputs.collected_log_files }}" >> $GITHUB_OUTPUT
+          
+          # Performance metrics collection
+          metrics_start_time=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          echo "metrics_collection_start=$metrics_start_time" >> $GITHUB_OUTPUT
+          
+          # Calculate log collection efficiency
+          if [ "${{ steps.portainer-logs.outputs.collected_log_files }}" -gt 0 ]; then
+            echo "log_collection_success_rate=100%" >> $GITHUB_OUTPUT
+          else
+            echo "log_collection_success_rate=0%" >> $GITHUB_OUTPUT
+          fi
+          
+          # System health indicators
+          echo "safework_app_status=checking" >> $GITHUB_OUTPUT
+          echo "postgresql_status=checking" >> $GITHUB_OUTPUT
+          echo "redis_status=checking" >> $GITHUB_OUTPUT
+          
+          # Advanced metrics
+          echo "analysis_complexity_score=${{ inputs.analysis_type == 'comprehensive' && '10' || inputs.analysis_type == 'security-audit' && '8' || '5' }}" >> $GITHUB_OUTPUT
+          echo "expected_processing_time=${{ inputs.analysis_type == 'comprehensive' && '15-20' || '10-15' }}min" >> $GITHUB_OUTPUT
 
       - name: 🔍 Generate system health report
         run: |
@@ -261,8 +281,10 @@ jobs:
             **Response Language:** Please respond in Korean for operational insights and recommendations.
           claude_args: |
             --temperature 0.1
-            --allowedTools "mcp__serena__*,mcp__github__*,mcp__sequential-thinking__*,mcp__memory__*,mcp__filesystem__*"
-            --systemPrompt "SafeWork operational log analysis and system monitoring expert. Analyzes real container logs collected via Portainer API to perform performance optimization, error pattern analysis, security monitoring, and continuously improve system stability and performance. Provides specialized monitoring and analysis for independent container architecture (app, mysql, redis)."
+            --allowedTools "mcp__serena__*,mcp__github__*,mcp__sequential-thinking__*,mcp__memory__*,mcp__filesystem__*,mcp__code-runner__*,mcp__eslint__*,mcp__shrimp-task-manager__*,Read,Write,Edit,Glob,Grep,Bash(docker:*),Bash(curl:*),TodoWrite"
+            --contextSize 150000
+            --maxTokens 6000
+            --systemPrompt "SafeWork operational log analysis and system monitoring expert with advanced analytics capabilities. Analyzes real container logs collected via Portainer API to perform performance optimization, error pattern analysis, security monitoring, predictive maintenance, and continuous system improvement. Specializes in PostgreSQL 15, Redis, Flask 3.0+ monitoring with automated issue resolution and performance optimization recommendations. Provides specialized monitoring and analysis for independent container architecture with advanced MCP tools integration."
 
       - name: 📊 Generate analysis summary
         run: |

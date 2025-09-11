@@ -1,0 +1,298 @@
+name: 🛠️ Maintenance Automation with Claude Code Action
+
+# Automated maintenance and documentation sync workflow
+# Features: Dependency updates, documentation sync, code cleanup, health monitoring
+
+concurrency:
+  group: claude-maintenance-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  workflow_call:
+    inputs:
+      maintenance_type:
+        description: 'Maintenance type: dependencies, documentation, cleanup, health-check, security-audit'
+        required: false
+        default: 'health-check'
+        type: string
+      auto_create_prs:
+        description: 'Automatically create PRs for fixes'
+        required: false
+        default: false
+        type: boolean
+      notification_level:
+        description: 'Notification level: minimal, standard, detailed'
+        required: false
+        default: 'standard'
+        type: string
+      dry_run:
+        description: 'Perform analysis only without making changes'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  security-events: write
+  actions: write
+
+jobs:
+  maintenance-automation:
+    name: 🛠️ Maintenance Automation
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    
+    steps:
+      - name: 📥 Repository Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for comprehensive analysis
+
+      - name: 🔍 System State Analysis
+        id: analysis
+        run: |
+          echo "maintenance_start_time=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
+          
+          # Repository metrics
+          total_files=$(find . -type f -not -path './.git/*' | wc -l)
+          code_files=$(find . -name "*.py" -o -name "*.js" -o -name "*.yml" -o -name "*.yaml" -o -name "*.json" | wc -l)
+          echo "total_files=$total_files" >> $GITHUB_OUTPUT
+          echo "code_files=$code_files" >> $GITHUB_OUTPUT
+          
+          # Git activity metrics
+          commits_last_week=$(git log --since="1 week ago" --oneline | wc -l)
+          contributors_last_month=$(git log --since="1 month ago" --format='%ae' | sort -u | wc -l)
+          echo "commits_last_week=$commits_last_week" >> $GITHUB_OUTPUT
+          echo "contributors_last_month=$contributors_last_month" >> $GITHUB_OUTPUT
+          
+          # Maintenance type specific checks
+          case "${{ inputs.maintenance_type }}" in
+            "dependencies")
+              if [ -f "requirements.txt" ]; then
+                deps_count=$(cat requirements.txt | grep -v '^#' | grep -v '^$' | wc -l)
+                echo "dependencies_count=$deps_count" >> $GITHUB_OUTPUT
+              fi
+              ;;
+            "documentation")
+              md_files=$(find . -name "*.md" | wc -l)
+              echo "documentation_files=$md_files" >> $GITHUB_OUTPUT
+              ;;
+            "cleanup")
+              temp_files=$(find . -name "*.tmp" -o -name "*.log" -o -name "*.bak" | wc -l)
+              echo "temp_files=$temp_files" >> $GITHUB_OUTPUT
+              ;;
+            "security-audit")
+              secrets_check=$(grep -r "password\|secret\|token\|key" --include="*.py" --include="*.yml" . | wc -l)
+              echo "potential_secrets=$secrets_check" >> $GITHUB_OUTPUT
+              ;;
+          esac
+
+      - name: 🤖 Claude Code Action - Maintenance Analysis
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          track_progress: true
+          prompt: |
+            **MAINTENANCE AUTOMATION REQUEST**
+            
+            **REPOSITORY CONTEXT:**
+            - Repository: ${{ github.repository }}
+            - Branch: ${{ github.ref_name }}
+            - Maintenance Type: ${{ inputs.maintenance_type }}
+            - Auto Create PRs: ${{ inputs.auto_create_prs }}
+            - Dry Run Mode: ${{ inputs.dry_run }}
+            - Notification Level: ${{ inputs.notification_level }}
+            
+            **SYSTEM METRICS:**
+            - Total Files: ${{ steps.analysis.outputs.total_files }}
+            - Code Files: ${{ steps.analysis.outputs.code_files }}
+            - Commits (Last Week): ${{ steps.analysis.outputs.commits_last_week }}
+            - Contributors (Last Month): ${{ steps.analysis.outputs.contributors_last_month }}
+            ${{ inputs.maintenance_type == 'dependencies' && format('- Dependencies Count: {0}', steps.analysis.outputs.dependencies_count) || '' }}
+            ${{ inputs.maintenance_type == 'documentation' && format('- Documentation Files: {0}', steps.analysis.outputs.documentation_files) || '' }}
+            ${{ inputs.maintenance_type == 'cleanup' && format('- Temporary Files: {0}', steps.analysis.outputs.temp_files) || '' }}
+            ${{ inputs.maintenance_type == 'security-audit' && format('- Potential Secrets Found: {0}', steps.analysis.outputs.potential_secrets) || '' }}
+            
+            **MAINTENANCE FRAMEWORK:**
+            
+            ## 🔧 ${{ inputs.maintenance_type == 'dependencies' && 'Dependency Management' || inputs.maintenance_type == 'documentation' && 'Documentation Sync' || inputs.maintenance_type == 'cleanup' && 'Code Cleanup' || inputs.maintenance_type == 'security-audit' && 'Security Audit' || 'System Health Check' }}
+            
+            ${{ inputs.maintenance_type == 'dependencies' && '
+            ### Dependency Analysis Checklist:
+            □ **Security Vulnerabilities**: Identify packages with known vulnerabilities
+            □ **Version Updates**: Check for available updates and compatibility
+            □ **License Compliance**: Verify license compatibility and restrictions
+            □ **Unused Dependencies**: Identify and recommend removal of unused packages
+            □ **Dependency Conflicts**: Resolve version conflicts and compatibility issues
+            □ **Performance Impact**: Assess impact of dependency updates on performance
+            □ **Breaking Changes**: Identify potential breaking changes in updates
+            
+            **Analysis Tasks:**
+            - Scan requirements.txt for outdated packages
+            - Check for security advisories and CVE reports
+            - Analyze dependency tree for conflicts
+            - Recommend update strategy with risk assessment
+            - Generate automated PR for safe updates (if auto_create_prs enabled)
+            ' || '' }}
+            
+            ${{ inputs.maintenance_type == 'documentation' && '
+            ### Documentation Sync Checklist:
+            □ **API Documentation**: Verify API docs match current implementation
+            □ **README Accuracy**: Ensure README reflects current setup and features
+            □ **Code Comments**: Review and update inline documentation
+            □ **Architecture Docs**: Update system diagrams and architecture descriptions
+            □ **Deployment Guides**: Validate deployment instructions and procedures
+            □ **Changelog Maintenance**: Update changelog with recent changes
+            □ **Link Validation**: Check for broken links and outdated references
+            
+            **Analysis Tasks:**
+            - Compare code implementation with documentation
+            - Identify missing or outdated documentation sections
+            - Validate code examples and tutorials
+            - Check for inconsistencies between different documentation sources
+            - Generate documentation update recommendations
+            ' || '' }}
+            
+            ${{ inputs.maintenance_type == 'cleanup' && '
+            ### Code Cleanup Checklist:
+            □ **Dead Code Removal**: Identify and remove unused functions and variables
+            □ **Import Optimization**: Clean up unused imports and reorganize
+            □ **Code Formatting**: Apply consistent formatting and style guidelines
+            □ **TODO/FIXME Review**: Address or document pending items
+            □ **Temporary Files**: Remove development artifacts and temporary files
+            □ **Log File Cleanup**: Manage and rotate log files appropriately
+            □ **Test Data Cleanup**: Remove obsolete test files and data
+            
+            **Analysis Tasks:**
+            - Scan for unused code patterns and variables
+            - Identify formatting inconsistencies
+            - Review TODO/FIXME comments for priority
+            - Find and categorize temporary files for removal
+            - Generate cleanup action plan with safety measures
+            ' || '' }}
+            
+            ${{ inputs.maintenance_type == 'security-audit' && '
+            ### Security Audit Checklist:
+            □ **Secrets Detection**: Scan for exposed passwords, tokens, and keys
+            □ **Vulnerability Assessment**: Check for common security vulnerabilities
+            □ **Access Control Review**: Validate authentication and authorization mechanisms
+            □ **Input Validation**: Ensure proper sanitization and validation
+            □ **Dependency Security**: Audit third-party packages for security issues
+            □ **Configuration Security**: Review security-related configuration settings
+            □ **Logging Security**: Ensure sensitive data is not logged inappropriately
+            
+            **Analysis Tasks:**
+            - Perform comprehensive secrets scanning
+            - Analyze code for common security anti-patterns
+            - Review database queries for injection vulnerabilities
+            - Check for XSS and CSRF protection measures
+            - Validate SSL/TLS configuration and usage
+            - Generate security improvement recommendations
+            ' || '' }}
+            
+            ${{ inputs.maintenance_type == 'health-check' && '
+            ### System Health Check Checklist:
+            □ **Performance Metrics**: Analyze system performance indicators
+            □ **Error Rate Analysis**: Review error patterns and frequencies
+            □ **Resource Utilization**: Check CPU, memory, and disk usage patterns
+            □ **Database Health**: Analyze database performance and integrity
+            □ **Cache Effectiveness**: Evaluate cache hit rates and efficiency
+            □ **Monitoring Coverage**: Ensure adequate monitoring and alerting
+            □ **Backup Validation**: Verify backup processes and recovery procedures
+            
+            **Analysis Tasks:**
+            - Review system logs for error patterns
+            - Analyze performance metrics and trends
+            - Check database query performance and optimization opportunities
+            - Validate monitoring and alerting configurations
+            - Assess overall system stability and reliability
+            - Generate health improvement recommendations
+            ' || '' }}
+            
+            ## 📋 Automated Actions Framework
+            
+            **DRY RUN MODE (${{ inputs.dry_run }}):**
+            ${{ inputs.dry_run == 'true' && '
+            - Perform analysis and generate recommendations only
+            - No files will be modified or PRs created
+            - Provide detailed action plan for manual execution
+            - Include risk assessment for each recommended action
+            ' || '
+            - Execute approved automated fixes and improvements
+            - Create PRs for changes requiring review (if enabled)
+            - Apply safe optimizations and cleanup automatically
+            - Generate summary of actions taken
+            ' }}
+            
+            **PR CREATION STRATEGY (${{ inputs.auto_create_prs }}):**
+            ${{ inputs.auto_create_prs == 'true' && '
+            - Create separate PRs for different types of changes
+            - Include detailed descriptions with reasoning and impact
+            - Add appropriate labels and assign reviewers
+            - Provide comprehensive testing and validation instructions
+            ' || '
+            - Generate recommendations for manual PR creation
+            - Provide change templates and suggested commit messages
+            - Include validation steps for manual implementation
+            ' }}
+            
+            **SUCCESS CRITERIA:**
+            ✅ Comprehensive analysis completed for selected maintenance type
+            ✅ Issues and improvement opportunities identified with priorities
+            ✅ Automated fixes applied safely (if not in dry-run mode)
+            ✅ Recommendations provided with implementation guidance
+            ${{ inputs.auto_create_prs == 'true' && '✅ PRs created for changes requiring review' || '✅ PR templates provided for manual creation' }}
+            ✅ Risk assessment included for all recommended changes
+            ✅ Next steps clearly defined with timeline suggestions
+            
+            **DELIVERABLES:**
+            1. **Maintenance Report**: Comprehensive analysis results and findings
+            2. **Action Plan**: Prioritized list of improvements and fixes
+            3. **Risk Assessment**: Safety evaluation for all recommended changes
+            4. **Implementation Guide**: Step-by-step instructions for manual tasks
+            ${{ inputs.auto_create_prs == 'true' && '5. **Automated PRs**: Ready-for-review pull requests for approved changes' || '5. **PR Templates**: Prepared templates for manual PR creation' }}
+            6. **Monitoring Recommendations**: Ongoing maintenance and monitoring suggestions
+            7. **Timeline**: Suggested implementation schedule with priorities
+          claude_args: |
+            --temperature 0.1
+            --allowedTools "mcp__serena__*,mcp__github__*,mcp__sequential-thinking__*,mcp__memory__*,mcp__eslint__*,mcp__code-runner__*,mcp__filesystem__*,Read,Write,Edit,Glob,Grep,Bash(git:*),Bash(gh:*),Bash(gh pr create:*),Bash(gh issue create:*),Bash(python:*),Bash(pip:*),TodoWrite"
+            --contextSize 200000
+            --maxTokens 10000
+            --systemPrompt "Expert maintenance automation specialist implementing Claude Code Action advanced methodologies. Provides systematic maintenance analysis, automated optimization, and comprehensive improvement recommendations with safety-first approach and detailed documentation."
+
+      - name: 📊 Maintenance Summary Generation
+        if: always()
+        run: |
+          maintenance_end_time=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          start_time="${{ steps.analysis.outputs.maintenance_start_time }}"
+          
+          if [ -n "$start_time" ]; then
+            start_epoch=$(date -d "$start_time" +%s)
+            end_epoch=$(date -d "$maintenance_end_time" +%s)
+            duration=$((end_epoch - start_epoch))
+          else
+            duration="unknown"
+          fi
+          
+          echo "## 🛠️ Maintenance Automation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Maintenance Configuration:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Type: ${{ inputs.maintenance_type }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Auto Create PRs: ${{ inputs.auto_create_prs }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Dry Run: ${{ inputs.dry_run }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Notification Level: ${{ inputs.notification_level }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Duration: ${duration}s" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Repository Metrics:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Total Files: ${{ steps.analysis.outputs.total_files }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Code Files: ${{ steps.analysis.outputs.code_files }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Recent Activity: ${{ steps.analysis.outputs.commits_last_week }} commits, ${{ steps.analysis.outputs.contributors_last_month }} contributors" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Next Steps:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Review Claude maintenance analysis and recommendations" >> $GITHUB_STEP_SUMMARY
+          echo "- Validate suggested improvements and fixes" >> $GITHUB_STEP_SUMMARY
+          ${{ inputs.auto_create_prs == 'true' && '- Review and merge automated PRs if created' || '- Create PRs for recommended changes' }}
+          echo "- Implement high-priority improvements based on risk assessment" >> $GITHUB_STEP_SUMMARY
+          echo "- Schedule regular maintenance based on analysis results" >> $GITHUB_STEP_SUMMARY

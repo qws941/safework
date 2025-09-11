@@ -1,8 +1,8 @@
-name: 🤖 Claude Code Assistant
+name: 🤖 Claude Code Assistant - Advanced Solutions Implementation
 
-# Prevent duplicate workflow execution
+# Prevent duplicate workflow execution with granular control
 concurrency:
-  group: claude-${{ github.ref }}-${{ github.event_name }}
+  group: claude-${{ github.ref }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.event.issue.number || 'default' }}
   cancel-in-progress: true
 
 on:
@@ -16,9 +16,27 @@ on:
     types: [submitted]
   pull_request:
     types: [opened, synchronize, ready_for_review, reopened]
+    paths:
+      - 'app/**'
+      - 'postgres/**' 
+      - 'redis/**'
+      - '.github/workflows/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/workflow-templates/**'
+      - 'requirements.txt'
+      - 'Dockerfile*'
+      - '*.md'
+      - '*.py'
+      - '*.yml'
+      - '*.yaml'
+      - '*.json'
+      - '*.sh'
+      - '*.sql'
   workflow_run:
     workflows: ["🚀 Deploy Pipeline"]
-    types: [completed]
+    types: [completed, failure]
+  schedule:
+    - cron: '0 9 * * 1'  # Weekly health check on Monday 9 AM KST
   workflow_dispatch:
     inputs:
       action_type:
@@ -31,6 +49,19 @@ on:
           - 'auto-fix'
           - 'review'
           - 'issue-resolve'
+          - 'security-audit'
+          - 'performance-check'
+          - 'workflow-test'
+          - 'deployment-analyze'
+      target_files:
+        description: 'Specific files or directories to analyze (optional)'
+        required: false
+        type: string
+      advanced_mode:
+        description: 'Enable advanced analysis with extended tools'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -46,36 +77,206 @@ permissions:
   metadata: read
 
 jobs:
+  # Advanced PR Review with template integration
+  pr-review-advanced:
+    if: github.event_name == 'pull_request'
+    uses: ./.github/workflow-templates/claude-pr-review-advanced.yml
+    secrets: inherit
+    with:
+      review_scope: 'full'
+      enable_inline_comments: true
+      security_threshold: 'medium'
+      contributor_type: ${{ github.actor == 'dependabot[bot]' && 'dependabot' || (github.event.pull_request.author_association == 'COLLABORATOR' || github.event.pull_request.author_association == 'MEMBER') && 'internal' || 'external' }}
+
+  # Advanced Issue Analysis with template integration  
+  issue-analysis-advanced:
+    if: github.event_name == 'issues'
+    uses: ./.github/workflow-templates/claude-issue-analysis-advanced.yml
+    secrets: inherit
+    with:
+      analysis_depth: 'standard'
+      auto_assign: false
+      create_action_items: true
+      priority_assessment: true
+
+  # Scheduled maintenance automation
+  maintenance-automation:
+    if: github.event_name == 'schedule'
+    uses: ./.github/workflow-templates/claude-maintenance-automation.yml
+    secrets: inherit
+    with:
+      maintenance_type: 'health-check'
+      auto_create_prs: false
+      notification_level: 'standard'
+      dry_run: false
+
+  # Main Claude assistant for other events
   claude-assistant:
     name: 🤖 AI Assistant
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    
-    # Comprehensive trigger conditions for Claude AI assistant
     if: >
-      github.event_name == 'workflow_run' ||
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'issues' && (github.event.action == 'opened' || github.event.action == 'edited')) ||
-      (github.event_name == 'pull_request' && github.event.pull_request.draft == false) ||
-      (github.event_name == 'pull_request_review' && github.event.review.state == 'changes_requested')
+      github.event_name != 'pull_request' && 
+      github.event_name != 'issues' && 
+      github.event_name != 'schedule' &&
+      (
+        github.event_name == 'workflow_run' ||
+        github.event_name == 'workflow_dispatch' ||
+        (github.event_name == 'issue_comment' && (
+          contains(github.event.comment.body, '@claude') ||
+          contains(github.event.comment.body, '/claude') ||
+          contains(github.event.comment.body, '!claude')
+        )) ||
+        (github.event_name == 'pull_request_review_comment' && (
+          contains(github.event.comment.body, '@claude') ||
+          contains(github.event.comment.body, '/claude') ||
+          contains(github.event.comment.body, '!claude')
+        )) ||
+        (github.event_name == 'pull_request_review' && (
+          github.event.review.state == 'changes_requested' ||
+          github.event.review.state == 'commented'
+        ))
+      )
     
     steps:
+      - name: 📊 Workflow Initialization
+        id: init
+        run: |
+          echo "workflow_start_time=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
+          echo "action_type=${{ inputs.action_type || 'analyze' }}" >> $GITHUB_OUTPUT
+          echo "advanced_mode=${{ inputs.advanced_mode || 'false' }}" >> $GITHUB_OUTPUT
+          echo "event_context=${{ github.event_name }}" >> $GITHUB_OUTPUT
+          
+          # Context validation
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual workflow triggered with action: ${{ inputs.action_type || 'analyze' }}"
+          else
+            echo "Automatic workflow triggered by: ${{ github.event_name }}"
+          fi
+          
+          # Environment validation
+          if [ -z "${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}" ]; then
+            echo "ERROR: CLAUDE_CODE_OAUTH_TOKEN not configured"
+            exit 1
+          fi
+          
+          echo "✅ Workflow initialization completed successfully"
+
       - name: 🤖 Claude Code Action
+        id: claude_action
         uses: anthropics/claude-code-action@v1
+        continue-on-error: true
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           track_progress: ${{ github.event_name != 'workflow_run' }}
           prompt: |
+            **REPOSITORY CONTEXT:**
+            - Repository: ${{ github.repository }}
+            - Event: ${{ github.event_name }}
+            - Actor: ${{ github.actor }}
+            - Branch: ${{ github.ref_name }}
+            - Commit: ${{ github.sha }}
+            ${{ github.event.pull_request && format('- PR Number: {0}', github.event.pull_request.number) || '' }}
+            ${{ github.event.issue && format('- Issue Number: {0}', github.event.issue.number) || '' }}
+            
+            **PRIMARY TASK & SYSTEMATIC REVIEW CRITERIA:**
             ${{ 
-              github.event_name == 'workflow_run' && 'SafeWork deployment workflow completed. Analyze results and create issues for any problems.' ||
-              github.event_name == 'workflow_dispatch' && format('Manual Claude action requested: {0}. Perform comprehensive analysis and assistance.', inputs.action_type) ||
-              github.event_name == 'pull_request' && 'Comprehensive SafeWork PR review: analyze code quality, security, performance, and testing. Provide detailed feedback.' ||
-              github.event_name == 'issues' && 'SafeWork issue analysis: provide solutions, code fixes, and implementation guidance.' ||
-              github.event_name == 'issue_comment' && 'Respond to SafeWork issue comment with technical assistance and solutions.' ||
-              github.event_name == 'pull_request_review_comment' && 'Address PR review comment with code improvements and explanations.' ||
-              'SafeWork AI Assistant: Industrial health & safety management system support with independent container deployment.'
+              github.event_name == 'workflow_run' && 'DEPLOYMENT ANALYSIS: Analyze SafeWork deployment workflow results and create actionable GitHub issues for problems.
+              
+              SYSTEMATIC CHECKLIST:
+              □ Container deployment status verification
+              □ PostgreSQL connection and migration status  
+              □ Redis cache functionality validation
+              □ Application health endpoint response
+              □ Portainer API integration verification
+              □ Environment variables security audit
+              □ Performance metrics analysis
+              
+              SUCCESS CRITERIA: All deployment errors identified with root causes, actionable GitHub issues created with specific solutions, deployment health status confirmed with metrics.' ||
+              
+              github.event_name == 'workflow_dispatch' && format('MANUAL ACTION: {0} - Comprehensive analysis with systematic approach.
+              
+              SYSTEMATIC CHECKLIST:
+              □ Repository structure and architecture analysis
+              □ Code quality and security assessment
+              □ Performance bottleneck identification
+              □ Testing coverage evaluation
+              □ Documentation completeness review
+              □ Dependency security audit
+              □ Configuration validation
+              
+              SUCCESS CRITERIA: Complete analysis with measurable recommendations, implementable code changes with validation steps, clear prioritized next steps.', inputs.action_type) ||
+              
+              github.event_name == 'pull_request' && 'PR REVIEW: Systematic SafeWork Flask application review with inline feedback.
+              
+              SYSTEMATIC REVIEW CHECKLIST:
+              □ Code Quality: Python best practices, PEP8 compliance, type hints
+              □ Security: SQL injection prevention, XSS protection, authentication validation
+              □ Performance: Database query optimization, caching strategies, resource usage
+              □ Testing: Unit test coverage, integration tests, error handling
+              □ Architecture: Flask patterns, PostgreSQL schema design, Redis usage
+              □ Documentation: Code comments, API documentation, README updates
+              □ Configuration: Environment variables, secrets management, Docker setup
+              
+              INLINE COMMENT STRATEGY: Use precise inline comments for specific code issues. Provide constructive feedback with examples.
+              
+              SUCCESS CRITERIA: All code changes systematically reviewed with specific feedback, security vulnerabilities identified with fixes, performance improvements suggested with metrics, test coverage validated with recommendations.' ||
+              
+              github.event_name == 'issues' && 'ISSUE RESOLUTION: Systematic analysis and solution implementation.
+              
+              SYSTEMATIC ANALYSIS APPROACH:
+              □ Problem reproduction and root cause analysis
+              □ Impact assessment and priority evaluation
+              □ Solution design with alternatives consideration
+              □ Implementation plan with testing strategy
+              □ Risk assessment and mitigation plan
+              
+              SUCCESS CRITERIA: Root cause identified with evidence, working solution provided with validation, code implementation ready for immediate deployment with test cases.' ||
+              
+              github.event_name == 'issue_comment' && 'COMMENT RESPONSE: Technical solution with comprehensive examples.
+              
+              RESPONSE FRAMEWORK:
+              □ Question understanding and clarification
+              □ Technical solution with code examples
+              □ Alternative approaches evaluation
+              □ Implementation guidance with steps
+              □ Testing and validation recommendations
+              
+              SUCCESS CRITERIA: Question answered with working code examples, alternative approaches provided with pros/cons, implementation steps clearly documented.' ||
+              
+              github.event_name == 'pull_request_review_comment' && 'REVIEW RESPONSE: Address feedback with specific improvements.
+              
+              FEEDBACK RESOLUTION APPROACH:
+              □ Feedback analysis and understanding
+              □ Code improvements implementation
+              □ Explanation of changes and rationale
+              □ Additional considerations and suggestions
+              □ Testing and validation updates
+              
+              SUCCESS CRITERIA: All feedback addressed with concrete code changes, explanations provided for design decisions, additional improvements suggested where applicable.' ||
+              
+              github.event_name == 'schedule' && 'SCHEDULED HEALTH CHECK: Weekly system health monitoring and optimization.
+              
+              HEALTH CHECK CHECKLIST:
+              □ System performance metrics analysis
+              □ Error rate and log pattern review
+              □ Security posture assessment
+              □ Dependency updates and vulnerability scan
+              □ Resource utilization optimization
+              □ Backup and recovery validation
+              
+              SUCCESS CRITERIA: System health status documented, performance issues identified with solutions, security recommendations provided, optimization plan created.' ||
+              
+              'GENERAL ASSISTANCE: Context-aware SafeWork system support with systematic approach.
+              
+              GENERAL SUPPORT FRAMEWORK:
+              □ Context analysis and requirement understanding
+              □ System architecture consideration
+              □ Best practices application
+              □ Security and performance evaluation
+              □ Implementation guidance provision
+              
+              SUCCESS CRITERIA: Clear guidance provided with technical depth, actionable recommendations with implementation steps, system health maintained with monitoring.'
             }}
             
             **Project Context:**
@@ -87,8 +288,133 @@ jobs:
             - Security: GitHub Secrets for production, environment-based configuration
             - Ports: App:4545, PostgreSQL:4546, Redis:4547
             
+            **OUTPUT FORMAT REQUIREMENTS:**
+            - Always include specific file paths and line numbers for code references
+            - Provide working code examples with complete context
+            - Include validation steps and test commands
+            - Use GitHub-flavored Markdown with proper syntax highlighting
+            - Add clear headings and sections for different aspects
+            - Include links to relevant documentation when applicable
+            
+            **QUALITY METRICS:**
+            - Code changes must be syntactically correct and tested
+            - Security recommendations must include specific vulnerability details
+            - Performance improvements must include measurable metrics
+            - All suggestions must be immediately implementable
+            - Korean language responses for user-facing communication
+            
+            **EXPECTED DELIVERABLES:**
+            - Root cause analysis with evidence
+            - Step-by-step implementation guide
+            - Code snippets ready for deployment
+            - Validation and testing procedures
+            - Follow-up monitoring recommendations
+            
             **Response Language:** Please respond in Korean for user communication.
           claude_args: |
             --temperature 0.1
-            --allowedTools "mcp__serena__*,mcp__github__*,mcp__sequential-thinking__*,mcp__memory__*"
-            --systemPrompt "SafeWork Flask application expert. Provides practical and secure solutions based on industrial health and safety domain knowledge and Flask/Python/MySQL/Docker technical expertise. Emphasizes code quality, security, and performance."
+            --allowedTools "mcp__serena__*,mcp__github__*,mcp__sequential-thinking__*,mcp__memory__*,mcp__eslint__*,mcp__code-runner__*,mcp__filesystem__*,mcp__playwright__*,mcp__shrimp-task-manager__*,mcp__exa__*,mcp__brave-search__*,Read,Write,Edit,MultiEdit,Glob,Grep,Bash(git:*),Bash(gh:*),Bash(gh pr comment:*),Bash(gh issue comment:*),Bash(gh pr review:*),Bash(docker:*),Bash(python:*),Bash(pip:*),Bash(flask:*),Bash(pytest:*),Bash(curl:*),Bash(jq:*),mcp__github_inline_comment__create_inline_comment,TodoWrite,WebFetch,WebSearch,Task"
+            --contextSize 200000
+            --maxTokens 12000
+            --responseFormat structured
+            --enableProgressTracking true
+            --systemPrompt "Expert SafeWork Flask industrial health & safety management system specialist. Implements Claude Code Action advanced solutions with systematic review methodologies, inline commenting capabilities, and comprehensive analysis frameworks. 
+
+            CORE EXPERTISE:
+            - Flask 3.0+ with SQLAlchemy 2.0 and PostgreSQL 15 architecture
+            - Independent Docker container deployment and Portainer API integration
+            - GitHub Actions CI/CD with advanced workflow optimization
+            - Security-first development with vulnerability assessment
+            - Performance optimization with measurable metrics
+            - Systematic code review with structured checklists
+            - Industrial safety domain knowledge and compliance requirements
+
+            REVIEW METHODOLOGY:
+            - Always use systematic checklists for comprehensive analysis
+            - Provide inline comments for specific code feedback using mcp__github_inline_comment__create_inline_comment
+            - Include measurable success criteria and validation steps
+            - Focus on security, performance, maintainability, and operational excellence
+            - Deliver actionable solutions with immediate implementation potential
+
+            OUTPUT REQUIREMENTS:
+            - Use GitHub-flavored Markdown with proper syntax highlighting
+            - Include specific file paths and line numbers for all code references
+            - Provide working code examples with complete context
+            - Add validation steps and test commands for all recommendations
+            - Create inline comments for PR reviews with constructive feedback
+            - Generate GitHub issues for complex problems requiring separate attention
+
+            SYSTEMATIC APPROACH:
+            Always follow structured evaluation frameworks based on event type, use comprehensive checklists, provide evidence-based analysis, and deliver measurable outcomes with clear success criteria."
+
+      - name: 📊 Workflow Results Analysis
+        id: results
+        if: always()
+        run: |
+          workflow_end_time=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          echo "workflow_end_time=$workflow_end_time" >> $GITHUB_OUTPUT
+          
+          # Calculate execution time
+          start_time="${{ steps.init.outputs.workflow_start_time }}"
+          if [ -n "$start_time" ]; then
+            start_epoch=$(date -d "$start_time" +%s)
+            end_epoch=$(date -d "$workflow_end_time" +%s)
+            duration=$((end_epoch - start_epoch))
+            echo "execution_duration=${duration}s" >> $GITHUB_OUTPUT
+          fi
+          
+          # Analyze Claude action result
+          claude_result="${{ steps.claude_action.outcome }}"
+          echo "claude_action_result=$claude_result" >> $GITHUB_OUTPUT
+          
+          if [ "$claude_result" = "success" ]; then
+            echo "✅ Claude Code Action completed successfully"
+            echo "workflow_status=success" >> $GITHUB_OUTPUT
+          elif [ "$claude_result" = "failure" ]; then
+            echo "❌ Claude Code Action failed"
+            echo "workflow_status=failed" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ Claude Code Action completed with warnings"
+            echo "workflow_status=warning" >> $GITHUB_OUTPUT
+          fi
+          
+          # Generate summary
+          echo "## 🤖 Claude Code Action Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Workflow Details:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Event: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Action Type: ${{ steps.init.outputs.action_type }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Advanced Mode: ${{ steps.init.outputs.advanced_mode }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Duration: ${duration:-unknown}s" >> $GITHUB_STEP_SUMMARY
+          echo "- Result: $claude_result" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Repository Context:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Actor: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: 🚨 Error Handling and Notifications
+        if: failure() || steps.claude_action.outcome == 'failure'
+        run: |
+          echo "🚨 Workflow execution failed or Claude action encountered errors"
+          
+          # Create failure summary
+          echo "## ❌ Workflow Failure Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Failure Details:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Event: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Action: ${{ steps.init.outputs.action_type }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_STEP_SUMMARY
+          echo "- Claude Result: ${{ steps.claude_action.outcome }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Troubleshooting:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Check Claude Code OAuth token configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- Verify tool permissions and access" >> $GITHUB_STEP_SUMMARY
+          echo "- Review workflow trigger conditions" >> $GITHUB_STEP_SUMMARY
+          echo "- Check repository permissions and secrets" >> $GITHUB_STEP_SUMMARY
+          
+          # Log error for monitoring
+          echo "ERROR: Claude Code Action workflow failed"
+          echo "Event: ${{ github.event_name }}"
+          echo "Action: ${{ steps.init.outputs.action_type }}"
+          echo "Claude Result: ${{ steps.claude_action.outcome }}"
