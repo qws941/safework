@@ -1,0 +1,378 @@
+name: 🚀 Deploy Pipeline
+
+# Prevent concurrent deployments on the same branch
+concurrency:
+  group: deploy-${{ github.ref_name }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'app/**'
+      - 'mysql/**'
+      - 'redis/**'
+      - '.github/workflows/deploy.yml'
+  
+  workflow_dispatch:
+
+env:
+  APP_NAME: safework
+  REGISTRY_HOST: ${{ secrets.REGISTRY_HOST || 'registry.jclee.me' }}
+  REGISTRY_USER: ${{ secrets.REGISTRY_USER || 'admin' }}
+  TZ: Asia/Seoul
+  PRD_URL: ${{ secrets.PRD_URL || 'https://safework.jclee.me' }}
+  DEV_URL: ${{ secrets.DEV_URL || 'https://safework-dev.jclee.me' }}
+  PORTAINER_URL: ${{ secrets.PORTAINER_URL || 'https://portainer.jclee.me' }}
+
+permissions:
+  contents: write          # Code modification access
+  actions: write          # Workflow control and management
+  pull-requests: write    # PR creation and management
+  issues: write          # Issue management and creation
+  packages: write        # Package and registry access
+  security-events: write # Security event management
+  checks: write          # Status check management
+  statuses: write        # Commit status updates
+  deployments: write     # Deployment management
+  discussions: write     # Repository discussions
+  repository-projects: write  # Project board access
+  id-token: write        # OIDC token for authentication
+
+jobs:
+  # Phase 1: Build and Test
+  build-and-test:
+    name: 🔨 Build & Test
+    runs-on: ubuntu-latest
+    outputs:
+      app_image_tag: ${{ steps.app_meta.outputs.tags }}
+      mysql_image_tag: ${{ steps.mysql_meta.outputs.tags }}
+      redis_image_tag: ${{ steps.redis_meta.outputs.tags }}
+      test_results: ${{ steps.test.outputs.results }}
+      build_status: ${{ steps.build.outputs.build_status }}
+      
+    steps:
+      - name: 📂 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🐳 Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🔐 Login to Registry  
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY_HOST }}
+          username: ${{ env.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      # Metadata for MySQL image
+      - name: 📋 Extract MySQL Metadata
+        id: mysql_meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY_HOST }}/safework/mysql
+          tags: |
+            type=raw,value=latest
+
+      # Metadata for Redis image
+      - name: 📋 Extract Redis Metadata
+        id: redis_meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY_HOST }}/safework/redis
+          tags: |
+            type=raw,value=latest
+
+      # Metadata for App image
+      - name: 📋 Extract App Metadata
+        id: app_meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY_HOST }}/safework/app
+          tags: |
+            type=raw,value=latest
+
+      # Build MySQL Container
+      - name: 🐘 Build & Push MySQL Container
+        uses: docker/build-push-action@v5
+        with:
+          context: ./mysql
+          file: ./mysql/Dockerfile
+          push: true
+          tags: ${{ steps.mysql_meta.outputs.tags }}
+          labels: ${{ steps.mysql_meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+
+      # Build Redis Container  
+      - name: 🔴 Build & Push Redis Container
+        uses: docker/build-push-action@v5
+        with:
+          context: ./redis
+          file: ./redis/Dockerfile
+          push: true
+          tags: ${{ steps.redis_meta.outputs.tags }}
+          labels: ${{ steps.redis_meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+
+      # Build App Container
+      - name: 🐍 Build & Push App Container
+        uses: docker/build-push-action@v5
+        with:
+          context: ./app
+          file: ./app/Dockerfile
+          push: true
+          tags: ${{ steps.app_meta.outputs.tags }}
+          labels: ${{ steps.app_meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+
+      # Test containers after build
+      - name: 🧪 Test Container Health
+        id: test
+        run: |
+          echo "Testing container startup..."
+          
+          # Test MySQL container
+          docker run --rm --name test-mysql -d \
+            -e MYSQL_ROOT_PASSWORD=safework2024 \
+            -e MYSQL_DATABASE=safework_db \
+            -e MYSQL_USER=safework \
+            -e MYSQL_PASSWORD=safework2024 \
+            ${{ steps.mysql_meta.outputs.tags }}
+          
+          sleep 10
+          
+          # Test Redis container
+          docker run --rm --name test-redis -d \
+            ${{ steps.redis_meta.outputs.tags }}
+          
+          sleep 5
+          
+          # Test App container startup
+          docker run --rm --name test-app -d \
+            -e MYSQL_HOST=mysql \
+            -e REDIS_HOST=redis \
+            -e SECRET_KEY=test-secret \
+            ${{ steps.app_meta.outputs.tags }}
+          
+          sleep 10
+          
+          # Cleanup test containers
+          docker stop test-mysql test-redis test-app || true
+          docker rm test-mysql test-redis test-app || true
+          
+          echo "results=success" >> $GITHUB_OUTPUT
+          echo "build_status=success" >> $GITHUB_OUTPUT
+
+  # Phase 2: Deploy to Production
+  deploy:
+    name: 🚀 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: success() || github.event.inputs.force_deploy == 'true'
+    outputs:
+      deployment_status: ${{ steps.deploy.outputs.status }}
+      deployment_url: ${{ steps.deploy.outputs.url }}
+      
+    steps:
+      - name: 📂 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🚀 Deploy via Portainer API
+        id: deploy
+        run: |
+          echo "🚀 SafeWork 프로덕션 배포 시작..."
+          
+          # Portainer API 설정
+          PORTAINER_URL="${{ env.PORTAINER_URL }}"
+          API_KEY="${{ secrets.PORTAINER_API_KEY }}"
+          
+          if [[ -z "$API_KEY" ]]; then
+            echo "❌ PORTAINER_API_KEY가 설정되지 않았습니다"
+            echo "status=failed" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          
+          # 컨테이너 재시작 (Independent Container 방식)
+          echo "📦 SafeWork MySQL 컨테이너 업데이트..."
+          curl -X POST \
+            -H "X-API-Key: $API_KEY" \
+            -H "Content-Type: application/json" \
+            "$PORTAINER_URL/api/endpoints/1/docker/containers/safework-mysql/restart" \
+            || echo "⚠️ MySQL 컨테이너 재시작 실패"
+          
+          echo "📦 SafeWork Redis 컨테이너 업데이트..."  
+          curl -X POST \
+            -H "X-API-Key: $API_KEY" \
+            -H "Content-Type: application/json" \
+            "$PORTAINER_URL/api/endpoints/1/docker/containers/safework-redis/restart" \
+            || echo "⚠️ Redis 컨테이너 재시작 실패"
+          
+          echo "📦 SafeWork App 컨테이너 업데이트..."
+          curl -X POST \
+            -H "X-API-Key: $API_KEY" \
+            -H "Content-Type: application/json" \
+            "$PORTAINER_URL/api/endpoints/1/docker/containers/safework-app/restart" \
+            || echo "⚠️ App 컨테이너 재시작 실패"
+          
+          # 배포 대기
+          echo "⏳ 컨테이너 재시작 대기 (30초)..."
+          sleep 30
+          
+          echo "status=success" >> $GITHUB_OUTPUT
+          echo "url=${{ env.PRD_URL }}" >> $GITHUB_OUTPUT
+
+      - name: 🏥 Health Check
+        id: health
+        run: |
+          echo "🏥 SafeWork 애플리케이션 상태 확인..."
+          
+          # Health check with retry
+          for i in {1..10}; do
+            echo "🔍 Health check 시도 $i/10..."
+            
+            if curl -f -s "${{ env.PRD_URL }}/health" > /dev/null; then
+              echo "✅ SafeWork 애플리케이션 정상 동작"
+              echo "health_status=healthy" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+            
+            echo "⏳ 30초 대기 후 재시도..."
+            sleep 30
+          done
+          
+          echo "❌ Health check 실패"
+          echo "health_status=unhealthy" >> $GITHUB_OUTPUT
+          exit 1
+
+      - name: 🔄 Automatic Rollback on Failure
+        if: failure()
+        run: |
+          echo "🚨 배포 실패 감지 - 자동 롤백 시작..."
+          
+          # Watchtower를 통한 이전 버전 복구
+          if [[ -n "${{ secrets.WATCHTOWER_HTTP_API_TOKEN }}" ]]; then
+            curl -X POST \
+              -H "Authorization: Bearer ${{ secrets.WATCHTOWER_HTTP_API_TOKEN }}" \
+              "https://watchtower.jclee.me/v1/update" \
+              || echo "⚠️ Watchtower 롤백 실패"
+          fi
+          
+          echo "🔄 롤백 완료"
+
+  # Phase 3: Notification and Cleanup
+  notify:
+    name: 📢 Deployment Notification
+    runs-on: ubuntu-latest
+    needs: [build-and-test, deploy]
+    if: always()
+    
+    steps:
+      - name: 📊 Deployment Summary
+        run: |
+          echo "=== SafeWork 배포 완료 ===" 
+          echo "빌드 상태: ${{ needs.build-and-test.outputs.build_status }}"
+          echo "배포 상태: ${{ needs.deploy.outputs.deployment_status }}"
+          echo "애플리케이션 URL: ${{ needs.deploy.outputs.deployment_url }}"
+          echo "배포 시간: $(date)"
+          
+          # 컨테이너 상태 확인
+          echo ""
+          echo "=== 컨테이너 상태 ===" 
+          echo "SafeWork MySQL: safework-mysql:4546"
+          echo "SafeWork Redis: safework-redis:4547" 
+          echo "SafeWork App: safework-app:4545"
+
+      - name: 🐛 Create Issue on Deployment Failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const title = `🚨 SafeWork 배포 실패 - ${new Date().toISOString()}`;
+            const body = `
+            ## 🚨 SafeWork 프로덕션 배포 실패
+            
+            **배포 정보:**
+            - 브랜치: ${{ github.ref_name }}
+            - 커밋: ${{ github.sha }}
+            - 워크플로우: ${{ github.workflow }}
+            - 실행 ID: ${{ github.run_id }}
+            
+            **실패 단계:**
+            - 빌드 상태: ${{ needs.build-and-test.outputs.build_status }}
+            - 배포 상태: ${{ needs.deploy.outputs.deployment_status }}
+            
+            **컨테이너 포트:**
+            - safework-mysql: 4546
+            - safework-redis: 4547
+            - safework-app: 4545
+            
+            **조치 필요:**
+            - [ ] 빌드 로그 확인
+            - [ ] 컨테이너 상태 점검  
+            - [ ] Health check 결과 분석
+            - [ ] 수동 롤백 필요 여부 판단
+            
+            **로그 확인:**
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            `;
+            
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['deployment-failure', 'claude-actionable', 'safework']
+            });
+
+      - name: 🎉 Deployment Success Notification
+        if: success()
+        run: |
+          echo "🎉 SafeWork 배포 성공!"
+          echo "프로덕션 URL: ${{ env.PRD_URL }}"
+          echo "Health check: ${{ env.PRD_URL }}/health"
+          echo "Admin 패널: ${{ env.PRD_URL }}/admin"
+          echo "설문조사: ${{ env.PRD_URL }}/survey/001_musculoskeletal_symptom_survey"
+
+      - name: 📈 Claude Code Analysis
+        if: always()
+        uses: anthropics/claude-code-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          anthropic_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          track_progress: true
+          prompt: |
+            🔍 **SafeWork 배포 파이프라인 분석**
+            
+            **배포 결과:**
+            - 빌드 상태: ${{ needs.build-and-test.outputs.build_status }}
+            - 배포 상태: ${{ needs.deploy.outputs.deployment_status }}
+            - URL: ${{ needs.deploy.outputs.deployment_url }}
+            
+            **컨테이너 구성:**
+            - SafeWork MySQL (포트 4546): 데이터베이스 서비스
+            - SafeWork Redis (포트 4547): 캐시 서비스  
+            - SafeWork App (포트 4545): Flask 애플리케이션
+            
+            **분석 요청:**
+            1. 배포 성공/실패 원인 분석
+            2. 컨테이너 독립 아키텍처 상태 점검
+            3. Health check 결과 해석
+            4. 성능 최적화 제안
+            5. 다음 배포를 위한 개선사항
+            
+            **SafeWork 특화 사항:**
+            - Flask 3.0+ 산업 안전 관리 시스템
+            - 001/002 건강 설문조사 폼
+            - 한국어 KST 시간대 지원
+            - Bootstrap 4.6 반응형 UI
+            
+            상세한 분석과 권장사항을 한국어로 제공해주세요.

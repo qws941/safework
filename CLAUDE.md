@@ -24,20 +24,82 @@ SafeWork is an industrial health and safety management system built with Flask 3
 ### Independent Container Setup (No Docker Compose)
 ```bash
 # Build all independent containers
-docker build -t safework/app:latest ./app
-docker build -t safework/postgres:latest ./postgres
-docker build -t safework/redis:latest ./redis
+docker build -t registry.jclee.me/safework2-app:latest ./app
+docker build -t registry.jclee.me/safework2-postgres:latest ./postgres  
+docker build -t registry.jclee.me/safework2-redis:latest ./redis
 
 # Start services independently with proper network
 docker network create safework2-network
-docker run -d --name safework2-postgres --network safework2-network -p 4546:5432 safework/postgres:latest
-docker run -d --name safework2-redis --network safework2-network -p 4547:6379 safework/redis:latest
-docker run -d --name safework2-app --network safework2-network -p 4545:4545 safework/app:latest
+docker run -d --name safework2-postgres --network safework2-network -p 4546:5432 \
+  -e POSTGRES_PASSWORD=safework2024 -e POSTGRES_DB=safework_db -e POSTGRES_USER=safework \
+  registry.jclee.me/safework2-postgres:latest
+docker run -d --name safework2-redis --network safework2-network -p 4547:6379 \
+  registry.jclee.me/safework2-redis:latest
+docker run -d --name safework2-app --network safework2-network -p 4545:4545 \
+  -e DB_HOST=safework2-postgres -e REDIS_HOST=safework2-redis \
+  registry.jclee.me/safework2-app:latest
 
 # Container management
 docker logs -f safework2-app            # View application logs
 docker ps                              # Check running containers
 docker stop safework2-app safework2-postgres safework2-redis  # Stop all services
+
+# Development with code changes (mount local code)
+docker run -d --name safework2-app-dev --network safework2-network -p 4545:4545 \
+  -v $(pwd)/app:/app -e FLASK_ENV=development \
+  registry.jclee.me/safework2-app:latest
+```
+
+### Code Quality & Linting
+```bash
+# Python code formatting and linting (defined in requirements.txt)
+cd app
+black .                                 # Format code
+flake8 .                               # Check code style
+python -m py_compile *.py              # Syntax check
+
+# Check for common issues
+grep -r "print(" . --include="*.py"    # Find debug prints
+grep -r "TODO\|FIXME" . --include="*.py"  # Find TODOs
+```
+
+### GitHub Actions & Claude AI Integration
+```bash
+# Trigger Claude AI assistance in issues or PRs
+# Simply mention @claude in any issue comment or PR discussion
+
+# Check workflow status
+gh run list --limit 10                 # View recent workflow runs
+gh workflow list                       # List all workflows
+gh run watch <run-id>                  # Watch specific workflow execution
+
+# Manual workflow triggers
+gh workflow run "🔄 Dependency Auto-Update" --ref master
+gh workflow run "📊 Operational Log Analysis" --ref master
+gh workflow run "🤖 CI Auto-Fix" --ref master
+
+# Issue management with Claude
+gh issue create --title "Bug: Description" --body "@claude Please analyze this issue"
+gh issue comment <issue-number> --body "@claude Please help with this problem"
+
+# View Claude analysis results
+gh issue view <issue-number>           # See Claude's issue analysis
+gh pr view <pr-number>                 # See Claude's PR review
+```
+
+### Workflow Development & Debugging
+```bash
+# Test workflow syntax locally
+cd .github/workflows
+yamllint *.yml                         # Validate YAML syntax
+
+# Check workflow file changes
+git diff HEAD~1 .github/workflows/     # See recent workflow changes
+git log --oneline .github/workflows/   # Workflow change history
+
+# Debug failed workflows
+gh run view <run-id> --log             # View detailed logs
+gh run download <run-id>               # Download artifacts
 ```
 
 ### Testing Commands
@@ -242,13 +304,25 @@ def safework_workers():
 
 ## Deployment & Infrastructure
 
-### Automated CI/CD Pipeline
-Push to `master` branch triggers automated deployment:
-1. **Security scanning**: Trivy, Bandit, Safety
-2. **Code quality checks**: Black, Flake8, Pylint 
-3. **Test suite execution**: pytest
-4. **Docker image build**: Multi-platform builds pushed to registry.jclee.me
-5. **Watchtower deployment**: Automatic container updates via API
+### Advanced GitHub Actions CI/CD Pipeline
+The project uses a sophisticated 8-workflow GitHub Actions system with Claude AI integration:
+
+**Core Workflows:**
+- **🚀 Deploy Pipeline**: Main deployment workflow (from temp_blacklist template)
+- **🤖 Claude Code Assistant**: AI-powered code assistance with `@claude` mentions
+- **🎯 Issue Handler**: Intelligent issue triage and auto-labeling
+- **🔍 PR Review**: Comprehensive PR analysis with progress tracking
+- **🤖 CI Auto-Fix**: Automatic CI failure detection and repair
+- **🔄 Dependency Auto-Update**: Automated dependency management
+- **📊 Operational Log Analysis**: Container log monitoring via Portainer API
+- **🔍 PR Auto Review**: Additional PR review automation
+
+**Deployment Triggers:**
+1. Push to `master` branch triggers all workflows
+2. **Claude integration**: `@claude` mentions trigger AI assistance
+3. **Auto-fix**: Failed workflows trigger automatic repair attempts
+4. **Security scanning**: Automated dependency vulnerability checks
+5. **Container deployment**: Multi-service Docker builds via Portainer API
 
 ### Infrastructure Components
 - **Registry**: registry.jclee.me (credentials in GitHub secrets)
@@ -277,17 +351,36 @@ PORTAINER_ENDPOINT_ID=1                  # Portainer endpoint ID (default: 1)
 
 # Database credentials
 POSTGRES_PASSWORD=<password>             # PostgreSQL password
+REDIS_PASSWORD=<password>                # Redis password
 SECRET_KEY=<secret>                      # Flask secret key
 
-# Environment URLs (optional)
+# Environment URLs
 PRD_URL=https://safework.jclee.me       # Production URL
 DEV_URL=https://safework-dev.jclee.me   # Development URL
 PORTAINER_URL=https://portainer.jclee.me # Portainer URL
 
-# Optional automation
+# Claude AI Integration (CRITICAL for workflows)
 CLAUDE_CODE_OAUTH_TOKEN=<token>          # Claude Code automation
+GITHUB_TOKEN=<token>                     # GitHub API access for Claude workflows
+
+# Optional automation
 SLACK_WEBHOOK_URL=<url>                  # Slack notifications
 ```
+
+### Claude AI Workflow Integration
+**Trigger Methods:**
+- **Issue Comments**: `@claude` in any issue comment
+- **PR Comments**: `@claude` in pull request discussions  
+- **Issue Labels**: Issues with `claude-actionable` or `needs-analysis` labels
+- **Workflow Failures**: Automatic CI failure analysis and repair
+- **Dependency Updates**: Weekly automated dependency scans
+
+**AI Capabilities:**
+- Intelligent issue triage with automatic labeling (14 categories)
+- Comprehensive PR reviews with 5-dimensional analysis
+- Automatic CI/CD failure detection and repair
+- Korean language support for industrial safety context
+- SafeWork-specific domain knowledge integration
 
 ## Error Detection & Resolution
 
@@ -398,11 +491,12 @@ SAFEWORK_DEV_URL=safework-dev.jclee.me   # Development monitoring
 - **GitHub Issue Creation**: Automatic issue creation for critical problems
 
 ### Log Analysis Features
-1. **Container Health Monitoring**: Flask app, MySQL, Redis container status
+1. **Container Health Monitoring**: Flask app, PostgreSQL, Redis container status
 2. **Performance Metrics**: Response times, database query performance, cache hit rates
 3. **Error Pattern Detection**: Application errors, database timeouts, security alerts
 4. **Security Monitoring**: Authentication failures, suspicious access patterns
 5. **Business Logic Health**: Survey form submissions, admin panel usage patterns
+6. **Claude AI Analysis**: Automated log analysis with Korean language reports via GitHub Actions
 
 ## Key API Endpoints
 ```bash
