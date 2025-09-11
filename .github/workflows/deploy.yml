@@ -341,15 +341,37 @@ jobs:
           echo "Admin 패널: ${{ env.PRD_URL }}/admin"
           echo "설문조사: ${{ env.PRD_URL }}/survey/001_musculoskeletal_symptom_survey"
 
-      - name: 📈 Deployment Analysis
-        if: always()
-        run: |
-          echo "🔍 SafeWork 배포 파이프라인 분석 완료"
-          echo "빌드 상태: ${{ needs.build-and-test.outputs.build_status }}"
-          echo "배포 상태: ${{ needs.deploy.outputs.deployment_status }}"
-          echo "URL: ${{ needs.deploy.outputs.deployment_url }}"
-          echo ""
-          echo "컨테이너 구성:"
-          echo "- SafeWork PostgreSQL (포트 4546): 데이터베이스 서비스"
-          echo "- SafeWork Redis (포트 4547): 캐시 서비스"
-          echo "- SafeWork App (포트 4545): Flask 애플리케이션"
+      - name: 📈 Claude Code Analysis
+        if: success()
+        uses: anthropics/claude-code-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          anthropic_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          track_progress: true
+          prompt: |
+            🔍 **SafeWork 배포 파이프라인 분석**
+            
+            **배포 결과:**
+            - 빌드 상태: ${{ needs.build-and-test.outputs.build_status }}
+            - 배포 상태: ${{ needs.deploy.outputs.deployment_status }}
+            - URL: ${{ needs.deploy.outputs.deployment_url }}
+            
+            **컨테이너 구성:**
+            - SafeWork PostgreSQL (포트 4546): 데이터베이스 서비스
+            - SafeWork Redis (포트 4547): 캐시 서비스  
+            - SafeWork App (포트 4545): Flask 애플리케이션
+            
+            **분석 요청:**
+            1. 배포 성공/실패 원인 분석
+            2. 컨테이너 독립 아키텍처 상태 점검
+            3. Health check 결과 해석
+            4. 성능 최적화 제안
+            5. 다음 배포를 위한 개선사항
+            
+            **SafeWork 특화 사항:**
+            - Flask 3.0+ 산업 안전 관리 시스템
+            - 001/002 건강 설문조사 폼
+            - 한국어 KST 시간대 지원
+            - Bootstrap 4.6 반응형 UI
+            
+            상세한 분석과 권장사항을 한국어로 제공해주세요.
