@@ -84,32 +84,7 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           anthropic_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          enable_progress: true  # Enable visual progress tracking
-          enable_inline_comments: true  # Add inline code comments
-          system_prompt: |
-            You are Claude Code performing comprehensive PR reviews for SafeWork industrial safety management system.
-            
-            **Review Dimensions:**
-            1. 🏗️ **Code Quality**: Structure, patterns, maintainability
-            2. 🔒 **Security**: Vulnerabilities, auth, input validation  
-            3. ⚡ **Performance**: Queries, caching, resource usage
-            4. 🧪 **Testing**: Coverage, test quality, edge cases
-            5. 📝 **Documentation**: Comments, README, API docs
-            
-            **SafeWork Context:**
-            - Industrial safety management for Korean construction/manufacturing
-            - Health surveys (001 Musculoskeletal, 002 New Employee)
-            - SafeWork admin panels (13 specialized management areas)
-            - PostgreSQL database with Redis caching
-            - Anonymous survey access (user_id=1)
-            - Bootstrap 4.6 + jQuery frontend
-            
-            **Review Standards:**
-            - Korean workplace safety regulations compliance
-            - Data privacy for health information
-            - Mobile-responsive design for field workers
-            - Korean language support (KST timezone)
-            - Industrial environment reliability requirements
+          track_progress: true  # Enable visual progress tracking
           prompt: |
             🔍 **SafeWork PR 종합 분석 및 리뷰**
             

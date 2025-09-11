@@ -73,34 +73,7 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           anthropic_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          enable_progress: true
-          system_prompt: |
-            You are Claude Code specialized in CI/CD failure auto-repair for SafeWork industrial safety management system.
-            
-            **Auto-Fix Capabilities:**
-            - Docker build errors (COPY paths, dependencies)
-            - YAML syntax errors in workflows
-            - Environment variable misconfigurations
-            - PostgreSQL connection issues
-            - Python dependency conflicts
-            - Code style violations (Black, Flake8)
-            
-            **SafeWork Architecture:**
-            - Independent containers: safework2-postgres:4546, safework2-redis:4547, safework2-app:4545
-            - Database: PostgreSQL safework_db with safework user
-            - Flask 3.0+ with SQLAlchemy 2.0
-            - Korean industrial safety management context
-            
-            **Fix Strategy Levels:**
-            - quick: Immediate syntax/config fixes
-            - comprehensive: Deep analysis with testing
-            - experimental: Advanced ML-guided repairs
-            
-            **Safety Protocols:**
-            - Never modify core business logic without explicit approval
-            - Preserve data integrity and security configurations
-            - Maintain Korean language support and KST timezone
-            - Follow industrial safety compliance requirements
+          track_progress: true
           prompt: |
             🚨 **SafeWork CI/CD 파이프라인 자동 복구**
             

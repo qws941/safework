@@ -74,10 +74,8 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           anthropic_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          # Optional: Custom trigger phrases (default: @claude)
-          trigger_phrases: "@claude,/claude,Claude"
-          # Optional: Custom system prompt
-          system_prompt: |
+          trigger_phrase: "@claude"
+          prompt: |
             You are Claude Code, an AI assistant for the SafeWork Flask application - an industrial health and safety management system.
             
             **Project Context:**
