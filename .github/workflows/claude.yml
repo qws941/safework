@@ -1,4 +1,4 @@
-name: 🤖 Claude Code Assistant
+name: 🤖 Claude Code Assistant with MCP Integration
 
 concurrency:
   group: claude-assistant-${{ github.repository }}
@@ -7,16 +7,22 @@ concurrency:
 on:
   issue_comment:
     types: [created]
-  pull_request_review_comment:
-    types: [created]
   issues:
-    types: [opened, assigned, labeled]
-  pull_request_review:
-    types: [submitted]
-  pull_request:
-    types: [opened, synchronize, ready_for_review, reopened]
+    types: [opened, labeled]
+  workflow_dispatch:
+    inputs:
+      task_type:
+        description: 'Task type for MCP integration'
+        required: true
+        default: 'general'
+        type: choice
+        options:
+        - general
+        - code-analysis
+        - task-planning
+        - thinking
   workflow_run:
-    workflows: ["🚀 Deploy Pipeline"]
+    workflows: ["🚀 SafeWork Deploy Pipeline"]
     types: [completed]
 
 permissions:

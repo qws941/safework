@@ -382,7 +382,7 @@ jobs:
           echo "Admin panel: ${{ env.PRD_URL }}/admin"
           echo "Survey: ${{ env.PRD_URL }}/survey/001_musculoskeletal_symptom_survey"
 
-      - name: 📈 Claude Code Analysis
+      - name: 📈 Advanced Claude Code Analysis with MCP
         if: success()
         uses: anthropics/claude-code-action@v1
         with:
@@ -390,7 +390,7 @@ jobs:
           anthropic_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           track_progress: true
           prompt: |
-            🔍 **SafeWork Deployment Pipeline Analysis**
+            🔍 **SafeWork Deployment Pipeline Analysis with MCP Integration**
             
             **Deployment Results:**
             - Build Status: ${{ needs.build-and-test.outputs.build_status }}
@@ -402,17 +402,25 @@ jobs:
             - SafeWork Redis (Port 4547): Cache service  
             - SafeWork App (Port 4545): Flask application
             
-            **Analysis Request:**
-            1. Analyze deployment success/failure causes
-            2. Check independent container architecture status
-            3. Interpret health check results
-            4. Suggest performance optimizations
-            5. Recommend improvements for next deployment
+            **MCP-Enhanced Analysis Request:**
+            Use ThinkMCP for complex reasoning, ShrimpMCP for task planning, and SerenaMCP for code analysis:
             
-            **SafeWork Specific Features:**
+            1. **ThinkMCP Analysis**: Deep reasoning on deployment success/failure patterns
+            2. **ShrimpMCP Planning**: Create optimization tasks and improvement roadmap  
+            3. **SerenaMCP Code Review**: Analyze codebase health and architecture compliance
+            4. **Performance Optimization**: Container resource usage and bottleneck analysis
+            5. **Future Recommendations**: Next deployment cycle improvements
+            
+            **SafeWork Specific Context:**
             - Flask 3.0+ Industrial Safety Management System
-            - 001/002 Health Survey Forms
+            - 001/002 Health Survey Forms with Korean localization
+            - Independent container architecture (no docker-compose)
+            - Watchtower auto-deployment integration
             - Korean KST timezone support
             - Bootstrap 4.6 responsive UI
             
-            Please provide detailed analysis and recommendations in Korean.
+            Provide comprehensive analysis and actionable recommendations in Korean.
+          claude_args: |
+            mcp_servers: ["shrimp-task-manager", "sequential-thinking", "serena"]
+            execution_mode: "automation"
+            max_iterations: 3
