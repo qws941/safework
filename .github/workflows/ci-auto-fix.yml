@@ -1,0 +1,126 @@
+name: 🤖 CI Auto-Fix Pipeline
+
+on:
+  workflow_run:
+    workflows: ["🚀 Deploy Pipeline"]
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      fix_strategy:
+        description: 'Fix strategy to use'
+        required: false
+        default: 'quick'
+        type: choice
+        options:
+          - quick
+          - comprehensive
+          - experimental
+
+permissions:
+  contents: write
+  actions: write
+  issues: write
+  pull-requests: write
+  checks: write
+  security-events: write
+  statuses: write
+  id-token: write
+  packages: write
+  deployments: write
+
+env:
+  CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  PORTAINER_API_KEY: ${{ secrets.PORTAINER_API_KEY }}
+  POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+  REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+  REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+
+jobs:
+  auto-fix:
+    if: github.event.workflow_run.conclusion == 'failure' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    
+    steps:
+      - name: 🔗 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          
+      - name: 🧠 Setup Claude Code
+        run: |
+          curl -fsSL https://claude.ai/install.sh | bash
+          echo "$CLAUDE_CODE_OAUTH_TOKEN" | claude auth
+          
+      - name: 📊 Collect failure context
+        id: context
+        run: |
+          echo "failure_context<<EOF" >> $GITHUB_OUTPUT
+          echo "Repository: SafeWork Flask Application" >> $GITHUB_OUTPUT
+          echo "Branch: ${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          echo "Commit: ${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "Triggered by: ${{ github.event_name }}" >> $GITHUB_OUTPUT
+          echo "Fix strategy: ${{ github.event.inputs.fix_strategy || 'quick' }}" >> $GITHUB_OUTPUT
+          echo "Architecture: Independent containers (PostgreSQL, Redis, Flask)" >> $GITHUB_OUTPUT
+          echo "Services: safework2-postgres:4546, safework2-redis:4547, safework2-app:4545" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          
+      - name: 🔍 Analyze failure and apply auto-fix
+        run: |
+          claude code --dir . << 'EOF'
+          🚨 CRITICAL AUTO-FIX MISSION: SafeWork CI/CD Pipeline Failure
+
+          **Context**: CI/CD pipeline failed. Need aggressive automated repair with IMMEDIATE action.
+
+          **Fix Strategy**: ${{ github.event.inputs.fix_strategy || 'quick' }}
+
+          **Repository Info**:
+          - SafeWork Flask application with PostgreSQL migration from MySQL
+          - Independent container architecture: safework2-postgres (4546), safework2-redis (4547), safework2-app (4545)
+          - GitHub Actions deployment via Portainer API
+          - Main database: safework_db with safework user
+
+          **AGGRESSIVE AUTO-FIX PROTOCOL**:
+          1. **Immediate Analysis**: Check recent workflow failures, container builds, database configs
+          2. **Direct File Editing**: Fix errors in-place without backup files
+          3. **Zero Delay Commit**: Immediately commit all fixes with descriptive messages
+          4. **Force Push**: Push to trigger new deployment pipeline
+          5. **Monitoring**: Track deployment success/failure
+
+          **Common Issues to Fix**:
+          - Docker build failures (COPY path mismatches, missing requirements.txt)
+          - PostgreSQL connection issues (host names, credentials, ports)
+          - GitHub Actions syntax errors (YAML formatting, permissions)
+          - Environment variable mismatches (PostgreSQL vs MySQL configs)
+          - Portainer API endpoint configurations
+
+          **STRICT GUIDELINES**:
+          - Fix files directly, no intermediate copies
+          - Use exact container names: safework2-postgres, safework2-redis, safework2-app
+          - PostgreSQL port 4546, Redis port 4547, App port 4545
+          - Database name: safework_db, user: safework
+          - Commit immediately after each fix
+          - Korean error messages in commit descriptions where appropriate
+
+          Execute aggressive automated repair NOW. 실패한 파이프라인을 즉시 수정하세요.
+          EOF
+          
+      - name: 📈 Report execution metrics
+        if: always()
+        run: |
+          echo "=== 🤖 CI Auto-Fix Execution Report ==="
+          echo "Strategy Used: ${{ github.event.inputs.fix_strategy || 'quick' }}"
+          echo "Execution Time: ${{ github.run_number }}"
+          echo "Repository: SafeWork"
+          echo "Status: ${{ job.status }}"
+          
+          # Create GitHub issue for tracking if needed
+          if [ "${{ job.status }}" != "success" ]; then
+            gh issue create \
+              --title "🚨 CI Auto-Fix Failed - Manual Intervention Required" \
+              --body "Auto-fix pipeline failed to resolve CI/CD issues. Manual review needed." \
+              --label "claude-actionable,ci-failure,high-priority"
+          fi

@@ -1,0 +1,174 @@
+name: 🔍 Claude PR Review
+
+concurrency:
+  group: pr-review-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review, reopened]
+  pull_request_review:
+    types: [submitted]
+
+permissions:
+  contents: read
+  pull-requests: write
+  id-token: write
+
+jobs:
+  pr-review:
+    if: github.event.pull_request.draft == false
+    
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    
+    steps:
+      - name: 📂 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🔍 PR Analysis
+        id: pr_analysis
+        run: |
+          echo "🔍 Analyzing PR context..."
+          
+          # PR file analysis
+          FILES_CHANGED=$(git diff --name-only ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} | wc -l)
+          LINES_CHANGED=$(git diff --stat ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} | tail -1 | grep -o '[0-9]\+ insertion\|[0-9]\+ deletion' | head -1 | grep -o '[0-9]\+' || echo "0")
+          
+          echo "files_changed=$FILES_CHANGED" >> $GITHUB_OUTPUT
+          echo "lines_changed=$LINES_CHANGED" >> $GITHUB_OUTPUT
+          
+          # Check for security-related file changes
+          if git diff --name-only ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} | grep -E "(auth|login|password|secret|key|token)" > /dev/null; then
+            echo "security_related=true" >> $GITHUB_OUTPUT
+          else
+            echo "security_related=false" >> $GITHUB_OUTPUT
+          fi
+          
+          # Check for database changes
+          if git diff --name-only ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} | grep -E "(models|migration|schema|sql)" > /dev/null; then
+            echo "database_related=true" >> $GITHUB_OUTPUT
+          else
+            echo "database_related=false" >> $GITHUB_OUTPUT
+          fi
+          
+          # Generate PR context file
+          echo "=== SafeWork PR 컨텍스트 ===" > pr_context.txt
+          echo "PR 번호: ${{ github.event.pull_request.number }}" >> pr_context.txt
+          echo "제목: ${{ github.event.pull_request.title }}" >> pr_context.txt
+          echo "작성자: ${{ github.event.pull_request.user.login }}" >> pr_context.txt
+          echo "상태: ${{ github.event.pull_request.state }}" >> pr_context.txt
+          echo "브랜치: ${{ github.event.pull_request.head.ref }} → ${{ github.event.pull_request.base.ref }}" >> pr_context.txt
+          echo "변경 파일 수: $FILES_CHANGED" >> pr_context.txt
+          echo "변경 라인 수: $LINES_CHANGED" >> pr_context.txt
+          echo "보안 관련: ${{ steps.pr_analysis.outputs.security_related }}" >> pr_context.txt
+          echo "데이터베이스 관련: ${{ steps.pr_analysis.outputs.database_related }}" >> pr_context.txt
+          echo "" >> pr_context.txt
+          
+          echo "=== PR 설명 ===" >> pr_context.txt
+          echo '${{ github.event.pull_request.body }}' >> pr_context.txt
+          echo "" >> pr_context.txt
+          
+          echo "=== 변경된 파일 목록 ===" >> pr_context.txt
+          git diff --name-only ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} >> pr_context.txt
+          echo "" >> pr_context.txt
+          
+          echo "=== 변경 내용 상세 ===" >> pr_context.txt
+          git diff ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} >> pr_context.txt
+          
+      - name: 🧠 Setup Claude Code
+        run: |
+          curl -fsSL https://claude.ai/install.sh | bash
+          echo "${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}" | claude auth
+          
+      - name: 🔍 Expert PR Review
+        run: |
+          claude code --dir . << 'EOF'
+          🔍 **SafeWork Flask 애플리케이션 전문 PR 리뷰 요청**
+          
+          **프로젝트 컨텍스트:**
+          - SafeWork Flask 3.0+ 애플리케이션 (산업 안전 관리 시스템)
+          - 독립 컨테이너 아키텍처: safework2-postgres (4546), safework2-redis (4547), safework2-app (4545)
+          - 핵심 기능: 건강 설문조사, SafeWork 관리, 문서 관리, RESTful API v2
+          - 기술 스택: Flask 3.0+, SQLAlchemy 2.0, PostgreSQL, Redis
+          
+          **PR 분석 정보:**
+          - 변경 파일: ${{ steps.pr_analysis.outputs.files_changed }}개
+          - 변경 라인: ${{ steps.pr_analysis.outputs.lines_changed }}줄
+          - 보안 관련: ${{ steps.pr_analysis.outputs.security_related }}
+          - 데이터베이스 관련: ${{ steps.pr_analysis.outputs.database_related }}
+          
+          **리뷰 프로세스:**
+          
+          1. **`pr_context.txt` 파일을 읽고 PR 내용 분석**
+             - PR 목적 및 범위 파악
+             - 변경사항의 비즈니스 로직 이해
+             - 기술적 구현 방식 검토
+          
+          2. **코드 품질 전문 검토**:
+             🔒 **보안 우선 검토**:
+             - 인증/권한 체크 (Flask-Login, @login_required)
+             - SQL 인젝션 방지 (SQLAlchemy ORM 사용)
+             - XSS 방지 (템플릿 이스케이핑)
+             - CSRF 보호 (현재 비활성화 상태 고려)
+             - 민감 정보 하드코딩 확인
+             
+             ⚡ **성능 및 효율성**:
+             - 데이터베이스 쿼리 최적화 (N+1 문제)
+             - Redis 캐싱 활용
+             - 페이지네이션 (20개 단위)
+             - 메모리 누수 방지
+             
+             🏗️ **아키텍처 일관성**:
+             - 블루프린트 구조 준수
+             - 모델 관계 설정 적절성
+             - RESTful API 설계 원칙
+             - 에러 핸들링 표준화
+             
+             🧪 **테스트 가능성**:
+             - 단위 테스트 작성 용이성
+             - Mock 객체 활용 가능성
+             - 통합 테스트 고려사항
+          
+          3. **SafeWork 특화 검토**:
+             - 설문 조사 로직 (001/002 양식)
+             - SafeWork 관리 패널 기능
+             - 한국어 지원 및 KST 타임존
+             - 익명 사용자 처리 (user_id=1)
+             - 문서 버전 관리 시스템
+          
+          4. **배포 및 운영 고려사항**:
+             - 독립 컨테이너 호환성
+             - 환경 변수 설정
+             - 의존성 관리 (requirements.txt)
+             - GitHub Actions 워크플로우 영향
+          
+          **리뷰 결과를 GitHub PR에 직접 댓글로 작성**:
+          - `gh pr comment` 명령어 사용
+          - 구체적이고 실행 가능한 피드백
+          - 긍정적 요소와 개선사항 균형있게 제시
+          - 한국어로 친근하면서 전문적인 톤
+          
+          **최종 판정 기준**:
+          - ✅ **승인**: 코드 품질 우수, 보안 이슈 없음, 아키텍처 일관성 유지
+          - ⚠️ **조건부 승인**: 사소한 개선사항 있음, 배포 전 수정 권장
+          - ❌ **수정 필요**: 보안 이슈, 심각한 버그, 아키텍처 위반
+          
+          지금 PR을 전문적으로 리뷰하고 GitHub에 댓글을 작성해주세요.
+          EOF
+          
+      - name: 📊 Review Metrics
+        if: always()
+        run: |
+          echo "=== PR 리뷰 완료 ==="
+          echo "PR 번호: ${{ github.event.pull_request.number }}"
+          echo "제목: ${{ github.event.pull_request.title }}"
+          echo "변경 파일: ${{ steps.pr_analysis.outputs.files_changed }}개"
+          echo "변경 라인: ${{ steps.pr_analysis.outputs.lines_changed }}줄"
+          echo "보안 관련: ${{ steps.pr_analysis.outputs.security_related }}"
+          echo "데이터베이스 관련: ${{ steps.pr_analysis.outputs.database_related }}"
+          echo "리뷰 상태: ${{ job.status }}"
+          echo "완료 시간: $(date)"

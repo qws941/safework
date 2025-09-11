@@ -1,0 +1,172 @@
+name: 🎯 Issue Handler
+
+concurrency:
+  group: issue-handler-${{ github.event.issue.number || github.run_id }}
+  cancel-in-progress: true
+
+on:
+  issues:
+    types: [opened, labeled, assigned]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+  id-token: write
+
+jobs:
+  handle-issue:
+    if: |
+      (github.event_name == 'issues' && (
+        contains(github.event.issue.body, '@claude') || 
+        contains(github.event.issue.title, '@claude') ||
+        contains(github.event.issue.labels.*.name, 'claude-actionable') ||
+        contains(github.event.issue.labels.*.name, 'needs-analysis')
+      )) ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude'))
+    
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: 🔗 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          
+      - name: 🔍 Context Analysis
+        id: context
+        run: |
+          echo "issue_number=${{ github.event.issue.number || 'N/A' }}" >> $GITHUB_OUTPUT
+          echo "issue_title=${{ github.event.issue.title || 'N/A' }}" >> $GITHUB_OUTPUT
+          echo "issue_author=${{ github.event.issue.user.login || 'N/A' }}" >> $GITHUB_OUTPUT
+          echo "event_type=${{ github.event_name }}" >> $GITHUB_OUTPUT
+          echo "repository=SafeWork Flask Application" >> $GITHUB_OUTPUT
+          echo "architecture=Independent containers (PostgreSQL, Redis, Flask)" >> $GITHUB_OUTPUT
+          
+          # Extract issue labels
+          LABELS="${{ join(github.event.issue.labels.*.name, ',') }}"
+          echo "issue_labels=$LABELS" >> $GITHUB_OUTPUT
+          
+          # Determine issue priority and type
+          if [[ "$LABELS" == *"critical"* ]]; then
+            echo "priority=critical" >> $GITHUB_OUTPUT
+          elif [[ "$LABELS" == *"high"* ]]; then
+            echo "priority=high" >> $GITHUB_OUTPUT
+          elif [[ "$LABELS" == *"bug"* ]]; then
+            echo "priority=high" >> $GITHUB_OUTPUT
+          else
+            echo "priority=normal" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: 🧠 Setup Claude Code
+        run: |
+          curl -fsSL https://claude.ai/install.sh | bash
+          echo "${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}" | claude auth
+          
+      - name: 🎯 Claude Issue Analysis
+        run: |
+          claude code --dir . << 'EOF'
+          🎯 **SafeWork 이슈 분석 및 처리 요청**
+          
+          **프로젝트 컨텍스트:**
+          - SafeWork Flask 3.0+ 애플리케이션 (산업 안전 관리 시스템)
+          - 독립 컨테이너 아키텍처: safework2-postgres (4546), safework2-redis (4547), safework2-app (4545)
+          - 데이터베이스: PostgreSQL (safework_db, safework 사용자)
+          - 주요 기능: 건강 설문조사, SafeWork 관리, 문서 관리, RESTful API v2
+          
+          **이슈 정보:**
+          - 이슈 번호: ${{ steps.context.outputs.issue_number }}
+          - 제목: "${{ steps.context.outputs.issue_title }}"
+          - 작성자: ${{ steps.context.outputs.issue_author }}
+          - 우선순위: ${{ steps.context.outputs.priority }}
+          - 라벨: ${{ steps.context.outputs.issue_labels }}
+          - 이벤트: ${{ steps.context.outputs.event_type }}
+          
+          **이슈 내용:**
+          ```
+          ${{ github.event.issue.body || github.event.comment.body }}
+          ```
+          
+          **분석 및 처리 지침:**
+          
+          1. **이슈 분석**:
+             - 문제 유형 식별 (버그, 기능 요청, 개선사항, 질문)
+             - 영향 범위 평가 (프론트엔드, 백엔드, 데이터베이스, 인프라)
+             - 우선순위 재평가 (critical, high, medium, low)
+          
+          2. **자동 해결 가능성 검토**:
+             - 코드 수정으로 해결 가능한 문제인지 판단
+             - 설정 변경이나 환경 변수 조정으로 해결 가능한지 확인
+             - 문서 업데이트나 가이드 제공으로 해결 가능한지 검토
+          
+          3. **즉시 실행 가능한 작업**:
+             - 버그 수정: 코드 수정 및 테스트
+             - 설정 문제: 환경 변수나 설정 파일 수정
+             - 문서 업데이트: README.md, CLAUDE.md 등 업데이트
+             - 의존성 문제: requirements.txt 수정
+          
+          4. **응답 생성**:
+             - 이슈에 대한 명확한 분석 결과
+             - 해결 방법 제시 (즉시 실행 또는 단계별 가이드)
+             - 필요한 경우 추가 정보 요청
+             - 한국어로 친근하고 전문적인 응답
+          
+          **특별 처리 규칙:**
+          
+          🚨 **Critical/High Priority**:
+          - 즉시 코드 수정 실행
+          - 배포 파이프라인 트리거
+          - 상세한 해결 과정 보고
+          
+          🔧 **Bug Reports**:
+          - 재현 가능한 버그는 즉시 수정
+          - 로그 분석 및 원인 파악
+          - 테스트 케이스 추가
+          
+          💡 **Feature Requests**:
+          - 구현 가능성 평가
+          - 아키텍처 영향도 분석
+          - 구현 계획 제시
+          
+          ❓ **Questions**:
+          - 명확하고 상세한 답변 제공
+          - 관련 문서나 코드 예제 제시
+          - 추가 학습 자료 제공
+          
+          **행동 지침:**
+          - 가능한 한 즉시 해결
+          - 해결할 수 없는 경우 명확한 이유 설명
+          - 대안 솔루션 제시
+          - 사용자 친화적인 한국어 응답
+          - 필요시 GitHub 이슈에 직접 댓글 작성
+          
+          이제 이슈를 분석하고 적절한 처리를 시작해주세요.
+          EOF
+          
+      - name: 📊 Issue Processing Summary
+        if: always()
+        run: |
+          echo "=== 이슈 처리 요약 ==="
+          echo "이슈 번호: ${{ steps.context.outputs.issue_number }}"
+          echo "제목: ${{ steps.context.outputs.issue_title }}"
+          echo "우선순위: ${{ steps.context.outputs.priority }}"
+          echo "처리 상태: ${{ job.status }}"
+          echo "처리 시간: $(date)"
+          
+          # Create processing summary comment if needed
+          if [ "${{ job.status }}" != "success" ]; then
+            gh issue comment ${{ steps.context.outputs.issue_number }} \
+              --body "🚨 **자동 처리 실패**
+
+              이슈 자동 처리 중 문제가 발생했습니다. 
+              수동 검토가 필요합니다.
+              
+              **처리 시간**: $(date)
+              **상태**: ${{ job.status }}
+              
+              @claude 다시 시도하거나 관리자에게 문의해주세요."
+          fi

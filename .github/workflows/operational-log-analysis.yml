@@ -1,0 +1,201 @@
+name: 📊 Operational Log Analysis
+
+on:
+  schedule:
+    - cron: '0 */4 * * *'  # Every 4 hours
+  workflow_dispatch:
+    inputs:
+      app_name:
+        description: 'Application name to analyze'
+        required: false
+        default: 'safework'
+        type: string
+      hours_back:
+        description: 'Hours of logs to analyze'
+        required: false
+        default: '4'
+        type: string
+      analysis_type:
+        description: 'Analysis type'
+        required: false
+        default: 'comprehensive'
+        type: choice
+        options:
+          - comprehensive
+          - errors_only
+          - performance
+          - security
+
+permissions:
+  contents: read
+  issues: write
+  actions: read
+
+env:
+  CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+  PORTAINER_API_KEY: ${{ secrets.PORTAINER_API_KEY }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  log-analysis:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    
+    steps:
+      - name: 🔗 Checkout Repository
+        uses: actions/checkout@v4
+        
+      - name: 📊 Collect Application Logs
+        id: app_logs
+        run: |
+          APP_NAME="${{ github.event.inputs.app_name || 'safework' }}"
+          HOURS_BACK="${{ github.event.inputs.hours_back || '4' }}"
+          
+          echo "=== SafeWork 애플리케이션 로그 수집 ===" > operational_logs.txt
+          echo "수집 시간: $(date)" >> operational_logs.txt
+          echo "분석 대상: $APP_NAME" >> operational_logs.txt
+          echo "수집 범위: 최근 ${HOURS_BACK}시간" >> operational_logs.txt
+          echo "" >> operational_logs.txt
+          
+          # Application URLs for SafeWork
+          SAFEWORK_PROD_URL="https://safework.jclee.me"
+          SAFEWORK_DEV_URL="https://safework-dev.jclee.me"
+          
+          echo "=== 애플리케이션 상태 확인 ===" >> operational_logs.txt
+          
+          # Health check
+          echo "🏥 Health Check:" >> operational_logs.txt
+          curl -s "$SAFEWORK_PROD_URL/health" >> operational_logs.txt 2>&1 || echo "Health check failed" >> operational_logs.txt
+          echo "" >> operational_logs.txt
+          
+          # API stats
+          echo "📊 API 통계:" >> operational_logs.txt
+          curl -s "$SAFEWORK_PROD_URL/api/stats" >> operational_logs.txt 2>&1 || echo "API stats unavailable" >> operational_logs.txt
+          echo "" >> operational_logs.txt
+          
+          # Development environment check
+          echo "🔧 개발 환경 상태:" >> operational_logs.txt
+          curl -s "$SAFEWORK_DEV_URL/health" >> operational_logs.txt 2>&1 || echo "Dev environment unreachable" >> operational_logs.txt
+          echo "" >> operational_logs.txt
+          
+      - name: 🐳 Collect Container Logs via Portainer
+        id: container_logs
+        run: |
+          if [ -n "$PORTAINER_API_KEY" ]; then
+            echo "=== Portainer 컨테이너 로그 수집 ===" >> operational_logs.txt
+            
+            # Get container list
+            CONTAINERS_JSON=$(curl -s -H "X-API-Key: $PORTAINER_API_KEY" \
+              "https://portainer.jclee.me/api/endpoints/1/docker/containers/json" || echo "[]")
+            
+            echo "발견된 컨테이너:" >> operational_logs.txt
+            echo "$CONTAINERS_JSON" | jq -r '.[] | select(.Names[0] | contains("safework")) | .Names[0]' >> operational_logs.txt 2>/dev/null || echo "SafeWork 컨테이너 없음" >> operational_logs.txt
+            echo "" >> operational_logs.txt
+            
+            # Collect logs from SafeWork containers
+            for container in $(echo "$CONTAINERS_JSON" | jq -r '.[] | select(.Names[0] | contains("safework")) | .Id' 2>/dev/null || echo ""); do
+              if [ -n "$container" ]; then
+                CONTAINER_NAME=$(echo "$CONTAINERS_JSON" | jq -r --arg id "$container" '.[] | select(.Id == $id) | .Names[0]')
+                echo "=== $CONTAINER_NAME 로그 ===" >> operational_logs.txt
+                
+                # Get recent logs (last 1000 lines)
+                curl -s -H "X-API-Key: $PORTAINER_API_KEY" \
+                  "https://portainer.jclee.me/api/endpoints/1/docker/containers/$container/logs?stdout=1&stderr=1&tail=1000" \
+                  >> operational_logs.txt 2>&1 || echo "로그 수집 실패" >> operational_logs.txt
+                echo "" >> operational_logs.txt
+              fi
+            done
+          else
+            echo "⚠️ Portainer API Key 없음 - 컨테이너 로그 수집 건너뜀" >> operational_logs.txt
+          fi
+          
+      - name: 🔍 Intelligent Log Analysis
+        run: |
+          # Check if we have meaningful logs
+          LOG_SIZE=$(wc -l < operational_logs.txt)
+          echo "수집된 로그 라인 수: $LOG_SIZE"
+          
+          if [ "$LOG_SIZE" -gt 10 ]; then
+            echo "로그 분석을 위해 Claude 호출 중..."
+            
+            curl -fsSL https://claude.ai/install.sh | bash
+            echo "$CLAUDE_CODE_OAUTH_TOKEN" | claude auth
+            
+            claude code --dir . << 'EOF'
+            📊 **SafeWork 운영 로그 분석 요청**
+            
+            **프로젝트 컨텍스트:**
+            - SafeWork Flask 3.0+ 애플리케이션 (산업 안전 관리 시스템)
+            - 독립 컨테이너 아키텍처: safework2-postgres (4546), safework2-redis (4547), safework2-app (4545)
+            - 프로덕션: https://safework.jclee.me
+            - 개발: https://safework-dev.jclee.me
+            
+            **분석 설정:**
+            - 분석 유형: ${{ github.event.inputs.analysis_type || 'comprehensive' }}
+            - 수집 기간: 최근 ${{ github.event.inputs.hours_back || '4' }}시간
+            - 실행 시간: $(date)
+            
+            **분석 요청:**
+            
+            1. **`operational_logs.txt` 파일을 읽고 분석**:
+               - 애플리케이션 상태 및 성능 메트릭
+               - 컨테이너 로그에서 에러/경고 패턴 감지
+               - 데이터베이스 연결 및 Redis 상태
+               - API 응답 시간 및 에러율
+            
+            2. **분석 유형별 집중 영역**:
+               - **comprehensive**: 전체적인 시스템 건강도, 성능, 에러 분석
+               - **errors_only**: 에러 로그만 집중 분석, 근본 원인 파악
+               - **performance**: 응답 시간, 데이터베이스 쿼리 성능, 메모리 사용량
+               - **security**: 인증 실패, 비정상 접근 패턴, 보안 관련 경고
+            
+            3. **한국어 운영 보고서 생성**:
+               - 📊 **시스템 상태 요약**
+               - 🚨 **발견된 이슈 및 우선순위**
+               - 📈 **성능 지표 분석**
+               - 🔧 **권장 조치사항**
+               - 📅 **다음 점검 포인트**
+            
+            4. **자동 이슈 생성 판단**:
+               - Critical: 서비스 장애, 보안 위험, 데이터 손실
+               - High: 성능 저하, 에러율 증가, 연결 실패
+               - Medium: 경고 증가, 비정상 패턴
+               
+            **출력 형식:**
+            - 명확하고 실행 가능한 한국어 보고서
+            - 기술적 세부사항과 비즈니스 영향도 포함
+            - 우선순위별 액션 아이템 제시
+            - 필요시 GitHub 이슈 생성을 위한 권고
+            
+            **특별 주의사항:**
+            - 개인정보나 민감한 정보는 제외하고 분석
+            - SafeWork 산업 안전 관리 시스템의 특성 고려
+            - 사용자 데이터 보호 및 컴플라이언스 준수
+            
+            지금 로그 분석을 시작해주세요.
+            EOF
+          else
+            echo "⚠️ 수집된 로그가 부족합니다. 분석을 건너뜁니다."
+            echo "수집된 로그 내용:" 
+            cat operational_logs.txt
+          fi
+          
+      - name: 📋 Analysis Summary
+        if: always()
+        run: |
+          echo "=== 운영 로그 분석 완료 ==="
+          echo "애플리케이션: ${{ github.event.inputs.app_name || 'safework' }}"
+          echo "분석 유형: ${{ github.event.inputs.analysis_type || 'comprehensive' }}"
+          echo "수집 기간: ${{ github.event.inputs.hours_back || '4' }}시간"
+          echo "실행 상태: ${{ job.status }}"
+          echo "완료 시간: $(date)"
+          
+          # Check if any critical issues were found that need immediate attention
+          if [ -f operational_logs.txt ]; then
+            CRITICAL_ERRORS=$(grep -i "critical\|error\|exception\|fail" operational_logs.txt | wc -l)
+            echo "발견된 에러/경고: $CRITICAL_ERRORS"
+            
+            if [ "$CRITICAL_ERRORS" -gt 10 ]; then
+              echo "🚨 높은 에러율 감지 - 추가 검토 필요"
+            fi
+          fi
