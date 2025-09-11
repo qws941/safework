@@ -204,21 +204,21 @@ jobs:
           curl -X POST \
             -H "X-API-Key: $API_KEY" \
             -H "Content-Type: application/json" \
-            "$PORTAINER_URL/api/endpoints/3/docker/containers/blacklist-postgres/restart" \
+            "$PORTAINER_URL/api/endpoints/3/docker/containers/safework-postgres/restart" \
             || echo "⚠️ PostgreSQL 컨테이너 재시작 실패"
           
           echo "📦 SafeWork Redis 컨테이너 업데이트..."  
           curl -X POST \
             -H "X-API-Key: $API_KEY" \
             -H "Content-Type: application/json" \
-            "$PORTAINER_URL/api/endpoints/3/docker/containers/blacklist-redis/restart" \
+            "$PORTAINER_URL/api/endpoints/3/docker/containers/safework-redis/restart" \
             || echo "⚠️ Redis 컨테이너 재시작 실패"
           
           echo "📦 SafeWork App 컨테이너 업데이트..."
           curl -X POST \
             -H "X-API-Key: $API_KEY" \
             -H "Content-Type: application/json" \
-            "$PORTAINER_URL/api/endpoints/3/docker/containers/blacklist-app/restart" \
+            "$PORTAINER_URL/api/endpoints/3/docker/containers/safework-app/restart" \
             || echo "⚠️ App 컨테이너 재시작 실패"
           
           # 배포 대기
