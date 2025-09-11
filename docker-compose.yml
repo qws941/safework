@@ -108,8 +108,8 @@ services:
       REDIS_PORT: ${REDIS_PORT:-6379}
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       REDIS_DB: ${REDIS_DB:-0}
-      ADMIN_USERNAME: ${ADMIN_USERNAME:-safewrork}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-123}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-safework2024}
       UPLOAD_FOLDER: ${UPLOAD_FOLDER:-/app/uploads}
       APP_PORT: ${APP_PORT:-4545}
       TZ: ${TZ:-Asia/Seoul}
