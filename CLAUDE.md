@@ -14,7 +14,7 @@ SafeWork is an industrial health and safety management system built with Flask 3
 - **RESTful API v2**: External system integrations via `/api/safework/v2/*`
 
 **Tech Stack:** 
-- Backend: Flask 3.0+, SQLAlchemy 2.0, MySQL 8.0, Redis 5.0
+- Backend: Flask 3.0+, SQLAlchemy 2.0, PostgreSQL 15+, Redis 7.0
 - Frontend: Bootstrap 4.6, jQuery, responsive design
 - Infrastructure: Docker, Private Registry (registry.jclee.me), Watchtower auto-deployment
 - Localization: KST timezone (`kst_now()` function), Korean UI/error messages
@@ -25,19 +25,19 @@ SafeWork is an industrial health and safety management system built with Flask 3
 ```bash
 # Build all independent containers
 docker build -t safework/app:latest ./app
-docker build -t safework/mysql:latest ./mysql
+docker build -t safework/postgres:latest ./postgres
 docker build -t safework/redis:latest ./redis
 
 # Start services independently with proper network
-docker network create safework-net
-docker run -d --name safework-mysql --network safework-net -p 4543:3306 safework/mysql:latest
-docker run -d --name safework-redis --network safework-net -p 4544:6379 safework/redis:latest
-docker run -d --name safework-app --network safework-net -p 4545:4545 safework/app:latest
+docker network create safework2-network
+docker run -d --name safework2-postgres --network safework2-network -p 4546:5432 safework/postgres:latest
+docker run -d --name safework2-redis --network safework2-network -p 4547:6379 safework/redis:latest
+docker run -d --name safework2-app --network safework2-network -p 4545:4545 safework/app:latest
 
 # Container management
-docker logs -f safework-app            # View application logs
+docker logs -f safework2-app            # View application logs
 docker ps                              # Check running containers
-docker stop safework-app safework-mysql safework-redis  # Stop all services
+docker stop safework2-app safework2-postgres safework2-redis  # Stop all services
 ```
 
 ### Testing Commands
@@ -48,12 +48,17 @@ python -m pytest                       # Run all tests
 python -m pytest -v                    # Verbose output
 python -m pytest --cov=. --cov-report=html  # Coverage report
 python -m pytest tests/test_survey.py  # Specific test file
+
+# Note: Test files may not be present yet - testing is configured via requirements.txt
+# Testing environment uses PostgreSQL with separate test database
+# Configure test database via environment variables:
+# DB_HOST=127.0.0.1, DB_NAME=safework_test, DB_USER=safework_test
 ```
 
 ### Database Management
 ```bash
 # Enter app container
-docker exec -it safework-app bash
+docker exec -it safework2-app bash
 
 # Migration commands (inside container)
 python migrate.py status               # Check migration status
@@ -61,8 +66,8 @@ python migrate.py migrate              # Apply migrations
 python migrate.py create "Description" # Create new migration
 
 # Database inspection
-docker exec -it safework-mysql mysql -u safework -psafework2024 safework_db -e "SHOW TABLES;"
-docker exec -it safework-mysql mysql -u safework -psafework2024 safework_db -e "DESCRIBE surveys;"
+docker exec -it safework2-postgres psql -U safework -d safework_db -c "\dt;"
+docker exec -it safework2-postgres psql -U safework -d safework_db -c "\d surveys;"
 ```
 
 ### API Testing & Debugging
@@ -92,7 +97,7 @@ curl http://localhost:4545/health              # Application health
 curl https://safework.jclee.me/health         # Production health
 
 # Verify database connectivity from container
-docker exec -it safework-app python -c "
+docker exec -it safework2-app python -c "
 from models import Survey, db
 print(f'Survey count: {Survey.query.count()}')
 print('Database connection: OK')
@@ -102,6 +107,8 @@ print('Database connection: OK')
 ### Access Points & Credentials
 **Local Development:**
 - **Main app**: http://localhost:4545
+- **PostgreSQL**: localhost:4546 (safework2-postgres container)
+- **Redis**: localhost:4547 (safework2-redis container)
 - **Admin panel**: http://localhost:4545/admin (admin/safework2024)
 - **Health check**: http://localhost:4545/health  
 - **Migration UI**: http://localhost:4545/migration/status
@@ -118,8 +125,29 @@ def create_app(config_name=None):
     # Factory pattern with config-based initialization
     # Extensions: SQLAlchemy, Flask-Login, Flask-Migrate, Redis
     # CSRF: Currently disabled (WTF_CSRF_ENABLED = False)
-    # Blueprints: 8 modular route handlers auto-registered
+    # Blueprints: 8+ modular route handlers auto-registered
+    # System uptime tracking and version management via Git
+    # Context processors for template globals and URL routing
 ```
+
+### Key Architectural Patterns
+**Application Factory Pattern:**
+- Environment-based configuration (development/production/testing)
+- Modular blueprint registration in `app.py`
+- Extension initialization with proper app context
+- Runtime database connection handling with retry logic
+
+**Migration System:**
+- Custom migration manager in `migration_manager.py`
+- Web interface for migration status at `/admin/migration/status`
+- Version-controlled database schema changes
+- Automatic admin user creation via migrations
+
+**Container Independence:**
+- No docker-compose dependency - each service runs independently
+- Health checks and restart policies in Dockerfiles
+- Volume declarations for data persistence
+- Container network communication via internal DNS
 
 ### Model Architecture & Database Design
 **Core Models (models.py):**
@@ -139,7 +167,7 @@ def create_app(config_name=None):
 ```sql
 -- Survey system with discriminator
 surveys.form_type = '001' | '002'  -- Form type identifier
-surveys.data (JSON)               -- Flexible form field storage
+surveys.data (JSONB)               -- Flexible form field storage with PostgreSQL indexing
 
 -- Anonymous submissions
 user_id = 1  -- Special user for anonymous form submissions
@@ -224,26 +252,40 @@ Push to `master` branch triggers automated deployment:
 
 ### Infrastructure Components
 - **Registry**: registry.jclee.me (credentials in GitHub secrets)
-- **Production**: https://safework.jclee.me (192.168.50.215)
-- **Development**: https://safework-dev.jclee.me (192.168.50.100)
-- **Watchtower**: watchtower.jclee.me (HTTP API for deployment triggers)
-- **Portainer**: portainer.jclee.me (Container management and log retrieval)
-- **Images**: safework/app:latest, safework/mysql:latest, safework/redis:latest
+- **Production**: https://safework.jclee.me
+- **Development**: https://safework-dev.jclee.me  
+- **Portainer**: portainer.jclee.me (Container management via API)
+- **Images**: 
+  - registry.jclee.me/safework2-app:latest
+  - registry.jclee.me/safework2-postgres:latest
+  - registry.jclee.me/safework2-redis:latest
 
 ### Independent Container Architecture
 SafeWork uses **completely independent Docker containers** with no docker-compose dependency:
-- Each service (app, mysql, redis) has its own Dockerfile and .dockerignore
-- All containers include Watchtower labels for automatic updates
+- Each service (app, postgres, redis) has its own Dockerfile and .dockerignore
+- Portainer API orchestration for zero-downtime deployment
 - Health checks implemented for all services
 - Connection retry logic for independent startup
 - Matrix build system in GitHub Actions for parallel deployment
 
 ### Required GitHub Secrets
 ```bash
-CLAUDE_CODE_OAUTH_TOKEN=<token>          # Claude Code automation
+# Core deployment secrets
 REGISTRY_PASSWORD=<password>             # Docker registry auth (registry.jclee.me)
-WATCHTOWER_HTTP_API_TOKEN=<token>        # Watchtower API deployment
-PORTAINER_API_TOKEN=<token>              # Portainer API access (ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=)
+PORTAINER_API_TOKEN=<token>              # Portainer API access
+PORTAINER_ENDPOINT_ID=1                  # Portainer endpoint ID (default: 1)
+
+# Database credentials
+POSTGRES_PASSWORD=<password>             # PostgreSQL password
+SECRET_KEY=<secret>                      # Flask secret key
+
+# Environment URLs (optional)
+PRD_URL=https://safework.jclee.me       # Production URL
+DEV_URL=https://safework-dev.jclee.me   # Development URL
+PORTAINER_URL=https://portainer.jclee.me # Portainer URL
+
+# Optional automation
+CLAUDE_CODE_OAUTH_TOKEN=<token>          # Claude Code automation
 SLACK_WEBHOOK_URL=<url>                  # Slack notifications
 ```
 
@@ -254,27 +296,27 @@ Claude automatically detects and fixes:
 - `gunicorn.errors.HaltServer` → Flask app import path verification
 - `Worker failed to boot` → Dependencies and environment validation  
 - `ImportError|ModuleNotFoundError` → requirements.txt audit
-- `OperationalError` → MySQL connection settings verification
+- `OperationalError` → PostgreSQL connection settings verification
 - `'field_name' is an invalid keyword argument for Survey` → Model field mapping errors
-- MySQL connection timeout → Increase DB_CONNECTION_RETRIES (currently 60) and DB_CONNECTION_DELAY (3s)
+- PostgreSQL connection timeout → Increase DB_CONNECTION_RETRIES (currently 60) and DB_CONNECTION_DELAY (3s)
 
 ### Troubleshooting Commands
 ```bash
 # Container status
 docker ps                                           # Check container status
-docker logs -f safework-app                         # View application logs
-docker pull registry.jclee.me/safework/app:latest  # Update to latest image
+docker logs -f safework2-app                        # View application logs
+docker pull registry.jclee.me/safework2-app:latest # Update to latest image
 
 # Independent container restart
-docker stop safework-app safework-mysql safework-redis
-docker rm safework-app safework-mysql safework-redis
-docker run -d --name safework-mysql --network safework-net safework/mysql:latest
-docker run -d --name safework-redis --network safework-net safework/redis:latest
-docker run -d --name safework-app --network safework-net safework/app:latest
+docker stop safework2-app safework2-postgres safework2-redis
+docker rm safework2-app safework2-postgres safework2-redis
+docker run -d --name safework2-postgres --network safework2-network safework/postgres:latest
+docker run -d --name safework2-redis --network safework2-network safework/redis:latest
+docker run -d --name safework2-app --network safework2-network safework/app:latest
 
 # Database management
 python migrate.py status                            # Check migration status
-docker exec -it safework-app python migrate.py migrate  # Run migrations
+docker exec -it safework2-app python migrate.py migrate  # Run migrations
 
 # Portainer API debugging
 curl -H "X-API-Key: ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=" \
@@ -317,14 +359,15 @@ FLASK_CONFIG=production                # Environment mode
 SECRET_KEY=safework-production-secret-key-2024
 TZ=Asia/Seoul                         # Korean timezone
 
-# Database connection
-MYSQL_HOST=safework-mysql             # Container name
-MYSQL_DATABASE=safework_db
-MYSQL_USER=safework
-MYSQL_PASSWORD=safework2024
+# Database connection (PostgreSQL)
+DB_HOST=safework2-postgres            # Container name
+DB_PORT=5432                          # PostgreSQL port
+DB_NAME=safework_db
+DB_USER=safework
+DB_PASSWORD=safework2024
 
 # Redis cache
-REDIS_HOST=safework-redis             # Container name  
+REDIS_HOST=safework2-redis            # Container name  
 REDIS_PORT=6379
 
 # Admin credentials
@@ -384,10 +427,11 @@ SAFEWORK_DEV_URL=safework-dev.jclee.me   # Development monitoring
 ## Production Guidelines
 
 ### Database Best Practices
-- MySQL 8.0 with UTF8MB4 charset for Korean text support
+- PostgreSQL 15+ with UTF8 encoding for Korean text support
 - Use `kst_now()` for all timestamp operations (consistent KST timezone)
 - Transaction-based operations with rollback for data integrity
 - Anonymous submissions always use `user_id=1`
+- JSONB fields for flexible survey data storage with indexing support
 
 ### Security & Performance
 - `@login_required` decorator for all admin routes
@@ -414,7 +458,7 @@ SAFEWORK_DEV_URL=safework-dev.jclee.me   # Development monitoring
 ### Independent Container Structure
 Each service has its own complete build context:
 - `app/` - Flask application with Dockerfile, .dockerignore, requirements.txt
-- `mysql/` - MySQL 8.0 with Dockerfile, .dockerignore, init.sql
+- `postgres/` - PostgreSQL 15+ with Dockerfile, .dockerignore, init.sql
 - `redis/` - Redis 7 with Dockerfile, .dockerignore, redis.conf
 
 ### Quality Validation
