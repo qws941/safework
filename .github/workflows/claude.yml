@@ -118,25 +118,7 @@ jobs:
     if: >
       github.event_name != 'pull_request' && 
       github.event_name != 'issues' && 
-      github.event_name != 'schedule' &&
-      (
-        github.event_name == 'workflow_run' ||
-        github.event_name == 'workflow_dispatch' ||
-        (github.event_name == 'issue_comment' && (
-          contains(github.event.comment.body, '@claude') ||
-          contains(github.event.comment.body, '/claude') ||
-          contains(github.event.comment.body, '!claude')
-        )) ||
-        (github.event_name == 'pull_request_review_comment' && (
-          contains(github.event.comment.body, '@claude') ||
-          contains(github.event.comment.body, '/claude') ||
-          contains(github.event.comment.body, '!claude')
-        )) ||
-        (github.event_name == 'pull_request_review' && (
-          github.event.review.state == 'changes_requested' ||
-          github.event.review.state == 'commented'
-        ))
-      )
+      github.event_name != 'schedule'
     
     steps:
       - name: 📊 Workflow Initialization
