@@ -6,12 +6,9 @@ concurrency:
   cancel-in-progress: true
 
 on:
-  push:
-    branches: [ main, master, develop ]
   pull_request:
     branches: [ main, master, develop ]
-  schedule:
-    - cron: '0 2 * * 1'  # Weekly on Monday at 2 AM KST
+    types: [opened, synchronize]
   workflow_dispatch:
     inputs:
       fix_type:

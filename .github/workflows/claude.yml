@@ -11,14 +11,26 @@ on:
   pull_request_review_comment:
     types: [created]
   issues:
-    types: [opened, assigned, labeled]
+    types: [opened, assigned, labeled, edited]
   pull_request_review:
     types: [submitted]
   pull_request:
     types: [opened, synchronize, ready_for_review, reopened]
   workflow_run:
-    workflows: ["🚀 SafeWork Deployment Pipeline"]
+    workflows: ["🚀 Deploy Pipeline"]
     types: [completed]
+  workflow_dispatch:
+    inputs:
+      action_type:
+        description: 'Claude action to perform'
+        required: false
+        default: 'analyze'
+        type: choice
+        options:
+          - 'analyze'
+          - 'auto-fix'
+          - 'review'
+          - 'issue-resolve'
 
 permissions:
   contents: write
@@ -39,12 +51,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     
-    # Only run if comment contains @claude or for specific events
+    # Comprehensive trigger conditions for Claude AI assistant
     if: >
       github.event_name == 'workflow_run' ||
+      github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'issues' && github.event.action == 'opened') ||
+      (github.event_name == 'issues' && (github.event.action == 'opened' || github.event.action == 'edited')) ||
       (github.event_name == 'pull_request' && github.event.pull_request.draft == false) ||
       (github.event_name == 'pull_request_review' && github.event.review.state == 'changes_requested')
     
@@ -56,19 +69,23 @@ jobs:
           track_progress: ${{ github.event_name != 'workflow_run' }}
           prompt: |
             ${{ 
-              github.event_name == 'workflow_run' && 'SafeWork deployment workflow has completed. Please analyze deployment results and provide solutions if there are issues. Create GitHub issues if necessary.' ||
-              github.event_name == 'pull_request' && 'Please comprehensively review the SafeWork Flask application Pull Request. Analyze from code quality, security, performance, and testing perspectives and suggest improvements.' ||
-              github.event_name == 'issues' && 'Please analyze new issues in the SafeWork project. Provide problem-solving approaches and help with code modifications if needed.' ||
-              'I will help with SafeWork project-related questions. Support industrial health and safety management system development with independent container deployment.'
+              github.event_name == 'workflow_run' && 'SafeWork deployment workflow completed. Analyze results and create issues for any problems.' ||
+              github.event_name == 'workflow_dispatch' && format('Manual Claude action requested: {0}. Perform comprehensive analysis and assistance.', inputs.action_type) ||
+              github.event_name == 'pull_request' && 'Comprehensive SafeWork PR review: analyze code quality, security, performance, and testing. Provide detailed feedback.' ||
+              github.event_name == 'issues' && 'SafeWork issue analysis: provide solutions, code fixes, and implementation guidance.' ||
+              github.event_name == 'issue_comment' && 'Respond to SafeWork issue comment with technical assistance and solutions.' ||
+              github.event_name == 'pull_request_review_comment' && 'Address PR review comment with code improvements and explanations.' ||
+              'SafeWork AI Assistant: Industrial health & safety management system support with independent container deployment.'
             }}
             
             **Project Context:**
             - SafeWork: Industrial Health and Safety Management System (Flask 3.0+)
-            - Tech Stack: Python Flask, MySQL 8.0, Redis, Independent Docker Containers
+            - Tech Stack: Python Flask, PostgreSQL 15, Redis, Independent Docker Containers
             - Architecture: Fully independent containers (no docker-compose), Dockerfile-based configuration
             - Key Features: Survey system, MSDS management, safety education, health checkups
-            - Deployment: Docker Registry (${{ secrets.DOCKER_REGISTRY_URL }}), Portainer API deployment
-            - Security: GitHub Secrets for production, Dockerfile for defaults
+            - Deployment: Docker Registry (registry.jclee.me), Portainer API deployment
+            - Security: GitHub Secrets for production, environment-based configuration
+            - Ports: App:4545, PostgreSQL:4546, Redis:4547
             
             **Response Language:** Please respond in Korean for user communication.
           claude_args: |
