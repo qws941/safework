@@ -36,8 +36,8 @@ env:
   REGISTRY_HOST: ${{ secrets.REGISTRY_HOST || 'registry.jclee.me' }}
   REGISTRY_USER: ${{ secrets.REGISTRY_USER || 'admin' }}
   TZ: Asia/Seoul
-  PRD_URL: ${{ secrets.PRD_URL || format('https://{0}.jclee.me', github.event.repository.name) }}
-  DEV_URL: ${{ secrets.DEV_URL || format('https://{0}-dev.jclee.me', github.event.repository.name) }}
+  PRD_URL: ${{ secrets.PRD_URL || 'https://safework.jclee.me' }}
+  DEV_URL: ${{ secrets.DEV_URL || 'https://safework-dev.jclee.me' }}
   PORTAINER_URL: ${{ secrets.PORTAINER_URL || 'https://portainer.jclee.me' }}
 
 permissions:
