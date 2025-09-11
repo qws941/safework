@@ -122,8 +122,8 @@ jobs:
             - Actor: ${{ github.actor }}
             - Branch: ${{ github.ref_name }}
             - Commit: ${{ github.sha }}
-            ${{ github.event.pull_request && format('- PR Number: {0}', github.event.pull_request.number) || '' }}
-            ${{ github.event.issue && format('- Issue Number: {0}', github.event.issue.number) || '' }}
+            ${{ github.event.pull_request && github.event.pull_request.number && '- PR Number: ' || '' }}${{ github.event.pull_request.number || '' }}
+            ${{ github.event.issue && github.event.issue.number && '- Issue Number: ' || '' }}${{ github.event.issue.number || '' }}
             
             **PRIMARY TASK & SYSTEMATIC REVIEW CRITERIA:**
             ${{ 
@@ -140,7 +140,7 @@ jobs:
               
               SUCCESS CRITERIA: All deployment errors identified with root causes, actionable GitHub issues created with specific solutions, deployment health status confirmed with metrics.' ||
               
-              github.event_name == 'workflow_dispatch' && format('MANUAL ACTION: {0} - Comprehensive analysis with systematic approach.
+              github.event_name == 'workflow_dispatch' && 'MANUAL ACTION: ' && inputs.action_type && ' - Comprehensive analysis with systematic approach.
               
               SYSTEMATIC CHECKLIST:
               □ Repository structure and architecture analysis
