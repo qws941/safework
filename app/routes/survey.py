@@ -462,6 +462,10 @@ def api_submit():
             department=data.get("department"),
             position=data.get("position"),
             employee_id=data.get("employee_id"),
+            work_years=data.get("work_years", 0),
+            work_months=data.get("work_months", 0),
+            has_symptoms=data.get("data", {}).get("has_symptoms", False),
+            status="submitted",
         )
 
         db.session.add(survey)
