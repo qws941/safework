@@ -14,7 +14,7 @@ from models import AuditLog, Survey, SurveyStatistics, User, db
 
 
 def create_app(config_name=None):
-    """Application factory"""
+    """Application factory - Updated CLAUDE.md deployment"""
     app = Flask(__name__)
 
     # 시스템 시작 시간 저장
