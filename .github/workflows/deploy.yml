@@ -10,7 +10,7 @@ on:
     branches: [master]
     paths:
       - 'app/**'
-      - 'mysql/**'
+      - 'postgres/**'
       - 'redis/**'
       - '.github/workflows/deploy.yml'
   
@@ -46,7 +46,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       app_image_tag: ${{ steps.app_meta.outputs.tags }}
-      mysql_image_tag: ${{ steps.mysql_meta.outputs.tags }}
+      postgres_image_tag: ${{ steps.postgres_meta.outputs.tags }}
       redis_image_tag: ${{ steps.redis_meta.outputs.tags }}
       test_results: ${{ steps.test.outputs.results }}
       build_status: ${{ steps.build.outputs.build_status }}
@@ -67,12 +67,12 @@ jobs:
           username: ${{ env.REGISTRY_USER }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
-      # Metadata for MySQL image
-      - name: 📋 Extract MySQL Metadata
-        id: mysql_meta
+      # Metadata for PostgreSQL image
+      - name: 📋 Extract PostgreSQL Metadata
+        id: postgres_meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY_HOST }}/safework/mysql
+          images: ${{ env.REGISTRY_HOST }}/safework/postgres
           tags: |
             type=raw,value=latest
 
@@ -94,15 +94,15 @@ jobs:
           tags: |
             type=raw,value=latest
 
-      # Build MySQL Container
-      - name: 🐘 Build & Push MySQL Container
+      # Build PostgreSQL Container
+      - name: 🐘 Build & Push PostgreSQL Container
         uses: docker/build-push-action@v5
         with:
-          context: ./mysql
-          file: ./mysql/Dockerfile
+          context: ./postgres
+          file: ./postgres/Dockerfile
           push: true
-          tags: ${{ steps.mysql_meta.outputs.tags }}
-          labels: ${{ steps.mysql_meta.outputs.labels }}
+          tags: ${{ steps.postgres_meta.outputs.tags }}
+          labels: ${{ steps.postgres_meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
@@ -139,13 +139,12 @@ jobs:
         run: |
           echo "Testing container startup..."
           
-          # Test MySQL container
-          docker run --rm --name test-mysql -d \
-            -e MYSQL_ROOT_PASSWORD=safework2024 \
-            -e MYSQL_DATABASE=safework_db \
-            -e MYSQL_USER=safework \
-            -e MYSQL_PASSWORD=safework2024 \
-            ${{ steps.mysql_meta.outputs.tags }}
+          # Test PostgreSQL container
+          docker run --rm --name test-postgres -d \
+            -e POSTGRES_PASSWORD=safework2024 \
+            -e POSTGRES_DB=safework_db \
+            -e POSTGRES_USER=safework \
+            ${{ steps.postgres_meta.outputs.tags }}
           
           sleep 10
           
@@ -157,7 +156,7 @@ jobs:
           
           # Test App container startup
           docker run --rm --name test-app -d \
-            -e MYSQL_HOST=mysql \
+            -e POSTGRES_HOST=postgres \
             -e REDIS_HOST=redis \
             -e SECRET_KEY=test-secret \
             ${{ steps.app_meta.outputs.tags }}
@@ -165,8 +164,8 @@ jobs:
           sleep 10
           
           # Cleanup test containers
-          docker stop test-mysql test-redis test-app || true
-          docker rm test-mysql test-redis test-app || true
+          docker stop test-postgres test-redis test-app || true
+          docker rm test-postgres test-redis test-app || true
           
           echo "results=success" >> $GITHUB_OUTPUT
           echo "build_status=success" >> $GITHUB_OUTPUT
@@ -201,12 +200,12 @@ jobs:
           fi
           
           # 컨테이너 재시작 (Independent Container 방식)
-          echo "📦 SafeWork MySQL 컨테이너 업데이트..."
+          echo "📦 SafeWork PostgreSQL 컨테이너 업데이트..."
           curl -X POST \
             -H "X-API-Key: $API_KEY" \
             -H "Content-Type: application/json" \
-            "$PORTAINER_URL/api/endpoints/1/docker/containers/safework-mysql/restart" \
-            || echo "⚠️ MySQL 컨테이너 재시작 실패"
+            "$PORTAINER_URL/api/endpoints/1/docker/containers/safework-postgres/restart" \
+            || echo "⚠️ PostgreSQL 컨테이너 재시작 실패"
           
           echo "📦 SafeWork Redis 컨테이너 업데이트..."  
           curl -X POST \
@@ -286,7 +285,7 @@ jobs:
           # 컨테이너 상태 확인
           echo ""
           echo "=== 컨테이너 상태 ===" 
-          echo "SafeWork MySQL: safework-mysql:4546"
+          echo "SafeWork PostgreSQL: safework-postgres:4546"
           echo "SafeWork Redis: safework-redis:4547" 
           echo "SafeWork App: safework-app:4545"
 
@@ -311,7 +310,7 @@ jobs:
             - 배포 상태: ${{ needs.deploy.outputs.deployment_status }}
             
             **컨테이너 포트:**
-            - safework-mysql: 4546
+            - safework-postgres: 4546
             - safework-redis: 4547
             - safework-app: 4545
             
@@ -358,7 +357,7 @@ jobs:
             - URL: ${{ needs.deploy.outputs.deployment_url }}
             
             **컨테이너 구성:**
-            - SafeWork MySQL (포트 4546): 데이터베이스 서비스
+            - SafeWork PostgreSQL (포트 4546): 데이터베이스 서비스
             - SafeWork Redis (포트 4547): 캐시 서비스  
             - SafeWork App (포트 4545): Flask 애플리케이션
             
