@@ -366,3 +366,4 @@ MSDSUsageRecord = MSDSUsageRecordModel
 Survey = SurveyModel
 SurveyStatistics = SurveyStatisticsModel
 AuditLog = AuditLogModel
+Process = ProcessModel
