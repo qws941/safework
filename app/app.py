@@ -224,5 +224,6 @@ def create_app(config_name=None):
 app = create_app()
 
 if __name__ == "__main__":
-    # Run directly in development
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    # Run directly in development - use APP_PORT environment variable
+    port = int(os.environ.get('APP_PORT', 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
