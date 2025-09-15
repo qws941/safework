@@ -27,8 +27,13 @@ HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
 # Expose PostgreSQL port
 EXPOSE 5432
 
-# Labels for container management
+# Labels for container management and Watchtower
 LABEL maintainer="SafeWork Team" \
       description="PostgreSQL 15 for SafeWork Industrial Health & Safety Management" \
       version="1.0" \
-      service="database"
+      service="database" \
+      com.centurylinklabs.watchtower.enable="true" \
+      com.centurylinklabs.watchtower.scope="safework" \
+      com.centurylinklabs.watchtower.lifecycle.pre-update="pg_dump -U safework safework_db > /tmp/backup.sql" \
+      com.centurylinklabs.watchtower.lifecycle.post-update="echo 'PostgreSQL container updated successfully'" \
+      com.centurylinklabs.watchtower.stop-timeout="60s"
