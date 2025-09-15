@@ -432,7 +432,7 @@ jobs:
           echo "Survey: ${{ env.PRD_URL }}/survey/001_musculoskeletal_symptom_survey"
 
       - name: 🚀 Advanced Post-Deployment Analysis & Optimization Engine
-        if: success()
+        if: success() && github.event_name == 'workflow_dispatch'
         uses: anthropics/claude-code-action@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
