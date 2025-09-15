@@ -87,7 +87,7 @@ class SurveyModel(db.Model):
     
     # 메타데이터 (최소한)
     status = db.Column(db.String(20), default="submitted")
-    submission_date = db.Column(db.DateTime, default=kst_now)  # Compatibility field
+    submission_date = db.Column(db.DateTime, default=kst_now)
     created_at = db.Column(db.DateTime, default=kst_now)
     updated_at = db.Column(db.DateTime, default=kst_now, onupdate=kst_now)
 

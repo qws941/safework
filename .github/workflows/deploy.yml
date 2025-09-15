@@ -111,7 +111,9 @@ jobs:
           file: ./app/Dockerfile
           push: true
           tags: ${{ steps.app_meta.outputs.tags }}
-          labels: ${{ steps.app_meta.outputs.labels }}
+          labels: |
+            ${{ steps.app_meta.outputs.labels }}
+            com.centurylinklabs.watchtower.enable=true
           build-args: |
             BUILD_DATE=${{ github.event.head_commit.timestamp }}
             VCS_REF=${{ github.sha }}
@@ -124,7 +126,9 @@ jobs:
           file: ./postgres/Dockerfile
           push: true
           tags: ${{ steps.postgres_meta.outputs.tags }}
-          labels: ${{ steps.postgres_meta.outputs.labels }}
+          labels: |
+            ${{ steps.postgres_meta.outputs.labels }}
+            com.centurylinklabs.watchtower.enable=true
 
       - name: 🐳 Build and Push Redis Container
         uses: docker/build-push-action@v5
@@ -133,7 +137,9 @@ jobs:
           file: ./redis/Dockerfile
           push: true
           tags: ${{ steps.redis_meta.outputs.tags }}
-          labels: ${{ steps.redis_meta.outputs.labels }}
+          labels: |
+            ${{ steps.redis_meta.outputs.labels }}
+            com.centurylinklabs.watchtower.enable=true
 
   # Phase 2: Test Container Connectivity
   test-connectivity:
@@ -245,18 +251,124 @@ jobs:
     if: always()
 
     steps:
-      - name: 📋 Check Container Status via Portainer
+      - name: 📋 Advanced Container Health Check via Portainer API
         run: |
           if [ -n "${{ env.PORTAINER_API_KEY }}" ]; then
-            echo "🔍 Checking container status..."
+            echo "🔍 Advanced SafeWork Container Health Analysis..."
 
-            containers=$(curl -s -H "X-API-Key: ${{ env.PORTAINER_API_KEY }}" \
-              "${{ env.PORTAINER_URL }}/api/endpoints/2/docker/containers/json" || echo "[]")
+            # Function to get container info from multiple endpoints
+            get_containers_info() {
+              local endpoint=$1
+              echo "Checking endpoint $endpoint..."
+              curl -s -H "X-API-Key: ${{ env.PORTAINER_API_KEY }}" \
+                "${{ env.PORTAINER_URL }}/api/endpoints/$endpoint/docker/containers/json?all=true" 2>/dev/null || echo "[]"
+            }
 
-            echo "📊 SafeWork Container Status:"
-            echo "$containers" | jq -r '.[] | select(.Names[0] | contains("safework")) | "\(.Names[0]): \(.State)"' || echo "No containers found"
+            # Check multiple Portainer endpoints (1, 2, 3 - common endpoint IDs)
+            SAFEWORK_CONTAINERS=""
+            for endpoint in 1 2 3; do
+              containers_json=$(get_containers_info "$endpoint")
+              safework_containers=$(echo "$containers_json" | jq -r '.[] | select(.Names[]? | test("safework|SafeWork"; "i")) | @base64' 2>/dev/null || echo "")
+
+              if [ -n "$safework_containers" ]; then
+                echo "✅ Found SafeWork containers on endpoint $endpoint"
+                ENDPOINT_FOUND="$endpoint"
+                break
+              fi
+            done
+
+            if [ -z "$safework_containers" ]; then
+              echo "❌ No SafeWork containers found on any endpoint"
+              echo "🔍 Listing all available containers for debugging:"
+              for endpoint in 1 2 3; do
+                containers_json=$(get_containers_info "$endpoint")
+                if [ "$containers_json" != "[]" ]; then
+                  echo "=== Endpoint $endpoint ==="
+                  echo "$containers_json" | jq -r '.[]?.Names[]? // "unnamed"' 2>/dev/null | head -10
+                fi
+              done
+              exit 1
+            fi
+
+            echo "📊 SafeWork Container Detailed Analysis (Endpoint: $ENDPOINT_FOUND):"
+            echo "=================================================="
+
+            # Analyze each SafeWork container
+            echo "$safework_containers" | while IFS= read -r container_base64; do
+              if [ -n "$container_base64" ]; then
+                container_info=$(echo "$container_base64" | base64 -d)
+
+                container_name=$(echo "$container_info" | jq -r '.Names[0] // "unknown"')
+                container_id=$(echo "$container_info" | jq -r '.Id // "unknown"')
+                container_state=$(echo "$container_info" | jq -r '.State // "unknown"')
+                container_status=$(echo "$container_info" | jq -r '.Status // "unknown"')
+                container_image=$(echo "$container_info" | jq -r '.Image // "unknown"')
+                created_time=$(echo "$container_info" | jq -r '.Created // 0')
+
+                echo "🐳 Container: $container_name"
+                echo "   ID: ${container_id:0:12}"
+                echo "   State: $container_state"
+                echo "   Status: $container_status"
+                echo "   Image: $container_image"
+
+                # Convert created time to human readable
+                if [ "$created_time" != "0" ] && [ "$created_time" != "null" ]; then
+                  created_date=$(date -d "@$created_time" '+%Y-%m-%d %H:%M:%S' 2>/dev/null || echo "unknown")
+                  echo "   Created: $created_date"
+                fi
+
+                # Check if container is recently updated (within last 10 minutes - Watchtower update indicator)
+                current_time=$(date +%s)
+                if [ "$created_time" != "0" ] && [ "$created_time" != "null" ]; then
+                  time_diff=$((current_time - created_time))
+                  if [ $time_diff -le 600 ]; then
+                    echo "   🔄 RECENTLY UPDATED (${time_diff}s ago) - Watchtower likely updated this container"
+                  fi
+                fi
+
+                # Check container health if available
+                health_status=$(echo "$container_info" | jq -r '.State.Health.Status // "no-healthcheck"')
+                if [ "$health_status" != "no-healthcheck" ]; then
+                  echo "   Health: $health_status"
+                fi
+
+                # Get detailed container stats
+                echo "   📈 Getting container stats..."
+                stats=$(curl -s -H "X-API-Key: ${{ env.PORTAINER_API_KEY }}" \
+                  "${{ env.PORTAINER_URL }}/api/endpoints/$ENDPOINT_FOUND/docker/containers/${container_id}/stats?stream=false" 2>/dev/null || echo "{}")
+
+                if [ "$stats" != "{}" ]; then
+                  cpu_usage=$(echo "$stats" | jq -r '.cpu_stats.cpu_usage.total_usage // 0' 2>/dev/null)
+                  memory_usage=$(echo "$stats" | jq -r '.memory_stats.usage // 0' 2>/dev/null)
+                  memory_limit=$(echo "$stats" | jq -r '.memory_stats.limit // 0' 2>/dev/null)
+
+                  if [ "$memory_usage" != "0" ] && [ "$memory_limit" != "0" ]; then
+                    memory_percent=$(echo "scale=1; $memory_usage * 100 / $memory_limit" | bc -l 2>/dev/null || echo "0")
+                    echo "   Memory: ${memory_percent}%"
+                  fi
+                fi
+
+                echo "   ----------------------------------"
+              fi
+            done
+
+            # Summary
+            total_containers=$(echo "$safework_containers" | wc -l)
+            running_containers=$(containers_json=$(get_containers_info "$ENDPOINT_FOUND"); echo "$containers_json" | jq -r '.[] | select(.Names[]? | test("safework|SafeWork"; "i")) | select(.State == "running") | .Names[0]' | wc -l)
+
+            echo "📋 Summary:"
+            echo "   Total SafeWork containers: $total_containers"
+            echo "   Running containers: $running_containers"
+            echo "   Portainer endpoint: $ENDPOINT_FOUND"
+
+            if [ "$running_containers" -eq "$total_containers" ] && [ "$total_containers" -gt 0 ]; then
+              echo "✅ All SafeWork containers are running healthy"
+            else
+              echo "⚠️ Some SafeWork containers may have issues"
+            fi
+
           else
-            echo "⚠️ Portainer API key not configured"
+            echo "⚠️ Portainer API key not configured - skipping detailed container analysis"
           fi
 
       - name: 📈 Performance Metrics
