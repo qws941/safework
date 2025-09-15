@@ -59,17 +59,18 @@ class User(UserMixin, db.Model):
 
 
 class SurveyModel(db.Model):
-    """Unified Survey Model - Based on Actual Database Schema"""
+    """Minimal Survey Model - Only Essential Database Columns"""
 
     __tablename__ = "surveys"
 
+    # 필수 필드만 포함 (실제 DB 스키마 기준)
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     
     # 양식 구분 필드
     form_type = db.Column(db.String(50), nullable=False)
     
-    # 기본 정보
+    # 기본 정보 (확실히 존재하는 컬럼만)
     name = db.Column(db.String(50))
     department = db.Column(db.String(50))
     position = db.Column(db.String(50))
@@ -77,68 +78,58 @@ class SurveyModel(db.Model):
     gender = db.Column(db.String(10))
     age = db.Column(db.Integer)
     years_of_service = db.Column(db.Integer)
-    # employment_type = db.Column(db.String(20))  # 임시 주석처리 - DB에 컬럼 없음
     employee_number = db.Column(db.String(50))
-    # hire_date = db.Column(db.Date)  # 임시 주석처리 - DB에 컬럼 없음
     
-    # 신체 정보
-    height_cm = db.Column(db.Numeric(5, 1))
-    weight_kg = db.Column(db.Numeric(5, 1))
-    blood_type = db.Column(db.String(10))
-    vision_left = db.Column(db.Numeric(3, 1))
-    vision_right = db.Column(db.Numeric(3, 1))
-    hearing_left = db.Column(db.String(20))
-    hearing_right = db.Column(db.String(20))
-    blood_pressure = db.Column(db.String(20))
+    # 업무 정보 (기본)
+    work_years = db.Column(db.Integer)
+    work_months = db.Column(db.Integer)
+    has_symptoms = db.Column(db.Boolean, default=False)
     
-    # 건강 정보
-    existing_conditions = db.Column(db.Text)
-    medication_history = db.Column(db.Text)
-    allergy_history = db.Column(db.Text)
-    surgery_history = db.Column(db.Text)
-    family_history = db.Column(db.Text)
-    
-    # 생활 습관
-    smoking_status = db.Column(db.String(20))
-    smoking_amount = db.Column(db.String(50))
-    drinking_status = db.Column(db.String(20))
-    drinking_amount = db.Column(db.String(50))
-    exercise_habits = db.Column(db.Text)
-    sleep_hours = db.Column(db.String(20))
-    
-    # 추가 정보
-    physical_limitations = db.Column(db.Text)
-    emergency_contact = db.Column(db.String(100))
-    special_considerations = db.Column(db.Text)
-    
-    # 업무 정보
-    work_area = db.Column(db.String(100))
-    work_hours_per_day = db.Column(db.Integer)
-    weekly_work_days = db.Column(db.Integer)
-    shift_type = db.Column(db.String(20))
-    physical_demand_level = db.Column(db.String(20))
-    job_satisfaction_score = db.Column(db.Integer)
-    stress_level = db.Column(db.String(20))
-    workplace_safety_rating = db.Column(db.Integer)
-    
-    # 설문 응답 데이터 (JSON)
-    responses = db.Column(db.JSON)
-    symptoms_data = db.Column(db.JSON)
-    
-    # 메타데이터
+    # 메타데이터 (필수)
     submission_date = db.Column(db.DateTime, default=kst_now)
     status = db.Column(db.String(20), default="submitted")
-    notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=kst_now)
     updated_at = db.Column(db.DateTime, default=kst_now, onupdate=kst_now)
     
-    # 추가 필드 (Foreign Keys)
-    company_id = db.Column(db.Integer)
-    process_id = db.Column(db.Integer)
-    role_id = db.Column(db.Integer)
-    has_symptoms = db.Column(db.Boolean, default=False)
-    work_years = db.Column(db.Integer)
-    work_months = db.Column(db.Integer)
+    # 설문 응답 데이터 (JSON - 나머지 모든 데이터 저장)
+    responses = db.Column(db.JSON)
+    
+    # 추가 필드들은 임시 주석처리 (DB 스키마 확인 후 점진적 추가)
+    # height_cm = db.Column(db.Numeric(5, 1))
+    # weight_kg = db.Column(db.Numeric(5, 1))
+    # blood_type = db.Column(db.String(10))
+    # vision_left = db.Column(db.Numeric(3, 1))
+    # vision_right = db.Column(db.Numeric(3, 1))
+    # hearing_left = db.Column(db.String(20))
+    # hearing_right = db.Column(db.String(20))
+    # blood_pressure = db.Column(db.String(20))
+    # existing_conditions = db.Column(db.Text)
+    # medication_history = db.Column(db.Text)
+    # allergy_history = db.Column(db.Text)
+    # surgery_history = db.Column(db.Text)
+    # family_history = db.Column(db.Text)
+    # smoking_status = db.Column(db.String(20))
+    # smoking_amount = db.Column(db.String(50))
+    # drinking_status = db.Column(db.String(20))
+    # drinking_amount = db.Column(db.String(50))
+    # exercise_habits = db.Column(db.Text)
+    # sleep_hours = db.Column(db.String(20))
+    # physical_limitations = db.Column(db.Text)
+    # emergency_contact = db.Column(db.String(100))
+    # special_considerations = db.Column(db.Text)
+    # work_area = db.Column(db.String(100))
+    # work_hours_per_day = db.Column(db.Integer)
+    # weekly_work_days = db.Column(db.Integer)
+    # shift_type = db.Column(db.String(20))
+    # physical_demand_level = db.Column(db.String(20))
+    # job_satisfaction_score = db.Column(db.Integer)
+    # stress_level = db.Column(db.String(20))
+    # workplace_safety_rating = db.Column(db.Integer)
+    # symptoms_data = db.Column(db.JSON)
+    # notes = db.Column(db.Text)
+    # company_id = db.Column(db.Integer)
+    # process_id = db.Column(db.Integer)
+    # role_id = db.Column(db.Integer)
 
     def __repr__(self):
         return f"<Survey {self.name or 'Anonymous'} - {self.form_type}>"
