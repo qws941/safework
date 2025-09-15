@@ -75,12 +75,8 @@ USER appuser
 HEALTHCHECK --interval=20s --timeout=10s --retries=5 --start-period=90s \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:4545/health')"
 
-# Watchtower labels for container management
+# Watchtower label for auto-updates
 LABEL com.centurylinklabs.watchtower.enable="true" \
-      com.centurylinklabs.watchtower.scope="safework" \
-      com.centurylinklabs.watchtower.lifecycle.pre-update="python -c 'print(\"Preparing app container update\")'" \
-      com.centurylinklabs.watchtower.lifecycle.post-update="echo 'SafeWork app container updated successfully'" \
-      com.centurylinklabs.watchtower.stop-timeout="45s" \
       maintainer="SafeWork Team" \
       org.label-schema.name="safework-app" \
       org.label-schema.description="SafeWork Flask Application - independent deployment"

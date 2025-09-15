@@ -4,12 +4,8 @@ FROM redis:7-alpine
 # Define volume for Redis data persistence
 VOLUME ["/data"]
 
-# Watchtower labels for container management
+# Watchtower label for auto-updates
 LABEL com.centurylinklabs.watchtower.enable="true" \
-      com.centurylinklabs.watchtower.scope="safework" \
-      com.centurylinklabs.watchtower.lifecycle.pre-update="redis-cli BGSAVE" \
-      com.centurylinklabs.watchtower.lifecycle.post-update="echo 'Redis container updated successfully'" \
-      com.centurylinklabs.watchtower.stop-timeout="30s" \
       maintainer="SafeWork Team" \
       org.label-schema.name="safework-redis" \
       org.label-schema.description="SafeWork Redis Cache with optimized configuration"
