@@ -1,11 +1,6 @@
 name: 📊 Operational Log Analysis
 
 on:
-  push:
-    branches: [master]
-    paths:
-      - 'app/**'
-      - '.github/workflows/operational-log-analysis.yml'
   workflow_dispatch:
     inputs:
       app_name:
