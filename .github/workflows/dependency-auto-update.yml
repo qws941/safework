@@ -1,6 +1,13 @@
 name: 🔄 Dependency Auto-Update
 
 on:
+  push:
+    branches: [master]
+    paths:
+      - 'requirements.txt'
+      - 'app/requirements.txt'
+      - 'package.json'
+      - '.github/workflows/dependency-auto-update.yml'
   workflow_dispatch:
     inputs:
       update_type:

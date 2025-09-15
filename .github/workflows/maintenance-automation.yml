@@ -5,6 +5,12 @@ concurrency:
   cancel-in-progress: false
 
 on:
+  push:
+    branches: [master]
+    paths:
+      - '.github/workflows/**'
+      - 'app/**'
+      - 'requirements.txt'
   workflow_dispatch:
     inputs:
       maintenance_type:
