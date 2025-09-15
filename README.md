@@ -1,8 +1,31 @@
-# SafeWork - Industrial Health & Safety Management System
+# 🏭 SafeWork - Industrial Health & Safety Management System
 
-## 🌟 **Enterprise-Grade Architecture - Independent Container Deployment**
+[![🚀 Production Deploy](https://github.com/qws941/safework/actions/workflows/deploy.yml/badge.svg)](https://github.com/qws941/safework/actions/workflows/deploy.yml)
+[![🤖 Claude AI Assistant](https://github.com/qws941/safework/actions/workflows/claude-mcp-assistant.yml/badge.svg)](https://github.com/qws941/safework/actions/workflows/claude-mcp-assistant.yml)
+[![🔧 Maintenance](https://github.com/qws941/safework/actions/workflows/maintenance-automation.yml/badge.svg)](https://github.com/qws941/safework/actions/workflows/maintenance-automation.yml)
 
-A comprehensive industrial health and safety management platform featuring musculoskeletal symptom surveys (001) and new employee health checkups (002), built with modern cloud-native architecture and PostgreSQL database.
+> **Advanced Industrial Safety Management System for Korean Construction/Industrial Environments**
+> Built with Flask 3.0+, SQLAlchemy 2.0, PostgreSQL 15+, Redis 7.0
+
+## 🌟 Key Features
+
+### 📋 **Survey System**
+- **Form 001**: Musculoskeletal Symptom Survey (근골격계 질환 증상 조사표)
+- **Form 002**: New Employee Health Checkup (신규 입사자 건강검진 양식)
+- **Anonymous Access**: Public survey submission without authentication
+- **Smart Validation**: Conditional JavaScript logic with real-time validation
+
+### 🛡️ **SafeWork Admin Dashboard**
+- **13 Specialized Management Panels**: Workers, Health Checks, Medications, MSDS, Safety Education
+- **Document Management**: Version-controlled system with access logging
+- **Audit Logging**: Comprehensive activity tracking with Korean timestamps (KST)
+- **MSDS Management**: Chemical safety data sheet system with OCR support
+
+### 🌐 **RESTful API v2**
+- **External Integrations**: `/api/safework/v2/*` endpoints
+- **JSON Responses**: Structured data exchange for third-party systems
+- **Authentication**: Token-based access control
+- **Rate Limiting**: API protection and performance optimization
 
 [![Deployment Status](https://img.shields.io/badge/deployment-automated-brightgreen)](https://github.com/qws941/safework2/actions)
 [![Database](https://img.shields.io/badge/database-PostgreSQL_15-336791)](https://postgresql.org/)

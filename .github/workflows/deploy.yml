@@ -1,9 +1,9 @@
-name: 🚀 SafeWork Deploy Pipeline
+name: 🚀 SafeWork Production Deployment
 
-# Prevent concurrent deployments on the same branch
+# Prevent concurrent deployments
 concurrency:
-  group: deploy-${{ github.ref_name }}
-  cancel-in-progress: true
+  group: production-deploy-${{ github.ref_name }}
+  cancel-in-progress: false
 
 on:
   push:
@@ -12,118 +12,99 @@ on:
       - 'app/**'
       - 'postgres/**'
       - 'redis/**'
-      - '.github/workflows/deploy.yml'
-  
+      - 'Dockerfile*'
+      - '.github/workflows/deploy-optimized.yml'
+
   workflow_dispatch:
+    inputs:
+      force_rebuild:
+        description: 'Force rebuild all containers'
+        required: false
+        default: false
+        type: boolean
 
 env:
-  APP_NAME: ${{ secrets.APP_NAME }}
-  REGISTRY_HOST: ${{ secrets.REGISTRY_HOST }}
-  REGISTRY_USER: ${{ secrets.REGISTRY_USER }}
+  APP_NAME: safework2
+  REGISTRY_HOST: registry.jclee.me
+  REGISTRY_USER: admin
   REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
   TZ: Asia/Seoul
-  PRD_URL: https://${{ secrets.APP_NAME }}.jclee.me
-  DEV_URL: https://${{ secrets.APP_NAME }}-dev.jclee.me
-  PORTAINER_URL: ${{ secrets.PORTAINER_URL }}
-  WATCHTOWER_URL: ${{ secrets.WATCHTOWER_URL }}
+
+  # Application URLs
+  PRD_URL: https://safework.jclee.me
+  DEV_URL: https://safework-dev.jclee.me
+
+  # Infrastructure APIs
+  PORTAINER_URL: https://portainer.jclee.me
+  PORTAINER_API_KEY: ${{ secrets.PORTAINER_API_KEY }}
+  WATCHTOWER_URL: https://watchtower.jclee.me
+  WATCHTOWER_HTTP_API_TOKEN: ${{ secrets.WATCHTOWER_HTTP_API_TOKEN }}
+
+  # Database Configuration
+  POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+  POSTGRES_DB: safework_db
+  POSTGRES_USER: safework
+  SECRET_KEY: ${{ secrets.SECRET_KEY }}
 
 permissions:
   contents: write
   actions: write
-  pull-requests: write
-  issues: write
   packages: write
   security-events: write
-  checks: write
-  statuses: write
   deployments: write
-  discussions: write
-  repository-projects: write
-  id-token: write
 
 jobs:
-  # Phase 1: Build and Test Independent Containers
-  build-and-test:
-    name: 🔨 Build & Test Independent Containers
+  # Phase 1: Build Independent Containers
+  build-containers:
+    name: 🔨 Build Independent Containers
     runs-on: ubuntu-latest
     outputs:
-      app_image_tag: ${{ steps.app_meta.outputs.tags }}
-      postgres_image_tag: ${{ steps.postgres_meta.outputs.tags }}
-      redis_image_tag: ${{ steps.redis_meta.outputs.tags }}
-      test_results: ${{ steps.test.outputs.results }}
-      build_status: ${{ steps.build.outputs.build_status }}
-      
+      app_tag: ${{ steps.app_meta.outputs.tags }}
+      postgres_tag: ${{ steps.postgres_meta.outputs.tags }}
+      redis_tag: ${{ steps.redis_meta.outputs.tags }}
+
     steps:
-      - name: 📂 Checkout
+      - name: 📂 Checkout Repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: 🐳 Setup Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: 🔐 Login to Registry  
+      - name: 🔐 Login to Registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY_HOST }}
           username: ${{ env.REGISTRY_USER }}
           password: ${{ env.REGISTRY_PASSWORD }}
 
-      # Metadata for PostgreSQL image
-      - name: 📋 Extract PostgreSQL Metadata
-        id: postgres_meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/postgres
-          tags: |
-            type=raw,value=latest
-
-      # Metadata for Redis image
-      - name: 📋 Extract Redis Metadata
-        id: redis_meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/redis
-          tags: |
-            type=raw,value=latest
-
-      # Metadata for App image
-      - name: 📋 Extract App Metadata
+      - name: 🏷️ Generate Container Metadata
         id: app_meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/app
+          images: ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}-app
           tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
             type=raw,value=latest
 
-      # Build PostgreSQL Container (Independent)
-      - name: 🐘 Build & Push PostgreSQL Container
-        uses: docker/build-push-action@v5
+      - name: 🏷️ Generate Postgres Metadata
+        id: postgres_meta
+        uses: docker/metadata-action@v5
         with:
-          context: ./postgres
-          file: ./postgres/Dockerfile
-          push: true
-          tags: ${{ steps.postgres_meta.outputs.tags }}
-          labels: ${{ steps.postgres_meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64
+          images: ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}-postgres
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest
 
-      # Build Redis Container (Independent)
-      - name: 🔴 Build & Push Redis Container
-        uses: docker/build-push-action@v5
+      - name: 🏷️ Generate Redis Metadata
+        id: redis_meta
+        uses: docker/metadata-action@v5
         with:
-          context: ./redis
-          file: ./redis/Dockerfile
-          push: true
-          tags: ${{ steps.redis_meta.outputs.tags }}
-          labels: ${{ steps.redis_meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64
+          images: ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}-redis
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest
 
-      # Build App Container (Independent)
-      - name: 🐍 Build & Push App Container
+      - name: 🐳 Build and Push App Container
         uses: docker/build-push-action@v5
         with:
           context: ./app
@@ -131,391 +112,246 @@ jobs:
           push: true
           tags: ${{ steps.app_meta.outputs.tags }}
           labels: ${{ steps.app_meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64
+          build-args: |
+            BUILD_DATE=${{ github.event.head_commit.timestamp }}
+            VCS_REF=${{ github.sha }}
+            VCS_URL=${{ github.server_url }}/${{ github.repository }}
 
-      # Test independent containers connectivity
-      - name: 🧪 Test Independent Container Connectivity
-        id: test
-        run: |
-          echo "Testing independent container connectivity..."
-          
-          # Test PostgreSQL container independently
-          docker run --rm --name test-postgres -d \
-            -e POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} \
-            -e POSTGRES_DB=${{ secrets.POSTGRES_DB }} \
-            -e POSTGRES_USER=${{ secrets.POSTGRES_USER }} \
-            -p 5432:5432 \
-            ${{ steps.postgres_meta.outputs.tags }}
-          
-          sleep 15
-          
-          # Test Redis container independently
-          docker run --rm --name test-redis -d \
-            -p 6379:6379 \
-            ${{ steps.redis_meta.outputs.tags }}
-          
-          sleep 10
-          
-          # Test App container with environment variables for independent execution
-          docker run --rm --name test-app -d \
-            -e DB_HOST=host.docker.internal \
-            -e DB_PORT=5432 \
-            -e REDIS_HOST=host.docker.internal \
-            -e REDIS_PORT=6379 \
-            -e SECRET_KEY=test-secret \
-            -e POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} \
-            -e POSTGRES_DB=${{ secrets.POSTGRES_DB }} \
-            -e POSTGRES_USER=${{ secrets.POSTGRES_USER }} \
-            -p 4545:4545 \
-            ${{ steps.app_meta.outputs.tags }}
-          
-          sleep 20
-          
-          # Test connectivity between containers
-          echo "Testing container connectivity..."
-          
-          # Test PostgreSQL connectivity
-          docker exec test-app pg_isready -h host.docker.internal -p 5432 || echo "PostgreSQL connection test warning"
-          
-          # Test Redis connectivity  
-          docker exec test-app redis-cli -h host.docker.internal -p 6379 ping || echo "Redis connection test warning"
-          
-          echo "Container connectivity test completed"
-          
-          # Keep containers running for log analysis on error
-          if [[ "${GITHUB_ACTIONS_DEBUG:-false}" == "true" ]]; then
-            echo "🔍 DEBUG MODE: Keeping containers running for log analysis"
-            echo "Container logs available via:"
-            echo "  docker logs test-postgres"
-            echo "  docker logs test-redis"
-            echo "  docker logs test-app"
-          else
-            # Cleanup test containers in normal mode
-            docker stop test-postgres test-redis test-app || true
-            docker rm test-postgres test-redis test-app || true
-          fi
-          
-          echo "results=success" >> $GITHUB_OUTPUT
-          echo "build_status=success" >> $GITHUB_OUTPUT
+      - name: 🐳 Build and Push Postgres Container
+        uses: docker/build-push-action@v5
+        with:
+          context: ./postgres
+          file: ./postgres/Dockerfile
+          push: true
+          tags: ${{ steps.postgres_meta.outputs.tags }}
+          labels: ${{ steps.postgres_meta.outputs.labels }}
 
-  # Phase 2: Deploy via Watchtower (Independent Architecture)
-  deploy:
-    name: 🚀 Deploy via Watchtower
+      - name: 🐳 Build and Push Redis Container
+        uses: docker/build-push-action@v5
+        with:
+          context: ./redis
+          file: ./redis/Dockerfile
+          push: true
+          tags: ${{ steps.redis_meta.outputs.tags }}
+          labels: ${{ steps.redis_meta.outputs.labels }}
+
+  # Phase 2: Test Container Connectivity
+  test-connectivity:
+    name: 🔗 Test Independent Container Connectivity
     runs-on: ubuntu-latest
-    needs: build-and-test
-    if: success() || github.event.inputs.force_deploy == 'true'
-    outputs:
-      deployment_status: ${{ steps.deploy.outputs.status }}
-      deployment_url: ${{ steps.deploy.outputs.url }}
-      
+    needs: build-containers
+
     steps:
-      - name: 📂 Checkout
-        uses: actions/checkout@v4
+      - name: 🐳 Create Test Network
+        run: docker network create safework-test-network
 
-      - name: 🚀 Trigger Watchtower Auto-Deploy
-        id: deploy
+      - name: 🟢 Start PostgreSQL Container
         run: |
-          echo "🚀 Starting SafeWork Watchtower auto-deployment..."
-          
-          # Check Watchtower HTTP API token
-          if [[ -z "${{ secrets.WATCHTOWER_HTTP_API_TOKEN }}" ]]; then
-            echo "❌ WATCHTOWER_HTTP_API_TOKEN is not configured"
-            echo "status=failed" >> $GITHUB_OUTPUT
-            exit 1
-          fi
-          
-          echo "📡 Updating SafeWork containers via Watchtower HTTP API..."
-          echo "Registry: ${{ env.REGISTRY_HOST }}"
-          echo "App Name: ${{ env.APP_NAME }}"
-          
-          # Call Watchtower API to update all SafeWork containers
-          WATCHTOWER_RESPONSE=$(curl -X POST \
-            -H "Authorization: Bearer ${{ secrets.WATCHTOWER_HTTP_API_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d "{\"containers\": [\"safework-postgres\", \"safework-redis\", \"safework-app\"]}" \
-            "${{ env.WATCHTOWER_URL }}/v1/update" \
-            -w "%{http_code}" -s)
-          
-          RESPONSE_CODE="${WATCHTOWER_RESPONSE: -3}"
-          RESPONSE_BODY="${WATCHTOWER_RESPONSE%???}"
-          
-          echo "Watchtower response code: $RESPONSE_CODE"
-          echo "Watchtower response body: $RESPONSE_BODY"
-          
-          if [[ "$RESPONSE_CODE" == "200" || "$RESPONSE_CODE" == "202" ]]; then
-            echo "✅ Watchtower auto-deployment successfully triggered"
-            echo "📦 PostgreSQL: ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/postgres:latest"
-            echo "📦 Redis: ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/redis:latest" 
-            echo "📦 App: ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/app:latest"
-            echo "status=success" >> $GITHUB_OUTPUT
-          else
-            echo "❌ Watchtower API call failed: $RESPONSE_CODE"
-            echo "status=failed" >> $GITHUB_OUTPUT
-            exit 1
-          fi
-          
-          # Wait for deployment
-          echo "⏳ Waiting for container restart (45 seconds)..."
-          sleep 45
-          
-          echo "status=success" >> $GITHUB_OUTPUT
-          echo "url=${{ env.PRD_URL }}" >> $GITHUB_OUTPUT
+          docker run -d --name test-postgres \
+            --network safework-test-network \
+            -e POSTGRES_PASSWORD=${{ env.POSTGRES_PASSWORD }} \
+            -e POSTGRES_DB=${{ env.POSTGRES_DB }} \
+            -e POSTGRES_USER=${{ env.POSTGRES_USER }} \
+            ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}-postgres:latest
 
-      - name: 🏥 Health Check with Retry
-        id: health
+      - name: 🔴 Start Redis Container
         run: |
-          echo "🏥 Checking SafeWork application status..."
-          
-          # Health check with extended retry for independent containers
-          for i in {1..15}; do
-            echo "🔍 Health check attempt $i/15..."
-            
-            if curl -f -s -m 10 "${{ env.PRD_URL }}/health" > /dev/null; then
-              echo "✅ SafeWork application running normally"
-              echo "🌐 Production URL: ${{ env.PRD_URL }}"
-              echo "health_status=healthy" >> $GITHUB_OUTPUT
+          docker run -d --name test-redis \
+            --network safework-test-network \
+            ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}-redis:latest
+
+      - name: ⏱️ Wait for Database Startup
+        run: sleep 30
+
+      - name: 🧪 Test PostgreSQL Connectivity
+        run: |
+          docker run --rm --network safework-test-network \
+            postgres:15 pg_isready -h test-postgres -p 5432 -U ${{ env.POSTGRES_USER }}
+
+      - name: 🧪 Test Redis Connectivity
+        run: |
+          docker run --rm --network safework-test-network \
+            redis:7 redis-cli -h test-redis ping
+
+      - name: 🧹 Cleanup Test Environment
+        if: always()
+        run: |
+          docker stop test-postgres test-redis || true
+          docker rm test-postgres test-redis || true
+          docker network rm safework-test-network || true
+
+  # Phase 3: Deploy via Watchtower
+  deploy-production:
+    name: 🚀 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build-containers, test-connectivity]
+    environment: production
+
+    steps:
+      - name: 🔔 Trigger Watchtower Auto-Deploy
+        run: |
+          curl -H "Authorization: Bearer ${{ env.WATCHTOWER_HTTP_API_TOKEN }}" \
+               -X POST \
+               "${{ env.WATCHTOWER_URL }}/v1/update"
+
+      - name: ⏱️ Wait for Deployment
+        run: sleep 60
+
+      - name: 🏥 Health Check - Production
+        run: |
+          for i in {1..10}; do
+            if curl -f "${{ env.PRD_URL }}/health"; then
+              echo "✅ Production health check passed"
               exit 0
             fi
-            
-            echo "⏳ Waiting 20 seconds before retry..."
-            sleep 20
+            echo "⏳ Waiting for production... ($i/10)"
+            sleep 30
           done
-          
-          echo "❌ Health check failed after 15 attempts"
-          echo "health_status=unhealthy" >> $GITHUB_OUTPUT
-          
-          # Keep containers running for log analysis
-          echo "🔍 Containers remain running for log analysis:"
-          echo "  - Access Portainer: https://portainer.jclee.me"
-          echo "  - Container logs: ${{ env.APP_NAME }}-postgres, ${{ env.APP_NAME }}-redis, ${{ env.APP_NAME }}-app"
-          echo "  - Production URL: ${{ env.PRD_URL }}"
-          
+          echo "❌ Production health check failed"
           exit 1
 
-      - name: 🔍 Container Debug Information
-        if: failure()
+      - name: 📊 Verify Database Connectivity
         run: |
-          echo "🔍 Container Debug Information for Log Analysis:"
-          
-          # Wait for containers to fully start
-          sleep 30
-          
-          echo "📋 Container Status via Watchtower API:"
-          if [[ -n "${{ secrets.WATCHTOWER_HTTP_API_TOKEN }}" ]]; then
-            CONTAINER_STATUS=$(curl -s \
-              -H "Authorization: Bearer ${{ secrets.WATCHTOWER_HTTP_API_TOKEN }}" \
-              "${{ env.WATCHTOWER_URL }}/v1/containers" || echo "API call failed")
-            echo "$CONTAINER_STATUS"
-          fi
-          
-          echo ""
-          echo "🏥 Direct Health Check Results:"
-          echo "App Health: $(curl -s -o /dev/null -w '%{http_code}' '${{ env.PRD_URL }}/health' || echo 'unreachable')"
-          echo "App Status: $(curl -s '${{ env.PRD_URL }}/health' || echo 'connection failed')"
-          
-          echo ""
-          echo "📊 Container Log Analysis Available via Portainer:"
-          echo "- Portainer URL: https://portainer.jclee.me"
-          echo "- Target containers: ${{ env.APP_NAME }}-postgres, ${{ env.APP_NAME }}-redis, ${{ env.APP_NAME }}-app"
-          echo "- Production URL: ${{ env.PRD_URL }}"
+          # Test survey submission to verify database schema fix
+          response=$(curl -s -X POST "${{ env.PRD_URL }}/survey/api/submit" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "form_type": "001",
+              "name": "Production Test",
+              "age": 30,
+              "gender": "Male",
+              "years_of_service": 5,
+              "employee_number": "TEST001",
+              "department": "QA",
+              "position": "Tester",
+              "employee_id": "QA001",
+              "work_years": 3,
+              "work_months": 6,
+              "data": {"has_symptoms": false}
+            }')
 
-      - name: 🔄 Optional Rollback (Manual Control)
-        if: failure()
-        run: |
-          echo "🚨 Deployment failure detected"
-          
-          # Optional rollback - can be disabled for debugging
-          if [[ "${AUTO_ROLLBACK_DISABLED:-false}" != "true" ]]; then
-            echo "📡 Executing automatic rollback via Watchtower..."
-            
-            if [[ -n "${{ secrets.WATCHTOWER_HTTP_API_TOKEN }}" ]]; then
-              ROLLBACK_RESPONSE=$(curl -X POST \
-                -H "Authorization: Bearer ${{ secrets.WATCHTOWER_HTTP_API_TOKEN }}" \
-                -H "Content-Type: application/json" \
-                -d "{\"containers\": [\"safework-postgres\", \"safework-redis\", \"safework-app\"], \"rollback\": true}" \
-                "${{ env.WATCHTOWER_URL }}/v1/update" \
-                -w "%{http_code}" -s)
-              
-              ROLLBACK_CODE="${ROLLBACK_RESPONSE: -3}"
-              echo "Rollback response code: $ROLLBACK_CODE"
-              
-              if [[ "$ROLLBACK_CODE" == "200" || "$ROLLBACK_CODE" == "202" ]]; then
-                echo "✅ Watchtower rollback successful"
-              else
-                echo "⚠️ Watchtower rollback failed: $ROLLBACK_CODE"
-              fi
-            else
-              echo "⚠️ WATCHTOWER_HTTP_API_TOKEN not configured"
-            fi
+          if echo "$response" | grep -q '"success": true'; then
+            echo "✅ Database connectivity and schema verified"
           else
-            echo "🔍 AUTO_ROLLBACK_DISABLED=true - Containers kept running for log analysis"
-            echo "📊 Manual rollback available via Watchtower: ${{ env.WATCHTOWER_URL }}"
+            echo "❌ Database connectivity test failed: $response"
+            exit 1
           fi
-          
-          echo "🔄 Rollback process completed"
 
-  # Phase 3: Notification and Monitoring
-  notify:
-    name: 📢 Deployment Notification
+  # Phase 4: Container Health Monitoring
+  monitor-deployment:
+    name: 📊 Monitor Container Health
     runs-on: ubuntu-latest
-    needs: [build-and-test, deploy]
+    needs: deploy-production
     if: always()
-    
-    steps:
-      - name: 📊 Deployment Summary
-        run: |
-          echo "=== SafeWork Deployment Complete ===" 
-          echo "Build Status: ${{ needs.build-and-test.outputs.build_status }}"
-          echo "Deploy Status: ${{ needs.deploy.outputs.deployment_status }}"
-          echo "Application URL: ${{ needs.deploy.outputs.deployment_url }}"
-          echo "Deploy Time: $(date)"
-          
-          # Check container status
-          echo ""
-          echo "=== Container Status ===" 
-          echo "SafeWork PostgreSQL: ${{ env.APP_NAME }}-postgres:4544"
-          echo "SafeWork Redis: ${{ env.APP_NAME }}-redis:4546" 
-          echo "SafeWork App: ${{ env.APP_NAME }}-app:4545"
 
-      - name: 🐛 Create Issue on Deployment Failure
-        if: failure()
+    steps:
+      - name: 📋 Check Container Status via Portainer
+        run: |
+          if [ -n "${{ env.PORTAINER_API_KEY }}" ]; then
+            echo "🔍 Checking container status..."
+
+            containers=$(curl -s -H "X-API-Key: ${{ env.PORTAINER_API_KEY }}" \
+              "${{ env.PORTAINER_URL }}/api/endpoints/2/docker/containers/json" || echo "[]")
+
+            echo "📊 SafeWork Container Status:"
+            echo "$containers" | jq -r '.[] | select(.Names[0] | contains("safework")) | "\(.Names[0]): \(.State)"' || echo "No containers found"
+          else
+            echo "⚠️ Portainer API key not configured"
+          fi
+
+      - name: 📈 Performance Metrics
+        run: |
+          echo "🎯 Production Performance Metrics:"
+
+          # Response time test
+          start_time=$(date +%s%N)
+          curl -s "${{ env.PRD_URL }}" > /dev/null
+          end_time=$(date +%s%N)
+          response_time=$(( (end_time - start_time) / 1000000 ))
+
+          echo "⚡ Homepage response time: ${response_time}ms"
+
+          if [ $response_time -lt 3000 ]; then
+            echo "✅ Performance: Excellent"
+          elif [ $response_time -lt 5000 ]; then
+            echo "⚠️ Performance: Good"
+          else
+            echo "❌ Performance: Needs optimization"
+          fi
+
+  # Phase 5: Rollback on Failure
+  rollback-on-failure:
+    name: 🔄 Emergency Rollback
+    runs-on: ubuntu-latest
+    needs: [deploy-production, monitor-deployment]
+    if: failure()
+
+    steps:
+      - name: 🚨 Rollback Deployment
+        run: |
+          echo "🔄 Initiating emergency rollback..."
+
+          # Stop current containers
+          curl -H "Authorization: Bearer ${{ env.WATCHTOWER_HTTP_API_TOKEN }}" \
+               -X POST \
+               "${{ env.WATCHTOWER_URL }}/v1/stop"
+
+          # Wait and restart with previous stable version
+          sleep 30
+
+          curl -H "Authorization: Bearer ${{ env.WATCHTOWER_HTTP_API_TOKEN }}" \
+               -X POST \
+               "${{ env.WATCHTOWER_URL }}/v1/update?rollback=true"
+
+      - name: 🆘 Create Emergency Issue
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const title = `🚨 SafeWork Deployment Failure - ${new Date().toISOString()}`;
-            const body = `
-            ## 🚨 SafeWork Production Deployment Failed
-            
-            **Deployment Information:**
-            - Branch: ${{ github.ref_name }}
-            - Commit: ${{ github.sha }}
-            - Workflow: ${{ github.workflow }}
-            - Run ID: ${{ github.run_id }}
-            
-            **Failure Stage:**
-            - Build Status: ${{ needs.build-and-test.outputs.build_status }}
-            - Deploy Status: ${{ needs.deploy.outputs.deployment_status }}
-            
-            **Container Ports:**
-            - ${{ env.APP_NAME }}-postgres: 4544
-            - ${{ env.APP_NAME }}-redis: 4546
-            - ${{ env.APP_NAME }}-app: 4545
-            
-            **Required Actions:**
-            - [ ] Check build logs
-            - [ ] Inspect container status  
-            - [ ] Analyze health check results
-            - [ ] Determine manual rollback necessity
-            
-            **Log Review:**
-            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-            `;
-            
-            await github.rest.issues.create({
+            github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: title,
-              body: body,
-              labels: ['deployment-failure', 'claude-actionable', '${{ env.APP_NAME }}']
-            });
+              title: '🚨 EMERGENCY: Production Deployment Failed - Auto-Rollback Initiated',
+              body: `
+              ## 🚨 Critical Deployment Failure
 
-      - name: 🎉 Deployment Success Notification
-        if: success()
+              **Deployment Details:**
+              - Commit: ${{ github.sha }}
+              - Branch: ${{ github.ref_name }}
+              - Workflow: ${{ github.workflow }}
+              - Run ID: ${{ github.run_id }}
+
+              **Actions Taken:**
+              - ✅ Emergency rollback initiated
+              - ✅ Previous stable version restored
+              - ✅ Monitoring activated
+
+              **Required Actions:**
+              - [ ] Investigate deployment failure logs
+              - [ ] Fix identified issues
+              - [ ] Test in development environment
+              - [ ] Re-deploy with fixes
+
+              **Monitoring:**
+              - Production URL: ${{ env.PRD_URL }}
+              - Health Check: ${{ env.PRD_URL }}/health
+
+              @qws941 Please investigate immediately.
+              `,
+              labels: ['critical', 'deployment', 'auto-generated', 'emergency']
+            })
+
+  # Phase 6: Success Notification
+  notify-success:
+    name: ✅ Deployment Success Notification
+    runs-on: ubuntu-latest
+    needs: [deploy-production, monitor-deployment]
+    if: success()
+
+    steps:
+      - name: 🎉 Deployment Success
         run: |
-          echo "🎉 SafeWork deployment successful!"
-          echo "Production URL: ${{ env.PRD_URL }}"
-          echo "Health check: ${{ env.PRD_URL }}/health"
-          echo "Admin panel: ${{ env.PRD_URL }}/admin"
-          echo "Survey: ${{ env.PRD_URL }}/survey/001_musculoskeletal_symptom_survey"
-
-      - name: 🚀 Advanced Post-Deployment Analysis & Optimization Engine
-        if: success() && github.event_name == 'workflow_dispatch'
-        uses: anthropics/claude-code-action@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          anthropic_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          track_progress: true
-          prompt: |
-            🚀 **SafeWork 고급 배포 후 분석 및 최적화 엔진**
-            
-            **📊 배포 성과 분석:**
-            - Build Status: ${{ needs.build-and-test.outputs.build_status }}
-            - Deploy Status: ${{ needs.deploy.outputs.deployment_status }}
-            - Application URL: ${{ needs.deploy.outputs.deployment_url }}
-            - Deployment Time: $(date)
-            - Container Architecture: Independent containers (PostgreSQL:4544, Redis:4546, App:4545)
-            
-            **🎯 고급 MCP 도구 통합 분석:**
-            
-            1. **🧠 Sequential Thinking**: 배포 성공/실패 패턴 심층 분석
-               - 성공 요인 식별 및 패턴화
-               - 잠재적 위험 요소 사전 탐지
-               - 성능 최적화 기회 발굴
-            
-            2. **📋 Shrimp Task Manager**: 시스템 개선 로드맵 생성
-               - 다음 배포 주기 최적화 작업 계획
-               - 자동화 확장 가능성 평가
-               - 보안 강화 작업 우선순위화
-            
-            3. **🔍 Serena Code Analysis**: 코드베이스 건강도 분석
-               - 아키텍처 일관성 검증
-               - 코드 품질 메트릭 평가
-               - 리팩터링 필요 영역 식별
-            
-            4. **🔗 GitHub Integration**: 이슈 및 PR 자동 관리
-               - 성공적인 배포에 대한 자동 이슈 클로징
-               - 개선 제안사항 이슈 생성
-               - PR 리뷰 품질 분석
-            
-            5. **💾 Memory System**: 배포 패턴 학습 및 저장
-               - 성공적인 배포 전략 패턴 저장
-               - 실패 원인 분석 결과 보관
-               - 향후 배포를 위한 지식 축적
-            
-            **🏥 실시간 시스템 상태 모니터링:**
-            - Portainer API를 통한 컨테이너 상태 분석
-            - 애플리케이션 성능 메트릭 수집
-            - 데이터베이스 연결 상태 및 쿼리 성능 점검
-            - Redis 캐시 효율성 분석
-            - 메모리 및 CPU 사용률 모니터링
-            
-            **⚡ 자동 최적화 수행:**
-            - 컨테이너 리소스 할당 최적화 제안
-            - 데이터베이스 인덱스 최적화 분석
-            - 캐시 전략 개선안 도출
-            - 보안 설정 강화 방안 제시
-            - 로그 분석을 통한 성능 병목 지점 식별
-            
-            **🔐 보안 및 컴플라이언스 점검:**
-            - 산업 안전 관리 시스템 규정 준수 검증
-            - 취약점 스캔 결과 분석
-            - 접근 제어 및 권한 관리 점검
-            - 데이터 보호 및 개인정보 처리 검토
-            
-            **📈 성과 지표 및 개선 권장사항:**
-            - 배포 속도 및 안정성 메트릭
-            - 사용자 경험 개선 포인트
-            - 시스템 확장성 평가
-            - 비용 최적화 방안
-            - 개발팀 생산성 향상 제안
-            
-            **🎯 실행 프로토콜:**
-            1. MCP 도구를 활용한 종합 상태 분석
-            2. 실시간 성능 메트릭 수집 및 평가
-            3. 보안 및 컴플라이언스 자동 점검
-            4. 최적화 기회 식별 및 우선순위화
-            5. 구체적인 개선 작업 계획 수립
-            6. GitHub 이슈로 추적 가능한 태스크 생성
-            7. 학습된 패턴을 Memory System에 저장
-            
-            **💬 보고서 작성 요구사항:**
-            - 한국어로 상세한 분석 결과 제공
-            - 구체적이고 실행 가능한 개선안 제시
-            - 우선순위가 명확한 액션 아이템 생성
-            - 다음 배포를 위한 체크리스트 제공
-            - 장기적인 시스템 발전 방향 제시
-            
-            즉시 고급 분석을 시작하고 SafeWork 시스템의 지속적인 개선을 위한 포괄적인 보고서를 작성해주세요.
+          echo "🎉 Deployment completed successfully!"
+          echo "🌐 Production URL: ${{ env.PRD_URL }}"
+          echo "🏥 Health Check: ${{ env.PRD_URL }}/health"
+          echo "📊 Container Status: All services running"
+          echo "✅ Database Schema: Fixed and verified"

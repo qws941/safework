@@ -1,0 +1,178 @@
+name: 🤖 Claude AI Assistant with Advanced MCP Integration
+
+concurrency:
+  group: claude-mcp-${{ github.repository }}
+  cancel-in-progress: true
+
+on:
+  issue_comment:
+    types: [created]
+  issues:
+    types: [opened, labeled]
+  pull_request:
+    types: [opened, synchronize]
+
+  workflow_dispatch:
+    inputs:
+      task_type:
+        description: 'MCP Task Type'
+        required: true
+        default: 'general'
+        type: choice
+        options:
+        - general
+        - code-analysis
+        - task-planning
+        - sequential-thinking
+        - serena-editing
+        - shrimp-management
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  checks: write
+  actions: write
+  security-events: write
+
+env:
+  CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  claude-mcp-assistant:
+    name: 🧠 Claude with MCP Tools Integration
+    runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.labels.*.name, 'claude-actionable') || contains(github.event.issue.labels.*.name, 'needs-analysis'))) ||
+      (github.event_name == 'pull_request') ||
+      (github.event_name == 'workflow_dispatch')
+
+    steps:
+      - name: 📂 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🤖 Advanced Claude Code Action with MCP
+        uses: anthropics/claude-code-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          anthropic_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          trigger_phrase: "@claude"
+          prompt: |
+            🤖 **SafeWork Advanced AI Assistant with MCP Integration**
+
+            **🏭 Project Context:**
+            - **SafeWork**: Industrial health and safety management system
+            - **Tech Stack**: Flask 3.0+, SQLAlchemy, PostgreSQL, Redis, Docker
+            - **Language**: Korean interface, English development
+            - **Domain**: Korean construction/industrial safety compliance
+
+            **🧰 Available MCP Tools Integration:**
+
+            **1. 🎯 Sequential Thinking MCP** (`mcp__sequential-thinking__sequentialthinking`):
+            - Complex problem decomposition
+            - Multi-step reasoning chains
+            - Decision tree analysis
+            - Systematic troubleshooting
+
+            **2. 🔍 Serena Code Analysis MCP** (`mcp__serena__*`):
+            - Deep codebase analysis
+            - Symbol-level editing
+            - Architectural understanding
+            - Intelligent refactoring
+
+            **3. 📋 Shrimp Task Management MCP** (`mcp__shrimp-task-manager__*`):
+            - Complex task planning
+            - Dependency management
+            - Progress tracking
+            - Workflow optimization
+
+            **4. 🧠 Memory System MCP** (`mcp__memory__*`):
+            - Pattern learning
+            - Context persistence
+            - Knowledge graph
+            - Experience retention
+
+            **🎯 Task Analysis Protocol:**
+
+            **For Issues/Comments:**
+            1. **Context Analysis**: Use sequential thinking to understand the problem
+            2. **Code Investigation**: Use Serena MCP for deep code analysis
+            3. **Task Planning**: Use Shrimp MCP for systematic approach
+            4. **Solution Implementation**: Execute with appropriate MCP tools
+            5. **Learning**: Store patterns in memory MCP
+
+            **For Pull Requests:**
+            1. **Code Review**: Comprehensive analysis using Serena MCP
+            2. **Quality Assessment**: Multiple quality dimensions
+            3. **Improvement Suggestions**: Actionable recommendations
+            4. **Test Validation**: Ensure test coverage and quality
+
+            **🏗️ SafeWork-Specific Intelligence:**
+
+            **Database Schema Management:**
+            - Survey model optimization for Korean forms
+            - PostgreSQL performance tuning
+            - Schema migration strategies
+
+            **Industrial Safety Compliance:**
+            - Korean KOSHA regulations
+            - Data protection (PIPA compliance)
+            - Worker privacy protection
+
+            **Container Architecture:**
+            - Independent container deployment
+            - Watchtower auto-deployment
+            - Health monitoring and rollback
+
+            **📊 Output Requirements:**
+
+            **Issue Analysis:**
+            - 🎯 Problem classification and severity
+            - 🔍 Root cause analysis using MCP tools
+            - 🛠️ Step-by-step solution plan
+            - 🧪 Testing and validation approach
+            - 📚 Knowledge retention for future issues
+
+            **Code Review:**
+            - 📈 Quality score (1-100) across 5 dimensions
+            - 🔒 Security vulnerability assessment
+            - ⚡ Performance optimization opportunities
+            - 🧹 Code organization and maintainability
+            - 🎯 SafeWork domain-specific improvements
+
+            **Task Management:**
+            - 📋 Structured task breakdown using Shrimp MCP
+            - 📅 Timeline and dependency analysis
+            - 🎯 Priority assessment and resource allocation
+            - 🔄 Progress tracking mechanisms
+
+            **🌐 Language Protocol:**
+            - **User Communication**: Korean (한국어) for business context
+            - **Technical Details**: English for code and logs
+            - **Documentation**: Bilingual with Korean priority
+            - **Error Messages**: Korean for user-facing, English for technical
+
+            **🚀 Automation Intelligence:**
+            - **Self-Healing**: Detect and fix common issues automatically
+            - **Predictive**: Anticipate problems before they occur
+            - **Learning**: Improve responses based on outcomes
+            - **Adaptive**: Adjust strategies based on project evolution
+
+            **Current Task Type**: ${{ github.event.inputs.task_type || 'auto-detected' }}
+            **Trigger Context**: ${{ github.event_name }}
+
+            Please analyze the current context and provide comprehensive assistance using the appropriate MCP tools for optimal results.
+
+      - name: 📊 MCP Integration Summary
+        if: always()
+        run: |
+          echo "🤖 Claude MCP Assistant Execution Summary"
+          echo "Task Type: ${{ github.event.inputs.task_type || 'auto-detected' }}"
+          echo "Trigger: ${{ github.event_name }}"
+          echo "Repository: ${{ github.repository }}"
+          echo "Status: ${{ job.status }}"
+          echo "Timestamp: $(date)"
