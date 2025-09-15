@@ -85,13 +85,12 @@ class SurveyModel(db.Model):
     work_months = db.Column(db.Integer)
     has_symptoms = db.Column(db.Boolean, default=False)
     
-    # 메타데이터 (필수)
-    submission_date = db.Column(db.DateTime, default=kst_now)
+    # 메타데이터 (최소한)
     status = db.Column(db.String(20), default="submitted")
     created_at = db.Column(db.DateTime, default=kst_now)
     updated_at = db.Column(db.DateTime, default=kst_now, onupdate=kst_now)
     
-    # 설문 응답 데이터 (JSON - 나머지 모든 데이터 저장)
+    # 설문 응답 데이터 (JSON - 모든 추가 데이터 저장)
     responses = db.Column(db.JSON)
     
     # 추가 필드들은 임시 주석처리 (DB 스키마 확인 후 점진적 추가)
