@@ -42,10 +42,10 @@ class User(UserMixin, db.Model):
 
     # Relationships
     surveys = db.relationship(
-        "Survey", foreign_keys="Survey.user_id", backref="user", lazy="dynamic"
+        "SurveyModel", foreign_keys="SurveyModel.user_id", backref="user", lazy="dynamic"
     )
     audit_logs = db.relationship(
-        "AuditLog", foreign_keys="AuditLog.user_id", backref="user", lazy="dynamic"
+        "AuditLogModel", foreign_keys="AuditLogModel.user_id", backref="user", lazy="dynamic"
     )
 
     def set_password(self, password):
