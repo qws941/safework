@@ -21,9 +21,6 @@ on:
         - code-analysis
         - task-planning
         - thinking
-  workflow_run:
-    workflows: ["🚀 SafeWork Deploy Pipeline"]
-    types: [completed]
 
 permissions:
   contents: write
@@ -41,11 +38,8 @@ jobs:
   claude:
     if: |
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'issues' && contains(github.event.issue.labels.*.name, 'claude-actionable')) ||
-      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
-      (github.event_name == 'pull_request' && (contains(github.event.pull_request.title, '[claude]') || contains(github.event.pull_request.body, '@claude'))) ||
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'failure')
+      (github.event_name == 'workflow_dispatch')
       
     runs-on: ubuntu-latest
     timeout-minutes: 30

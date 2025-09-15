@@ -993,11 +993,11 @@ def safework_medical_visit_form():
     """의무실 방문 기록 입력 폼"""
     return render_template("admin/safework_medical_visit_form.html")
 
-@admin_bp.route("/safework/medication/inventory-advanced")
+@admin_bp.route("/safework/medication/inventory")
 @admin_required
-def safework_medication_inventory_advanced():
-    """고급 의약품 재고 관리"""
-    return render_template("admin/safework_medication_inventory_advanced.html")
+def safework_medication_inventory():
+    """의약품 재고 관리"""
+    return render_template("admin/safework_medication_inventory.html")
 
 @admin_bp.route("/safework/notifications")
 @admin_required

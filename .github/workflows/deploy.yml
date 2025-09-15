@@ -234,7 +234,7 @@ jobs:
           WATCHTOWER_RESPONSE=$(curl -X POST \
             -H "Authorization: Bearer ${{ secrets.WATCHTOWER_HTTP_API_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d "{\"containers\": [\"${{ env.APP_NAME }}-postgres\", \"${{ env.APP_NAME }}-redis\", \"${{ env.APP_NAME }}-app\"]}" \
+            -d "{\"containers\": [\"safework-postgres\", \"safework-redis\", \"safework-app\"]}" \
             "${{ env.WATCHTOWER_URL }}/v1/update" \
             -w "%{http_code}" -s)
           
@@ -334,7 +334,7 @@ jobs:
               ROLLBACK_RESPONSE=$(curl -X POST \
                 -H "Authorization: Bearer ${{ secrets.WATCHTOWER_HTTP_API_TOKEN }}" \
                 -H "Content-Type: application/json" \
-                -d "{\"containers\": [\"${{ env.APP_NAME }}-postgres\", \"${{ env.APP_NAME }}-redis\", \"${{ env.APP_NAME }}-app\"], \"rollback\": true}" \
+                -d "{\"containers\": [\"safework-postgres\", \"safework-redis\", \"safework-app\"], \"rollback\": true}" \
                 "${{ env.WATCHTOWER_URL }}/v1/update" \
                 -w "%{http_code}" -s)
               
