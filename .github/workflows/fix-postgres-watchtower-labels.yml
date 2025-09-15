@@ -1,0 +1,282 @@
+name: 🔧 Fix PostgreSQL Watchtower Labels
+
+on:
+  workflow_dispatch:
+    inputs:
+      container_name:
+        description: 'PostgreSQL container name to fix (leave empty to auto-detect)'
+        required: false
+        default: ''
+        type: string
+      dry_run:
+        description: 'Dry run - only show what would be done'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  actions: write
+
+env:
+  PORTAINER_URL: https://portainer.jclee.me
+  PORTAINER_API_KEY: ${{ secrets.PORTAINER_API_KEY }}
+
+jobs:
+  fix-postgres-labels:
+    name: 🔧 Add Watchtower Labels to PostgreSQL Container
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 🔍 Find PostgreSQL Container
+        id: find_container
+        run: |
+          echo "🔍 Searching for PostgreSQL containers via Portainer API..."
+
+          # Function to get containers from endpoint
+          get_containers() {
+            local endpoint=$1
+            curl -s -H "X-API-Key: ${{ env.PORTAINER_API_KEY }}" \
+              "${{ env.PORTAINER_URL }}/api/endpoints/$endpoint/docker/containers/json?all=true" 2>/dev/null || echo "[]"
+          }
+
+          # Search through endpoints 1, 2, 3
+          POSTGRES_CONTAINER=""
+          ENDPOINT_FOUND=""
+
+          for endpoint in 1 2 3; do
+            echo "Checking endpoint $endpoint..."
+            containers=$(get_containers "$endpoint")
+
+            if [ "$containers" != "[]" ]; then
+              # Look for PostgreSQL containers
+              postgres_containers=$(echo "$containers" | jq -r '.[] | select(.Names[]? | test("postgres|safework.*postgres|pg"; "i")) | @base64' 2>/dev/null)
+
+              if [ -n "$postgres_containers" ]; then
+                echo "✅ Found PostgreSQL containers on endpoint $endpoint"
+                ENDPOINT_FOUND="$endpoint"
+
+                # If specific container name provided, look for it
+                if [ -n "${{ github.event.inputs.container_name }}" ]; then
+                  specific_container=$(echo "$containers" | jq -r --arg name "${{ github.event.inputs.container_name }}" '.[] | select(.Names[]? == ("/" + $name)) | @base64' 2>/dev/null)
+                  if [ -n "$specific_container" ]; then
+                    POSTGRES_CONTAINER="$specific_container"
+                    echo "✅ Found specific container: ${{ github.event.inputs.container_name }}"
+                    break
+                  fi
+                else
+                  # Use first PostgreSQL container found
+                  POSTGRES_CONTAINER=$(echo "$postgres_containers" | head -n1)
+                  break
+                fi
+              fi
+            fi
+          done
+
+          if [ -z "$POSTGRES_CONTAINER" ]; then
+            echo "❌ No PostgreSQL container found"
+            exit 1
+          fi
+
+          # Decode container info
+          container_info=$(echo "$POSTGRES_CONTAINER" | base64 -d)
+          container_name=$(echo "$container_info" | jq -r '.Names[0] // "unknown"' | sed 's|^/||')
+          container_id=$(echo "$container_info" | jq -r '.Id // "unknown"')
+          container_image=$(echo "$container_info" | jq -r '.Image // "unknown"')
+          container_state=$(echo "$container_info" | jq -r '.State // "unknown"')
+
+          echo "📋 Container Details:"
+          echo "   Name: $container_name"
+          echo "   ID: ${container_id:0:12}"
+          echo "   Image: $container_image"
+          echo "   State: $container_state"
+
+          # Check current labels
+          echo "🏷️ Current Labels:"
+          labels=$(echo "$container_info" | jq -r '.Labels // {}')
+          echo "$labels" | jq -r 'to_entries[] | "   \(.key): \(.value)"' 2>/dev/null || echo "   No labels found"
+
+          # Check if Watchtower label already exists
+          watchtower_enabled=$(echo "$labels" | jq -r '."com.centurylinklabs.watchtower.enable" // "not-set"')
+          echo "   Watchtower enabled: $watchtower_enabled"
+
+          # Save to outputs
+          echo "endpoint=$ENDPOINT_FOUND" >> $GITHUB_OUTPUT
+          echo "container_id=$container_id" >> $GITHUB_OUTPUT
+          echo "container_name=$container_name" >> $GITHUB_OUTPUT
+          echo "container_image=$container_image" >> $GITHUB_OUTPUT
+          echo "needs_update=$([[ \"$watchtower_enabled\" != \"true\" ]] && echo true || echo false)" >> $GITHUB_OUTPUT
+
+      - name: 🔧 Update Container Labels (Production Method)
+        if: steps.find_container.outputs.needs_update == 'true'
+        run: |
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            echo "🧪 DRY RUN MODE - Would update container labels"
+            echo "Container: ${{ steps.find_container.outputs.container_name }}"
+            echo "Would add: com.centurylinklabs.watchtower.enable=true"
+            exit 0
+          fi
+
+          echo "🔧 Updating PostgreSQL container labels for Watchtower..."
+
+          # Method 1: Try to update image with new label and recreate container
+          # This is the safest method for production
+
+          CONTAINER_ID="${{ steps.find_container.outputs.container_id }}"
+          CONTAINER_NAME="${{ steps.find_container.outputs.container_name }}"
+          ENDPOINT="${{ steps.find_container.outputs.endpoint }}"
+
+          echo "📋 Preparing to recreate container with Watchtower labels..."
+
+          # Get container configuration
+          container_config=$(curl -s -H "X-API-Key: ${{ env.PORTAINER_API_KEY }}" \
+            "${{ env.PORTAINER_URL }}/api/endpoints/$ENDPOINT/docker/containers/$CONTAINER_ID/json")
+
+          if [ $? -ne 0 ]; then
+            echo "❌ Failed to get container configuration"
+            exit 1
+          fi
+
+          echo "✅ Retrieved container configuration"
+
+          # Extract important configuration
+          image=$(echo "$container_config" | jq -r '.Config.Image')
+          env_vars=$(echo "$container_config" | jq -r '.Config.Env[]?' 2>/dev/null | tr '\n' ' ')
+          volumes=$(echo "$container_config" | jq -r '.Mounts[]? | "\(.Source):\(.Destination)" + (if .Type == "bind" then ":bind" else "" end)' 2>/dev/null)
+          ports=$(echo "$container_config" | jq -r '.NetworkSettings.Ports | to_entries[]? | select(.value != null) | "\(.value[0].HostPort):\(.key | split("/")[0])"' 2>/dev/null)
+          networks=$(echo "$container_config" | jq -r '.NetworkSettings.Networks | keys[]' 2>/dev/null)
+
+          echo "📊 Container Configuration:"
+          echo "   Image: $image"
+          echo "   Environment variables: $env_vars"
+          echo "   Volumes: $volumes"
+          echo "   Ports: $ports"
+          echo "   Networks: $networks"
+
+          # Create new container configuration with Watchtower label
+          cat > /tmp/postgres_container_config.json << EOF
+          {
+            "Image": "$image",
+            "Env": [$(echo "$env_vars" | sed 's/ /", "/g' | sed 's/^/"/;s/$/"/' | sed 's/""//g')],
+            "Labels": {
+              "com.centurylinklabs.watchtower.enable": "true"
+            },
+            "HostConfig": {
+              "Binds": [$(echo "$volumes" | sed 's/^/"/;s/$/"/' | tr '\n' ',' | sed 's/,$//')]$(if [ -n "$ports" ]; then echo ','; fi)
+              $(if [ -n "$ports" ]; then echo '"PortBindings": {'; echo "$ports" | sed 's/\([0-9]*\):\([0-9]*\)/"\2\/tcp": [{"HostPort": "\1"}]/g' | tr '\n' ',' | sed 's/,$//'; echo '}'; fi)
+            }
+          }
+          EOF
+
+          echo "🔧 Creating new PostgreSQL container with Watchtower labels..."
+
+          # Stop the old container first
+          echo "⏸️ Stopping old container..."
+          curl -X POST -H "X-API-Key: ${{ env.PORTAINER_API_KEY }}" \
+            "${{ env.PORTAINER_URL }}/api/endpoints/$ENDPOINT/docker/containers/$CONTAINER_ID/stop"
+
+          sleep 5
+
+          # Remove old container
+          echo "🗑️ Removing old container..."
+          curl -X DELETE -H "X-API-Key: ${{ env.PORTAINER_API_KEY }}" \
+            "${{ env.PORTAINER_URL }}/api/endpoints/$ENDPOINT/docker/containers/$CONTAINER_ID"
+
+          sleep 2
+
+          # Create new container with same name but with labels
+          echo "🆕 Creating new container with Watchtower labels..."
+          new_container=$(curl -X POST -H "X-API-Key: ${{ env.PORTAINER_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d @/tmp/postgres_container_config.json \
+            "${{ env.PORTAINER_URL }}/api/endpoints/$ENDPOINT/docker/containers/create?name=${CONTAINER_NAME}")
+
+          new_container_id=$(echo "$new_container" | jq -r '.Id')
+
+          if [ "$new_container_id" != "null" ] && [ -n "$new_container_id" ]; then
+            echo "✅ New container created: ${new_container_id:0:12}"
+
+            # Start the new container
+            echo "▶️ Starting new container..."
+            curl -X POST -H "X-API-Key: ${{ env.PORTAINER_API_KEY }}" \
+              "${{ env.PORTAINER_URL }}/api/endpoints/$ENDPOINT/docker/containers/$new_container_id/start"
+
+            echo "✅ PostgreSQL container recreated with Watchtower labels!"
+
+            # Wait a moment and check status
+            sleep 10
+
+            new_status=$(curl -s -H "X-API-Key: ${{ env.PORTAINER_API_KEY }}" \
+              "${{ env.PORTAINER_URL }}/api/endpoints/$ENDPOINT/docker/containers/$new_container_id/json" | \
+              jq -r '.State.Status')
+
+            echo "📊 New container status: $new_status"
+
+            if [ "$new_status" = "running" ]; then
+              echo "🎉 SUCCESS: PostgreSQL container is running with Watchtower enabled!"
+            else
+              echo "⚠️ Warning: Container may not be running properly. Status: $new_status"
+            fi
+          else
+            echo "❌ Failed to create new container"
+            exit 1
+          fi
+
+      - name: ✅ Verify Watchtower Labels
+        if: steps.find_container.outputs.needs_update == 'true'
+        run: |
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            echo "🧪 DRY RUN MODE - Verification skipped"
+            exit 0
+          fi
+
+          echo "🔍 Verifying Watchtower labels on updated container..."
+
+          # Find the updated container
+          ENDPOINT="${{ steps.find_container.outputs.endpoint }}"
+          CONTAINER_NAME="${{ steps.find_container.outputs.container_name }}"
+
+          updated_containers=$(curl -s -H "X-API-Key: ${{ env.PORTAINER_API_KEY }}" \
+            "${{ env.PORTAINER_URL }}/api/endpoints/$ENDPOINT/docker/containers/json" | \
+            jq -r --arg name "$CONTAINER_NAME" '.[] | select(.Names[0] == ("/" + $name))')
+
+          if [ -n "$updated_containers" ]; then
+            watchtower_label=$(echo "$updated_containers" | jq -r '.Labels."com.centurylinklabs.watchtower.enable" // "not-found"')
+            container_state=$(echo "$updated_containers" | jq -r '.State')
+
+            echo "📊 Verification Results:"
+            echo "   Container: $CONTAINER_NAME"
+            echo "   State: $container_state"
+            echo "   Watchtower enabled: $watchtower_label"
+
+            if [ "$watchtower_label" = "true" ] && [ "$container_state" = "running" ]; then
+              echo "✅ SUCCESS: PostgreSQL container now has Watchtower labels and is running!"
+            else
+              echo "❌ FAILED: Labels or state verification failed"
+              exit 1
+            fi
+          else
+            echo "❌ Could not find updated container for verification"
+            exit 1
+          fi
+
+      - name: 📋 Summary
+        if: always()
+        run: |
+          echo "=== PostgreSQL Watchtower Labels Fix Summary ==="
+          echo "Container: ${{ steps.find_container.outputs.container_name || 'Not found' }}"
+          echo "Needs update: ${{ steps.find_container.outputs.needs_update || 'Unknown' }}"
+          echo "Dry run: ${{ github.event.inputs.dry_run }}"
+          echo "Status: ${{ job.status }}"
+
+          if [ "${{ steps.find_container.outputs.needs_update }}" = "false" ]; then
+            echo "✅ Container already has Watchtower labels - no action needed"
+          elif [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            echo "🧪 Dry run completed - no changes made"
+          elif [ "${{ job.status }}" = "success" ]; then
+            echo "🎉 PostgreSQL container successfully updated with Watchtower labels!"
+            echo "Watchtower will now automatically monitor and update this container."
+          else
+            echo "❌ Failed to update PostgreSQL container labels"
+          fi
