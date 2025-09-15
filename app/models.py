@@ -367,3 +367,5 @@ Survey = SurveyModel
 SurveyStatistics = SurveyStatisticsModel
 AuditLog = AuditLogModel
 Process = ProcessModel
+Company = CompanyModel
+Role = RoleModel
