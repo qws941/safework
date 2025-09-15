@@ -239,20 +239,21 @@ created_at = kst_now()  -- Always use KST timezone
 ```
 
 **Critical Survey Model Fields (for API endpoints):**
-The Survey model uses these exact field names - **field mismatches cause 500 errors**:
+The Survey model uses **minimal essential columns only** - optimized for database compatibility:
 ```python
-# Core identification fields
+# Essential fields (September 2024 Schema Optimization)
 user_id, form_type, name, age, gender
+department, position, employee_id
+years_of_service, employee_number
+work_years, work_months, has_symptoms
+status, created_at, updated_at
+responses  # JSON field for all additional data
 
-# Employment fields  
-years_of_service, employee_number, department, position, employee_id
-work_years, work_months  # Legacy fields still in use
-
-# Health fields
-has_symptoms, status  # Boolean and varchar fields
-
-# Additional fields in database schema
-company_id, process_id, role_id, responses (JSON), symptoms_data (JSON)
+# Schema Optimization Notes:
+# - Removed problematic columns: hire_date, submission_date, employment_type
+# - All extended data stored in JSON responses field
+# - Minimal model prevents database column mismatch errors
+# - Flexible JSON storage for 001/002 form variations
 ```
 
 ### Route Organization & Blueprint Structure
@@ -305,17 +306,23 @@ def safework_workers():
 ## Deployment & Infrastructure
 
 ### Advanced GitHub Actions CI/CD Pipeline
-The project uses a sophisticated 8-workflow GitHub Actions system with Claude AI integration:
+The project uses an **optimized English-only workflow system** with advanced Claude AI integration:
 
-**Core Workflows:**
-- **🚀 Deploy Pipeline**: Watchtower-based deployment with independent container support
-- **🤖 Claude Code Assistant**: AI-powered code assistance with MCP integration (ThinkMCP, ShrimpMCP, SerenaMCP)
-- **🎯 Issue Handler**: Intelligent issue triage and auto-labeling
-- **🔍 PR Review**: Comprehensive PR analysis with progress tracking
-- **🤖 CI Auto-Fix**: Automatic CI failure detection and repair
-- **🔄 Dependency Auto-Update**: Automated dependency management
-- **📊 Operational Log Analysis**: Container log monitoring via Portainer API
-- **🔍 PR Auto Review**: Additional PR review automation with Korean language support
+**Core Workflows (Post-2024 Optimization):**
+- **🚀 SafeWork Production Deployment**: Comprehensive deployment with auto-rollback and emergency recovery
+- **🤖 Claude AI Assistant with Advanced MCP Integration**: AI-powered assistance with Multiple MCP Protocol tools
+- **🔧 SafeWork Maintenance Automation & Health Check**: Automated system maintenance and monitoring
+- **📊 Operational Log Analysis**: Real-time container log monitoring via Portainer API
+- **🛡️ Security Auto-Triage**: Automated vulnerability detection and resolution
+- **🎯 Issue Handler**: Intelligent issue management with auto-labeling
+- **🔄 Dependency Auto-Update**: Weekly automated dependency management
+
+**Recent Optimizations (September 2024):**
+- ✅ **Workflow Consolidation**: Reduced from 9 to 6 optimized workflows
+- ✅ **English Conversion**: All workflow files converted to English
+- ✅ **MCP Integration**: Advanced Multiple MCP Protocol tools (Sequential Thinking, Serena Code Analysis, Shrimp Task Management)
+- ✅ **Auto-Recovery**: Emergency rollback and self-healing deployment system
+- ✅ **Container Testing**: Independent container connectivity validation
 
 **Deployment Triggers:**
 1. Push to `master` branch triggers all workflows

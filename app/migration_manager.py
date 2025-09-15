@@ -21,7 +21,7 @@ class MigrationManager:
     def __init__(self, app: Optional[Flask] = None, migrations_dir: str = None):
         self.app = app
         self.migrations_dir = migrations_dir or os.path.join(
-            os.path.dirname(__file__), "migrations"
+            os.path.dirname(__file__), "db"
         )
 
         if app is not None:
