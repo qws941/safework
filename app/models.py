@@ -77,7 +77,7 @@ class SurveyModel(db.Model):
     gender = db.Column(db.String(10))
     age = db.Column(db.Integer)
     years_of_service = db.Column(db.Integer)
-    employment_type = db.Column(db.String(20))
+    # employment_type = db.Column(db.String(20))  # 임시 주석처리 - DB에 컬럼 없음
     employee_number = db.Column(db.String(50))
     hire_date = db.Column(db.Date)
     
