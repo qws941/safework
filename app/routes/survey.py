@@ -272,53 +272,8 @@ def my_surveys():
 @survey_bp.route("/admin")
 @login_required
 def admin_dashboard():
-    """관리자 대시보드 - 제출된 모든 조사표 보기"""
-    # 관리자 권한 체크 (필요시)
-    # if not current_user.is_admin:
-    #     flash("관리자 권한이 필요합니다.", "error")
-    #     return redirect(url_for("main.index"))
-    
-    # 필터 파라미터
-    form_type = request.args.get("form_type", "all")
-    search_query = request.args.get("search", "")
-    page = request.args.get("page", 1, type=int)
-    
-    # 기본 쿼리
-    query = Survey.query
-    
-    # 양식 타입별 필터링
-    if form_type == "001":
-        query = query.filter(Survey.form_type.contains("001"))
-    elif form_type == "002":
-        query = query.filter(Survey.form_type.contains("002"))
-    
-    # 검색어 필터링
-    if search_query:
-        query = query.filter(
-            db.or_(
-                Survey.name.contains(search_query),
-                Survey.employee_number.contains(search_query),
-                Survey.department.contains(search_query)
-            )
-        )
-    
-    # 페이지네이션
-    surveys = query.order_by(Survey.submission_date.desc()).paginate(
-        page=page, per_page=20, error_out=False
-    )
-    
-    # 통계 데이터
-    total_001 = Survey.query.filter(Survey.form_type.contains("001")).count()
-    total_002 = Survey.query.filter(Survey.form_type.contains("002")).count()
-    
-    return render_template(
-        "survey/admin_dashboard.html",
-        surveys=surveys,
-        form_type=form_type,
-        search_query=search_query,
-        total_001=total_001,
-        total_002=total_002
-    )
+    """관리자 대시보드 - 통합된 관리자 페이지로 리디렉션"""
+    return redirect(url_for("admin.surveys"))
 
 
 @survey_bp.route("/admin/001_musculoskeletal")
