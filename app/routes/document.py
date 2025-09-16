@@ -259,40 +259,42 @@ def search():
     date_from = request.args.get('date_from')
     date_to = request.args.get('date_to')
     
-    # Build search query
-    documents_query = Document.query.filter(
-        Document.is_active == True,
-        Document.is_archived == False
-    )
-    
+    # Build search query - simplified to match actual DB schema
+    documents_query = Document.query
+
     # Apply search filters
     if query:
         documents_query = documents_query.filter(
             or_(
                 Document.title.contains(query),
-                Document.description.contains(query),
-                Document.document_number.contains(query),
-                Document.tags.contains(query)
+                Document.description.contains(query)
             )
         )
-    
+
     if category:
-        documents_query = documents_query.filter(Document.category_id == category)
-    
+        # Category is a string field, not ID
+        documents_query = documents_query.filter(Document.category == category)
+
     if doc_type:
-        documents_query = documents_query.filter(Document.document_type == doc_type)
-    
+        # Skip document_type filter - doesn't exist in DB
+        pass
+
     if date_from:
         documents_query = documents_query.filter(Document.created_at >= date_from)
-    
+
     if date_to:
         documents_query = documents_query.filter(Document.created_at <= date_to)
-    
-    # Apply access control
+
+    # Apply access control - use access_level field
     if not current_user.is_authenticated:
-        documents_query = documents_query.filter(Document.is_public == True)
+        documents_query = documents_query.filter(Document.access_level == 'public')
     elif not current_user.is_admin:
-        documents_query = documents_query.filter(Document.requires_admin == False)
+        documents_query = documents_query.filter(
+            or_(
+                Document.access_level == 'public',
+                Document.upload_user_id == current_user.id
+            )
+        )
     
     # Paginate results
     page = request.args.get('page', 1, type=int)
@@ -310,14 +312,15 @@ def search():
 def templates():
     """문서 템플릿(양식) 목록"""
     category = request.args.get('category')
-    
-    query = DocumentTemplate.query.filter_by(is_active=True)
-    
+
+    # Use Document table with is_template=True instead of DocumentTemplate
+    query = Document.query.filter_by(is_template=True)
+
     if category:
         query = query.filter_by(category=category)
-    
-    templates = query.order_by(DocumentTemplate.name).all()
-    
+
+    templates = query.order_by(Document.title).all()
+
     return render_template('document/templates.html', templates=templates)
 
 
@@ -325,13 +328,13 @@ def templates():
 @login_required
 def download_template(id):
     """템플릿 다운로드"""
-    template = DocumentTemplate.query.get_or_404(id)
-    
+    template = Document.query.filter_by(id=id, is_template=True).first_or_404()
+
     try:
         return send_file(
             template.file_path,
             as_attachment=True,
-            download_name=f"{template.name}.{template.file_type}"
+            download_name=template.filename
         )
     except FileNotFoundError:
         flash('템플릿 파일을 찾을 수 없습니다.', 'danger')
