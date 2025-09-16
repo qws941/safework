@@ -12,19 +12,18 @@ class Config:
     )
 
     # Database (PostgreSQL)
-    DB_HOST = os.environ.get("DB_HOST", "safework-postgres")
-    DB_PORT = int(os.environ.get("DB_PORT", 5432))
+    DB_HOST = os.environ.get("DB_HOST", "safework-mysql")
+    DB_PORT = int(os.environ.get("DB_PORT", 3306))
     DB_USER = os.environ.get("DB_USER", "safework")
     DB_PASSWORD = os.environ.get("DB_PASSWORD", "safework2024")
     DB_NAME = os.environ.get("DB_NAME", "safework")
 
-    SQLALCHEMY_DATABASE_URI = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_size": 10,
         "pool_recycle": 3600,
         "pool_pre_ping": True,
-        "client_encoding": "utf8",
     }
 
     # Redis
@@ -114,7 +113,7 @@ class DevelopmentConfig(Config):
     DB_PASSWORD = os.environ.get("DB_PASSWORD", "safework2024")
     DB_NAME = os.environ.get("DB_NAME", "safework")
 
-    SQLALCHEMY_DATABASE_URI = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
     # PostgreSQL connection options for development
     SQLALCHEMY_ENGINE_OPTIONS = {
@@ -141,7 +140,7 @@ class ProductionConfig(Config):
     DB_PASSWORD = os.environ.get("DB_PASSWORD", "safework2024")
     DB_NAME = os.environ.get("DB_NAME", "safework")
 
-    SQLALCHEMY_DATABASE_URI = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
     # PostgreSQL connection options for production
     SQLALCHEMY_ENGINE_OPTIONS = {
@@ -172,7 +171,7 @@ class TestingConfig(Config):
     DB_PASSWORD = os.environ.get("DB_PASSWORD", "safework_test_password")
     DB_NAME = os.environ.get("DB_NAME", "safework_test")
 
-    SQLALCHEMY_DATABASE_URI = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     WTF_CSRF_ENABLED = False
     
     # PostgreSQL connection options for testing
