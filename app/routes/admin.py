@@ -124,7 +124,10 @@ def surveys():
 @admin_required
 def survey_detail(id):
     """조사표 상세 보기 - 통합된 라우트"""
-    survey = Survey.query.get_or_404(id)
+    from models import Survey, db
+    survey = db.session.get(Survey, id)
+    if not survey:
+        abort(404)
     return render_template("survey/admin_detail.html", survey=survey)
 
 

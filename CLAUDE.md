@@ -37,7 +37,7 @@ git commit -m "Fix: Update SafeWork with submission_date column"
 git push origin master
 
 # GitHub Actions will:
-# 1. Build safework2-app, safework2-postgres, safework2-redis images
+# 1. Build safework/app, safework/postgres, safework/redis images
 # 2. Push to registry.jclee.me with latest tags
 # 3. Trigger Watchtower update via HTTP API
 # 4. Monitor deployment success via Portainer API
@@ -45,25 +45,29 @@ git push origin master
 
 ### Manual Container Setup (Development Only)
 ```bash
-# Use registry images (built by GitHub Actions)
-docker pull registry.jclee.me/safework2-app:latest
-docker pull registry.jclee.me/safework2-postgres:latest
-docker pull registry.jclee.me/safework2-redis:latest
+# CRITICAL: Use correct image names (safework/app format)
+docker pull registry.jclee.me/safework/app:latest
+docker pull registry.jclee.me/safework/postgres:latest
+docker pull registry.jclee.me/safework/redis:latest
 
-# Start services with Watchtower labels
+# Start PostgreSQL with KST timezone and automated schema migration
 docker run -d --name safework-postgres --network watchtower_default -p 4546:5432 \
-  -e POSTGRES_PASSWORD=safework2024 -e POSTGRES_DB=safework_db -e POSTGRES_USER=safework \
+  -e TZ=Asia/Seoul -e POSTGRES_PASSWORD=safework2024 -e POSTGRES_DB=safework_db -e POSTGRES_USER=safework \
   --label "com.centurylinklabs.watchtower.enable=true" \
-  registry.jclee.me/safework2-postgres:latest
+  registry.jclee.me/safework/postgres:latest
 
+# Start Redis with clean state
 docker run -d --name safework-redis --network watchtower_default -p 4547:6379 \
+  -e TZ=Asia/Seoul \
   --label "com.centurylinklabs.watchtower.enable=true" \
-  registry.jclee.me/safework2-redis:latest
+  registry.jclee.me/safework/redis:latest
 
+# Start application with correct database name (safework_db) and KST timezone
 docker run -d --name safework-app --network watchtower_default -p 4545:4545 \
-  -e DB_HOST=safework-postgres -e REDIS_HOST=safework-redis \
+  -e TZ=Asia/Seoul -e DB_HOST=safework-postgres -e DB_NAME=safework_db -e DB_USER=safework \
+  -e DB_PASSWORD=safework2024 -e REDIS_HOST=safework-redis \
   --label "com.centurylinklabs.watchtower.enable=true" \
-  registry.jclee.me/safework2-app:latest
+  registry.jclee.me/safework/app:latest
 
 # Container management
 docker logs -f safework-app            # View application logs
@@ -253,11 +257,13 @@ def create_app(config_name=None):
 - Version-controlled database schema changes
 - Automatic admin user creation via migrations
 
-**Container Independence:**
+**Container Independence & Schema Migration:**
 - No docker-compose dependency - each service runs independently
+- Automated PostgreSQL schema migration via init.sql and migration scripts
 - Health checks and restart policies in Dockerfiles
 - Volume declarations for data persistence
 - Container network communication via internal DNS
+- KST timezone enforcement across all containers
 
 ### Model Architecture & Database Design
 **Core Models (models.py):**
@@ -496,7 +502,7 @@ curl -X POST -H "X-API-Key: ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=" \
   -H "Content-Type: application/json" \
   "https://portainer.jclee.me/api/endpoints/3/docker/containers/create?name=safework-postgres" \
   -d '{
-    "Image": "registry.jclee.me/safework2-postgres:latest",
+    "Image": "registry.jclee.me/safework/postgres:latest",
     "Env": ["POSTGRES_PASSWORD=safework2024", "POSTGRES_DB=safework_db", "POSTGRES_USER=safework"],
     "Labels": {"com.centurylinklabs.watchtower.enable": "true"},
     "HostConfig": {
@@ -573,15 +579,17 @@ SurveyStatistics = SurveyStatisticsModel
 AuditLog = AuditLogModel
 ```
 
-**CURRENT SYSTEM STATUS:**
-- **Database**: MySQL 8.0+ in production (37 tables including 10 SafeWork tables)
-- **Container Names**: safework-app, safework-mysql, safework-redis
+**CURRENT SYSTEM STATUS (Updated September 2024):**
+- **Database**: PostgreSQL 15+ in production with automated schema migration system
+- **Container Names**: safework-app, safework-postgres, safework-redis (all KST timezone)
+- **Database Name**: **CRITICAL** - Must use `safework_db` not `safework` to prevent connection errors
 - **Authentication**: Working correctly (login redirects function properly)
 - **Version Display**: Fixed property object bug - now shows "3.0.0"
 - **API Endpoints**: All SafeWork admin endpoints require authentication
-- **Test Data**: Survey submissions, worker records, health checks verified
+- **Test Data**: Survey submissions with complete JSON response data storage
 - **CSRF Protection**: Disabled for survey testing (WTF_CSRF_ENABLED=false)
-- **Health Checks**: All containers operational with Watchtower auto-deployment
+- **Schema Migration**: Automated via PostgreSQL init.sql and migration scripts
+- **Data Persistence**: Verified across container restarts with volume persistence
 
 ### Survey API Testing & Verification
 ```bash
@@ -610,15 +618,22 @@ docker exec -it safework-postgres psql -U safework -d safework_db \
 
 ## Error Detection & Resolution
 
-### Common Container Issues
-Claude automatically detects and fixes:
-- `gunicorn.errors.HaltServer` → Flask app import path verification
-- `Worker failed to boot` → Dependencies and environment validation  
-- `ImportError|ModuleNotFoundError` → requirements.txt audit
+### Common Container Issues & Critical Fixes
+**Database Connection Issues (Most Common):**
+- `FATAL: database "safework" does not exist` → **SOLUTION**: Use `DB_NAME=safework_db` (not `safework`)
+- `connection to server at "safework-postgres" port 5432 failed: Connection refused` → **SOLUTION**: Ensure PostgreSQL container fully initialized before app starts
+- `column "submission_date" of relation "surveys" does not exist` → **SOLUTION**: Automated migration system handles this
+
+**Import and Model Issues:**
 - `ImportError: cannot import name 'AuditLog' from 'models'` → **CRITICAL**: Missing model aliases in models.py
-- `OperationalError` → PostgreSQL connection settings verification
-- `'field_name' is an invalid keyword argument for Survey` → Model field mapping errors
-- PostgreSQL connection timeout → Increase DB_CONNECTION_RETRIES (currently 60) and DB_CONNECTION_DELAY (3s)
+- `'data' is an invalid keyword argument for SurveyModel` → **SOLUTION**: Uncommented data field in models.py
+- `Working outside of application context` → **SOLUTION**: Use Flask app context for database operations
+
+**Container Issues:**
+- `gunicorn.errors.HaltServer` → Flask app import path verification
+- `Worker failed to boot` → Dependencies and environment validation
+- Redis AOF permission errors → **SOLUTION**: Remove and recreate Redis container with clean state
+- Container timezone issues → **SOLUTION**: Add `-e TZ=Asia/Seoul` to all container runs
 
 **Critical Model Alias Fix Applied:**
 ```python
@@ -643,15 +658,20 @@ git push origin master                              # Triggers GitHub Actions bu
 docker stop safework-app safework-postgres safework-redis
 docker rm safework-app safework-postgres safework-redis
 # Restart using latest images from registry (built by GitHub Actions)
+# CRITICAL: Use correct image naming and environment variables
 docker run -d --name safework-postgres --network watchtower_default -p 4546:5432 \
+  -e TZ=Asia/Seoul -e POSTGRES_PASSWORD=safework2024 -e POSTGRES_DB=safework_db -e POSTGRES_USER=safework \
   --label "com.centurylinklabs.watchtower.enable=true" \
-  registry.jclee.me/safework2-postgres:latest
+  registry.jclee.me/safework/postgres:latest
 docker run -d --name safework-redis --network watchtower_default -p 4547:6379 \
+  -e TZ=Asia/Seoul \
   --label "com.centurylinklabs.watchtower.enable=true" \
-  registry.jclee.me/safework2-redis:latest
+  registry.jclee.me/safework/redis:latest
 docker run -d --name safework-app --network watchtower_default -p 4545:4545 \
+  -e TZ=Asia/Seoul -e DB_HOST=safework-postgres -e DB_NAME=safework_db \
+  -e DB_USER=safework -e DB_PASSWORD=safework2024 -e REDIS_HOST=safework-redis \
   --label "com.centurylinklabs.watchtower.enable=true" \
-  registry.jclee.me/safework2-app:latest
+  registry.jclee.me/safework/app:latest
 
 # Database management
 docker exec -it safework-app python migrate.py status              # Check migration status
@@ -664,11 +684,24 @@ curl -H "X-API-Key: ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=" \
 # Direct PostgreSQL access (current production database)
 docker exec -it safework-postgres psql -U safework -d safework_db   # PostgreSQL CLI
 
+# Database connectivity verification (critical for troubleshooting)
+docker exec safework-app python -c "
+from app import create_app
+from models import Survey, db
+app = create_app()
+with app.app_context():
+    try:
+        count = Survey.query.count()
+        print(f'✅ Database connection successful! Survey count: {count}')
+    except Exception as e:
+        print(f'❌ Database connection failed: {e}')
+"
+
 # Survey form debugging
 # - Verify HTML/JavaScript ID matching (critical for conditional logic)
 # - Ensure user_id=1 exists for anonymous submissions
 # - Use kst_now() consistently for Korean timezone
-# - Check submission_date column exists (recent fix applied)
+# - Check submission_date column exists (handled by automated migration)
 ```
 
 ## Development Patterns & Standards
@@ -842,11 +875,13 @@ jobs:
 ## Production Guidelines
 
 ### Database Best Practices
-- PostgreSQL 15+ with UTF8 encoding for Korean text support
+- **PostgreSQL 15+** with UTF8 encoding for Korean text support (production standard)
+- **Database Name**: Always use `safework_db` (not `safework`) to match schema initialization
 - Use `kst_now()` for all timestamp operations (consistent KST timezone)
 - Transaction-based operations with rollback for data integrity
 - Anonymous submissions always use `user_id=1`
 - JSONB fields for flexible survey data storage with indexing support
+- Automated schema migration via init.sql and migration scripts in PostgreSQL container
 
 ### Security & Performance
 - `@login_required` decorator for all admin routes
