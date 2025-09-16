@@ -170,26 +170,18 @@ def surveys_test():
 
 
 @admin_bp.route("/survey/<int:id>/review", methods=["GET", "POST"])
+@admin_required
 def review_survey(id):
     """조사표 검토 및 처리"""
     try:
         survey = Survey.query.get_or_404(id)
-
-        # 간단한 HTML 응답으로 테스트
-        return f"""
-        <html>
-        <head><title>설문 상세</title></head>
-        <body>
-            <h1>설문 상세 정보</h1>
-            <p>ID: {survey.id}</p>
-            <p>이름: {survey.name}</p>
-            <p>상태: {survey.status}</p>
-            <a href="/admin/surveys">목록으로</a>
-        </body>
-        </html>
-        """
+        
+        # 템플릿을 사용하여 정상적인 응답 반환
+        return render_template("admin/review_survey.html", survey=survey)
+        
     except Exception as e:
-        return f"<html><body><h1>Error</h1><p>{str(e)}</p></body></html>", 500
+        flash(f'설문 조회 중 오류가 발생했습니다: {str(e)}', 'error')
+        return redirect(url_for('admin.surveys'))
 
 
 @admin_bp.route("/export/excel")
