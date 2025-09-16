@@ -218,6 +218,38 @@ COMMENT ON TABLE documents IS 'Document management system for safety and health 
 COMMENT ON COLUMN surveys.data IS 'Flexible JSON storage for form-specific data';
 COMMENT ON COLUMN surveys.form_type IS 'Form type identifier: 001 for musculoskeletal, 002 for new employee';
 
+-- Create schema_migrations table for tracking migrations
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    version VARCHAR(255) PRIMARY KEY,
+    applied_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Run initial migrations
+-- Migration 001: Add submission_date column to surveys table
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'surveys'
+        AND column_name = 'submission_date'
+    ) THEN
+        ALTER TABLE surveys ADD COLUMN submission_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+        RAISE NOTICE 'Added submission_date column to surveys table';
+    ELSE
+        RAISE NOTICE 'submission_date column already exists in surveys table';
+    END IF;
+END $$;
+
+-- Update existing records without submission_date
+UPDATE surveys
+SET submission_date = created_at
+WHERE submission_date IS NULL;
+
+-- Log migration completion
+INSERT INTO schema_migrations (version, applied_at)
+VALUES ('001_add_submission_date', CURRENT_TIMESTAMP)
+ON CONFLICT (version) DO NOTHING;
+
 -- Log successful initialization
 DO $$
 BEGIN

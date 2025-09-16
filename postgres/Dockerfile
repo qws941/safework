@@ -16,6 +16,11 @@ ENV POSTGRES_PASSWORD=safework2024
 
 # Create initialization scripts directory
 COPY init.sql /docker-entrypoint-initdb.d/
+COPY migrations/ /docker-entrypoint-initdb.d/migrations/
+COPY run-migrations.sh /docker-entrypoint-initdb.d/
+
+# Make migration script executable
+RUN chmod +x /docker-entrypoint-initdb.d/run-migrations.sh
 
 # Create volume for data persistence
 VOLUME ["/var/lib/postgresql/data"]
