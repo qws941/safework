@@ -476,7 +476,7 @@ def safework_dashboard():
         # 곧 만료될 의약품 확인
         expiry_soon_query = db.session.execute("""
             SELECT COUNT(*) FROM safework_medications 
-            WHERE expiry_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+            WHERE expiry_date <= CURRENT_DATE + INTERVAL '30 days'
         """)
         expiry_soon_count = expiry_soon_query.fetchone()[0] if expiry_soon_query else 0
         
@@ -760,28 +760,28 @@ def safework_medical_visits():
         # 오늘 방문 수
         today_visits_query = db.session.execute("""
             SELECT COUNT(*) FROM safework_medical_visits 
-            WHERE DATE(visit_date) = %s
+            WHERE visit_date::date = %s
         """, (today,))
         today_visits = today_visits_query.fetchone()[0] if today_visits_query else 0
         
         # 이번 주 방문 수
         week_visits_query = db.session.execute("""
             SELECT COUNT(*) FROM safework_medical_visits 
-            WHERE DATE(visit_date) >= %s
+            WHERE visit_date::date >= %s
         """, (week_ago,))
         week_visits = week_visits_query.fetchone()[0] if week_visits_query else 0
         
         # 이번 달 방문 수
         month_visits_query = db.session.execute("""
             SELECT COUNT(*) FROM safework_medical_visits 
-            WHERE DATE(visit_date) >= %s
+            WHERE visit_date::date >= %s
         """, (month_start,))
         month_visits = month_visits_query.fetchone()[0] if month_visits_query else 0
         
         # 추적관찰 필요한 경우 수
         followup_query = db.session.execute("""
             SELECT COUNT(*) FROM safework_medical_visits 
-            WHERE follow_up_needed = 1 AND (follow_up_date IS NULL OR follow_up_date >= CURDATE())
+            WHERE follow_up_needed = 1 AND (follow_up_date IS NULL OR follow_up_date >= CURRENT_DATE)
         """)
         followup_needed = followup_query.fetchone()[0] if followup_query else 0
         
@@ -874,7 +874,7 @@ def safework_medications():
         # 30일 내 만료 예정 의약품 수
         expiry_soon_query = db.session.execute("""
             SELECT COUNT(*) FROM safework_medications 
-            WHERE expiry_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+            WHERE expiry_date <= CURRENT_DATE + INTERVAL '30 days'
         """)
         expiry_soon_count = expiry_soon_query.fetchone()[0] if expiry_soon_query else 0
         
