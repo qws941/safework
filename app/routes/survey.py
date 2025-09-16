@@ -410,6 +410,10 @@ def api_submit():
         return jsonify({"error": "데이터가 없습니다."}), 400
 
     try:
+        # 디버깅: 받은 데이터 로그 출력
+        print(f"[DEBUG] Received data: {data}")
+        print(f"[DEBUG] Data type: {type(data)}")
+
         survey = Survey(
             user_id=1,  # API 제출은 익명 사용자 (user_id=1)
             form_type=data.get("form_type", "001"),
@@ -429,8 +433,15 @@ def api_submit():
             status="submitted",
         )
 
+        # 디버깅: Survey 객체 생성 후 상태 확인
+        print(f"[DEBUG] Survey.responses before commit: {survey.responses}")
+
         db.session.add(survey)
         db.session.commit()
+
+        # 디버깅: 커밋 후 다시 조회해서 확인
+        saved_survey = Survey.query.get(survey.id)
+        print(f"[DEBUG] Survey.responses after commit: {saved_survey.responses}")
 
         return (
             jsonify(
