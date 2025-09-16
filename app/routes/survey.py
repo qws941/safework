@@ -395,8 +395,10 @@ def admin_export(form_type):
     # DataFrame 생성
     data = []
     for survey in surveys:
+        # timezone 정보 제거 (Excel 호환성)
+        submission_date = survey.submission_date.replace(tzinfo=None) if survey.submission_date else None
         data.append({
-            "제출일시": survey.submission_date,
+            "제출일시": submission_date,
             "사번": survey.employee_number,
             "이름": survey.name,
             "부서": survey.department,
@@ -408,7 +410,13 @@ def admin_export(form_type):
         })
     
     df = pd.DataFrame(data)
-    
+
+    # timezone 정보가 있는 datetime 컬럼들 처리 (Excel 호환성)
+    for col in df.columns:
+        if df[col].dtype == 'object':
+            # datetime 객체인지 확인하고 timezone 제거
+            df[col] = df[col].apply(lambda x: x.replace(tzinfo=None) if pd.notnull(x) and hasattr(x, 'replace') and hasattr(x, 'tzinfo') and x.tzinfo is not None else x)
+
     # 엑셀 파일 생성
     output = BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
