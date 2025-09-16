@@ -56,6 +56,32 @@ class Document(db.Model):
         """Increment view counter"""
         self.view_count = (self.view_count or 0) + 1
 
+    # Compatibility properties for template
+    @property
+    def file_type(self):
+        """Return file extension from mime_type or filename"""
+        if self.mime_type:
+            # Extract file extension from mime type
+            mime_to_ext = {
+                'application/pdf': 'pdf',
+                'application/msword': 'doc',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+                'application/vnd.ms-excel': 'xls',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+                'text/plain': 'txt',
+                'image/jpeg': 'jpg',
+                'image/png': 'png'
+            }
+            return mime_to_ext.get(self.mime_type, 'file')
+        elif self.filename and '.' in self.filename:
+            return self.filename.rsplit('.', 1)[1].lower()
+        return 'file'
+
+    @property
+    def file_name(self):
+        """Alias for filename"""
+        return self.filename
+
 
 class DocumentVersion(db.Model):
     """문서 버전 관리 모델"""
