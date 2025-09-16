@@ -273,7 +273,7 @@ def my_surveys():
 @login_required
 def admin_dashboard():
     """관리자 대시보드 - 통합된 관리자 페이지로 리디렉션"""
-    return redirect(url_for("admin.surveys"))
+    return redirect(url_for("admin.survey"))
 
 
 @survey_bp.route("/admin/001_musculoskeletal")
@@ -320,13 +320,8 @@ def admin_002_new_employee():
 @survey_bp.route("/admin/survey/<int:id>")
 @login_required
 def admin_survey_detail(id):
-    """관리자 - 조사표 상세 보기"""
-    survey = Survey.query.get_or_404(id)
-    
-    return render_template(
-        "survey/admin_detail.html",
-        survey=survey
-    )
+    """관리자 - 조사표 상세 보기 - Redirect to consolidated route"""
+    return redirect(url_for("admin.survey_detail", id=id))
 
 
 @survey_bp.route("/admin/export/<form_type>")

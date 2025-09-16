@@ -44,7 +44,9 @@
                     <small class="text-muted">{{ survey.form_type }}양식</small>
                 </td>
                 <td>
-                    <strong>{{ survey.name }}</strong><br>
+                    <a href="{{ url_for('admin.survey_detail', id=survey.id) }}" class="text-decoration-none">
+                        <strong>{{ survey.name }}</strong>
+                    </a><br>
                     <small class="text-muted">{{ survey.employee_number or '사번없음' }}</small>
                 </td>
                 <td>
@@ -77,13 +79,13 @@
     <nav>
         <ul class="pagination justify-content-center">
             <li class="page-item {% if not surveys.has_prev %}disabled{% endif %}">
-                <a class="page-link" href="{{ url_for('admin.surveys', page=surveys.prev_num) }}">이전</a>
+                <a class="page-link" href="{{ url_for('admin.survey', page=surveys.prev_num) }}">이전</a>
             </li>
             <li class="page-item active">
                 <span class="page-link">{{ surveys.page }} / {{ surveys.pages }}</span>
             </li>
             <li class="page-item {% if not surveys.has_next %}disabled{% endif %}">
-                <a class="page-link" href="{{ url_for('admin.surveys', page=surveys.next_num) }}">다음</a>
+                <a class="page-link" href="{{ url_for('admin.survey', page=surveys.next_num) }}">다음</a>
             </li>
         </ul>
     </nav>

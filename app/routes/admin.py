@@ -92,10 +92,10 @@ def dashboard():
     )
 
 
-@admin_bp.route("/surveys")
+@admin_bp.route("/survey")
 @admin_required
-def surveys():
-    """조사표 목록 관리"""
+def survey():
+    """조사표 목록 관리 - 통합된 라우트"""
     form = AdminFilterForm()
     page = request.args.get("page", 1, type=int)
 
@@ -154,6 +154,21 @@ def surveys():
     ]
 
     return render_template("admin/surveys.html", surveys=surveys, form=form)
+
+
+@admin_bp.route("/surveys")
+@admin_required
+def surveys():
+    """Legacy route - redirect to consolidated route"""
+    return redirect(url_for("admin.survey"))
+
+
+@admin_bp.route("/survey/<int:id>")
+@admin_required
+def survey_detail(id):
+    """조사표 상세 보기 - 통합된 라우트"""
+    survey = Survey.query.get_or_404(id)
+    return render_template("survey/admin_detail.html", survey=survey)
 
 
 @admin_bp.route("/surveys-test")

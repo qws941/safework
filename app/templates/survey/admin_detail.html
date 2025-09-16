@@ -4,7 +4,7 @@
 {% block content %}
 <div class="container">
     <div class="mb-4">
-        <a href="{{ url_for('survey.admin_dashboard') }}" class="btn btn-secondary">
+        <a href="{{ url_for('admin.survey') }}" class="btn btn-secondary">
             <i class="bi bi-arrow-left"></i> 목록으로
         </a>
     </div>
@@ -130,62 +130,75 @@
                         <!-- 목 -->
                         <tr>
                             <td><strong>목</strong></td>
-                            <td>{{ survey.neck_pain or 0 }}</td>
-                            <td>{{ survey.neck_symptoms or '-' }}</td>
-                            <td>{{ survey.neck_frequency or '-' }}</td>
-                            <td>{{ survey.neck_duration or '-' }}</td>
-                            <td>{{ survey.neck_severity or '-' }}</td>
-                            <td>{{ survey.neck_work_impact or '-' }}</td>
-                            <td>{{ '✓' if survey.neck_last_year else '-' }}</td>
-                            <td>{{ '✓' if survey.neck_last_week else '-' }}</td>
+                            <td>
+                                {% set neck_data = (survey.responses.목 if survey.responses and survey.responses.목 else {}) %}
+                                {% if neck_data.severity is defined %}
+                                    {{ neck_data.severity }}
+                                {% elif survey.data and survey.data.neck and survey.data.neck.severity %}
+                                    {{ survey.data.neck.severity }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>{{ neck_data.side or '-' }}</td>
+                            <td>{{ neck_data.frequency or '-' }}</td>
+                            <td>{{ neck_data.duration or '-' }}</td>
+                            <td>{{ neck_data.severity or '-' }}</td>
+                            <td>{{ neck_data.consequences|join(', ') if neck_data.consequences else '-' }}</td>
+                            <td>{{ '✓' if neck_data.last_year else '-' }}</td>
+                            <td>{{ '✓' if neck_data.last_week else '-' }}</td>
                         </tr>
                         <!-- 어깨 -->
                         <tr>
                             <td><strong>어깨</strong></td>
-                            <td>{{ survey.shoulder_pain or 0 }}</td>
-                            <td>{{ survey.shoulder_symptoms or '-' }}</td>
-                            <td>{{ survey.shoulder_frequency or '-' }}</td>
-                            <td>{{ survey.shoulder_duration or '-' }}</td>
-                            <td>{{ survey.shoulder_severity or '-' }}</td>
-                            <td>{{ survey.shoulder_work_impact or '-' }}</td>
-                            <td>{{ '✓' if survey.shoulder_last_year else '-' }}</td>
-                            <td>{{ '✓' if survey.shoulder_last_week else '-' }}</td>
+                            {% set shoulder_data = (survey.responses.어깨 if survey.responses and survey.responses.어깨 else {}) %}
+                            <td>{{ shoulder_data.severity or '-' }}</td>
+                            <td>{{ shoulder_data.side or '-' }}</td>
+                            <td>{{ shoulder_data.frequency or '-' }}</td>
+                            <td>{{ shoulder_data.duration or '-' }}</td>
+                            <td>{{ shoulder_data.severity or '-' }}</td>
+                            <td>{{ shoulder_data.consequences|join(', ') if shoulder_data.consequences else '-' }}</td>
+                            <td>{{ '✓' if shoulder_data.last_year else '-' }}</td>
+                            <td>{{ '✓' if shoulder_data.last_week else '-' }}</td>
                         </tr>
                         <!-- 팔/팔꿈치 -->
                         <tr>
                             <td><strong>팔/팔꿈치</strong></td>
-                            <td>{{ survey.arm_pain or 0 }}</td>
-                            <td>{{ survey.arm_symptoms or '-' }}</td>
-                            <td>{{ survey.arm_frequency or '-' }}</td>
-                            <td>{{ survey.arm_duration or '-' }}</td>
-                            <td>{{ survey.arm_severity or '-' }}</td>
-                            <td>{{ survey.arm_work_impact or '-' }}</td>
-                            <td>{{ '✓' if survey.arm_last_year else '-' }}</td>
-                            <td>{{ '✓' if survey.arm_last_week else '-' }}</td>
+                            {% set arm_data = (survey.responses['팔/팔꿈치'] if survey.responses and survey.responses['팔/팔꿈치'] else {}) %}
+                            <td>{{ arm_data.severity or '-' }}</td>
+                            <td>{{ arm_data.side or '-' }}</td>
+                            <td>{{ arm_data.frequency or '-' }}</td>
+                            <td>{{ arm_data.duration or '-' }}</td>
+                            <td>{{ arm_data.severity or '-' }}</td>
+                            <td>{{ arm_data.consequences|join(', ') if arm_data.consequences else '-' }}</td>
+                            <td>{{ '✓' if arm_data.last_year else '-' }}</td>
+                            <td>{{ '✓' if arm_data.last_week else '-' }}</td>
                         </tr>
                         <!-- 손/손목/손가락 -->
                         <tr>
                             <td><strong>손/손목</strong></td>
-                            <td>{{ survey.hand_pain or 0 }}</td>
-                            <td>{{ survey.hand_symptoms or '-' }}</td>
-                            <td>{{ survey.hand_frequency or '-' }}</td>
-                            <td>{{ survey.hand_duration or '-' }}</td>
-                            <td>{{ survey.hand_severity or '-' }}</td>
-                            <td>{{ survey.hand_work_impact or '-' }}</td>
-                            <td>{{ '✓' if survey.hand_last_year else '-' }}</td>
-                            <td>{{ '✓' if survey.hand_last_week else '-' }}</td>
+                            {% set hand_data = (survey.responses['손/손목/손가락'] if survey.responses and survey.responses['손/손목/손가락'] else {}) %}
+                            <td>{{ hand_data.severity or '-' }}</td>
+                            <td>{{ hand_data.side or '-' }}</td>
+                            <td>{{ hand_data.frequency or '-' }}</td>
+                            <td>{{ hand_data.duration or '-' }}</td>
+                            <td>{{ hand_data.severity or '-' }}</td>
+                            <td>{{ hand_data.consequences|join(', ') if hand_data.consequences else '-' }}</td>
+                            <td>{{ '✓' if hand_data.last_year else '-' }}</td>
+                            <td>{{ '✓' if hand_data.last_week else '-' }}</td>
                         </tr>
                         <!-- 등/허리 -->
                         <tr>
                             <td><strong>등/허리</strong></td>
-                            <td>{{ survey.back_pain or 0 }}</td>
-                            <td>{{ survey.back_symptoms or '-' }}</td>
-                            <td>{{ survey.back_frequency or '-' }}</td>
-                            <td>{{ survey.back_duration or '-' }}</td>
-                            <td>{{ survey.back_severity or '-' }}</td>
-                            <td>{{ survey.back_work_impact or '-' }}</td>
-                            <td>{{ '✓' if survey.back_last_year else '-' }}</td>
-                            <td>{{ '✓' if survey.back_last_week else '-' }}</td>
+                            {% set back_data = (survey.responses.허리 if survey.responses and survey.responses.허리 else {}) %}
+                            <td>{{ back_data.severity or '-' }}</td>
+                            <td>{{ back_data.side or '-' }}</td>
+                            <td>{{ back_data.frequency or '-' }}</td>
+                            <td>{{ back_data.duration or '-' }}</td>
+                            <td>{{ back_data.severity or '-' }}</td>
+                            <td>{{ back_data.consequences|join(', ') if back_data.consequences else '-' }}</td>
+                            <td>{{ '✓' if back_data.last_year else '-' }}</td>
+                            <td>{{ '✓' if back_data.last_week else '-' }}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -248,10 +261,30 @@
         </div>
     </div>
     {% endif %}
-    
+
+    <!-- 설문 응답 데이터 (원본) -->
+    {% if survey.responses or survey.data %}
+    <div class="card mb-4">
+        <div class="card-header bg-secondary text-white">
+            <h5 class="mb-0">설문 응답 데이터</h5>
+        </div>
+        <div class="card-body">
+            {% if survey.responses %}
+            <h6>Responses 필드:</h6>
+            <pre class="bg-light p-3"><code>{{ survey.responses|tojson(indent=2) }}</code></pre>
+            {% endif %}
+
+            {% if survey.data %}
+            <h6>Data 필드:</h6>
+            <pre class="bg-light p-3"><code>{{ survey.data|tojson(indent=2) }}</code></pre>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
     <!-- 작업 버튼 -->
     <div class="mb-5">
-        <a href="{{ url_for('survey.admin_dashboard') }}" class="btn btn-secondary">
+        <a href="{{ url_for('admin.survey') }}" class="btn btn-secondary">
             <i class="bi bi-arrow-left"></i> 목록으로
         </a>
         <button onclick="window.print()" class="btn btn-primary">
