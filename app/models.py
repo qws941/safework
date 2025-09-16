@@ -93,7 +93,7 @@ class SurveyModel(db.Model):
 
     # 설문 응답 데이터 (JSON - 모든 추가 데이터 저장)
     responses = db.Column(db.JSON)
-    # data = db.Column(db.JSON)  # 임시 주석처리 - responses 필드로 통합
+    data = db.Column(db.JSON)  # 실제 DB에 존재하는 data 필드 활성화
 
     # 추가 필드들은 임시 주석처리 (DB 스키마 확인 후 점진적 추가)
     # height_cm = db.Column(db.Numeric(5, 1))

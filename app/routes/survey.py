@@ -430,6 +430,7 @@ def api_submit():
             has_symptoms=data.get("data", {}).get("has_symptoms", data.get("has_symptoms", False)),
             # employment_type=data.get("employment_type"),  # 컬럼 없음 - 주석처리
             responses=data,  # 전체 요청 데이터 저장
+            data=data.get("data", {}),  # 상세 응답 데이터를 data 필드에 저장
             status="submitted",
         )
 
