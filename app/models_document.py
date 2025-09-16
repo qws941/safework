@@ -4,6 +4,8 @@ from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 from models import db
 
+# Note: Using string references for User model to avoid circular import issues
+
 class DocumentCategory(db.Model):
     """문서 카테고리 모델"""
     __tablename__ = "document_categories"
@@ -55,24 +57,24 @@ class Document(db.Model):
     # Upload information
     uploaded_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     upload_date = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
     # Status and validity
     is_active = db.Column(db.Boolean, default=True)
     is_archived = db.Column(db.Boolean, default=False)
     valid_from = db.Column(db.Date)
     valid_until = db.Column(db.Date)
-    
+
     # Statistics
     download_count = db.Column(db.Integer, default=0)
     view_count = db.Column(db.Integer, default=0)
     last_accessed = db.Column(db.DateTime)
-    
+
     # Audit fields
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     deleted_at = db.Column(db.DateTime)  # Soft delete
-    
-    # Relationships
+
+    # Relationships - Use string reference to avoid circular import
     uploader = db.relationship('User', foreign_keys=[uploaded_by], backref='uploaded_documents')
     access_logs = db.relationship('DocumentAccessLog', backref='document', lazy='dynamic')
     versions = db.relationship('DocumentVersion', backref='document', lazy='dynamic')
