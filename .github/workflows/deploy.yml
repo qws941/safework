@@ -24,7 +24,7 @@ on:
         type: boolean
 
 env:
-  APP_NAME: safework2
+  APP_NAME: safework
   REGISTRY_HOST: registry.jclee.me
   REGISTRY_USER: admin
   REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
@@ -78,7 +78,7 @@ jobs:
         id: app_meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}-app
+          images: ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/app
           tags: |
             type=ref,event=branch
             type=sha,prefix={{branch}}-
@@ -88,7 +88,7 @@ jobs:
         id: postgres_meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}-postgres
+          images: ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/postgres
           tags: |
             type=ref,event=branch
             type=sha,prefix={{branch}}-
@@ -98,7 +98,7 @@ jobs:
         id: redis_meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}-redis
+          images: ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/redis
           tags: |
             type=ref,event=branch
             type=sha,prefix={{branch}}-
@@ -148,6 +148,13 @@ jobs:
     needs: build-containers
 
     steps:
+      - name: 🔐 Login to Registry for Testing
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY_HOST }}
+          username: ${{ env.REGISTRY_USER }}
+          password: ${{ env.REGISTRY_PASSWORD }}
+
       - name: 🐳 Create Test Network
         run: docker network create safework-test-network
 
@@ -158,13 +165,13 @@ jobs:
             -e POSTGRES_PASSWORD=${{ env.POSTGRES_PASSWORD }} \
             -e POSTGRES_DB=${{ env.POSTGRES_DB }} \
             -e POSTGRES_USER=${{ env.POSTGRES_USER }} \
-            ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}-postgres:latest
+            ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/postgres:latest
 
       - name: 🔴 Start Redis Container
         run: |
           docker run -d --name test-redis \
             --network safework-test-network \
-            ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}-redis:latest
+            ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/redis:latest
 
       - name: ⏱️ Wait for Database Startup
         run: sleep 30
