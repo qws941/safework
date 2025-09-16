@@ -49,31 +49,31 @@ def dashboard():
     # 통계 데이터 수집
     total_surveys = Survey.query.count()
     today_surveys = Survey.query.filter(
-        func.date(Survey.submission_date) == func.date(datetime.now())
+        func.date(Survey.created_at) == func.date(datetime.now())
     ).count()
 
-    # 부위별 증상 카운트 (JSON 필드 기반)
-    neck_count = Survey.query.filter(Survey.neck_data.isnot(None)).count()
-    shoulder_count = Survey.query.filter(Survey.shoulder_data.isnot(None)).count()
-    arm_count = Survey.query.filter(Survey.arm_data.isnot(None)).count()
-    hand_count = Survey.query.filter(Survey.hand_data.isnot(None)).count()
-    waist_count = Survey.query.filter(Survey.waist_data.isnot(None)).count()
-    leg_count = Survey.query.filter(Survey.leg_data.isnot(None)).count()
-    
-    # 증상이 있는 총 설문 수 (has_symptoms는 VARCHAR이므로 '예' 값으로 필터)
-    high_risk_count = Survey.query.filter(Survey.has_symptoms == '예').count()
+    # 증상이 있는 총 설문 수
+    high_risk_count = Survey.query.filter(Survey.has_symptoms == True).count()
 
-    # 공정별 제출 현황 (부서 대신 공정 사용)
+    # 부위별 증상 카운트 (현재는 0으로 설정, 나중에 JSON responses 필드에서 추출 가능)
+    neck_count = 0
+    shoulder_count = 0
+    arm_count = 0
+    hand_count = 0
+    waist_count = 0
+    leg_count = 0
+
+    # 부서별 제출 현황
     dept_stats = (
-        db.session.query(Process.name, func.count(Survey.id).label("count"))
-        .join(Survey, Survey.process_id == Process.id)
-        .group_by(Process.name)
+        db.session.query(Survey.department, func.count(Survey.id).label("count"))
+        .filter(Survey.department.isnot(None))
+        .group_by(Survey.department)
         .all()
     )
 
     # 최근 제출 목록
     recent_surveys = (
-        Survey.query.order_by(Survey.submission_date.desc()).limit(10).all()
+        Survey.query.order_by(Survey.created_at.desc()).limit(10).all()
     )
 
     return render_template(
@@ -123,11 +123,11 @@ def surveys():
     date_to = request.args.get("date_to")
     if date_from:
         query = query.filter(
-            Survey.submission_date >= datetime.strptime(date_from, "%Y-%m-%d")
+            Survey.created_at >= datetime.strptime(date_from, "%Y-%m-%d")
         )
     if date_to:
         query = query.filter(
-            Survey.submission_date <= datetime.strptime(date_to, "%Y-%m-%d")
+            Survey.created_at <= datetime.strptime(date_to, "%Y-%m-%d")
         )
 
     # 상태 필터
@@ -135,47 +135,15 @@ def surveys():
     if status:
         query = query.filter(Survey.status == status)
 
-    # 통증 수준 필터
-    pain_level = request.args.get("pain_level")
-    if pain_level == "low":
-        query = query.filter(
-            and_(
-                Survey.neck_pain <= 3,
-                Survey.shoulder_pain <= 3,
-                Survey.arm_pain <= 3,
-                Survey.hand_pain <= 3,
-                Survey.back_pain <= 3,
-                Survey.waist_pain <= 3,
-                Survey.leg_pain <= 3,
-            )
-        )
-    elif pain_level == "medium":
-        query = query.filter(
-            or_(
-                and_(Survey.neck_pain >= 4, Survey.neck_pain <= 6),
-                and_(Survey.shoulder_pain >= 4, Survey.shoulder_pain <= 6),
-                and_(Survey.arm_pain >= 4, Survey.arm_pain <= 6),
-                and_(Survey.hand_pain >= 4, Survey.hand_pain <= 6),
-                and_(Survey.back_pain >= 4, Survey.back_pain <= 6),
-                and_(Survey.waist_pain >= 4, Survey.waist_pain <= 6),
-                and_(Survey.leg_pain >= 4, Survey.leg_pain <= 6),
-            )
-        )
-    elif pain_level == "high":
-        query = query.filter(
-            or_(
-                Survey.neck_pain >= 7,
-                Survey.shoulder_pain >= 7,
-                Survey.arm_pain >= 7,
-                Survey.hand_pain >= 7,
-                Survey.back_pain >= 7,
-                Survey.waist_pain >= 7,
-                Survey.leg_pain >= 7,
-            )
-        )
+    # 증상 유무 필터 (pain_level 대신 has_symptoms 사용)
+    has_symptoms = request.args.get("has_symptoms")
+    if has_symptoms == "true":
+        query = query.filter(Survey.has_symptoms == True)
+    elif has_symptoms == "false":
+        query = query.filter(Survey.has_symptoms == False)
 
     # 페이지네이션
-    surveys = query.order_by(Survey.submission_date.desc()).paginate(
+    surveys = query.order_by(Survey.created_at.desc()).paginate(
         page=page, per_page=20, error_out=False
     )
 
@@ -256,7 +224,8 @@ def export_excel():
     for s in surveys:
         data.append(
             {
-                "제출일시": s.submission_date,
+                "제출일시": s.created_at,
+                "양식유형": s.form_type,
                 "사번": s.employee_number,
                 "성명": s.name,
                 "부서": s.department,
@@ -264,17 +233,11 @@ def export_excel():
                 "나이": s.age,
                 "성별": s.gender,
                 "근무년수": s.work_years,
-                "작업내용": s.work_type,
-                "목_통증": s.neck_pain,
-                "어깨_통증": s.shoulder_pain,
-                "팔_통증": s.arm_pain,
-                "손_통증": s.hand_pain,
-                "등_통증": s.back_pain,
-                "허리_통증": s.waist_pain,
-                "다리_통증": s.leg_pain,
-                "치료이력": "있음" if s.medical_treatment else "없음",
-                "업무관련성": "있음" if s.work_related else "없음",
+                "근무개월수": s.work_months,
+                "재직년수": s.years_of_service,
+                "증상유무": "있음" if s.has_symptoms else "없음",
                 "상태": s.status,
+                "추가데이터": str(s.responses) if s.responses else ""
             }
         )
 
@@ -314,53 +277,39 @@ def statistics():
     # 일별 제출 건수
     daily_stats = (
         db.session.query(
-            func.date(Survey.submission_date).label("date"),
+            func.date(Survey.created_at).label("date"),
             func.count(Survey.id).label("count"),
         )
-        .filter(Survey.submission_date >= start_date)
-        .group_by(func.date(Survey.submission_date))
+        .filter(Survey.created_at >= start_date)
+        .group_by(func.date(Survey.created_at))
         .all()
     )
 
-    # 부위별 평균 통증
-    pain_stats = (
+    # 증상 유무별 통계 (pain_stats 대신)
+    symptom_stats = (
         db.session.query(
-            func.avg(Survey.neck_pain).label("neck"),
-            func.avg(Survey.shoulder_pain).label("shoulder"),
-            func.avg(Survey.arm_pain).label("arm"),
-            func.avg(Survey.hand_pain).label("hand"),
-            func.avg(Survey.back_pain).label("back"),
-            func.avg(Survey.waist_pain).label("waist"),
-            func.avg(Survey.leg_pain).label("leg"),
+            func.count(func.case((Survey.has_symptoms == True, 1), else_=None)).label("with_symptoms"),
+            func.count(func.case((Survey.has_symptoms == False, 1), else_=None)).label("without_symptoms"),
+            func.count(Survey.id).label("total")
         )
-        .filter(Survey.submission_date >= start_date)
+        .filter(Survey.created_at >= start_date)
         .first()
     )
 
-    # 부서별 고위험군
+    # 부서별 증상 유무 통계
     dept_risk = (
         db.session.query(
             Survey.department,
             func.count(Survey.id).label("total"),
             func.sum(
                 func.case(
-                    (
-                        or_(
-                            Survey.neck_pain >= 7,
-                            Survey.shoulder_pain >= 7,
-                            Survey.arm_pain >= 7,
-                            Survey.hand_pain >= 7,
-                            Survey.back_pain >= 7,
-                            Survey.waist_pain >= 7,
-                            Survey.leg_pain >= 7,
-                        ),
-                        1,
-                    ),
+                    (Survey.has_symptoms == True, 1),
                     else_=0,
                 )
-            ).label("high_risk"),
+            ).label("with_symptoms"),
         )
-        .filter(Survey.submission_date >= start_date)
+        .filter(Survey.created_at >= start_date)
+        .filter(Survey.department.isnot(None))
         .group_by(Survey.department)
         .all()
     )
@@ -377,7 +326,7 @@ def statistics():
             ).label("age_group"),
             func.count(Survey.id).label("count"),
         )
-        .filter(Survey.submission_date >= start_date)
+        .filter(Survey.created_at >= start_date)
         .group_by("age_group")
         .all()
     )
@@ -385,7 +334,7 @@ def statistics():
     return render_template(
         "admin/statistics.html",
         daily_stats=daily_stats,
-        pain_stats=pain_stats,
+        symptom_stats=symptom_stats,
         dept_risk=dept_risk,
         age_groups=age_groups,
         period=period,
