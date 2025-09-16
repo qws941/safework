@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS surveys (
     work_months INTEGER,
     has_symptoms BOOLEAN DEFAULT FALSE,
     status VARCHAR(20) DEFAULT 'submitted',
+    submission_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     data JSONB, -- Flexible JSON storage for form data
     responses JSONB, -- Additional responses data
     symptoms_data JSONB, -- Symptoms specific data
