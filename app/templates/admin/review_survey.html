@@ -163,17 +163,3 @@ function exportToExcel() {
 }
 </script>
 {% endblock %}
-
-{% block content %}
-<h2 class="mb-4">설문조사 상세 정보</h2>
-
-<div class="section-card">
-    <h5>기본 정보</h5>
-    <p><strong>ID:</strong> {{ survey.id }}</p>
-    <p><strong>이름:</strong> {{ survey.name }}</p>
-    <p><strong>설문 유형:</strong> {{ survey.form_type }}</p>
-    <p><strong>상태:</strong> {{ survey.status }}</p>
-
-    <a href="{{ url_for('admin.surveys') }}" class="btn btn-secondary">목록으로 돌아가기</a>
-</div>
-{% endblock %}
