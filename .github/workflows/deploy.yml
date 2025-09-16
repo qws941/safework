@@ -13,7 +13,7 @@ on:
       - 'postgres/**'
       - 'redis/**'
       - 'Dockerfile*'
-      - '.github/workflows/deploy-optimized.yml'
+      - '.github/workflows/deploy.yml'
 
   workflow_dispatch:
     inputs:
