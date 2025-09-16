@@ -145,6 +145,20 @@ def musculoskeletal_symptom_survey():
         process_name = request.form.get("process_custom") if request.form.get("process") == "__custom__" else request.form.get("process")
         role_name = request.form.get("role_custom") if request.form.get("role") == "__custom__" else request.form.get("role")
 
+        # 모든 폼 데이터를 수집하여 responses JSON 필드에 저장
+        all_form_data = {}
+        for key, value in request.form.items():
+            if key.endswith('[]'):
+                # 리스트 형태 데이터 처리
+                all_form_data[key] = request.form.getlist(key)
+            else:
+                all_form_data[key] = value
+
+        # 근골격계 상세 데이터 추가
+        if musculo_details:
+            all_form_data['musculo_details'] = musculo_details
+            all_form_data['symptom_data_dict'] = symptom_data_dict
+
         # 데이터베이스 스키마에 맞춘 Survey 생성
         survey = Survey(
             user_id=user_id,
@@ -152,14 +166,16 @@ def musculoskeletal_symptom_survey():
             # 실제 DB 필드만 사용
             name=request.form.get("name") or "익명",
             age=request.form.get("age", type=int) or 30,
-            gender=request.form.get("gender") or "male", 
+            gender=request.form.get("gender") or "male",
             department=request.form.get("department"),
             position=request.form.get("position"),
             employee_number=request.form.get("employee_number"),
             # 근골격계 증상 여부
             has_symptoms=request.form.get("current_symptom") == "예",
             work_years=request.form.get("work_years", type=int),
-            work_months=request.form.get("work_months", type=int)
+            work_months=request.form.get("work_months", type=int),
+            # 모든 설문 응답 데이터를 JSON으로 저장
+            responses=all_form_data
         )
 
         # 추가 증상 데이터를 JSON으로 저장 - 임시 비활성화 (DB 컬럼 없음)
@@ -215,6 +231,15 @@ def new_employee_health_checkup_form():
         if current_user.is_authenticated:
             user_id = current_user.id
 
+        # 모든 폼 데이터를 수집하여 responses JSON 필드에 저장
+        all_form_data = {}
+        for key, value in request.form.items():
+            if key.endswith('[]'):
+                # 리스트 형태 데이터 처리
+                all_form_data[key] = request.form.getlist(key)
+            else:
+                all_form_data[key] = value
+
         survey = Survey(
             user_id=user_id,
             form_type="002",  # 양식 타입 구분
@@ -233,7 +258,9 @@ def new_employee_health_checkup_form():
             # 기존 질병 이력
             existing_conditions=request.form.get("existing_conditions"),
             medication_history=request.form.get("medication_history"),
-            allergy_history=request.form.get("allergy_history")
+            allergy_history=request.form.get("allergy_history"),
+            # 모든 설문 응답 데이터를 JSON으로 저장
+            responses=all_form_data
         )
 
         db.session.add(survey)

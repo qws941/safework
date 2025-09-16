@@ -268,22 +268,60 @@
     </div>
     {% endif %}
 
-    <!-- 설문 응답 데이터 (원본) -->
-    {% if survey.responses or survey.data %}
+    <!-- 설문 응답 데이터 (제출한 그대로) -->
+    {% if survey.responses %}
     <div class="card mb-4">
-        <div class="card-header bg-secondary text-white">
-            <h5 class="mb-0">설문 응답 데이터</h5>
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">📝 설문 제출 데이터 (원본)</h5>
         </div>
         <div class="card-body">
-            {% if survey.responses %}
-            <h6>Responses 필드:</h6>
-            <pre class="bg-light p-3"><code>{{ survey.responses|tojson(indent=2) }}</code></pre>
-            {% endif %}
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead class="thead-light">
+                        <tr>
+                            <th style="width: 30%;">항목</th>
+                            <th>응답 내용</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for key, value in survey.responses.items() %}
+                            {% if key not in ['csrf_token'] %}
+                            <tr>
+                                <td><strong>{{ key }}</strong></td>
+                                <td>
+                                    {% if value is iterable and value is not string %}
+                                        {% if key == 'musculo_details' %}
+                                            <!-- 근골격계 상세 데이터 특별 표시 -->
+                                            {% for detail in value %}
+                                            <div class="border p-2 mb-2">
+                                                <strong>부위:</strong> {{ detail.part or '-' }}<br>
+                                                <strong>측면:</strong> {{ detail.side or '-' }}<br>
+                                                <strong>지속기간:</strong> {{ detail.duration or '-' }}<br>
+                                                <strong>심각도:</strong> {{ detail.severity or '-' }}<br>
+                                                <strong>빈도:</strong> {{ detail.frequency or '-' }}<br>
+                                                <strong>지난주:</strong> {{ detail.last_week or '-' }}<br>
+                                                <strong>결과:</strong> {{ detail.consequences|join(', ') if detail.consequences else '-' }}
+                                            </div>
+                                            {% endfor %}
+                                        {% else %}
+                                            {{ value|join(', ') if value else '-' }}
+                                        {% endif %}
+                                    {% else %}
+                                        {{ value or '-' }}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
 
-            {% if survey.data %}
-            <h6>Data 필드:</h6>
-            <pre class="bg-light p-3"><code>{{ survey.data|tojson(indent=2) }}</code></pre>
-            {% endif %}
+            <!-- JSON 원본 데이터도 표시 -->
+            <details class="mt-3">
+                <summary><strong>JSON 원본 데이터 보기</strong></summary>
+                <pre class="bg-light p-3 mt-2"><code>{{ survey.responses|tojson(indent=2) }}</code></pre>
+            </details>
         </div>
     </div>
     {% endif %}
