@@ -13,6 +13,28 @@ from models import AuditLog, Survey, Company, Process, Role, db
 survey_bp = Blueprint("survey", __name__)
 
 
+@survey_bp.route("/")
+def index():
+    """설문 목록 페이지"""
+    return '''<!DOCTYPE html>
+<html>
+<head><title>설문 목록 - SafeWork</title></head>
+<body>
+<h1>SafeWork 설문 목록</h1>
+<ul>
+<li><a href="/survey/001_musculoskeletal_symptom_survey">근골격계 증상조사표</a></li>
+<li><a href="/survey/002_new_employee_health_checkup_form">신규 입사자 건강검진표</a></li>
+</ul>
+</body>
+</html>'''
+
+
+@survey_bp.route("/statistics")
+def statistics():
+    """설문 통계 페이지 (임시로 관리자 대시보드 사용)"""
+    return redirect(url_for('admin.dashboard'))
+
+
 def get_or_create_company(name):
     """회사명으로 Company 객체 찾기 또는 생성"""
     if not name or name.strip() == "":
@@ -436,11 +458,16 @@ def api_submit():
         current_app.logger.info(f"[DEBUG] Received data: {data}")
         current_app.logger.info(f"[DEBUG] Data type: {type(data)}")
 
+        # 필수 필드 검증 및 기본값 설정
+        form_type = data.get("form_type", "001")
+        name = data.get("name") or "익명 사용자"  # name이 None이면 기본값 설정
+        age = data.get("age") or 0
+
         survey = Survey(
             user_id=1,  # API 제출은 익명 사용자 (user_id=1)
-            form_type=data.get("form_type", "001"),
-            name=data.get("name"),
-            age=data.get("age"),
+            form_type=form_type,
+            name=name,
+            age=age,
             gender=data.get("gender"),
             years_of_service=data.get("years_of_service", 0),
             employee_number=data.get("employee_number"),

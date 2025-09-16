@@ -74,38 +74,34 @@ def document_form(document_name):
     
     form_info = form_templates[document_name]
     
-    # Create document template if it doesn't exist
-    template = DocumentTemplate.query.filter_by(name=document_name).first()
+    # Create document template using Document model with is_template=True
+    template = Document.query.filter_by(title=form_info['title'], is_template=True).first()
     if not template:
-        template = DocumentTemplate(
-            name=document_name,
+        template = Document(
             title=form_info['title'],
             description=form_info['description'],
-            template_path=form_info['template'],
-            is_active=True
+            filename=f"{document_name}.html",
+            file_path=f"templates/{form_info['template']}",
+            mime_type='text/html',
+            category='form_template',
+            access_level='public',
+            is_template=True
         )
         db.session.add(template)
         db.session.commit()
-    
-    # Try to render the template
-    try:
-        return render_template(
-            form_info['template'],
-            document_name=document_name,
-            title=form_info['title'],
-            description=form_info['description'],
-            template=template
-        )
-    except Exception as e:
-        # If template doesn't exist, create a default one
-        current_app.logger.warning(f"Template not found for {document_name}: {e}")
-        return render_template(
-            'forms/form_default.html',
-            document_name=document_name,
-            title=form_info['title'],
-            description=form_info['description'],
-            template=template
-        )
+
+    # Return simple HTML response for now
+    return f'''<!DOCTYPE html>
+<html>
+<head><title>{form_info['title']} - SafeWork</title></head>
+<body>
+<h1>{form_info['title']}</h1>
+<p>{form_info['description']}</p>
+<p>문서 ID: {document_name}</p>
+<p>이 페이지는 임시 페이지입니다. 실제 폼 기능은 추후 구현될 예정입니다.</p>
+<a href="/documents/">문서 목록으로 돌아가기</a>
+</body>
+</html>'''
 
 @document_bp.route('/')
 def index():
