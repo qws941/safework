@@ -470,6 +470,7 @@ def api_submit():
             work_months=data.get("work_months", 0),
             has_symptoms=data.get("data", {}).get("has_symptoms", False),
             # employment_type=data.get("employment_type"),  # 컬럼 없음 - 주석처리
+            responses=data.get("data", {}),  # 상세 응답 데이터 저장
             status="submitted",
         )
 
