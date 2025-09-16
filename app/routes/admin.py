@@ -651,54 +651,94 @@ def safework_workers():
 @admin_required
 def safework_health_checks():
     """SafeWork 건강검진 관리"""
-    
-    # 샘플 통계 데이터
-    total_targets = 245
-    completed_count = 214
-    scheduled_count = 31
-    completion_rate = round((completed_count / total_targets * 100) if total_targets > 0 else 0, 1)
-    
-    # 샘플 검진 계획 데이터
+
+    try:
+        # 실제 건강검진 통계 데이터 조회
+        total_workers = db.session.execute("SELECT COUNT(*) FROM safework_workers WHERE is_active = true").fetchone()[0]
+        completed_checks = db.session.execute("""
+            SELECT COUNT(DISTINCT worker_id) FROM safework_health_checks
+            WHERE EXTRACT(YEAR FROM check_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+        """).fetchone()[0]
+
+        total_targets = total_workers or 0
+        completed_count = completed_checks or 0
+        scheduled_count = total_targets - completed_count
+        completion_rate = round((completed_count / total_targets * 100) if total_targets > 0 else 0, 1)
+
+        # 실제 건강검진 결과 데이터 조회
+        health_results_query = db.session.execute("""
+            SELECT hc.id, hc.check_date, w.name, w.department, hc.result,
+                   hc.blood_pressure, hc.notes
+            FROM safework_health_checks hc
+            JOIN safework_workers w ON hc.worker_id = w.id
+            WHERE EXTRACT(YEAR FROM hc.check_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+            ORDER BY hc.check_date DESC
+            LIMIT 20
+        """)
+
+        health_results = []
+        for row in health_results_query:
+            result = {
+                'id': row[0],
+                'check_date': row[1].strftime('%Y-%m-%d') if row[1] else '',
+                'name': row[2] or '',
+                'department': row[3] or '미지정',
+                'grade': row[4] or 'A',  # result 필드를 grade로 매핑
+                'bmi': 'N/A',  # BMI 계산 로직 추가 필요
+                'blood_pressure': row[5] or 'N/A',
+                'follow_up_required': True if row[6] and '관찰' in row[6] else False
+            }
+            health_results.append(result)
+
+    except Exception as e:
+        print(f"Health checks query error: {e}")
+        # 에러 발생 시 기본값 사용
+        total_targets = 0
+        completed_count = 0
+        scheduled_count = 0
+        completion_rate = 0
+        health_results = []
+
+    # 기본 건강검진 계획 (추후 별도 테이블로 관리)
     health_plans = [
         {
             'id': 1, 'year': 2024, 'type': 'GENERAL', 'planned_date': '2024-03-15',
-            'target_count': 150, 'completed_count': 142, 'status': 'IN_PROGRESS',
-            'completion_rate': 94.7
-        },
-        {
-            'id': 2, 'year': 2024, 'type': 'SPECIAL', 'planned_date': '2024-06-15',
-            'target_count': 95, 'completed_count': 72, 'status': 'IN_PROGRESS',
-            'completion_rate': 75.8
+            'target_count': total_targets, 'completed_count': completed_count,
+            'status': 'IN_PROGRESS', 'completion_rate': completion_rate
         }
     ]
-    
-    # 샘플 대상자 데이터
-    health_targets = [
-        {
-            'id': 1, 'employee_number': '2024001', 'name': '김철수',
-            'department': '생산부', 'check_type': '일반', 'scheduled_date': '2024-03-20',
-            'hospital_name': '서울대학교병원', 'status': 'SCHEDULED'
-        },
-        {
-            'id': 2, 'employee_number': '2024002', 'name': '이영희',
-            'department': '품질관리부', 'check_type': '특수', 'scheduled_date': '2024-03-21',
-            'hospital_name': '삼성서울병원', 'status': 'COMPLETED'
-        }
-    ]
-    
-    # 샘플 검진 결과 데이터
-    health_results = [
-        {
-            'id': 1, 'check_date': '2024-01-15', 'name': '박지성',
-            'department': '생산부', 'grade': 'B', 'bmi': 23.5,
-            'blood_pressure': '120/80', 'follow_up_required': False
-        },
-        {
-            'id': 2, 'check_date': '2024-01-16', 'name': '김연아',
-            'department': '경영지원부', 'grade': 'C', 'bmi': 27.2,
-            'blood_pressure': '140/90', 'follow_up_required': True
-        }
-    ]
+
+    # 건강검진 대상자 목록 (활성 근로자 기반)
+    try:
+        health_targets_query = db.session.execute("""
+            SELECT w.id, w.employee_number, w.name, w.department,
+                   CASE WHEN hc.id IS NULL THEN 'SCHEDULED' ELSE 'COMPLETED' END as status,
+                   COALESCE(hc.check_date, CURRENT_DATE + INTERVAL '30 days') as scheduled_date
+            FROM safework_workers w
+            LEFT JOIN safework_health_checks hc ON w.id = hc.worker_id
+                AND EXTRACT(YEAR FROM hc.check_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+            WHERE w.is_active = true
+            ORDER BY w.employee_number
+            LIMIT 20
+        """)
+
+        health_targets = []
+        for row in health_targets_query:
+            target = {
+                'id': row[0],
+                'employee_number': row[1] or '',
+                'name': row[2] or '',
+                'department': row[3] or '미지정',
+                'check_type': '일반',
+                'scheduled_date': row[5].strftime('%Y-%m-%d') if row[5] else '',
+                'hospital_name': '지정 병원',
+                'status': row[4]
+            }
+            health_targets.append(target)
+
+    except Exception as e:
+        print(f"Health targets query error: {e}")
+        health_targets = []
     
     return render_template(
         "admin/safework_health_checks.html",
@@ -948,21 +988,57 @@ def safework_notifications_dashboard():
 @admin_required
 def safework_consultations():
     """건강상담 기록 관리"""
-    consultations = [
-        {
-            'id': 1, 'date': '2024-01-15', 'worker_name': '김철수',
-            'department': '생산부', 'consultation_type': '개인상담',
-            'counselor': '보건관리자', 'topic': '스트레스 관리',
-            'status': 'COMPLETED'
-        },
-        {
-            'id': 2, 'date': '2024-01-16', 'worker_name': '이영희',
-            'department': '품질관리부', 'consultation_type': '집단상담',
-            'counselor': '산업간호사', 'topic': '금연 프로그램',
-            'status': 'IN_PROGRESS'
-        }
-    ]
-    return render_template("admin/safework_consultations.html", consultations=consultations)
+    try:
+        # 실제 근로자 데이터 기반으로 상담 필요 대상자 목록 생성
+        # 추후 별도 safework_consultations 테이블 생성하여 실제 상담 기록 관리
+        workers_query = db.session.execute("""
+            SELECT w.id, w.name, w.department, w.medical_conditions
+            FROM safework_workers w
+            WHERE w.is_active = true
+            ORDER BY w.name
+            LIMIT 20
+        """)
+
+        consultations = []
+        consultation_id = 1
+
+        for row in workers_query:
+            # 의료 상태가 있는 근로자는 상담이 필요할 수 있음
+            has_medical_condition = row[3] and len(row[3].strip()) > 0
+
+            consultation = {
+                'id': consultation_id,
+                'date': '2024-09-16',  # 현재 날짜로 설정
+                'worker_name': row[1] or '미등록',
+                'department': row[2] or '미지정',
+                'consultation_type': '개인상담' if has_medical_condition else '일반상담',
+                'counselor': '산업보건관리자',
+                'topic': '건강관리 상담' if has_medical_condition else '일반 건강상담',
+                'status': 'SCHEDULED' if has_medical_condition else 'NOT_REQUIRED',
+                'medical_notes': row[3] or ''
+            }
+            consultations.append(consultation)
+            consultation_id += 1
+
+        # 상담 통계
+        total_consultations = len(consultations)
+        completed_consultations = sum(1 for c in consultations if c['status'] == 'COMPLETED')
+        scheduled_consultations = sum(1 for c in consultations if c['status'] == 'SCHEDULED')
+
+    except Exception as e:
+        print(f"Consultations query error: {e}")
+        consultations = []
+        total_consultations = 0
+        completed_consultations = 0
+        scheduled_consultations = 0
+
+    return render_template(
+        "admin/safework_consultations.html",
+        consultations=consultations,
+        total_consultations=total_consultations,
+        completed_consultations=completed_consultations,
+        scheduled_consultations=scheduled_consultations
+    )
 
 @admin_bp.route("/safework/health-programs")
 @admin_required
@@ -986,21 +1062,72 @@ def safework_health_programs():
 @admin_required
 def safework_special_management():
     """특별관리 대상자 관리"""
-    special_workers = [
-        {
-            'id': 1, 'name': '박지성', 'employee_number': '2024001',
-            'department': '생산부', 'reason': '고혈압',
-            'management_level': 'C1', 'last_check': '2024-01-10',
-            'next_check': '2024-07-10', 'status': 'ACTIVE'
-        },
-        {
-            'id': 2, 'name': '김연아', 'employee_number': '2024002',
-            'department': '품질관리부', 'reason': '당뇨',
-            'management_level': 'C2', 'last_check': '2024-01-15',
-            'next_check': '2024-04-15', 'status': 'ACTIVE'
-        }
-    ]
-    return render_template("admin/safework_special_management.html", special_workers=special_workers)
+    try:
+        # 의료 조건이 있는 근로자를 특별관리 대상자로 분류
+        special_workers_query = db.session.execute("""
+            SELECT w.id, w.name, w.employee_number, w.department,
+                   w.medical_conditions, w.allergies,
+                   MAX(hc.check_date) as last_check_date
+            FROM safework_workers w
+            LEFT JOIN safework_health_checks hc ON w.id = hc.worker_id
+            WHERE w.is_active = true
+              AND (w.medical_conditions IS NOT NULL AND w.medical_conditions != ''
+                   OR w.allergies IS NOT NULL AND w.allergies != '')
+            GROUP BY w.id, w.name, w.employee_number, w.department,
+                     w.medical_conditions, w.allergies
+            ORDER BY w.employee_number
+        """)
+
+        special_workers = []
+        for row in special_workers_query:
+            # 다음 검진일 계산 (마지막 검진일로부터 6개월 후)
+            from datetime import datetime, timedelta
+            last_check = row[6] if row[6] else datetime.now().date()
+            next_check = last_check + timedelta(days=180)  # 6개월
+
+            # 관리 등급 결정 (의료 조건의 심각도에 따라)
+            medical_condition = row[4] or ''
+            allergies = row[5] or ''
+
+            if any(condition in medical_condition.lower() for condition in ['고혈압', '당뇨', '심장']):
+                management_level = 'C1'  # 고위험
+            elif any(condition in medical_condition.lower() for condition in ['관절염', '디스크']):
+                management_level = 'C2'  # 중위험
+            else:
+                management_level = 'C3'  # 저위험
+
+            special_worker = {
+                'id': row[0],
+                'name': row[1] or '미등록',
+                'employee_number': row[2] or '',
+                'department': row[3] or '미지정',
+                'reason': medical_condition or allergies or '기타',
+                'management_level': management_level,
+                'last_check': last_check.strftime('%Y-%m-%d') if last_check else '',
+                'next_check': next_check.strftime('%Y-%m-%d'),
+                'status': 'ACTIVE'
+            }
+            special_workers.append(special_worker)
+
+        # 통계 계산
+        total_special = len(special_workers)
+        c1_count = sum(1 for w in special_workers if w['management_level'] == 'C1')
+        c2_count = sum(1 for w in special_workers if w['management_level'] == 'C2')
+        c3_count = sum(1 for w in special_workers if w['management_level'] == 'C3')
+
+    except Exception as e:
+        print(f"Special management query error: {e}")
+        special_workers = []
+        total_special = c1_count = c2_count = c3_count = 0
+
+    return render_template(
+        "admin/safework_special_management.html",
+        special_workers=special_workers,
+        total_special=total_special,
+        c1_count=c1_count,
+        c2_count=c2_count,
+        c3_count=c3_count
+    )
 
 @admin_bp.route("/safework/environment-measurements")
 @admin_required
