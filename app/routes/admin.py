@@ -45,51 +45,8 @@ def admin_required(f):
 @admin_bp.route("/dashboard")
 @admin_required
 def dashboard():
-    """관리자 대시보드"""
-    # 통계 데이터 수집
-    total_surveys = Survey.query.count()
-    today_surveys = Survey.query.filter(
-        func.date(Survey.created_at) == func.date(datetime.now())
-    ).count()
-
-    # 증상이 있는 총 설문 수
-    high_risk_count = Survey.query.filter(Survey.has_symptoms == True).count()
-
-    # 부위별 증상 카운트 (현재는 0으로 설정, 나중에 JSON responses 필드에서 추출 가능)
-    neck_count = 0
-    shoulder_count = 0
-    arm_count = 0
-    hand_count = 0
-    waist_count = 0
-    leg_count = 0
-
-    # 부서별 제출 현황
-    dept_stats = (
-        db.session.query(Survey.department, func.count(Survey.id).label("count"))
-        .filter(Survey.department.isnot(None))
-        .group_by(Survey.department)
-        .all()
-    )
-
-    # 최근 제출 목록
-    recent_surveys = (
-        Survey.query.order_by(Survey.created_at.desc()).limit(10).all()
-    )
-
-    return render_template(
-        "admin/dashboard.html",
-        total_surveys=total_surveys,
-        today_surveys=today_surveys,
-        neck_count=neck_count,
-        shoulder_count=shoulder_count,
-        arm_count=arm_count,
-        hand_count=hand_count,
-        waist_count=waist_count,
-        leg_count=leg_count,
-        high_risk=high_risk_count,  # 템플릿과 일치하도록 수정
-        dept_stats=dept_stats,
-        recent_surveys=recent_surveys,
-    )
+    """관리자 대시보드 - SafeWork 대시보드로 리다이렉트"""
+    return redirect(url_for('admin.safework_dashboard'))
 
 
 @admin_bp.route("/survey")
