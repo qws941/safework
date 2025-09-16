@@ -1,0 +1,179 @@
+name: 🤖 SafeWork Claude Assistant
+
+# SafeWork에 특화된 Claude AI 자동화
+# - 보안 취약점 스캔 및 산업안전 코드 리뷰
+# - 이슈 자동 분류 및 우선순위 설정
+# - 한국어 문서 자동 번역 및 동기화
+
+on:
+  issues:
+    types: [opened, labeled]
+  pull_request:
+    types: [opened, synchronize, labeled]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  actions: read
+
+jobs:
+  # SafeWork 보안 및 산업안전 특화 코드 리뷰
+  safework-code-review:
+    name: 🛡️ SafeWork Security & Safety Review
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'pull_request' &&
+      (contains(github.event.pull_request.title, 'security') ||
+       contains(github.event.pull_request.title, '보안') ||
+       contains(github.event.pull_request.labels.*.name, 'security') ||
+       contains(github.event.pull_request.labels.*.name, 'safework'))
+
+    steps:
+      - name: 🔍 SafeWork Security Analysis
+        uses: anthropics/claude-code-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          anthropic_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            SafeWork 산업안전 관리 시스템의 보안 분석을 수행해주세요:
+
+            ## 🎯 분석 초점:
+            1. **SQL Injection 방지**: PostgreSQL 쿼리의 파라미터 바인딩 확인
+            2. **XSS 방지**: Flask 템플릿의 사용자 입력 이스케이프 처리
+            3. **CSRF 보호**: 현재 비활성화된 CSRF 보호의 보안 영향
+            4. **인증/권한**: Flask-Login 및 @admin_required 데코레이터 사용
+            5. **민감정보**: 환경변수 및 시크릿 하드코딩 여부
+            6. **파일업로드**: 업로드 파일 검증 및 경로 순회 공격 방지
+            7. **산업안전 데이터**: 근로자 개인정보 및 건강정보 보호
+
+            ## 🏭 SafeWork 특화 검증:
+            - 설문조사 데이터 (근골격계, 신규입사자) 보안성
+            - MSDS 화학물질 정보 접근 제어
+            - 건강검진 결과 암호화 및 접근 로그
+            - 관리자 권한 분리 (일반 관리자 vs 최고 관리자)
+
+            ## 📊 출력 형식:
+            - 발견된 보안 이슈별 심각도 (Critical/High/Medium/Low)
+            - 구체적인 코드 위치 및 수정 방안
+            - SafeWork 도메인 특화 보안 권장사항
+            - 한국 개인정보보호법(PIPA) 준수 여부
+
+  # 이슈 자동 분류 및 우선순위 설정
+  safework-issue-triage:
+    name: 🏷️ SafeWork Issue Auto-Triage
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'issues' &&
+      github.event.action == 'opened'
+
+    steps:
+      - name: 🔍 Issue Classification
+        uses: anthropics/claude-code-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          anthropic_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            SafeWork 이슈를 분석하여 자동 분류 및 라벨을 설정해주세요:
+
+            ## 🏷️ 분류 카테고리:
+            **기능별:**
+            - `survey`: 설문조사 (001 근골격계, 002 신규입사자)
+            - `admin`: 관리자 패널 (13개 SafeWork 관리 기능)
+            - `database`: PostgreSQL 스키마 및 마이그레이션
+            - `security`: 보안 및 인증 관련
+            - `api`: RESTful API v2 엔드포인트
+            - `ui`: Bootstrap 4.6 프론트엔드
+            - `docker`: 컨테이너 빌드 및 배포
+            - `docs`: 문서화 및 CLAUDE.md 업데이트
+
+            **심각도별:**
+            - `critical`: 운영 서비스 중단 (P0)
+            - `high`: 주요 기능 오류 (P1)
+            - `medium`: 일반 버그 (P2)
+            - `low`: 개선사항 (P3)
+
+            **SafeWork 도메인:**
+            - `industrial-safety`: 산업안전보건법 관련
+            - `health-survey`: 건강검진 및 설문
+            - `msds`: 화학물질안전데이터시트
+            - `worker-management`: 근로자 정보 관리
+            - `korean-compliance`: 한국 법규 준수
+
+            ## 📝 분석 후 수행:
+            1. 적절한 라벨 조합 제안 (최대 5개)
+            2. 우선순위 설정 근거 설명
+            3. 담당자 할당 제안 (@qws941)
+            4. 관련 문서 또는 코드 참조 제공
+
+            이슈 제목: "${{ github.event.issue.title }}"
+            이슈 내용: "${{ github.event.issue.body }}"
+
+  # @claude 멘션 응답
+  claude-mention-response:
+    name: 💬 Claude Mention Handler
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'issue_comment' &&
+      contains(github.event.comment.body, '@claude')
+
+    steps:
+      - name: 🤖 Claude Response
+        uses: anthropics/claude-code-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          anthropic_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            SafeWork 프로젝트 컨텍스트에서 사용자 질문에 답변해주세요:
+
+            ## 🏭 SafeWork 시스템 정보:
+            - **목적**: 한국 건설/산업 환경의 산업안전보건 관리
+            - **기술스택**: Flask 3.0+, PostgreSQL 15+, Redis 7, Bootstrap 4.6
+            - **핵심기능**: 건강설문(001/002), 13개 관리패널, MSDS, 근로자관리
+            - **배포환경**: Docker, GitHub Actions, Watchtower 자동배포
+            - **언어**: 한국어 UI, KST 타임존
+
+            ## 🎯 답변 가이드라인:
+            1. SafeWork 도메인 지식을 활용한 구체적 답변
+            2. 한국 산업안전보건법 및 개인정보보호법 고려
+            3. 실제 코드 위치 및 파일명 제공
+            4. 단계별 해결책 제시
+            5. 보안 및 안전성 최우선 고려
+
+            **사용자 질문**: "${{ github.event.comment.body }}"
+            **이슈 제목**: "${{ github.event.issue.title }}"
+
+  # 문서 자동 동기화 (한국어 ↔ 영어)
+  safework-docs-sync:
+    name: 📖 SafeWork Documentation Sync
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'pull_request' &&
+      (contains(github.event.pull_request.changed_files, 'CLAUDE.md') ||
+       contains(github.event.pull_request.changed_files, 'README.md'))
+
+    steps:
+      - name: 📝 Document Translation & Sync
+        uses: anthropics/claude-code-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          anthropic_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            SafeWork 프로젝트 문서의 한국어-영어 동기화를 확인해주세요:
+
+            ## 📋 검증 항목:
+            1. **CLAUDE.md**: 개발 가이드 일관성
+            2. **README.md**: 프로젝트 소개 동기화
+            3. **기술용어**: 산업안전 전문용어 통일
+            4. **설치가이드**: Docker 컨테이너 명령어 정확성
+            5. **API 문서**: 엔드포인트 및 파라미터 일치
+
+            ## 🔄 동기화 작업:
+            - 누락된 번역 부분 식별
+            - 기술적 정확성 검증
+            - SafeWork 도메인 용어 통일
+            - 한국 법규 관련 내용 정확성
+
+            변경된 파일들을 분석하여 동기화가 필요한 부분을 제안해주세요.
