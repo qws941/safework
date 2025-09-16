@@ -11,8 +11,8 @@ from sqlalchemy import func, desc
 from functools import wraps
 
 from models import db, User
-from models_document import (Document, DocumentCategory, DocumentAccessLog, 
-                            DocumentVersion, DocumentTemplate)
+from models_document import (Document, DocumentAccessLog,
+                            DocumentVersion)
 
 document_admin_bp = Blueprint('document_admin', __name__)
 
