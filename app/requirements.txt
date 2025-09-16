@@ -8,6 +8,7 @@ Flask-Cors==4.0.0
 
 # Database
 psycopg2-binary==2.9.7
+pymysql==1.1.0
 cryptography==41.0.7
 SQLAlchemy==2.0.23
 redis==5.0.1
