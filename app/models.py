@@ -21,8 +21,6 @@ db = SQLAlchemy()
 from models_document import (
     Document,
     DocumentAccessLog,
-    DocumentCategory,
-    DocumentTemplate,
     DocumentVersion,
 )
 
