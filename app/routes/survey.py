@@ -423,9 +423,10 @@ def api_submit():
             employee_id=data.get("employee_id"),
             work_years=data.get("work_years", 0),
             work_months=data.get("work_months", 0),
-            has_symptoms=data.get("data", {}).get("has_symptoms", False),
+            has_symptoms=data.get("data", {}).get("has_symptoms", data.get("has_symptoms", False)),
             # employment_type=data.get("employment_type"),  # 컬럼 없음 - 주석처리
-            responses=data.get("data", {}),  # 상세 응답 데이터 저장
+            responses=data,  # 전체 요청 데이터 저장
+            data=data.get("data", {}),  # 상세 응답 데이터를 data 필드에도 저장
             status="submitted",
         )
 
