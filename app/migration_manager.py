@@ -41,10 +41,10 @@ class MigrationManager:
     def _ensure_migration_table(self):
         """마이그레이션 추적 테이블 확인 (init.sql에서 이미 생성됨)"""
         try:
-            # MySQL에서 migrations 테이블이 있는지 확인만 함
+            # PostgreSQL에서 migrations 테이블이 있는지 확인만 함
             with db.engine.connect() as conn:
                 result = conn.execute(
-                    db.text("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'migrations'")
+                    db.text("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'public' AND TABLE_NAME = 'migrations'")
                 ).scalar()
 
                 if result > 0:

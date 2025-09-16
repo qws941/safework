@@ -23,15 +23,15 @@ from sqlalchemy import text
 
 
 def create_index_if_not_exists(conn, index_name, table_name, columns):
-    """Helper function to create index only if it doesn't exist (MySQL compatible)"""
+    """Helper function to create index only if it doesn't exist (PostgreSQL compatible)"""
     # Check if index exists
     result = conn.execute(
         text("""
         SELECT COUNT(*) as count
-        FROM INFORMATION_SCHEMA.STATISTICS 
-        WHERE table_schema = DATABASE() 
-        AND table_name = :table_name 
-        AND index_name = :index_name
+        FROM pg_indexes
+        WHERE schemaname = 'public'
+        AND tablename = :table_name
+        AND indexname = :index_name
         """),
         {"table_name": table_name, "index_name": index_name}
     ).fetchone()
@@ -73,23 +73,23 @@ def upgrade():
 
 
 def drop_index_if_exists(conn, index_name, table_name):
-    """Helper function to drop index only if it exists (MySQL compatible)"""
+    """Helper function to drop index only if it exists (PostgreSQL compatible)"""
     # Check if index exists
     result = conn.execute(
         text("""
         SELECT COUNT(*) as count
-        FROM INFORMATION_SCHEMA.STATISTICS 
-        WHERE table_schema = DATABASE() 
-        AND table_name = :table_name 
-        AND index_name = :index_name
+        FROM pg_indexes
+        WHERE schemaname = 'public'
+        AND tablename = :table_name
+        AND indexname = :index_name
         """),
         {"table_name": table_name, "index_name": index_name}
     ).fetchone()
-    
+
     if result[0] > 0:
-        # For MySQL, we need to use ALTER TABLE to drop indexes
+        # For PostgreSQL, we drop the index directly
         conn.execute(
-            text(f"ALTER TABLE {table_name} DROP INDEX {index_name}")
+            text(f"DROP INDEX IF EXISTS {index_name}")
         )
         print(f"  ✓ Dropped index {index_name} from {table_name}")
 
