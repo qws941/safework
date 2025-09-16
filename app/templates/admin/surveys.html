@@ -29,35 +29,43 @@
             <tr>
                 <th>제출일시</th>
                 <th>이름</th>
-                <th>부서</th>
-                <th>나이</th>
-                <th>최고통증</th>
+                <th>부서/직위</th>
+                <th>나이/성별</th>
+                <th>근무정보</th>
+                <th>증상여부</th>
                 <th>상태</th>
-                <th>작업</th>
             </tr>
         </thead>
         <tbody>
             {% for survey in surveys.items %}
             <tr>
-                <td>{{ survey.submission_date.strftime('%Y-%m-%d %H:%M') }}</td>
-                <td>{{ survey.name }}</td>
-                <td>{{ survey.department }}</td>
-                <td>{{ survey.age }}</td>
                 <td>
-                    {% set max_pain = [survey.neck_pain, survey.shoulder_pain, survey.arm_pain, 
-                                      survey.hand_pain, survey.back_pain, survey.waist_pain, 
-                                      survey.leg_pain] | max %}
-                    <span class="badge bg-{% if max_pain >= 7 %}danger{% elif max_pain >= 4 %}warning{% else %}success{% endif %}">
-                        {{ max_pain }}/10
+                    <strong>{{ survey.created_at.strftime('%Y-%m-%d %H:%M') }}</strong><br>
+                    <small class="text-muted">{{ survey.form_type }}양식</small>
+                </td>
+                <td>
+                    <strong>{{ survey.name }}</strong><br>
+                    <small class="text-muted">{{ survey.employee_number or '사번없음' }}</small>
+                </td>
+                <td>
+                    {{ survey.department or '-' }}<br>
+                    <small class="text-muted">{{ survey.position or '-' }}</small>
+                </td>
+                <td>
+                    {{ survey.age }}세<br>
+                    <small class="text-muted">{{ survey.gender or '-' }}</small>
+                </td>
+                <td>
+                    <small>재직 {{ survey.years_of_service or 0 }}년<br>
+                    근무 {{ survey.work_years or 0 }}년 {{ survey.work_months or 0 }}개월</small>
+                </td>
+                <td>
+                    <span class="badge bg-{% if survey.has_symptoms %}warning{% else %}success{% endif %}">
+                        {% if survey.has_symptoms %}증상 있음{% else %}증상 없음{% endif %}
                     </span>
                 </td>
                 <td>
                     <span class="badge bg-primary">{{ survey.status }}</span>
-                </td>
-                <td>
-                    <a href="{{ url_for('admin.review_survey', id=survey.id) }}" class="btn btn-sm btn-outline-primary">
-                        상세
-                    </a>
                 </td>
             </tr>
             {% endfor %}

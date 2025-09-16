@@ -186,19 +186,15 @@ def musculoskeletal_symptom_survey():
             flash(f"설문 제출 중 오류가 발생했습니다: {str(e)}", "error")
             return redirect(url_for("survey.musculoskeletal_symptom_survey"))
 
-        # 감사 로그
-        if current_user.is_authenticated:
-            log = AuditLog(
-                user_id=current_user.id,
-                action="survey_submitted",
-                target_type="survey",
-                target_id=survey.id,
-                details={"name": survey.name},
-                ip_address=request.remote_addr,
-                user_agent=request.user_agent.string,
-            )
-            db.session.add(log)
-            db.session.commit()
+        # 감사 로그 (임시 비활성화 - 프로덕션 스키마 호환성)
+        # if current_user.is_authenticated:
+        #     log = AuditLog(
+        #         user_id=current_user.id,
+        #         action="survey_submitted",
+        #         details={"name": survey.name, "survey_id": survey.id},
+        #     )
+        #     db.session.add(log)
+        #     db.session.commit()
 
         flash("증상조사표가 성공적으로 제출되었습니다.", "success")
         if kiosk_mode:

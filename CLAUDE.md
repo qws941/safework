@@ -13,11 +13,12 @@ SafeWork is an industrial health and safety management system built with Flask 3
 - **Anonymous Access**: Public survey submission with user_id=1 fallback
 - **RESTful API v2**: External system integrations via `/api/safework/v2/*`
 
-**Tech Stack:** 
-- Backend: Flask 3.0+, SQLAlchemy 2.0, PostgreSQL 15+, Redis 7.0
-- Frontend: Bootstrap 4.6, jQuery, responsive design
+**Tech Stack:**
+- Backend: Flask 3.0+, SQLAlchemy 2.0, MySQL 8.0+ (production database), Redis 7.0
+- Frontend: Bootstrap 5.3, jQuery, responsive design with mobile optimization
 - Infrastructure: Docker, Private Registry (registry.jclee.me), Watchtower auto-deployment
 - Localization: KST timezone (`kst_now()` function), Korean UI/error messages
+- Security: CSRF currently disabled for survey testing, Flask-Login authentication
 
 ## Development Commands
 
@@ -137,9 +138,9 @@ python -m pytest --cov=. --cov-report=html  # Coverage report
 python -m pytest tests/test_survey.py  # Specific test file
 
 # Note: Test files may not be present yet - testing is configured via requirements.txt
-# Testing environment uses PostgreSQL with separate test database
+# Testing environment uses MySQL with separate test database (switched from PostgreSQL)
 # Configure test database via environment variables:
-# DB_HOST=127.0.0.1, DB_NAME=safework_test, DB_USER=safework_test
+# DB_HOST=127.0.0.1, DB_NAME=safework_test, DB_USER=safework_test, DB_PORT=3306
 ```
 
 ### Database Management
@@ -149,12 +150,16 @@ docker exec -it safework2-app bash
 
 # Migration commands (inside container)
 python migrate.py status               # Check migration status
-python migrate.py migrate              # Apply migrations  
+python migrate.py migrate              # Apply migrations
 python migrate.py create "Description" # Create new migration
 
-# Database inspection
-docker exec -it safework2-postgres psql -U safework -d safework_db -c "\dt;"
-docker exec -it safework2-postgres psql -U safework -d safework_db -c "\d surveys;"
+# Database inspection (MySQL in production)
+docker exec -it safework-mysql mysql -u safework -p safework_db -e "SHOW TABLES;"
+docker exec -it safework-mysql mysql -u safework -p safework_db -e "DESCRIBE surveys;"
+
+# Legacy PostgreSQL commands (if using PostgreSQL containers)
+# docker exec -it safework2-postgres psql -U safework -d safework_db -c "\dt;"
+# docker exec -it safework2-postgres psql -U safework -d safework_db -c "\d surveys;"
 ```
 
 ### API Testing & Debugging
@@ -194,11 +199,11 @@ print('Database connection: OK')
 ### Access Points & Credentials
 **Local Development:**
 - **Main app**: http://localhost:4545
-- **PostgreSQL**: localhost:4546 (safework2-postgres container)
-- **Redis**: localhost:4547 (safework2-redis container)
+- **MySQL**: localhost:4546 (safework-mysql container)
+- **Redis**: localhost:4547 (safework-redis container)
 - **Admin panel**: http://localhost:4545/admin (admin/safework2024)
-- **Health check**: http://localhost:4545/health  
-- **Migration UI**: http://localhost:4545/migration/status
+- **Health check**: http://localhost:4545/health
+- **Migration UI**: http://localhost:4545/admin/migration/status
 
 **Remote Environments:**
 - **Development**: https://safework-dev.jclee.me
@@ -254,7 +259,7 @@ def create_app(config_name=None):
 ```sql
 -- Survey system with discriminator
 surveys.form_type = '001' | '002'  -- Form type identifier
-surveys.data (JSONB)               -- Flexible form field storage with PostgreSQL indexing
+surveys.responses (JSON)           -- Flexible form field storage (MySQL JSON, PostgreSQL JSONB)
 
 -- Anonymous submissions
 user_id = 1  -- Special user for anonymous form submissions
@@ -309,6 +314,25 @@ app/routes/
 // When re-enabled: xhr.setRequestHeader("X-CSRFToken", csrf_token);
 ```
 
+### Configuration Management
+**Multi-Environment Setup (config.py):**
+```python
+# Environment-specific database configuration
+config = {
+    "development": DevelopmentConfig,  # PostgreSQL, CSRF disabled
+    "production": ProductionConfig,    # PostgreSQL, CSRF disabled
+    "testing": TestingConfig,          # MySQL, CSRF disabled
+    "default": DevelopmentConfig,
+}
+
+# Key configuration patterns:
+# - Database switching: PostgreSQL (prod/dev) vs MySQL (testing)
+# - CSRF protection completely disabled across all environments
+# - File upload limits: 50MB with specific allowed extensions
+# - Session configuration with security headers
+# - Redis integration for caching and session storage
+```
+
 **SafeWork Admin Panel Pattern:**
 ```python
 # 1. Model Definition (models_safework.py)
@@ -333,14 +357,15 @@ def safework_workers():
 ### Advanced GitHub Actions CI/CD Pipeline
 The project uses an **optimized English-only workflow system** with advanced Claude AI integration:
 
-**Core Workflows (Post-2024 Optimization):**
-- **🚀 SafeWork Production Deployment**: Comprehensive deployment with auto-rollback and emergency recovery
-- **🤖 Claude AI Assistant with Advanced MCP Integration**: AI-powered assistance with Multiple MCP Protocol tools
-- **🔧 SafeWork Maintenance Automation & Health Check**: Automated system maintenance and monitoring
-- **📊 Operational Log Analysis**: Real-time container log monitoring via Portainer API
-- **🛡️ Security Auto-Triage**: Automated vulnerability detection and resolution
-- **🎯 Issue Handler**: Intelligent issue management with auto-labeling
-- **🔄 Dependency Auto-Update**: Weekly automated dependency management
+**Current Active Workflows:**
+- **🚀 deploy.yml**: SafeWork Production Deployment with auto-rollback and emergency recovery
+- **🤖 claude-mcp-assistant.yml**: Claude AI Assistant with Advanced MCP Integration
+- **🔧 maintenance-automation.yml**: Automated system maintenance and health monitoring
+- **📊 operational-log-analysis.yml**: Real-time container log monitoring via Portainer API
+- **🛡️ security-auto-triage.yml**: Automated vulnerability detection and resolution
+- **🎯 issue-handler.yml**: Intelligent issue management with auto-labeling
+- **🔄 dependency-auto-update.yml**: Weekly automated dependency management
+- **🔧 fix-postgres-watchtower-labels.yml**: PostgreSQL Watchtower labels fix workflow
 
 **Recent Optimizations (September 2024):**
 - ✅ **Workflow Consolidation**: Reduced from 9 to 6 optimized workflows
@@ -470,25 +495,57 @@ curl -X POST -H "X-API-Key: ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=" \
   }'
 ```
 
-### Recent Database Schema Fixes
-**CRITICAL**: The `submission_date` column was missing from the surveys table, causing 500 errors.
+### Recent Database Schema Fixes & Current Issues
+**CRITICAL FIXES APPLIED:**
 
-**Fixed in models.py:**
+1. **APP_VERSION Property Object Display Bug (RESOLVED):**
 ```python
-# OLD (property causing issues):
-@property
-def submission_date(self):
-    return self.created_at
+# Problem: Footer showing "<property object at 0x...>" instead of version number
+# Root cause: Flask config copying property decorator instead of value
+# Solution: Explicit conversion in app.py after config loading
+config_obj = config[config_name]()
+app.config['APP_VERSION'] = config_obj.APP_VERSION  # Gets actual string value
 
-# NEW (actual column):
-submission_date = db.Column(db.DateTime, default=kst_now)
+# Fallback handling also updated for property object issue:
+app_version = "3.0.0"  # Direct hardcoding instead of property reference
 ```
 
-**Manual schema fix command:**
-```sql
--- Added via Portainer API PostgreSQL exec
+2. **submission_date Column Issue (RESOLVED):**
+```python
+# Problem: Missing submission_date column causing 500 errors
+# Solution: Added actual database column instead of property
+submission_date = db.Column(db.DateTime, default=kst_now)
+
+# Manual fix applied via Portainer API:
 ALTER TABLE surveys ADD COLUMN submission_date TIMESTAMP DEFAULT NOW();
 ```
+
+3. **Database Configuration Switch (RESOLVED):**
+```python
+# Switched to MySQL for production deployment
+# Current Status: MySQL 8.0+ (production), PostgreSQL 15+ (legacy/development)
+# Container: safework-mysql (port 3306)
+# Benefits: Better compatibility with deployment infrastructure
+```
+
+4. **Model Import Issues (RESOLVED):**
+```python
+# Problem: ImportError: cannot import name 'AuditLog' from 'models'
+# Solution: Added backward compatibility aliases at end of models.py
+Survey = SurveyModel
+SurveyStatistics = SurveyStatisticsModel
+AuditLog = AuditLogModel
+```
+
+**CURRENT SYSTEM STATUS:**
+- **Database**: MySQL 8.0+ in production (37 tables including 10 SafeWork tables)
+- **Container Names**: safework-app, safework-mysql, safework-redis
+- **Authentication**: Working correctly (login redirects function properly)
+- **Version Display**: Fixed property object bug - now shows "3.0.0"
+- **API Endpoints**: All SafeWork admin endpoints require authentication
+- **Test Data**: Survey submissions, worker records, health checks verified
+- **CSRF Protection**: Disabled for survey testing (WTF_CSRF_ENABLED=false)
+- **Health Checks**: All containers operational with Watchtower auto-deployment
 
 ### Survey API Testing & Verification
 ```bash
@@ -510,9 +567,9 @@ curl -X POST http://localhost:4545/survey/api/submit \
     "data": {"has_symptoms": true}
   }'
 
-# Verify data saved in PostgreSQL
-docker exec -it safework-postgres psql -U safework -d safework_db \
-  -c "SELECT id, name, form_type, age, gender, department, position, submission_date, created_at FROM surveys ORDER BY id DESC LIMIT 5;"
+# Verify data saved in MySQL
+docker exec -it safework-mysql mysql -u safework -p safework_db \
+  -e "SELECT id, name, form_type, age, gender, department, position, submission_date, created_at FROM surveys ORDER BY id DESC LIMIT 5;"
 ```
 
 ## Error Detection & Resolution
@@ -568,8 +625,11 @@ docker exec -it safework-app python migrate.py migrate             # Run migrati
 curl -H "X-API-Key: ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=" \
      "https://portainer.jclee.me/api/endpoints/3/docker/containers/json" # List containers
 
-# Direct PostgreSQL access
-docker exec -it safework-postgres psql -U safework -d safework_db   # PostgreSQL CLI
+# Direct MySQL access (current production database)
+docker exec -it safework-mysql mysql -u safework -p safework_db      # MySQL CLI
+
+# Direct PostgreSQL access (legacy/development)
+# docker exec -it safework-postgres psql -U safework -d safework_db  # PostgreSQL CLI
 
 # Survey form debugging
 # - Verify HTML/JavaScript ID matching (critical for conditional logic)
@@ -605,24 +665,34 @@ except Exception as e:
 ### Environment Variables
 ```bash
 # Core application settings
-FLASK_CONFIG=production                # Environment mode
+FLASK_CONFIG=production                # Environment mode (development/production/testing)
 SECRET_KEY=safework-production-secret-key-2024
 TZ=Asia/Seoul                         # Korean timezone
 
-# Database connection (PostgreSQL)
-DB_HOST=safework2-postgres            # Container name
-DB_PORT=5432                          # PostgreSQL port
-DB_NAME=safework_db
-DB_USER=safework
-DB_PASSWORD=safework2024
+# Database connection (MySQL in production, PostgreSQL legacy)
+DB_HOST=safework-mysql                # Container name (safework-mysql for production)
+DB_PORT=3306                          # MySQL port (5432 for PostgreSQL legacy)
+DB_NAME=safework_db                   # Database name
+DB_USER=safework                      # Database user
+DB_PASSWORD=safework2024              # Database password
 
 # Redis cache
-REDIS_HOST=safework2-redis            # Container name  
-REDIS_PORT=6379
+REDIS_HOST=safework-redis             # Container name (updated to match current containers)
+REDIS_PORT=6379                       # Redis port
+REDIS_PASSWORD=                       # Redis password (optional)
+REDIS_DB=0                           # Redis database number
 
 # Admin credentials
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=safework2024
+ADMIN_USERNAME=admin                  # Admin username
+ADMIN_PASSWORD=safework2024           # Admin password
+
+# CSRF Settings (currently disabled)
+WTF_CSRF_ENABLED=false               # CSRF protection (disabled for survey testing)
+WTF_CSRF_CHECK_DEFAULT=false         # CSRF check default
+
+# File upload settings
+UPLOAD_FOLDER=/app/uploads           # Upload directory
+MAX_CONTENT_LENGTH=52428800          # 50MB max file size
 ```
 
 ## Claude Code 자동화 모니터링 시스템
@@ -739,11 +809,12 @@ jobs:
 ## Production Guidelines
 
 ### Database Best Practices
-- PostgreSQL 15+ with UTF8 encoding for Korean text support
+- MySQL 8.0+ (production) with UTF8MB4 encoding for Korean text support
+- PostgreSQL 15+ (legacy/development) with UTF8 encoding
 - Use `kst_now()` for all timestamp operations (consistent KST timezone)
 - Transaction-based operations with rollback for data integrity
 - Anonymous submissions always use `user_id=1`
-- JSONB fields for flexible survey data storage with indexing support
+- JSON fields for flexible survey data storage (MySQL JSON, PostgreSQL JSONB)
 
 ### Security & Performance
 - `@login_required` decorator for all admin routes

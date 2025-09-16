@@ -16,7 +16,7 @@ class Config:
     DB_PORT = int(os.environ.get("DB_PORT", 3306))
     DB_USER = os.environ.get("DB_USER", "safework")
     DB_PASSWORD = os.environ.get("DB_PASSWORD", "safework2024")
-    DB_NAME = os.environ.get("DB_NAME", "safework_db")
+    DB_NAME = os.environ.get("DB_NAME", "safework")
 
     SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -106,7 +106,23 @@ class DevelopmentConfig(Config):
 
     DEBUG = True
     TESTING = False
-    
+
+    # Use MySQL for development with environment variables
+    DB_HOST = os.environ.get("DB_HOST", "safework-mysql")
+    DB_PORT = int(os.environ.get("DB_PORT", 3306))
+    DB_USER = os.environ.get("DB_USER", "safework")
+    DB_PASSWORD = os.environ.get("DB_PASSWORD", "safework2024")
+    DB_NAME = os.environ.get("DB_NAME", "safework")
+
+    SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+
+    # MySQL connection options for development
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_size": 10,
+        "pool_recycle": 3600,
+        "pool_pre_ping": True,
+    }
+
     # CSRF 완전 비활성화 - 설문 테스트용 (환경변수에서 읽기)
     WTF_CSRF_ENABLED = os.environ.get("WTF_CSRF_ENABLED", "false").lower() == "true"
     WTF_CSRF_CHECK_DEFAULT = os.environ.get("WTF_CSRF_CHECK_DEFAULT", "false").lower() == "true"
@@ -118,12 +134,28 @@ class ProductionConfig(Config):
     DEBUG = False
     TESTING = False
 
+    # Use MySQL for production with environment variables
+    DB_HOST = os.environ.get("DB_HOST", "safework-mysql")
+    DB_PORT = int(os.environ.get("DB_PORT", 3306))
+    DB_USER = os.environ.get("DB_USER", "safework")
+    DB_PASSWORD = os.environ.get("DB_PASSWORD", "safework2024")
+    DB_NAME = os.environ.get("DB_NAME", "safework")
+
+    SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+
+    # MySQL connection options for production
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_size": 10,
+        "pool_recycle": 3600,
+        "pool_pre_ping": True,
+    }
+
     # Override with production values
     SECRET_KEY = os.environ.get("SECRET_KEY", "fallback-key-for-testing")
     # Validation moved to runtime instead of import time
     # if not SECRET_KEY:
     #     raise ValueError("SECRET_KEY must be set in production")
-    
+
     # CSRF 완전 비활성화 - 설문 테스트용 (환경변수에서 읽기)
     WTF_CSRF_ENABLED = os.environ.get("WTF_CSRF_ENABLED", "false").lower() == "true"
     WTF_CSRF_CHECK_DEFAULT = os.environ.get("WTF_CSRF_CHECK_DEFAULT", "false").lower() == "true"

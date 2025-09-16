@@ -10,25 +10,62 @@
 <div class="section-card">
     <h5>기본 정보</h5>
     <table class="table">
-        <tr><th width="30%">성명</th><td>{{ survey.name }}</td></tr>
-        <tr><th>부서</th><td>{{ survey.department }}</td></tr>
-        <tr><th>나이</th><td>{{ survey.age }}세</td></tr>
-        <tr><th>제출일</th><td>{{ survey.submission_date.strftime('%Y-%m-%d %H:%M') }}</td></tr>
+        <tr><th width="30%">성명</th><td>{{ survey.name or '-' }}</td></tr>
+        <tr><th>부서</th><td>{{ survey.department or '-' }}</td></tr>
+        <tr><th>직위</th><td>{{ survey.position or '-' }}</td></tr>
+        <tr><th>나이</th><td>{{ survey.age or '-' }}{% if survey.age %}세{% endif %}</td></tr>
+        <tr><th>성별</th><td>{{ survey.gender or '-' }}</td></tr>
+        <tr><th>사번</th><td>{{ survey.employee_id or '-' }}</td></tr>
+        <tr><th>근무경력</th><td>{% if survey.work_years %}{{ survey.work_years }}년{% endif %}{% if survey.work_months %} {{ survey.work_months }}개월{% endif %}{% if not survey.work_years and not survey.work_months %}-{% endif %}</td></tr>
+        <tr><th>제출일</th><td>{{ survey.submission_date.strftime('%Y-%m-%d %H:%M') if survey.submission_date else survey.created_at.strftime('%Y-%m-%d %H:%M') }}</td></tr>
+        <tr><th>양식유형</th><td>
+            {% if survey.form_type == '001' %}
+                <span class="badge bg-primary">001 근골격계 증상조사표</span>
+            {% elif survey.form_type == '002' %}
+                <span class="badge bg-info">002 신규 입사자 건강검진</span>
+            {% else %}
+                {{ survey.form_type }}
+            {% endif %}
+        </td></tr>
     </table>
 </div>
 
 <div class="section-card">
-    <h5>통증 정보</h5>
-    <table class="table">
-        <tr><th width="30%">목</th><td>{{ survey.neck_pain }}/10</td></tr>
-        <tr><th>어깨</th><td>{{ survey.shoulder_pain }}/10</td></tr>
-        <tr><th>팔/팔꿈치</th><td>{{ survey.arm_pain }}/10</td></tr>
-        <tr><th>손/손목</th><td>{{ survey.hand_pain }}/10</td></tr>
-        <tr><th>등</th><td>{{ survey.back_pain }}/10</td></tr>
-        <tr><th>허리</th><td>{{ survey.waist_pain }}/10</td></tr>
-        <tr><th>다리/무릎/발</th><td>{{ survey.leg_pain }}/10</td></tr>
-    </table>
+    <h5>상세 응답 데이터</h5>
+    {% if survey.responses %}
+        <div class="table-responsive">
+            <table class="table table-sm">
+                {% for key, value in survey.responses.items() %}
+                <tr>
+                    <th width="30%">{{ key }}</th>
+                    <td>
+                        {% if value is mapping %}
+                            <code>{{ value | tojson }}</code>
+                        {% elif value is iterable and value is not string %}
+                            <ul class="mb-0">
+                            {% for item in value %}
+                                <li>{{ item }}</li>
+                            {% endfor %}
+                            </ul>
+                        {% else %}
+                            {{ value }}
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+    {% else %}
+        <p class="text-muted">응답 데이터가 없습니다.</p>
+    {% endif %}
 </div>
 
-<a href="{{ url_for('survey.my_surveys') }}" class="btn btn-primary">목록으로</a>
+<div class="mb-4">
+    <a href="{{ url_for('survey.my_surveys') }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> 목록으로
+    </a>
+    <button onclick="window.print()" class="btn btn-primary">
+        <i class="bi bi-printer"></i> 인쇄
+    </button>
+</div>
 {% endblock %}

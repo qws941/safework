@@ -182,18 +182,18 @@ class SurveyStatisticsModel(db.Model):
 
 
 class AuditLogModel(db.Model):
-    """Audit Log Model"""
+    """Audit Log Model - Production Compatible"""
 
     __tablename__ = "audit_logs"
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     action = db.Column(db.String(50), nullable=False)
-    target_type = db.Column(db.String(50))
-    target_id = db.Column(db.Integer)
+    # target_type = db.Column(db.String(50))  # 프로덕션 DB에 없음 - 주석처리
+    # target_id = db.Column(db.Integer)       # 프로덕션 DB에 없음 - 주석처리
     details = db.Column(db.JSON)
-    ip_address = db.Column(db.String(45))
-    user_agent = db.Column(db.String(500))
+    # ip_address = db.Column(db.String(45))   # 프로덕션 DB에 없음 - 주석처리
+    # user_agent = db.Column(db.String(500))  # 프로덕션 DB에 없음 - 주석처리
     created_at = db.Column(db.DateTime, default=kst_now)
 
     def __repr__(self):

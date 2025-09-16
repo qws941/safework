@@ -49,7 +49,7 @@ def dashboard():
     # 통계 데이터 수집
     total_surveys = Survey.query.count()
     today_surveys = Survey.query.filter(
-        func.date(Survey.submission_date) == func.date(datetime.now())
+        func.date(Survey.created_at) == func.date(datetime.now())
     ).count()
 
     # 증상이 있는 총 설문 수
@@ -73,7 +73,7 @@ def dashboard():
 
     # 최근 제출 목록
     recent_surveys = (
-        Survey.query.order_by(Survey.submission_date.desc()).limit(10).all()
+        Survey.query.order_by(Survey.created_at.desc()).limit(10).all()
     )
 
     return render_template(
@@ -118,16 +118,16 @@ def surveys():
     if department:
         query = query.filter(Survey.department == department)
 
-    # 날짜 필터
+    # 날짜 필터 (created_at 사용으로 변경)
     date_from = request.args.get("date_from")
     date_to = request.args.get("date_to")
     if date_from:
         query = query.filter(
-            Survey.submission_date >= datetime.strptime(date_from, "%Y-%m-%d")
+            Survey.created_at >= datetime.strptime(date_from, "%Y-%m-%d")
         )
     if date_to:
         query = query.filter(
-            Survey.submission_date <= datetime.strptime(date_to, "%Y-%m-%d")
+            Survey.created_at <= datetime.strptime(date_to, "%Y-%m-%d")
         )
 
     # 상태 필터
@@ -142,8 +142,8 @@ def surveys():
     elif has_symptoms == "false":
         query = query.filter(Survey.has_symptoms == False)
 
-    # 페이지네이션
-    surveys = query.order_by(Survey.submission_date.desc()).paginate(
+    # 페이지네이션 (created_at 사용으로 변경)
+    surveys = query.order_by(Survey.created_at.desc()).paginate(
         page=page, per_page=20, error_out=False
     )
 
@@ -156,47 +156,68 @@ def surveys():
     return render_template("admin/surveys.html", surveys=surveys, form=form)
 
 
-@admin_bp.route("/survey/<int:id>/review", methods=["GET", "POST"])
+@admin_bp.route("/surveys-test")
 @admin_required
+def surveys_test():
+    """설문 목록 테스트 - 간소화 버전"""
+    try:
+        # 가장 간단한 쿼리
+        surveys_list = Survey.query.order_by(Survey.created_at.desc()).limit(10).all()
+
+        # 간단한 HTML 응답
+        html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head><title>설문 목록 테스트</title></head>
+        <body>
+            <h1>설문 목록 테스트</h1>
+            <p>총 설문 개수: {Survey.query.count()}개</p>
+            <ul>
+        """
+
+        for survey in surveys_list:
+            html += f"""
+                <li>
+                    ID: {survey.id},
+                    이름: {survey.name},
+                    부서: {survey.department},
+                    일시: {survey.created_at}
+                </li>
+            """
+
+        html += """
+            </ul>
+        </body>
+        </html>
+        """
+
+        return html
+
+    except Exception as e:
+        return f"오류 발생: {str(e)}"
+
+
+@admin_bp.route("/survey/<int:id>/review", methods=["GET", "POST"])
 def review_survey(id):
     """조사표 검토 및 처리"""
-    survey = Survey.query.get_or_404(id)
+    try:
+        survey = Survey.query.get_or_404(id)
 
-    if request.method == "POST":
-        action = request.form.get("action")
-        notes = request.form.get("notes")
-
-        if action == "review":
-            survey.status = "reviewed"
-            survey.reviewed_by = current_user.id
-            survey.reviewed_at = datetime.utcnow()
-        elif action == "process":
-            survey.status = "processed"
-
-        if notes:
-            survey.additional_notes = (
-                survey.additional_notes or ""
-            ) + f"\n[관리자 메모 {datetime.now()}]: {notes}"
-
-        db.session.commit()
-
-        # 감사 로그
-        log = AuditLog(
-            user_id=current_user.id,
-            action=f"survey_{action}",
-            target_type="survey",
-            target_id=survey.id,
-            details={"notes": notes},
-            ip_address=request.remote_addr,
-            user_agent=request.user_agent.string,
-        )
-        db.session.add(log)
-        db.session.commit()
-
-        flash("처리가 완료되었습니다.", "success")
-        return redirect(url_for("admin.surveys"))
-
-    return render_template("admin/review_survey.html", survey=survey)
+        # 간단한 HTML 응답으로 테스트
+        return f"""
+        <html>
+        <head><title>설문 상세</title></head>
+        <body>
+            <h1>설문 상세 정보</h1>
+            <p>ID: {survey.id}</p>
+            <p>이름: {survey.name}</p>
+            <p>상태: {survey.status}</p>
+            <a href="/admin/surveys">목록으로</a>
+        </body>
+        </html>
+        """
+    except Exception as e:
+        return f"<html><body><h1>Error</h1><p>{str(e)}</p></body></html>", 500
 
 
 @admin_bp.route("/export/excel")
@@ -224,7 +245,7 @@ def export_excel():
     for s in surveys:
         data.append(
             {
-                "제출일시": s.submission_date,
+                "제출일시": s.created_at,
                 "양식유형": s.form_type,
                 "사번": s.employee_number,
                 "성명": s.name,
@@ -277,11 +298,11 @@ def statistics():
     # 일별 제출 건수
     daily_stats = (
         db.session.query(
-            func.date(Survey.submission_date).label("date"),
+            func.date(Survey.created_at).label("date"),
             func.count(Survey.id).label("count"),
         )
-        .filter(Survey.submission_date >= start_date)
-        .group_by(func.date(Survey.submission_date))
+        .filter(Survey.created_at >= start_date)
+        .group_by(func.date(Survey.created_at))
         .all()
     )
 
@@ -292,7 +313,7 @@ def statistics():
             func.count(func.case((Survey.has_symptoms == False, 1), else_=None)).label("without_symptoms"),
             func.count(Survey.id).label("total")
         )
-        .filter(Survey.submission_date >= start_date)
+        .filter(Survey.created_at >= start_date)
         .first()
     )
 
@@ -308,7 +329,7 @@ def statistics():
                 )
             ).label("with_symptoms"),
         )
-        .filter(Survey.submission_date >= start_date)
+        .filter(Survey.created_at >= start_date)
         .filter(Survey.department.isnot(None))
         .group_by(Survey.department)
         .all()
@@ -326,7 +347,7 @@ def statistics():
             ).label("age_group"),
             func.count(Survey.id).label("count"),
         )
-        .filter(Survey.submission_date >= start_date)
+        .filter(Survey.created_at >= start_date)
         .group_by("age_group")
         .all()
     )
