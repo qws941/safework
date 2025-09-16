@@ -1516,5 +1516,190 @@ def msds_add_usage(msds_id):
     except Exception as e:
         db.session.rollback()
         flash(f'사용 기록 추가 중 오류가 발생했습니다: {str(e)}', 'error')
-    
+
     return redirect(url_for('admin.msds_detail', msds_id=msds_id))
+
+
+@admin_bp.route("/survey/statistics")
+@admin_required
+def survey_statistics():
+    """설문조사 통계 분석 페이지 - 엑셀과 같은 형태"""
+    try:
+        # 전체 설문 데이터 조회
+        surveys = Survey.query.all()
+
+        # 1. 기본 통계
+        total_surveys = len(surveys)
+        musculo_surveys = len([s for s in surveys if s.form_type == '001'])
+        newbie_surveys = len([s for s in surveys if s.form_type == '002'])
+
+        # 2. 부서별 통계
+        dept_stats = {}
+        for survey in surveys:
+            dept = survey.department or '미분류'
+            if dept not in dept_stats:
+                dept_stats[dept] = {
+                    '응답자수': 0,
+                    '평균나이': 0,
+                    '남성': 0,
+                    '여성': 0,
+                    '통증호소자': 0,
+                    '관리대상자': 0
+                }
+            dept_stats[dept]['응답자수'] += 1
+            if survey.age:
+                dept_stats[dept]['평균나이'] += survey.age
+            if survey.gender == '남성':
+                dept_stats[dept]['남성'] += 1
+            elif survey.gender == '여성':
+                dept_stats[dept]['여성'] += 1
+            if survey.has_symptoms:
+                dept_stats[dept]['통증호소자'] += 1
+                # 관리대상자 판정 로직 (엑셀 기준 적용)
+                if is_management_target(survey):
+                    dept_stats[dept]['관리대상자'] += 1
+
+        # 평균 나이 계산
+        for dept, stats in dept_stats.items():
+            if stats['응답자수'] > 0:
+                stats['평균나이'] = round(stats['평균나이'] / stats['응답자수'], 1)
+
+        # 3. 신체부위별 통증 분포
+        body_parts = ['목', '어깨', '팔/팔꿈치', '손/손목/손가락', '허리', '다리/발']
+        body_part_stats = {}
+
+        for part in body_parts:
+            body_part_stats[part] = {
+                '통증호소자': 0,
+                '약한통증': 0,
+                '중간통증': 0,
+                '심한통증': 0,
+                '매우심한통증': 0,
+                '관리대상자': 0
+            }
+
+        # responses 필드에서 근골격계 데이터 분석
+        for survey in surveys:
+            if survey.responses and survey.form_type == '001':
+                analyze_musculo_symptoms(survey, body_part_stats)
+
+        # 4. 작업부하 분포
+        workload_stats = {
+            '전혀 힘들지 않음': 0,
+            '견딜만 함': 0,
+            '약간 힘듦': 0,
+            '매우 힘듦': 0
+        }
+
+        for survey in surveys:
+            if survey.responses and 'work_difficulty' in survey.responses:
+                difficulty = survey.responses['work_difficulty']
+                if difficulty in workload_stats:
+                    workload_stats[difficulty] += 1
+
+        return render_template('admin/survey_statistics.html',
+                             total_surveys=total_surveys,
+                             musculo_surveys=musculo_surveys,
+                             newbie_surveys=newbie_surveys,
+                             dept_stats=dept_stats,
+                             body_part_stats=body_part_stats,
+                             workload_stats=workload_stats)
+
+    except Exception as e:
+        app.logger.error(f"Survey statistics error: {e}")
+        flash(f'통계 분석 중 오류가 발생했습니다: {str(e)}', 'error')
+        return redirect(url_for('admin.survey'))
+
+
+def is_management_target(survey):
+    """관리대상자 판정 - 엑셀 기준 적용"""
+    if not survey.responses or not survey.has_symptoms:
+        return False
+
+    # 엑셀 기준:
+    # 2번 통증기간: 적어도 1주일이상 지속되거나(OR)
+    # 4번 통증빈도: 1달에 한번 이상 통증발생되고
+    # 3번 통증강도: '중간 정도'인 경우
+    # 또는
+    # 2번 통증기간: 적어도 1주일이상 지속되고(AND)
+    # 4번 통증빈도: 1달에 한번 이상 통증발생되고
+    # 3번 통증강도: '심한 통증' 또는 '매우심한 통증'인 경우
+
+    try:
+        responses = survey.responses
+        musculo_details = responses.get('musculo_details', [])
+
+        for detail in musculo_details:
+            duration = detail.get('duration', '')
+            frequency = detail.get('frequency', '')
+            severity = detail.get('severity', '')
+
+            # 기간 체크: 1주일 이상
+            week_or_more = any(period in duration for period in ['1주일', '1달', '6개월'])
+
+            # 빈도 체크: 1달에 1번 이상
+            monthly_or_more = any(freq in frequency for freq in ['1달에 1번', '1주일에 1번', '매일'])
+
+            # 강도 체크
+            moderate_pain = '중간 통증' in severity
+            severe_pain = any(level in severity for level in ['심한 통증', '매우 심한 통증'])
+
+            # 관리대상자 조건
+            condition1 = week_or_more or (monthly_or_more and moderate_pain)
+            condition2 = week_or_more and monthly_or_more and severe_pain
+
+            if condition1 or condition2:
+                return True
+
+        return False
+
+    except Exception:
+        return False
+
+
+def analyze_musculo_symptoms(survey, body_part_stats):
+    """근골격계 증상 분석"""
+    try:
+        responses = survey.responses
+        musculo_details = responses.get('musculo_details', [])
+
+        for detail in musculo_details:
+            part = detail.get('part', '')
+            severity = detail.get('severity', '')
+
+            if part in body_part_stats:
+                body_part_stats[part]['통증호소자'] += 1
+
+                if '약한 통증' in severity:
+                    body_part_stats[part]['약한통증'] += 1
+                elif '중간 통증' in severity:
+                    body_part_stats[part]['중간통증'] += 1
+                elif '심한 통증' in severity:
+                    body_part_stats[part]['심한통증'] += 1
+                elif '매우 심한 통증' in severity:
+                    body_part_stats[part]['매우심한통증'] += 1
+
+                # 관리대상자 판정
+                if is_management_target_by_detail(detail):
+                    body_part_stats[part]['관리대상자'] += 1
+
+    except Exception as e:
+        pass  # 에러 무시하고 계속 진행
+
+
+def is_management_target_by_detail(detail):
+    """개별 부위별 관리대상자 판정"""
+    try:
+        duration = detail.get('duration', '')
+        frequency = detail.get('frequency', '')
+        severity = detail.get('severity', '')
+
+        week_or_more = any(period in duration for period in ['1주일', '1달', '6개월'])
+        monthly_or_more = any(freq in frequency for freq in ['1달에 1번', '1주일에 1번', '매일'])
+        moderate_pain = '중간 통증' in severity
+        severe_pain = any(level in severity for level in ['심한 통증', '매우 심한 통증'])
+
+        return (week_or_more or (monthly_or_more and moderate_pain)) or (week_or_more and monthly_or_more and severe_pain)
+
+    except Exception:
+        return False

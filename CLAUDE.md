@@ -45,7 +45,7 @@ git push origin master
 
 ### Manual Container Setup (Development Only)
 ```bash
-# CRITICAL: Use correct image names (safework/app format)
+# CRITICAL: Use correct image names (consistent with production)
 docker pull registry.jclee.me/safework/app:latest
 docker pull registry.jclee.me/safework/postgres:latest
 docker pull registry.jclee.me/safework/redis:latest
@@ -548,22 +548,31 @@ curl -X POST -H "X-API-Key: ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=" \
 ### Recent Database Schema Fixes & Current Issues
 **CRITICAL FIXES APPLIED:**
 
-1. **Survey Detail Data Display Issue (RESOLVED - September 2024):**
+1. **Survey Detail Data Display Issue (RESOLVED - December 2024):**
 ```python
-# Problem: Survey detail pages showing empty data for survey responses
-# Root cause: Template expected nested object structure but data stored as array
-# Template expected: survey.responses.목, survey.responses.어깨
-# Actual data: survey.responses.data.symptom_parts = ["목/어깨", "허리", "다리/발"]
+# Problem: Survey detail pages not displaying submitted form data properly
+# Root cause: Form data not being saved to responses JSON field during submission
 
-# Solution: Updated template logic in admin_detail.html
-{% if survey.responses and survey.responses.data and survey.responses.data.symptom_parts %}
-    {% if "목/어깨" in survey.responses.data.symptom_parts %}
-        {{ survey.responses.data.symptom_severity or '-' }}
-    {% endif %}
-{% endif %}
+# Solution: Updated survey.py to save ALL form data to responses field
+# Before: Only saved basic fields to database columns
+# After: All form data (including complex musculo_details) saved to responses JSON
 
-# Impact: Survey detail pages now show complete response data instead of empty
-# Status: Fixed in commit 49edd5b, deployed and verified
+# Changes made:
+# 1. survey.py: Collect all form data into responses field
+all_form_data = {}
+for key, value in request.form.items():
+    if key.endswith('[]'):
+        all_form_data[key] = request.form.getlist(key)
+    else:
+        all_form_data[key] = value
+if musculo_details:
+    all_form_data['musculo_details'] = musculo_details
+
+# 2. admin_detail.html: Display submitted data in table format
+# Shows original submitted data exactly as user entered it
+
+# Impact: Survey detail pages now show complete submitted data as originally entered
+# Status: Fixed in commit 3c21fa2, deployed and verified
 ```
 
 2. **APP_VERSION Property Object Display Bug (RESOLVED):**
@@ -588,12 +597,12 @@ submission_date = db.Column(db.DateTime, default=kst_now)
 ALTER TABLE surveys ADD COLUMN submission_date TIMESTAMP DEFAULT NOW();
 ```
 
-3. **Database Configuration Switch (RESOLVED):**
+3. **Database Configuration Standardization (RESOLVED):**
 ```python
-# Switched to MySQL for production deployment
-# Current Status: MySQL 8.0+ (production), PostgreSQL 15+ (legacy/development)
-# Container: safework-mysql (port 3306)
-# Benefits: Better compatibility with deployment infrastructure
+# Standardized to PostgreSQL 15+ for all environments
+# Current Status: PostgreSQL 15+ (production, development, testing)
+# Container: safework-postgres (port 4546)
+# Benefits: Consistent JSONB support, better performance for survey data
 ```
 
 4. **Model Import Issues (RESOLVED):**
@@ -633,42 +642,32 @@ if not survey:
 - **Schema Migration**: Automated via PostgreSQL init.sql and migration scripts
 - **Data Persistence**: Verified across container restarts with volume persistence
 
-### Survey Data Display Debugging
+### Survey Data Display Troubleshooting (Updated December 2024)
 ```bash
-# Debug survey detail pages not displaying data properly
-# Common issue: Survey responses not displaying in admin detail view
+# Debug survey detail pages not displaying submitted data properly
+# RESOLVED: Form data now properly saved to responses JSON field
 
-# Check survey data in database
+# Check survey data in database with complete responses
 docker exec -it safework-postgres psql -U safework -d safework_db \
-  -c "SELECT id, name, form_type, responses, created_at FROM surveys WHERE id = 2;"
+  -c "SELECT id, name, form_type, jsonb_pretty(responses) FROM surveys WHERE id = 2;"
 
-# Verify responses field contains actual JSON data (not empty {})
+# Verify all form fields are saved in responses JSON
 docker exec -it safework-postgres psql -U safework -d safework_db \
-  -c "SELECT jsonb_pretty(responses) FROM surveys WHERE id = 2;"
+  -c "SELECT responses ? 'name', responses ? 'age', responses ? 'musculo_details' FROM surveys WHERE id = 2;"
 
-# Test survey submission with curl to verify data saving
-curl -X POST http://localhost:4545/survey/api/submit -H "Content-Type: application/json" -d '{
-  "form_type": "001",
-  "name": "테스트 사용자",
-  "age": 30,
-  "gender": "남성",
-  "years_of_service": 5,
-  "employee_number": "EMP001",
-  "department": "개발부",
-  "position": "개발자",
-  "employee_id": "DEV001",
-  "work_years": 3,
-  "work_months": 6,
-  "data": {
-    "has_symptoms": true,
-    "symptom_parts": ["목/어깨", "허리"],
-    "symptom_severity": "중간"
-  }
-}'
+# Test new survey submission (all data saved to responses field)
+curl -X POST http://localhost:4545/survey/001_musculoskeletal_symptom_survey \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d 'name=테스트사용자&age=30&gender=남성&department=개발부&position=개발자&current_symptom=예'
 
-# Verify data structure matches template expectations
-# Template expects: survey.responses.data.symptom_parts (array)
-# Not: survey.responses.목, survey.responses.어깨 (separate fields)
+# Access detailed survey view to see all submitted data
+# URL pattern: https://safework.jclee.me/admin/survey/<id>
+# Now displays: Table format with all form fields + JSON collapsible view
+
+# Template structure (fixed):
+# - Displays all key-value pairs from responses JSON
+# - Special handling for musculo_details array data
+# - JSON raw data available in collapsible details section
 ```
 
 ### Survey API Testing & Verification

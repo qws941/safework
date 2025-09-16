@@ -41,6 +41,11 @@
                         <i class="bi bi-person-plus"></i> 신규입사자 (002)
                     </a>
                 </li>
+                <li>
+                    <a href="{{ url_for('admin.survey_statistics') }}">
+                        <i class="bi bi-bar-chart"></i> 📊 통계 분석
+                    </a>
+                </li>
                 <li class="divider"></li>
                 <li>
                     <a href="{{ url_for('survey.admin_dashboard', form_type='001') }}">
