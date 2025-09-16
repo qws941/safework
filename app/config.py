@@ -18,7 +18,7 @@ class Config:
     DB_PASSWORD = os.environ.get("DB_PASSWORD", "safework2024")
     DB_NAME = os.environ.get("DB_NAME", "safework")
 
-    SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    SQLALCHEMY_DATABASE_URI = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_size": 10,
@@ -114,7 +114,7 @@ class DevelopmentConfig(Config):
     DB_PASSWORD = os.environ.get("DB_PASSWORD", "safework2024")
     DB_NAME = os.environ.get("DB_NAME", "safework")
 
-    SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    SQLALCHEMY_DATABASE_URI = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
     # MySQL connection options for development
     SQLALCHEMY_ENGINE_OPTIONS = {
@@ -141,7 +141,7 @@ class ProductionConfig(Config):
     DB_PASSWORD = os.environ.get("DB_PASSWORD", "safework2024")
     DB_NAME = os.environ.get("DB_NAME", "safework")
 
-    SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    SQLALCHEMY_DATABASE_URI = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
     # MySQL connection options for production
     SQLALCHEMY_ENGINE_OPTIONS = {
@@ -172,7 +172,7 @@ class TestingConfig(Config):
     DB_PASSWORD = os.environ.get("DB_PASSWORD", "safework_test_password")
     DB_NAME = os.environ.get("DB_NAME", "safework_test")
 
-    SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    SQLALCHEMY_DATABASE_URI = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     WTF_CSRF_ENABLED = False
     
     # MySQL connection options for testing
