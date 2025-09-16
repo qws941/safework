@@ -14,11 +14,11 @@ SafeWork is an industrial health and safety management system built with Flask 3
 - **RESTful API v2**: External system integrations via `/api/safework/v2/*`
 
 **Tech Stack:**
-- Backend: Flask 3.0+, SQLAlchemy 2.0, MySQL 8.0+ (production database), Redis 7.0
-- Frontend: Bootstrap 5.3, jQuery, responsive design with mobile optimization
+- Backend: Flask 3.0+, SQLAlchemy 2.0, PostgreSQL 15+ (**⚠️ MySQL 사용 금지**), Redis 7.0
+- Frontend: Bootstrap 4.6, jQuery, responsive design
 - Infrastructure: Docker, Private Registry (registry.jclee.me), Watchtower auto-deployment
 - Localization: KST timezone (`kst_now()` function), Korean UI/error messages
-- Security: CSRF currently disabled for survey testing, Flask-Login authentication
+- Security: CSRF protection disabled (WTF_CSRF_ENABLED = False), Flask-Login authentication
 
 ## Development Commands
 
@@ -89,6 +89,22 @@ grep -r "print(" . --include="*.py"    # Find debug prints
 grep -r "TODO\|FIXME" . --include="*.py"  # Find TODOs
 ```
 
+### Portainer Container Management Scripts
+```bash
+# Use the simplified Portainer query scripts (in scripts/ directory)
+./scripts/portainer_simple.sh          # Show all SafeWork container info
+./scripts/portainer_simple.sh status   # Container status overview
+./scripts/portainer_simple.sh running  # List only running containers
+./scripts/portainer_simple.sh logs safework-app  # View specific container logs
+./scripts/portainer_simple.sh network  # Show network configuration
+
+# Detailed monitoring script
+./scripts/portainer_queries.sh         # Comprehensive container analysis
+
+# Scripts automatically filter SafeWork containers and provide clean output
+# No need to remember complex API calls or JSON parsing
+```
+
 ### GitHub Actions & Claude AI Integration
 ```bash
 # Trigger Claude AI assistance in issues or PRs
@@ -137,29 +153,31 @@ python -m pytest -v                    # Verbose output
 python -m pytest --cov=. --cov-report=html  # Coverage report
 python -m pytest tests/test_survey.py  # Specific test file
 
-# Note: Test files may not be present yet - testing is configured via requirements.txt
-# Testing environment uses MySQL with separate test database (switched from PostgreSQL)
-# Configure test database via environment variables:
-# DB_HOST=127.0.0.1, DB_NAME=safework_test, DB_USER=safework_test, DB_PORT=3306
+# Code quality checks
+black .                                 # Format code with Black
+flake8 .                               # Lint code with Flake8
+python -m py_compile *.py              # Syntax validation
+
+# Run tests in container
+docker exec -it safework-app python -m pytest
 ```
 
 ### Database Management
 ```bash
 # Enter app container
-docker exec -it safework2-app bash
+docker exec -it safework-app bash
 
 # Migration commands (inside container)
 python migrate.py status               # Check migration status
 python migrate.py migrate              # Apply migrations
 python migrate.py create "Description" # Create new migration
 
-# Database inspection (MySQL in production)
-docker exec -it safework-mysql mysql -u safework -p safework_db -e "SHOW TABLES;"
-docker exec -it safework-mysql mysql -u safework -p safework_db -e "DESCRIBE surveys;"
+# Database inspection (PostgreSQL)
+docker exec -it safework-postgres psql -U safework -d safework_db -c "\dt;"
+docker exec -it safework-postgres psql -U safework -d safework_db -c "\d surveys;"
 
-# Legacy PostgreSQL commands (if using PostgreSQL containers)
-# docker exec -it safework2-postgres psql -U safework -d safework_db -c "\dt;"
-# docker exec -it safework2-postgres psql -U safework -d safework_db -c "\d surveys;"
+# Check specific survey data
+docker exec -it safework-postgres psql -U safework -d safework_db -c "SELECT id, name, form_type, responses FROM surveys ORDER BY id DESC LIMIT 5;"
 ```
 
 ### API Testing & Debugging
@@ -199,11 +217,11 @@ print('Database connection: OK')
 ### Access Points & Credentials
 **Local Development:**
 - **Main app**: http://localhost:4545
-- **MySQL**: localhost:4546 (safework-mysql container)
+- **PostgreSQL**: localhost:4546 (safework-postgres container)
 - **Redis**: localhost:4547 (safework-redis container)
 - **Admin panel**: http://localhost:4545/admin (admin/safework2024)
 - **Health check**: http://localhost:4545/health
-- **Migration UI**: http://localhost:4545/admin/migration/status
+- **Migration UI**: http://localhost:4545/migration/status
 
 **Remote Environments:**
 - **Development**: https://safework-dev.jclee.me
@@ -460,9 +478,16 @@ curl -X POST -H "Authorization: Bearer wt_k8Jm4nX9pL2vQ7rB5sT6yH3fG1dA0" \
   "https://watchtower.jclee.me/v1/update"
 ```
 
-### Portainer API Container Management
+### Portainer API Container Management & Simplified Scripts
 ```bash
-# List all containers via Portainer API (endpoint 3)
+# Use simplified Portainer query scripts (recommended)
+./scripts/portainer_simple.sh status        # Check SafeWork container status
+./scripts/portainer_simple.sh running       # List running containers only
+./scripts/portainer_simple.sh logs safework-app  # View specific container logs
+./scripts/portainer_simple.sh network       # Check network configuration
+./scripts/portainer_simple.sh               # Show all information
+
+# Raw API calls (if needed)
 curl -H "X-API-Key: ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=" \
   "https://portainer.jclee.me/api/endpoints/3/docker/containers/json"
 
@@ -498,7 +523,18 @@ curl -X POST -H "X-API-Key: ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=" \
 ### Recent Database Schema Fixes & Current Issues
 **CRITICAL FIXES APPLIED:**
 
-1. **APP_VERSION Property Object Display Bug (RESOLVED):**
+1. **Survey Detail Data Display Issue (RESOLVED - September 2024):**
+```python
+# Problem: API submissions not saving detailed response data to responses field
+# Root cause: Missing responses field population in survey creation
+# Solution: Added responses field population in survey.py
+responses=data.get("data", {}),  # Store detailed survey response data
+
+# Impact: Survey detail pages now show complete response data instead of empty
+# Status: Fixed in commit 3cfea91, deployed and verified
+```
+
+2. **APP_VERSION Property Object Display Bug (RESOLVED):**
 ```python
 # Problem: Footer showing "<property object at 0x...>" instead of version number
 # Root cause: Flask config copying property decorator instead of value
@@ -567,9 +603,9 @@ curl -X POST http://localhost:4545/survey/api/submit \
     "data": {"has_symptoms": true}
   }'
 
-# Verify data saved in MySQL
-docker exec -it safework-mysql mysql -u safework -p safework_db \
-  -e "SELECT id, name, form_type, age, gender, department, position, submission_date, created_at FROM surveys ORDER BY id DESC LIMIT 5;"
+# Verify data saved in PostgreSQL
+docker exec -it safework-postgres psql -U safework -d safework_db \
+  -c "SELECT id, name, form_type, age, gender, department, position, submission_date, created_at FROM surveys ORDER BY id DESC LIMIT 5;"
 ```
 
 ## Error Detection & Resolution
@@ -625,11 +661,8 @@ docker exec -it safework-app python migrate.py migrate             # Run migrati
 curl -H "X-API-Key: ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=" \
      "https://portainer.jclee.me/api/endpoints/3/docker/containers/json" # List containers
 
-# Direct MySQL access (current production database)
-docker exec -it safework-mysql mysql -u safework -p safework_db      # MySQL CLI
-
-# Direct PostgreSQL access (legacy/development)
-# docker exec -it safework-postgres psql -U safework -d safework_db  # PostgreSQL CLI
+# Direct PostgreSQL access (current production database)
+docker exec -it safework-postgres psql -U safework -d safework_db   # PostgreSQL CLI
 
 # Survey form debugging
 # - Verify HTML/JavaScript ID matching (critical for conditional logic)
@@ -669,15 +702,15 @@ FLASK_CONFIG=production                # Environment mode (development/productio
 SECRET_KEY=safework-production-secret-key-2024
 TZ=Asia/Seoul                         # Korean timezone
 
-# Database connection (MySQL in production, PostgreSQL legacy)
-DB_HOST=safework-mysql                # Container name (safework-mysql for production)
-DB_PORT=3306                          # MySQL port (5432 for PostgreSQL legacy)
+# Database connection (PostgreSQL)
+DB_HOST=safework-postgres             # Container name
+DB_PORT=5432                          # PostgreSQL port
 DB_NAME=safework_db                   # Database name
 DB_USER=safework                      # Database user
 DB_PASSWORD=safework2024              # Database password
 
 # Redis cache
-REDIS_HOST=safework-redis             # Container name (updated to match current containers)
+REDIS_HOST=safework-redis             # Container name
 REDIS_PORT=6379                       # Redis port
 REDIS_PASSWORD=                       # Redis password (optional)
 REDIS_DB=0                           # Redis database number
@@ -809,12 +842,11 @@ jobs:
 ## Production Guidelines
 
 ### Database Best Practices
-- MySQL 8.0+ (production) with UTF8MB4 encoding for Korean text support
-- PostgreSQL 15+ (legacy/development) with UTF8 encoding
+- PostgreSQL 15+ with UTF8 encoding for Korean text support
 - Use `kst_now()` for all timestamp operations (consistent KST timezone)
 - Transaction-based operations with rollback for data integrity
 - Anonymous submissions always use `user_id=1`
-- JSON fields for flexible survey data storage (MySQL JSON, PostgreSQL JSONB)
+- JSONB fields for flexible survey data storage with indexing support
 
 ### Security & Performance
 - `@login_required` decorator for all admin routes
