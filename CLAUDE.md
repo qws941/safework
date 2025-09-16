@@ -75,9 +75,9 @@ docker ps                              # Check running containers
 docker stop safework-app safework-postgres safework-redis  # Stop all services
 
 # Development with code changes (mount local code)
-docker run -d --name safework2-app-dev --network safework2-network -p 4545:4545 \
+docker run -d --name safework-app-dev --network watchtower_default -p 4545:4545 \
   -v $(pwd)/app:/app -e FLASK_ENV=development \
-  registry.jclee.me/safework2-app:latest
+  registry.jclee.me/safework/app:latest
 ```
 
 ### Code Quality & Linting
@@ -93,20 +93,37 @@ grep -r "print(" . --include="*.py"    # Find debug prints
 grep -r "TODO\|FIXME" . --include="*.py"  # Find TODOs
 ```
 
-### Portainer Container Management Scripts
+### Production Monitoring & Log Analysis Scripts
 ```bash
-# Use the simplified Portainer query scripts (in scripts/ directory)
-./scripts/portainer_simple.sh          # Show all SafeWork container info
-./scripts/portainer_simple.sh status   # Container status overview
-./scripts/portainer_simple.sh running  # List only running containers
-./scripts/portainer_simple.sh logs safework-app  # View specific container logs
-./scripts/portainer_simple.sh network  # Show network configuration
+# Production-optimized scripts for live system monitoring
+./scripts/simple_production_query.sh           # Quick production status check
+./scripts/production_query_advanced.sh         # Detailed production analysis
+./scripts/portainer_production_logs.sh         # Production log analysis
+
+# Container management shortcuts
+./scripts/portainer_simple.sh status           # Container health overview
+./scripts/portainer_simple.sh logs safework-app # View app container logs
+./scripts/portainer_simple.sh network          # Network configuration check
+./scripts/portainer_simple.sh                  # Show all SafeWork container info
+./scripts/portainer_simple.sh running          # List only running containers
 
 # Detailed monitoring script
 ./scripts/portainer_queries.sh         # Comprehensive container analysis
 
 # Scripts automatically filter SafeWork containers and provide clean output
 # No need to remember complex API calls or JSON parsing
+```
+
+### GitHub Actions Workflows
+```bash
+# Current active workflows:
+- deploy.yml                    # Main production deployment
+- claude-mcp-assistant.yml      # AI-powered issue analysis
+- maintenance-automation.yml    # System maintenance tasks
+- operational-log-analysis.yml  # Real-time log monitoring
+- security-auto-triage.yml      # Security scanning
+- issue-handler.yml             # Intelligent issue management
+- dependency-auto-update.yml    # Dependency management
 ```
 
 ### GitHub Actions & Claude AI Integration
@@ -210,11 +227,14 @@ curl -X POST http://localhost:4545/survey/api/submit \
 curl http://localhost:4545/health              # Application health
 curl https://safework.jclee.me/health         # Production health
 
-# Verify database connectivity from container
-docker exec -it safework2-app python -c "
+# Verify database connectivity from container (SQLAlchemy 2.0 compatible)
+docker exec -it safework-app python -c "
+from app import create_app
 from models import Survey, db
-print(f'Survey count: {Survey.query.count()}')
-print('Database connection: OK')
+app = create_app()
+with app.app_context():
+    print(f'Survey count: {Survey.query.count()}')
+    print('Database connection: OK')
 "
 ```
 
@@ -310,18 +330,17 @@ responses  # JSON field for all additional data
 # - Flexible JSON storage for 001/002 form variations
 ```
 
-### Route Organization & Blueprint Structure
+### Flask Route Architecture
 ```
 app/routes/
-├── main.py               # Homepage, general routes
-├── auth.py              # Authentication (login/register/logout)
-├── survey.py            # 001/002 form handling, conditional logic
-├── admin.py             # Admin dashboard + 13 SafeWork panels
-├── document.py          # Public document access
-├── document_admin.py    # Document management admin
-├── api_safework_v2.py   # RESTful API endpoints
-├── health.py            # System health monitoring (/health)
-└── migration.py         # Database migration web interface
+├── admin.py              # 13 SafeWork admin panels + main admin dashboard
+├── api_safework_v2.py    # RESTful API v2 endpoints for external systems
+├── survey.py             # 001/002 form handling with conditional JavaScript
+├── auth.py               # Flask-Login authentication (admin/safework2024)
+├── health.py             # System health monitoring (/health endpoint)
+├── document.py           # Public document access (version control)
+├── document_admin.py     # Admin document management
+└── main.py               # Homepage and general routes
 ```
 
 ### Critical Frontend Patterns
@@ -531,13 +550,20 @@ curl -X POST -H "X-API-Key: ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=" \
 
 1. **Survey Detail Data Display Issue (RESOLVED - September 2024):**
 ```python
-# Problem: API submissions not saving detailed response data to responses field
-# Root cause: Missing responses field population in survey creation
-# Solution: Added responses field population in survey.py
-responses=data.get("data", {}),  # Store detailed survey response data
+# Problem: Survey detail pages showing empty data for survey responses
+# Root cause: Template expected nested object structure but data stored as array
+# Template expected: survey.responses.목, survey.responses.어깨
+# Actual data: survey.responses.data.symptom_parts = ["목/어깨", "허리", "다리/발"]
+
+# Solution: Updated template logic in admin_detail.html
+{% if survey.responses and survey.responses.data and survey.responses.data.symptom_parts %}
+    {% if "목/어깨" in survey.responses.data.symptom_parts %}
+        {{ survey.responses.data.symptom_severity or '-' }}
+    {% endif %}
+{% endif %}
 
 # Impact: Survey detail pages now show complete response data instead of empty
-# Status: Fixed in commit 3cfea91, deployed and verified
+# Status: Fixed in commit 49edd5b, deployed and verified
 ```
 
 2. **APP_VERSION Property Object Display Bug (RESOLVED):**
@@ -579,6 +605,22 @@ SurveyStatistics = SurveyStatisticsModel
 AuditLog = AuditLogModel
 ```
 
+5. **SQLAlchemy 2.0 Compatibility Update (RESOLVED - September 2024):**
+```python
+# Problem: SQLAlchemy deprecation warning in admin.py
+# Old code: survey = Survey.query.get_or_404(id)
+# Warning: "The Query.get() method is considered legacy"
+
+# Solution: Updated to SQLAlchemy 2.0 pattern
+from models import Survey, db
+survey = db.session.get(Survey, id)
+if not survey:
+    abort(404)
+
+# Impact: Eliminates deprecation warnings and ensures future compatibility
+# Status: Fixed in commit 49edd5b, deployed with survey data display fix
+```
+
 **CURRENT SYSTEM STATUS (Updated September 2024):**
 - **Database**: PostgreSQL 15+ in production with automated schema migration system
 - **Container Names**: safework-app, safework-postgres, safework-redis (all KST timezone)
@@ -590,6 +632,44 @@ AuditLog = AuditLogModel
 - **CSRF Protection**: Disabled for survey testing (WTF_CSRF_ENABLED=false)
 - **Schema Migration**: Automated via PostgreSQL init.sql and migration scripts
 - **Data Persistence**: Verified across container restarts with volume persistence
+
+### Survey Data Display Debugging
+```bash
+# Debug survey detail pages not displaying data properly
+# Common issue: Survey responses not displaying in admin detail view
+
+# Check survey data in database
+docker exec -it safework-postgres psql -U safework -d safework_db \
+  -c "SELECT id, name, form_type, responses, created_at FROM surveys WHERE id = 2;"
+
+# Verify responses field contains actual JSON data (not empty {})
+docker exec -it safework-postgres psql -U safework -d safework_db \
+  -c "SELECT jsonb_pretty(responses) FROM surveys WHERE id = 2;"
+
+# Test survey submission with curl to verify data saving
+curl -X POST http://localhost:4545/survey/api/submit -H "Content-Type: application/json" -d '{
+  "form_type": "001",
+  "name": "테스트 사용자",
+  "age": 30,
+  "gender": "남성",
+  "years_of_service": 5,
+  "employee_number": "EMP001",
+  "department": "개발부",
+  "position": "개발자",
+  "employee_id": "DEV001",
+  "work_years": 3,
+  "work_months": 6,
+  "data": {
+    "has_symptoms": true,
+    "symptom_parts": ["목/어깨", "허리"],
+    "symptom_severity": "중간"
+  }
+}'
+
+# Verify data structure matches template expectations
+# Template expects: survey.responses.data.symptom_parts (array)
+# Not: survey.responses.목, survey.responses.어깨 (separate fields)
+```
 
 ### Survey API Testing & Verification
 ```bash
