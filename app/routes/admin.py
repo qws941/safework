@@ -49,7 +49,7 @@ def dashboard():
     # 통계 데이터 수집
     total_surveys = Survey.query.count()
     today_surveys = Survey.query.filter(
-        func.date(Survey.created_at) == func.date(datetime.now())
+        func.date(Survey.submission_date) == func.date(datetime.now())
     ).count()
 
     # 증상이 있는 총 설문 수
@@ -73,7 +73,7 @@ def dashboard():
 
     # 최근 제출 목록
     recent_surveys = (
-        Survey.query.order_by(Survey.created_at.desc()).limit(10).all()
+        Survey.query.order_by(Survey.submission_date.desc()).limit(10).all()
     )
 
     return render_template(
@@ -123,11 +123,11 @@ def surveys():
     date_to = request.args.get("date_to")
     if date_from:
         query = query.filter(
-            Survey.created_at >= datetime.strptime(date_from, "%Y-%m-%d")
+            Survey.submission_date >= datetime.strptime(date_from, "%Y-%m-%d")
         )
     if date_to:
         query = query.filter(
-            Survey.created_at <= datetime.strptime(date_to, "%Y-%m-%d")
+            Survey.submission_date <= datetime.strptime(date_to, "%Y-%m-%d")
         )
 
     # 상태 필터
@@ -143,7 +143,7 @@ def surveys():
         query = query.filter(Survey.has_symptoms == False)
 
     # 페이지네이션
-    surveys = query.order_by(Survey.created_at.desc()).paginate(
+    surveys = query.order_by(Survey.submission_date.desc()).paginate(
         page=page, per_page=20, error_out=False
     )
 
@@ -224,7 +224,7 @@ def export_excel():
     for s in surveys:
         data.append(
             {
-                "제출일시": s.created_at,
+                "제출일시": s.submission_date,
                 "양식유형": s.form_type,
                 "사번": s.employee_number,
                 "성명": s.name,
@@ -277,11 +277,11 @@ def statistics():
     # 일별 제출 건수
     daily_stats = (
         db.session.query(
-            func.date(Survey.created_at).label("date"),
+            func.date(Survey.submission_date).label("date"),
             func.count(Survey.id).label("count"),
         )
-        .filter(Survey.created_at >= start_date)
-        .group_by(func.date(Survey.created_at))
+        .filter(Survey.submission_date >= start_date)
+        .group_by(func.date(Survey.submission_date))
         .all()
     )
 
@@ -292,7 +292,7 @@ def statistics():
             func.count(func.case((Survey.has_symptoms == False, 1), else_=None)).label("without_symptoms"),
             func.count(Survey.id).label("total")
         )
-        .filter(Survey.created_at >= start_date)
+        .filter(Survey.submission_date >= start_date)
         .first()
     )
 
@@ -308,7 +308,7 @@ def statistics():
                 )
             ).label("with_symptoms"),
         )
-        .filter(Survey.created_at >= start_date)
+        .filter(Survey.submission_date >= start_date)
         .filter(Survey.department.isnot(None))
         .group_by(Survey.department)
         .all()
@@ -326,7 +326,7 @@ def statistics():
             ).label("age_group"),
             func.count(Survey.id).label("count"),
         )
-        .filter(Survey.created_at >= start_date)
+        .filter(Survey.submission_date >= start_date)
         .group_by("age_group")
         .all()
     )
