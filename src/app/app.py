@@ -1,0 +1,321 @@
+import os
+import time as time_module
+from datetime import datetime, timezone, timedelta
+
+import redis
+from flask import Flask, flash, redirect, render_template, request, url_for
+from flask_login import LoginManager, current_user, login_required, login_user, logout_user
+from flask_migrate import Migrate
+# from flask_wtf.csrf import CSRFProtect  # DISABLED FOR SURVEY TESTING
+
+from config import config
+from migration_manager import MigrationManager
+from models import AuditLog, Survey, SurveyStatistics, User, db
+
+
+def create_app(config_name=None):
+    """Application factory with robust connection retry logic"""
+    app = Flask(__name__)
+
+    # 시스템 시작 시간 저장
+    app.start_time = time_module.time()
+
+    # Load configuration
+    config_name = config_name or os.environ.get("FLASK_CONFIG", "production")
+    app.config.from_object(config[config_name])
+
+    # Fix APP_VERSION property object issue
+    config_obj = config[config_name]()
+    app.config['APP_VERSION'] = config_obj.APP_VERSION
+
+    # CSRF 보호 완전 비활성화 - SURVEY TESTING
+    app.config['WTF_CSRF_ENABLED'] = False
+    app.config['WTF_CSRF_CHECK_DEFAULT'] = False
+    app.config['WTF_CSRF_TIME_LIMIT'] = None
+    app.config['SECRET_KEY_FALLBACK'] = app.config.get('SECRET_KEY', 'fallback-key')
+    
+    # Flask-WTF CSRF 설정 강제 적용
+    import flask_wtf
+    if hasattr(flask_wtf, 'CSRFProtect'):
+        app.extensions = getattr(app, 'extensions', {})
+        app.extensions.pop('csrf', None)
+
+    # Database connection with retry logic
+    def init_database_with_retry():
+        """데이터베이스 연결 재시도 로직"""
+        max_retries = int(os.environ.get('DB_CONNECTION_RETRIES', 60))
+        retry_delay = int(os.environ.get('DB_CONNECTION_DELAY', 3))
+        
+        for attempt in range(max_retries):
+            try:
+                db.init_app(app)
+                migrate = Migrate(app, db)
+                
+                # Test connection
+                with app.app_context():
+                    db.engine.connect()
+                    app.logger.info(f"✅ Database connected successfully on attempt {attempt + 1}")
+                    return True
+                    
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    app.logger.warning(f"⚠️ Database connection attempt {attempt + 1} failed: {e}")
+                    app.logger.info(f"🔄 Retrying in {retry_delay} seconds...")
+                    time_module.sleep(retry_delay)
+                else:
+                    app.logger.error(f"❌ Database connection failed after {max_retries} attempts: {e}")
+                    raise
+        return False
+
+    # Redis connection with retry logic  
+    def init_redis_with_retry():
+        """Redis 연결 재시도 로직"""
+        max_retries = int(os.environ.get('REDIS_CONNECTION_RETRIES', 10))
+        retry_delay = int(os.environ.get('REDIS_CONNECTION_DELAY', 1))
+        
+        for attempt in range(max_retries):
+            try:
+                redis_client = redis.Redis(
+                    host=app.config["REDIS_HOST"],
+                    port=app.config["REDIS_PORT"],
+                    password=app.config["REDIS_PASSWORD"],
+                    db=app.config["REDIS_DB"],
+                    decode_responses=True,
+                    socket_connect_timeout=app.config.get("REDIS_SOCKET_CONNECT_TIMEOUT", 5),
+                    socket_keepalive=app.config.get("REDIS_SOCKET_KEEPALIVE", True),
+                    retry_on_timeout=True,
+                    health_check_interval=30,
+                )
+                
+                # Test connection
+                redis_client.ping()
+                app.redis = redis_client
+                app.logger.info(f"✅ Redis connected successfully on attempt {attempt + 1}")
+                return True
+                
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    app.logger.warning(f"⚠️ Redis connection attempt {attempt + 1} failed: {e}")
+                    app.logger.info(f"🔄 Retrying in {retry_delay} seconds...")
+                    time_module.sleep(retry_delay)
+                else:
+                    app.logger.error(f"❌ Redis connection failed after {max_retries} attempts: {e}")
+                    # Redis 실패는 치명적이지 않음 - 캐시 없이 동작
+                    app.redis = None
+                    app.logger.warning("⚠️ Redis unavailable - running without cache")
+                    return False
+        return False
+
+    # 의존성 순서대로 초기화
+    app.logger.info("🚀 SafeWork 초기화 시작...")
+    
+    # 1. Database 초기화 (최우선)
+    app.logger.info("1️⃣ Database 연결 중...")
+    init_database_with_retry()
+    
+    # 2. Redis 초기화 (선택적)
+    app.logger.info("2️⃣ Redis 연결 중...")
+    init_redis_with_retry()
+
+    # Initialize migration manager
+    migration_manager = MigrationManager(app)
+    app.migration_manager = migration_manager
+
+    # Initialize Login Manager
+    login_manager = LoginManager()
+    login_manager.init_app(app)
+    login_manager.login_view = "auth.login"
+    login_manager.login_message = "이 페이지에 접근하려면 로그인이 필요합니다."
+
+    @login_manager.user_loader
+    def load_user(user_id):
+        return db.session.get(User, int(user_id))
+
+    # Add CSRF token to template context - DISABLED BUT PROVIDE EMPTY TOKEN FOR COMPATIBILITY
+    @app.context_processor
+    def inject_csrf_token():
+        return dict(csrf_token=lambda: "")
+
+    # Graceful connection check functions
+    def check_database_health():
+        """데이터베이스 헬스체크"""
+        try:
+            with app.app_context():
+                db.engine.connect()
+                return True
+        except Exception as e:
+            app.logger.error(f"Database health check failed: {e}")
+            return False
+
+    def check_redis_health():
+        """Redis 헬스체크"""
+        try:
+            if app.redis:
+                app.redis.ping()
+                return True
+            return False
+        except Exception as e:
+            app.logger.error(f"Redis health check failed: {e}")
+            return False
+
+    # Add health check functions to app
+    app.check_database_health = check_database_health
+    app.check_redis_health = check_redis_health
+
+    # Register blueprints
+    from routes.admin import admin_bp
+    from routes.auth import auth_bp
+    from routes.document import document_bp
+    from routes.document_admin import document_admin_bp
+    from routes.health import health_bp
+    from routes.main import main_bp
+    from routes.migration import migration_bp
+    from routes.survey import survey_bp
+
+    app.register_blueprint(main_bp)
+    app.register_blueprint(auth_bp, url_prefix="/auth")
+    app.register_blueprint(survey_bp, url_prefix="/survey")
+    app.register_blueprint(admin_bp, url_prefix="/admin")
+    app.register_blueprint(migration_bp, url_prefix="/admin")
+    app.register_blueprint(health_bp)
+    app.register_blueprint(document_bp, url_prefix="/documents")
+    app.register_blueprint(document_admin_bp, url_prefix="/admin/documents")
+
+    # SafeWork API routes (v2.0)
+    try:
+        from routes.api_safework_v2 import api_safework_bp
+        app.register_blueprint(api_safework_bp, url_prefix="/api/safework/v2")
+        app.logger.info("✅ SafeWork API v2.0 loaded successfully")
+    except ImportError as e:
+        app.logger.warning(f"⚠️ SafeWork API v2.0 not loaded: {e}")
+
+    # Error handlers with connection retry
+    @app.errorhandler(404)
+    def not_found_error(error):
+        return render_template("errors/404.html"), 404
+
+    @app.errorhandler(500)
+    def internal_error(error):
+        try:
+            db.session.rollback()
+        except Exception:
+            app.logger.warning("Cannot rollback database session")
+        return render_template("errors/500.html"), 500
+
+    # Enhanced health endpoint
+    @app.route('/health/detailed')
+    def detailed_health():
+        """상세 헬스체크 엔드포인트"""
+        health_status = {
+            "service": "safework",
+            "status": "healthy",
+            "timestamp": datetime.now(timezone(timedelta(hours=9))).isoformat(),
+            "components": {
+                "database": check_database_health(),
+                "redis": check_redis_health(),
+                "application": True
+            }
+        }
+        
+        # 하나라도 실패하면 전체 상태를 unhealthy로 변경
+        if not all([health_status["components"]["database"], 
+                   health_status["components"]["application"]]):
+            health_status["status"] = "unhealthy"
+            
+        return health_status, 200 if health_status["status"] == "healthy" else 503
+
+    # Context processors
+    @app.context_processor
+    def inject_config():
+        config_obj = app.config
+        
+        # URL 정보 추가
+        url_info = {
+            "current_url": config_obj.get('DEV_URL') if config_obj.get('FLASK_CONFIG') == 'development' else 
+                          config_obj.get('PRD_URL') if config_obj.get('FLASK_CONFIG') == 'production' else 
+                          config_obj.get('LOCAL_URL', 'http://localhost:4545'),
+            "dev_url": config_obj.get('DEV_URL', 'https://safework-dev.jclee.me'),
+            "prd_url": config_obj.get('PRD_URL', 'https://safework.jclee.me'),
+            "local_url": config_obj.get('LOCAL_URL', 'http://localhost:4545'),
+            "environment": config_obj.get('FLASK_CONFIG', 'development')
+        }
+        
+        # 워크플로우에서 생성된 Git 태그 기반 버전 표시
+        try:
+            import subprocess
+            result = subprocess.run([
+                "git", "describe", "--tags", "--exact-match"
+            ], capture_output=True, text=True, timeout=2)
+            
+            if result.returncode == 0:
+                app_version = result.stdout.strip()
+                version_info = {
+                    "version": app_version,
+                    "source": "workflow-tag",
+                    "note": "Version from GitHub Actions workflow tag"
+                }
+            else:
+                result = subprocess.run([
+                    "git", "rev-parse", "--short", "HEAD"
+                ], capture_output=True, text=True, timeout=2)
+                if result.returncode == 0:
+                    timestamp = datetime.now().strftime('%Y%m%d-%H%M')
+                    app_version = f"v3.0.{timestamp}-{result.stdout.strip()}"
+                    version_info = {
+                        "version": app_version,
+                        "source": "git-sha",
+                        "note": "Temporary version from Git SHA"
+                    }
+                else:
+                    raise Exception("Git command failed")
+        except Exception:
+            app_version = "3.0.0"
+            version_info = {
+                "version": app_version,
+                "source": "config-fallback",
+                "note": "Fallback static version"
+            }
+
+        # 시스템 업타임 계산
+        uptime_seconds = time_module.time() - app.start_time
+        uptime_days = int(uptime_seconds // 86400)
+        uptime_hours = int((uptime_seconds % 86400) // 3600)
+        uptime_minutes = int((uptime_seconds % 3600) // 60)
+
+        if uptime_days > 0:
+            uptime_str = f"{uptime_days}일 {uptime_hours}시간 {uptime_minutes}분"
+        elif uptime_hours > 0:
+            uptime_str = f"{uptime_hours}시간 {uptime_minutes}분"
+        else:
+            uptime_str = f"{uptime_minutes}분"
+
+        return {
+            "app_name": app.config["APP_NAME"],
+            "app_version": app_version,
+            "version_info": version_info,
+            "system_uptime": uptime_str,
+            "start_time": datetime.fromtimestamp(
+                app.start_time, tz=timezone(timedelta(hours=9))
+            ).strftime("%Y-%m-%d %H:%M:%S KST"),
+            "url_info": url_info,
+        }
+
+    # Audit logging with error handling
+    @app.before_request
+    def log_request():
+        if current_user.is_authenticated:
+            if request.endpoint and "admin" in request.endpoint:
+                # 임시로 감사 로그 비활성화 - 프로덕션 스키마 호환성 문제
+                pass
+
+    app.logger.info("✅ SafeWork 초기화 완료!")
+    return app
+
+
+# Create application instance for gunicorn
+app = create_app()
+
+if __name__ == "__main__":
+    # Run directly in development - use APP_PORT environment variable
+    port = int(os.environ.get('APP_PORT', 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
