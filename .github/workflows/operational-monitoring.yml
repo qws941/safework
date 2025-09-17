@@ -1,0 +1,383 @@
+name: 📊 SafeWork Operational Monitoring
+
+# 운영 모니터링 및 로그 분석 워크플로우
+# 통합 운영 스크립트를 활용한 자동 모니터링
+
+on:
+  schedule:
+    # 매 시간마다 실행 (운영 시간 동안)
+    - cron: '0 9-18 * * 1-5'  # 월-금, 9시-18시
+    # 매 4시간마다 실행 (비운영 시간)
+    - cron: '0 */4 * * *'      # 모든 날, 4시간마다
+
+  workflow_dispatch:
+    inputs:
+      monitoring_type:
+        description: 'Monitoring type'
+        required: true
+        default: 'health'
+        type: choice
+        options:
+          - 'health'
+          - 'overview'
+          - 'logs'
+          - 'full'
+      container_target:
+        description: 'Container target (for logs)'
+        required: false
+        default: 'all'
+        type: string
+
+env:
+  # 운영 환경 설정
+  PRODUCTION_URL: https://safework.jclee.me
+  PORTAINER_URL: https://portainer.jclee.me
+  PORTAINER_TOKEN: ${{ secrets.PORTAINER_API_KEY }}
+  
+  # 알림 설정
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+  
+  # 모니터링 임계값
+  HEALTH_THRESHOLD: 80
+  LOG_ERROR_THRESHOLD: 5
+
+permissions:
+  contents: read
+  actions: write
+  issues: write
+
+jobs:
+  operational-monitoring:
+    name: 🔍 Operational Monitoring
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📂 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Monitoring Environment
+        run: |
+          # Install required tools
+          sudo apt-get update
+          sudo apt-get install -y jq curl bc
+
+          # Make unified operations script executable
+          chmod +x ./scripts/safework_ops_unified.sh
+
+          # Configure environment
+          export PORTAINER_URL="${{ env.PORTAINER_URL }}"
+          export PORTAINER_TOKEN="${{ env.PORTAINER_TOKEN }}"
+          export PRODUCTION_URL="${{ env.PRODUCTION_URL }}"
+          export DEBUG=0  # Reduce noise in production monitoring
+
+      - name: 🏥 System Health Check
+        id: health_check
+        run: |
+          echo "🏥 Running comprehensive system health check..."
+          
+          # Run health monitoring using unified script
+          if ./scripts/safework_ops_unified.sh monitor health > health-report.txt 2>&1; then
+            echo "health_status=healthy" >> $GITHUB_OUTPUT
+            echo "✅ System health check completed successfully"
+          else
+            echo "health_status=degraded" >> $GITHUB_OUTPUT
+            echo "⚠️ System health check detected issues"
+          fi
+
+          # Extract health score if available
+          if grep -q "건강 점수" health-report.txt; then
+            health_score=$(grep "건강 점수" health-report.txt | grep -o '[0-9]\+' | head -1)
+            echo "health_score=${health_score:-0}" >> $GITHUB_OUTPUT
+          else
+            echo "health_score=0" >> $GITHUB_OUTPUT
+          fi
+
+          # Display health report
+          cat health-report.txt
+
+      - name: 📊 System Overview
+        run: |
+          echo "📊 Generating system overview..."
+          
+          # Run system overview using unified script
+          ./scripts/safework_ops_unified.sh monitor overview > overview-report.txt 2>&1 || {
+            echo "⚠️ System overview failed - using fallback monitoring"
+            
+            # Fallback monitoring
+            {
+              echo "🔍 Fallback System Overview"
+              echo "=========================="
+              echo "Timestamp: $(date -u)"
+              echo ""
+              
+              # Direct endpoint checks
+              echo "📡 Direct Endpoint Checks:"
+              if curl -sf "${{ env.PRODUCTION_URL }}/health" >/dev/null; then
+                echo "✅ Health API: Responding"
+              else
+                echo "❌ Health API: Not responding"
+              fi
+              
+              if curl -sf "${{ env.PRODUCTION_URL }}/" >/dev/null; then
+                echo "✅ Main Site: Responding"
+              else
+                echo "❌ Main Site: Not responding"
+              fi
+              
+            } > overview-report.txt
+          }
+
+          cat overview-report.txt
+
+      - name: 📝 Error Log Analysis
+        id: log_analysis
+        run: |
+          echo "📝 Analyzing recent error logs..."
+          
+          # Run error log analysis using unified script
+          ./scripts/safework_ops_unified.sh logs errors all > error-logs.txt 2>&1 || {
+            echo "⚠️ Error log analysis failed"
+            echo "No error logs available" > error-logs.txt
+          }
+
+          # Count errors
+          error_count=$(grep -c -i "error\|exception\|critical\|fatal" error-logs.txt || echo "0")
+          echo "error_count=${error_count}" >> $GITHUB_OUTPUT
+          
+          echo "📊 Error count: ${error_count}"
+          
+          # Show recent errors if any
+          if [[ $error_count -gt 0 ]]; then
+            echo "🚨 Recent errors found:"
+            head -20 error-logs.txt
+          else
+            echo "✅ No recent errors detected"
+          fi
+
+      - name: 🚨 Alert Processing
+        if: steps.health_check.outputs.health_status == 'degraded' || steps.log_analysis.outputs.error_count > env.LOG_ERROR_THRESHOLD
+        run: |
+          echo "🚨 Processing alerts for system issues..."
+          
+          health_score="${{ steps.health_check.outputs.health_score }}"
+          error_count="${{ steps.log_analysis.outputs.error_count }}"
+          
+          # Create alert message
+          {
+            echo "🚨 SafeWork Production Alert"
+            echo "=========================="
+            echo "Timestamp: $(date -u)"
+            echo "Health Score: ${health_score}%"
+            echo "Error Count: ${error_count}"
+            echo ""
+            
+            if [[ $health_score -lt ${{ env.HEALTH_THRESHOLD }} ]]; then
+              echo "⚠️ Health score below threshold (${{ env.HEALTH_THRESHOLD }}%)"
+            fi
+            
+            if [[ $error_count -gt ${{ env.LOG_ERROR_THRESHOLD }} ]]; then
+              echo "⚠️ Error count above threshold (${{ env.LOG_ERROR_THRESHOLD }})"
+            fi
+            
+            echo ""
+            echo "🔗 Action URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            
+          } > alert-message.txt
+
+          cat alert-message.txt
+
+      - name: 📊 Generate Monitoring Report
+        run: |
+          echo "📊 Generating comprehensive monitoring report..."
+          
+          {
+            echo "# SafeWork Operational Monitoring Report"
+            echo ""
+            echo "**Generated:** $(date -u)"
+            echo "**Workflow:** ${{ github.workflow }}"
+            echo "**Run ID:** ${{ github.run_id }}"
+            echo "**Trigger:** ${{ github.event_name }}"
+            echo ""
+            
+            echo "## System Health Summary"
+            echo "- **Status:** ${{ steps.health_check.outputs.health_status }}"
+            echo "- **Health Score:** ${{ steps.health_check.outputs.health_score }}%"
+            echo "- **Error Count:** ${{ steps.log_analysis.outputs.error_count }}"
+            echo ""
+            
+            echo "## Health Check Details"
+            echo '```'
+            if [[ -f health-report.txt ]]; then
+              cat health-report.txt
+            else
+              echo "Health report not available"
+            fi
+            echo '```'
+            echo ""
+            
+            echo "## System Overview"
+            echo '```'
+            if [[ -f overview-report.txt ]]; then
+              cat overview-report.txt
+            else
+              echo "Overview report not available"
+            fi
+            echo '```'
+            echo ""
+            
+            if [[ ${{ steps.log_analysis.outputs.error_count }} -gt 0 ]]; then
+              echo "## Recent Errors"
+              echo '```'
+              if [[ -f error-logs.txt ]]; then
+                head -50 error-logs.txt
+              else
+                echo "Error logs not available"
+              fi
+              echo '```'
+            fi
+            
+            echo ""
+            echo "## Operations Script Usage"
+            echo "The following unified operations script commands are available:"
+            echo ""
+            echo "### Health Monitoring"
+            echo '```bash'
+            echo "./scripts/safework_ops_unified.sh monitor health"
+            echo "./scripts/safework_ops_unified.sh monitor overview"
+            echo '```'
+            echo ""
+            echo "### Log Analysis"
+            echo '```bash'
+            echo "./scripts/safework_ops_unified.sh logs recent all 50"
+            echo "./scripts/safework_ops_unified.sh logs errors all"
+            echo "./scripts/safework_ops_unified.sh logs live safework-app"
+            echo '```'
+            echo ""
+            echo "### Deployment Status"
+            echo '```bash'
+            echo "./scripts/safework_ops_unified.sh deploy status"
+            echo '```'
+            
+          } > monitoring-report.md
+
+          echo "📋 Monitoring report generated:"
+          cat monitoring-report.md
+
+      - name: 📤 Upload Monitoring Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: monitoring-report-${{ github.run_number }}
+          path: |
+            monitoring-report.md
+            health-report.txt
+            overview-report.txt
+            error-logs.txt
+            alert-message.txt
+          retention-days: 7
+
+      - name: 🔔 Send Slack Notification
+        if: always() && env.SLACK_WEBHOOK_URL
+        run: |
+          # Prepare Slack notification
+          status_emoji="✅"
+          if [[ "${{ steps.health_check.outputs.health_status }}" == "degraded" ]]; then
+            status_emoji="⚠️"
+          fi
+          
+          health_score="${{ steps.health_check.outputs.health_score }}"
+          error_count="${{ steps.log_analysis.outputs.error_count }}"
+          
+          curl -X POST "${{ env.SLACK_WEBHOOK_URL }}" \
+            -H 'Content-Type: application/json' \
+            -d "{
+              \"text\": \"${status_emoji} SafeWork Monitoring Report\",
+              \"blocks\": [
+                {
+                  \"type\": \"header\",
+                  \"text\": {
+                    \"type\": \"plain_text\",
+                    \"text\": \"${status_emoji} SafeWork Production Monitoring\"
+                  }
+                },
+                {
+                  \"type\": \"section\",
+                  \"fields\": [
+                    {
+                      \"type\": \"mrkdwn\",
+                      \"text\": \"*Health Score:* ${health_score}%\"
+                    },
+                    {
+                      \"type\": \"mrkdwn\",
+                      \"text\": \"*Error Count:* ${error_count}\"
+                    },
+                    {
+                      \"type\": \"mrkdwn\",
+                      \"text\": \"*Status:* ${{ steps.health_check.outputs.health_status }}\"
+                    },
+                    {
+                      \"type\": \"mrkdwn\",
+                      \"text\": \"*Time:* $(date -u)\"
+                    }
+                  ]
+                },
+                {
+                  \"type\": \"actions\",
+                  \"elements\": [
+                    {
+                      \"type\": \"button\",
+                      \"text\": {
+                        \"type\": \"plain_text\",
+                        \"text\": \"View Report\"
+                      },
+                      \"url\": \"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"
+                    },
+                    {
+                      \"type\": \"button\",
+                      \"text\": {
+                        \"type\": \"plain_text\",
+                        \"text\": \"Production Site\"
+                      },
+                      \"url\": \"${{ env.PRODUCTION_URL }}\"
+                    }
+                  ]
+                }
+              ]
+            }" || echo "⚠️ Slack notification failed"
+
+  # Additional job for manual log collection
+  manual-log-collection:
+    name: 📋 Manual Log Collection
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.monitoring_type == 'logs'
+    
+    steps:
+      - name: 📂 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Log Collection Environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq curl
+          chmod +x ./scripts/safework_ops_unified.sh
+
+      - name: 📝 Collect Detailed Logs
+        run: |
+          container_target="${{ github.event.inputs.container_target }}"
+          
+          echo "📋 Collecting detailed logs for: ${container_target}"
+          
+          # Use unified script for log collection
+          ./scripts/safework_ops_unified.sh logs recent "${container_target}" 100 > detailed-logs.txt || {
+            echo "⚠️ Log collection failed"
+            echo "Log collection failed at $(date)" > detailed-logs.txt
+          }
+
+          echo "📊 Log collection completed"
+          echo "Lines collected: $(wc -l < detailed-logs.txt)"
+
+      - name: 📤 Upload Detailed Logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: detailed-logs-${{ github.event.inputs.container_target }}-${{ github.run_number }}
+          path: detailed-logs.txt
+          retention-days: 14

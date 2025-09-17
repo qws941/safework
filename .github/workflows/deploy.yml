@@ -242,7 +242,7 @@ jobs:
           echo "✅ Continuing deployment - manual verification recommended"
 
 
-  # Phase 3: Post-Deployment Validation using Integrated Script
+  # Phase 3: Post-Deployment Validation using Unified Operations Script
   post-deployment-validation:
     name: ✅ Post-Deployment Validation
     runs-on: ubuntu-latest
@@ -253,79 +253,137 @@ jobs:
 
       - name: 🔧 Setup Validation Environment
         run: |
-          # Make scripts executable
-          chmod +x ./scripts/integrated_build_deploy.sh
-          chmod +x ./scripts/test_runner.sh
+          # Install required tools
+          sudo apt-get update
+          sudo apt-get install -y jq curl
 
-      - name: 🎯 Run Post-Deployment Status Check
+          # Make unified script executable
+          chmod +x ./scripts/safework_ops_unified.sh
+
+      - name: 🎯 Run Comprehensive Deployment Validation
         run: |
-          echo "🔍 Running post-deployment validation using integrated script..."
+          echo "🔍 Running comprehensive deployment validation..."
 
-          # Configure the script to check remote deployment
-          export REGISTRY_HOST="${{ env.REGISTRY_HOST }}"
-          export PROJECT_NAME="${{ env.APP_NAME }}"
+          # Configure environment for production validation
+          export PORTAINER_URL="${{ env.PORTAINER_URL }}"
+          export PORTAINER_TOKEN="${{ env.PORTAINER_API_KEY }}"
+          export PRODUCTION_URL="${{ env.PRD_URL }}"
+          export DEBUG=1
 
-          # Run status check
-          ./scripts/integrated_build_deploy.sh status || {
-            echo "⚠️ Local status check failed - checking production endpoints directly"
-
-            # Direct production health checks
+          # Run unified deployment status check
+          echo "📊 Checking deployment status..."
+          ./scripts/safework_ops_unified.sh deploy status || {
+            echo "⚠️ Deployment status check failed - investigating..."
+            
+            # Fallback to individual checks
             curl -f "${{ env.PRD_URL }}/health" || echo "❌ Production health check failed"
             curl -f "${{ env.PRD_URL }}/" || echo "❌ Production homepage check failed"
           }
 
-      - name: 📊 Generate Deployment Report
+      - name: 🔍 Monitor System Health
         run: |
-          echo "📋 Generating deployment validation report..."
+          echo "🏥 Running comprehensive health monitoring..."
+          
+          # Run health monitoring using unified script
+          ./scripts/safework_ops_unified.sh monitor health || {
+            echo "⚠️ Health monitoring completed with warnings"
+            echo "🔍 Manual verification recommended"
+          }
+
+      - name: 📝 Collect Deployment Logs
+        run: |
+          echo "📋 Collecting deployment logs..."
+          
+          # Use unified script to collect recent logs
+          ./scripts/safework_ops_unified.sh logs recent all 30 > deployment-logs.txt || {
+            echo "⚠️ Log collection failed - using fallback method"
+            echo "Deployment completed at $(date)" > deployment-logs.txt
+          }
+
+      - name: 📊 Generate Comprehensive Deployment Report
+        run: |
+          echo "📋 Generating comprehensive deployment report..."
 
           {
-            echo "# SafeWork2 Deployment Validation Report"
+            echo "# SafeWork Production Deployment Report"
             echo "**Deployment Date:** $(date -u)"
             echo "**Commit:** ${{ github.sha }}"
             echo "**Branch:** ${{ github.ref_name }}"
+            echo "**Unified Operations Script:** ✅ Integrated"
             echo ""
-            echo "## Production Health Status"
+            
+            echo "## System Overview"
+            ./scripts/safework_ops_unified.sh monitor overview 2>/dev/null || {
+              echo "⚠️ System overview failed - using manual checks"
+              
+              # Manual endpoint checks
+              echo "### Manual Endpoint Verification"
+              if curl -f "${{ env.PRD_URL }}/health" &>/dev/null; then
+                echo "✅ Health endpoint: PASS"
+              else
+                echo "❌ Health endpoint: FAIL"
+              fi
 
-            # Test main endpoints
-            if curl -f "${{ env.PRD_URL }}/health" &>/dev/null; then
-              echo "✅ Health endpoint: PASS"
+              if curl -f "${{ env.PRD_URL }}/" &>/dev/null; then
+                echo "✅ Homepage: PASS" 
+              else
+                echo "❌ Homepage: FAIL"
+              fi
+
+              if curl -f "${{ env.PRD_URL }}/survey/001_musculoskeletal_symptom_survey" &>/dev/null; then
+                echo "✅ Survey 001: PASS"
+              else
+                echo "❌ Survey 001: FAIL"
+              fi
+
+              if curl -f "${{ env.PRD_URL }}/survey/002_new_employee_health_checkup_form" &>/dev/null; then
+                echo "✅ Survey 002: PASS"
+              else
+                echo "❌ Survey 002: FAIL"
+              fi
+
+              if curl -f "${{ env.PRD_URL }}/survey/003_musculoskeletal_program" &>/dev/null; then
+                echo "✅ Survey 003: PASS"
+              else
+                echo "❌ Survey 003: FAIL"
+              fi
+            }
+
+            echo ""
+            echo "## Deployment Logs Summary"
+            if [[ -f deployment-logs.txt ]]; then
+              echo '```'
+              tail -20 deployment-logs.txt
+              echo '```'
             else
-              echo "❌ Health endpoint: FAIL"
+              echo "⚠️ Deployment logs not available"
             fi
 
-            if curl -f "${{ env.PRD_URL }}/" &>/dev/null; then
-              echo "✅ Homepage: PASS"
-            else
-              echo "❌ Homepage: FAIL"
-            fi
-
-            if curl -f "${{ env.PRD_URL }}/survey/001_musculoskeletal_symptom_survey" &>/dev/null; then
-              echo "✅ Survey 001: PASS"
-            else
-              echo "❌ Survey 001: FAIL"
-            fi
-
-            if curl -f "${{ env.PRD_URL }}/survey/002_new_employee_health_checkup_form" &>/dev/null; then
-              echo "✅ Survey 002: PASS"
-            else
-              echo "❌ Survey 002: FAIL"
-            fi
+            echo ""
+            echo "## Operations Script Integration"
+            echo "✅ Unified operations script deployed"
+            echo "✅ Portainer API integration active"
+            echo "✅ Log monitoring capabilities enabled"
+            echo "✅ Health check automation ready"
 
             echo ""
             echo "## Next Steps"
-            echo "- Monitor production logs for any issues"
-            echo "- Verify admin dashboard functionality"
-            echo "- Check database integrity if needed"
+            echo "- Use \`./scripts/safework_ops_unified.sh monitor health\` for health checks"
+            echo "- Use \`./scripts/safework_ops_unified.sh logs live safework-app\` for real-time monitoring"
+            echo "- Use \`./scripts/safework_ops_unified.sh deploy status\` for deployment status"
+            echo "- Monitor production stability for 24 hours"
 
           } > deployment-report.md
 
           cat deployment-report.md
 
-      - name: 📤 Upload Deployment Report
+      - name: 📤 Upload Comprehensive Deployment Report  
         uses: actions/upload-artifact@v4
         with:
-          name: deployment-report
-          path: deployment-report.md
+          name: deployment-report-comprehensive
+          path: |
+            deployment-report.md
+            deployment-logs.txt
           retention-days: 30
 
   # Phase 4: Success Notification

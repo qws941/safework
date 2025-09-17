@@ -51,6 +51,62 @@ curl -s https://safework.jclee.me/health
 # Response: {"service":"safework","status":"healthy","timestamp":"2025-09-17T10:09:15.655985"}
 ```
 
+### Unified Operations Management (NEW - September 2024)
+```bash
+# 🚀 UNIFIED SAFEWORK OPERATIONS SCRIPT - One command for all operations
+# Replaces 8+ individual scripts with single comprehensive interface
+./scripts/safework_ops_unified.sh [COMMAND] [OPTIONS]
+
+# 📊 DEPLOYMENT COMMANDS
+./scripts/safework_ops_unified.sh deploy status           # Show all container status + production health
+./scripts/safework_ops_unified.sh deploy github          # Trigger GitHub Actions deployment
+./scripts/safework_ops_unified.sh deploy local           # Run local deployment (calls integrated_build_deploy.sh)
+
+# 📋 LOG MANAGEMENT COMMANDS
+./scripts/safework_ops_unified.sh logs live [container] [lines]    # Real-time log streaming (default: safework-app, 50 lines)
+./scripts/safework_ops_unified.sh logs recent [container] [lines]  # Recent logs (default: all, 20 lines)
+./scripts/safework_ops_unified.sh logs errors [container]          # Filter error logs only
+
+# 🔍 MONITORING COMMANDS  
+./scripts/safework_ops_unified.sh monitor overview        # Complete system overview with container info
+./scripts/safework_ops_unified.sh monitor health          # Comprehensive health check with scoring
+./scripts/safework_ops_unified.sh monitor performance     # Performance metrics and resource usage
+./scripts/safework_ops_unified.sh monitor security        # Security status and vulnerability check
+
+# 🛠️ UTILITY COMMANDS
+./scripts/safework_ops_unified.sh utils containers        # List all SafeWork containers
+./scripts/safework_ops_unified.sh utils cleanup           # Clean up stopped containers and unused images
+./scripts/safework_ops_unified.sh utils backup            # Backup database and configurations
+./scripts/safework_ops_unified.sh utils restore [file]    # Restore from backup file
+
+# EXAMPLES - Common workflow patterns:
+# 1. Check system status before deployment
+./scripts/safework_ops_unified.sh monitor health && \
+./scripts/safework_ops_unified.sh deploy github
+
+# 2. Monitor deployment progress
+./scripts/safework_ops_unified.sh deploy status && \
+./scripts/safework_ops_unified.sh logs live safework-app
+
+# 3. Troubleshoot production issues
+./scripts/safework_ops_unified.sh logs errors all && \
+./scripts/safework_ops_unified.sh monitor health
+
+# 4. Complete system maintenance
+./scripts/safework_ops_unified.sh utils backup && \
+./scripts/safework_ops_unified.sh utils cleanup && \
+./scripts/safework_ops_unified.sh monitor overview
+
+# KEY BENEFITS:
+# ✅ Unified interface replacing 8+ separate scripts
+# ✅ Color-coded output with status indicators
+# ✅ Portainer API integration for real-time data  
+# ✅ Korean language support for operational messages
+# ✅ Error handling and debug mode (DEBUG=1)
+# ✅ Production-ready with comprehensive logging
+# ✅ GitHub Actions integration for CI/CD workflows
+```
+
 ### System Validation & Deployment Verification
 ```bash
 # NEW: Automated system validation (added September 2024)
@@ -131,9 +187,9 @@ grep -r "print(" . --include="*.py"    # Find debug prints
 grep -r "TODO\|FIXME" . --include="*.py"  # Find TODOs
 ```
 
-### Production Monitoring & Log Analysis Scripts
+### Legacy Production Monitoring & Log Analysis Scripts
 ```bash
-# Production-optimized scripts for live system monitoring
+# LEGACY: Individual scripts (replaced by unified script - use safework_ops_unified.sh instead)
 ./scripts/simple_production_query.sh           # Quick production status check
 ./scripts/production_query_advanced.sh         # Detailed production analysis
 ./scripts/portainer_production_logs.sh         # Production log analysis
@@ -221,7 +277,14 @@ gh run download <run-id>               # Download artifacts
 
 ### Testing Commands
 ```bash
-# NEW: Comprehensive automated testing (종합 자동화 테스트)
+# 🚀 UNIFIED TESTING & VALIDATION (NEW - September 2024)
+# Use unified operations script for all testing and validation
+./scripts/safework_ops_unified.sh monitor health          # Comprehensive health check
+./scripts/safework_ops_unified.sh monitor performance     # Performance validation
+./scripts/safework_ops_unified.sh logs errors all         # Error log analysis
+./scripts/safework_ops_unified.sh deploy status           # Deployment status validation
+
+# Traditional testing suite
 ./scripts/test_runner.sh               # 전체 시스템 테스트 실행 (7/18 passing as of validation)
 ./scripts/pipeline_validator.sh        # CI/CD 파이프라인 검증 (68% ready as of validation)
 
@@ -255,10 +318,13 @@ with app.app_context():
 
 ### Integrated Build & Deployment (통합 빌드 및 배포)
 ```bash
-# ONE-COMMAND deployment (한 번에 빌드부터 배포까지)
-./scripts/integrated_build_deploy.sh full     # 전체 빌드 및 배포
+# 🚀 RECOMMENDED: Use unified operations script for all deployment tasks
+./scripts/safework_ops_unified.sh deploy github           # GitHub Actions deployment
+./scripts/safework_ops_unified.sh deploy local            # Local deployment
+./scripts/safework_ops_unified.sh deploy status           # Deployment status check
 
-# Step-by-step deployment options
+# Legacy: Individual deployment commands
+./scripts/integrated_build_deploy.sh full     # 전체 빌드 및 배포
 ./scripts/integrated_build_deploy.sh build    # 빌드만
 ./scripts/integrated_build_deploy.sh deploy   # 배포만
 ./scripts/integrated_build_deploy.sh status   # 현재 상태 확인
@@ -920,6 +986,22 @@ with app.app_context():
     except Exception as e:
         print(f'❌ Database connection failed: {e}')
 "
+
+# 🚀 UNIFIED TROUBLESHOOTING (NEW - September 2024)
+# Use unified operations script for streamlined troubleshooting workflow
+
+# Quick system health check
+./scripts/safework_ops_unified.sh monitor health         # Comprehensive health assessment
+./scripts/safework_ops_unified.sh deploy status          # Current deployment status
+
+# Analyze production issues  
+./scripts/safework_ops_unified.sh logs errors all        # Find all error logs
+./scripts/safework_ops_unified.sh logs recent all 50     # Recent activity across containers
+./scripts/safework_ops_unified.sh monitor performance    # Performance metrics
+
+# Real-time monitoring
+./scripts/safework_ops_unified.sh logs live safework-app # Live application logs
+./scripts/safework_ops_unified.sh monitor overview       # Complete system overview
 
 # Survey form debugging
 # - Verify HTML/JavaScript ID matching (critical for conditional logic)
