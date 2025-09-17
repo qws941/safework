@@ -24,7 +24,7 @@ on:
         type: boolean
 
 env:
-  APP_NAME: safework2
+  APP_NAME: safework
   REGISTRY_HOST: registry.jclee.me
   REGISTRY_USER: admin
   REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
@@ -37,8 +37,6 @@ env:
   # Infrastructure APIs
   PORTAINER_URL: https://portainer.jclee.me
   PORTAINER_API_KEY: ${{ secrets.PORTAINER_API_KEY }}
-  WATCHTOWER_URL: https://watchtower.jclee.me
-  WATCHTOWER_HTTP_API_TOKEN: ${{ secrets.WATCHTOWER_HTTP_API_TOKEN }}
 
   # Database Configuration
   POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
@@ -66,7 +64,7 @@ jobs:
       - name: 🐳 Set up Docker Environment
         run: |
           docker --version
-          docker network create safework2-test-network || true
+          docker network create safework-test-network || true
 
       - name: 🧪 Run Comprehensive Tests
         run: |
@@ -139,9 +137,7 @@ jobs:
           file: ./app/Dockerfile
           push: true
           tags: ${{ steps.app_meta.outputs.tags }}
-          labels: |
-            ${{ steps.app_meta.outputs.labels }}
-            com.centurylinklabs.watchtower.enable=true
+          labels: ${{ steps.app_meta.outputs.labels }}
           build-args: |
             BUILD_DATE=${{ github.event.head_commit.timestamp }}
             VCS_REF=${{ github.sha }}
@@ -154,9 +150,7 @@ jobs:
           file: ./postgres/Dockerfile
           push: true
           tags: ${{ steps.postgres_meta.outputs.tags }}
-          labels: |
-            ${{ steps.postgres_meta.outputs.labels }}
-            com.centurylinklabs.watchtower.enable=true
+          labels: ${{ steps.postgres_meta.outputs.labels }}
 
       - name: 🐳 Build and Push Redis Container
         uses: docker/build-push-action@v5
@@ -165,12 +159,10 @@ jobs:
           file: ./redis/Dockerfile
           push: true
           tags: ${{ steps.redis_meta.outputs.tags }}
-          labels: |
-            ${{ steps.redis_meta.outputs.labels }}
-            com.centurylinklabs.watchtower.enable=true
+          labels: ${{ steps.redis_meta.outputs.labels }}
 
 
-  # Phase 2: Deploy via Watchtower
+  # Phase 2: Deploy via Portainer API
   deploy-production:
     name: 🚀 Deploy to Production
     runs-on: ubuntu-latest
@@ -178,14 +170,36 @@ jobs:
     environment: production
 
     steps:
-      - name: 🔔 Trigger Watchtower Auto-Deploy
-        run: |
-          curl -H "Authorization: Bearer ${{ env.WATCHTOWER_HTTP_API_TOKEN }}" \
-               -X POST \
-               "${{ env.WATCHTOWER_URL }}/v1/update"
+      - name: 📂 Checkout Repository
+        uses: actions/checkout@v4
 
-      - name: ⏱️ Wait for Deployment
-        run: sleep 60
+      - name: 🔄 Direct Container Update via Portainer API
+        run: |
+          echo "🐳 Updating SafeWork containers directly via Portainer API..."
+
+          # Function to pull latest image and restart container
+          update_container() {
+            local container_name="$1"
+            local image_name="$2"
+
+            echo "📥 Pulling latest image for $container_name..."
+            curl -s -X POST -H "X-API-Key: ${{ env.PORTAINER_API_KEY }}" \
+              -H "Content-Type: application/json" \
+              "${{ env.PORTAINER_URL }}/api/endpoints/3/docker/images/create" \
+              -d "{\"fromImage\": \"$image_name\"}"
+
+            echo "🔄 Restarting $container_name..."
+            curl -s -X POST -H "X-API-Key: ${{ env.PORTAINER_API_KEY }}" \
+              "${{ env.PORTAINER_URL }}/api/endpoints/3/docker/containers/$container_name/restart"
+          }
+
+          # Update each container
+          update_container "safework-app" "${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/app:latest"
+          update_container "safework-postgres" "${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/postgres:latest"
+          update_container "safework-redis" "${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/redis:latest"
+
+      - name: ⏱️ Wait for Container Restart
+        run: sleep 45
 
       - name: 🏥 Health Check - Production
         run: |

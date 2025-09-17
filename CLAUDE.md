@@ -31,7 +31,7 @@ SafeWork is an industrial health and safety management system built with Flask 3
 **Production Deployment Process:**
 1. **Push to master branch** → Triggers GitHub Actions workflow
 2. **Build & Push Images** → Builds all containers, pushes to registry.jclee.me
-3. **Watchtower Auto-Deploy** → Automatically detects new images and deploys
+3. **Direct Container Update** → Portainer API pulls latest images and restarts containers
 4. **Health Verification** → Checks all services are running properly
 
 ```bash
@@ -43,8 +43,8 @@ git push origin master
 # GitHub Actions will:
 # 1. Build safework/app, safework/postgres, safework/redis images
 # 2. Push to registry.jclee.me with latest tags
-# 3. Trigger Watchtower update via HTTP API
-# 4. Monitor deployment success via Portainer API
+# 3. Pull latest images and restart containers via Portainer API
+# 4. Monitor deployment success via health checks
 
 # Production health verification (September 2024)
 curl -s https://safework.jclee.me/health
@@ -140,28 +140,25 @@ curl -s -X POST https://safework.jclee.me/survey/api/submit \
 ### Manual Container Setup (Development Only)
 ```bash
 # CRITICAL: Use correct image names (consistent with production)
-docker pull registry.jclee.me/safework2/app:latest
-docker pull registry.jclee.me/safework2/postgres:latest
-docker pull registry.jclee.me/safework2/redis:latest
+docker pull registry.jclee.me/safework/app:latest
+docker pull registry.jclee.me/safework/postgres:latest
+docker pull registry.jclee.me/safework/redis:latest
 
 # Start PostgreSQL with KST timezone and automated schema migration
 docker run -d --name safework2-postgres --network watchtower_default -p 4546:5432 \
   -e TZ=Asia/Seoul -e POSTGRES_PASSWORD=safework2024 -e POSTGRES_DB=safework_db -e POSTGRES_USER=safework \
-  --label "com.centurylinklabs.watchtower.enable=true" \
-  registry.jclee.me/safework2/postgres:latest
+  registry.jclee.me/safework/postgres:latest
 
 # Start Redis with clean state
 docker run -d --name safework2-redis --network watchtower_default -p 4547:6379 \
   -e TZ=Asia/Seoul \
-  --label "com.centurylinklabs.watchtower.enable=true" \
-  registry.jclee.me/safework2/redis:latest
+  registry.jclee.me/safework/redis:latest
 
 # Start application with correct database name (safework_db) and KST timezone
 docker run -d --name safework2-app --network watchtower_default -p 4545:4545 \
   -e TZ=Asia/Seoul -e DB_HOST=safework2-postgres -e DB_NAME=safework_db -e DB_USER=safework \
   -e DB_PASSWORD=safework2024 -e REDIS_HOST=safework2-redis \
-  --label "com.centurylinklabs.watchtower.enable=true" \
-  registry.jclee.me/safework2/app:latest
+  registry.jclee.me/safework/app:latest
 
 # Container management
 docker logs -f safework2-app            # View application logs
@@ -171,7 +168,7 @@ docker stop safework2-app safework2-postgres safework2-redis  # Stop all service
 # Development with code changes (mount local code)
 docker run -d --name safework2-app-dev --network watchtower_default -p 4545:4545 \
   -v $(pwd)/app:/app -e FLASK_ENV=development \
-  registry.jclee.me/safework2/app:latest
+  registry.jclee.me/safework/app:latest
 ```
 
 ### Code Quality & Linting
@@ -653,20 +650,24 @@ SLACK_WEBHOOK_URL=<url>                  # Slack notifications
 - Korean language support for industrial safety context
 - SafeWork-specific domain knowledge integration
 
-## Watchtower & Portainer Operations
+## Portainer Container Operations
 
-### Watchtower Container Verification
+### Direct Container Management
 ```bash
-# Check if Watchtower is detecting all SafeWork containers
-curl -H "Authorization: Bearer wt_k8Jm4nX9pL2vQ7rB5sT6yH3fG1dA0" \
-  "https://watchtower.jclee.me/v1/status"
+# Check SafeWork container status via Portainer API
+curl -H "X-API-Key: ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=" \
+  "https://portainer.jclee.me/api/endpoints/3/docker/containers/json" | \
+  jq -r '.[] | select(.Names[] | contains("safework")) | .Names[0] + " - " + .State'
 
-# Expected response: Should show safework-app, safework-postgres, safework-redis
-# Target: 6 containers total (3 SafeWork + 3 BlackList)
+# Restart SafeWork containers directly
+curl -X POST -H "X-API-Key: ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=" \
+  "https://portainer.jclee.me/api/endpoints/3/docker/containers/safework-app/restart"
 
-# Trigger manual Watchtower update
-curl -X POST -H "Authorization: Bearer wt_k8Jm4nX9pL2vQ7rB5sT6yH3fG1dA0" \
-  "https://watchtower.jclee.me/v1/update"
+# Pull latest images and update containers
+curl -X POST -H "X-API-Key: ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=" \
+  -H "Content-Type: application/json" \
+  "https://portainer.jclee.me/api/endpoints/3/docker/images/create" \
+  -d '{"fromImage": "registry.jclee.me/safework/app:latest"}'
 ```
 
 ### Portainer API Container Management & Simplified Scripts
@@ -682,14 +683,13 @@ curl -X POST -H "Authorization: Bearer wt_k8Jm4nX9pL2vQ7rB5sT6yH3fG1dA0" \
 curl -H "X-API-Key: ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=" \
   "https://portainer.jclee.me/api/endpoints/3/docker/containers/json"
 
-# Create new container with Watchtower labels via Portainer
+# Create new container via Portainer
 curl -X POST -H "X-API-Key: ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=" \
   -H "Content-Type: application/json" \
   "https://portainer.jclee.me/api/endpoints/3/docker/containers/create?name=safework2-postgres" \
   -d '{
-    "Image": "registry.jclee.me/safework2/postgres:latest",
+    "Image": "registry.jclee.me/safework/postgres:latest",
     "Env": ["POSTGRES_PASSWORD=safework2024", "POSTGRES_DB=safework_db", "POSTGRES_USER=safework"],
-    "Labels": {"com.centurylinklabs.watchtower.enable": "true"},
     "HostConfig": {
       "PortBindings": {"5432/tcp": [{"HostPort": "4546"}]},
       "NetworkMode": "watchtower_default"
@@ -952,16 +952,16 @@ docker rm safework2-app safework2-postgres safework2-redis
 docker run -d --name safework2-postgres --network watchtower_default -p 4546:5432 \
   -e TZ=Asia/Seoul -e POSTGRES_PASSWORD=safework2024 -e POSTGRES_DB=safework_db -e POSTGRES_USER=safework \
   --label "com.centurylinklabs.watchtower.enable=true" \
-  registry.jclee.me/safework2/postgres:latest
+  registry.jclee.me/safework/postgres:latest
 docker run -d --name safework2-redis --network watchtower_default -p 4547:6379 \
   -e TZ=Asia/Seoul \
   --label "com.centurylinklabs.watchtower.enable=true" \
-  registry.jclee.me/safework2/redis:latest
+  registry.jclee.me/safework/redis:latest
 docker run -d --name safework2-app --network watchtower_default -p 4545:4545 \
   -e TZ=Asia/Seoul -e DB_HOST=safework2-postgres -e DB_NAME=safework_db \
   -e DB_USER=safework -e DB_PASSWORD=safework2024 -e REDIS_HOST=safework2-redis \
   --label "com.centurylinklabs.watchtower.enable=true" \
-  registry.jclee.me/safework2/app:latest
+  registry.jclee.me/safework/app:latest
 
 # Database management
 docker exec -it safework2-app python migrate.py status              # Check migration status

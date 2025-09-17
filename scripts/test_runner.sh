@@ -120,7 +120,7 @@ test_container_startup() {
     # PostgreSQL 테스트 컨테이너 실행
     if docker run -d --name safework2-postgres-test --network safework2-test-network \
         -e POSTGRES_PASSWORD=test123 -e POSTGRES_DB=test_db -e POSTGRES_USER=test \
-        registry.jclee.me/safework2/postgres:latest >/dev/null 2>&1; then
+        registry.jclee.me/safework/postgres:latest >/dev/null 2>&1; then
 
         # PostgreSQL 준비 대기
         sleep 5
@@ -138,7 +138,7 @@ test_container_startup() {
 
     # Redis 테스트 컨테이너 실행
     if docker run -d --name safework2-redis-test --network safework2-test-network \
-        registry.jclee.me/safework2/redis:latest >/dev/null 2>&1; then
+        registry.jclee.me/safework/redis:latest >/dev/null 2>&1; then
 
         sleep 3
         if docker exec safework2-redis-test redis-cli ping >/dev/null 2>&1; then

@@ -68,9 +68,9 @@
 ## 📦 Docker Images
 
 ```
-registry.jclee.me/safework2-app:latest       # Main Application (Port 4545)
-registry.jclee.me/safework2-postgres:latest  # PostgreSQL Database (Port 4546) 
-registry.jclee.me/safework2-redis:latest     # Redis Cache (Port 4547)
+registry.jclee.me/safework-app:latest       # Main Application (Port 4545)
+registry.jclee.me/safework-postgres:latest  # PostgreSQL Database (Port 4546) 
+registry.jclee.me/safework-redis:latest     # Redis Cache (Port 4547)
 ```
 
 ---
@@ -460,9 +460,9 @@ docker restart safework2-postgres
 docker restart safework2-redis
 
 # Update to latest images
-docker pull registry.jclee.me/safework2-app:latest
-docker pull registry.jclee.me/safework2-postgres:latest
-docker pull registry.jclee.me/safework2-redis:latest
+docker pull registry.jclee.me/safework-app:latest
+docker pull registry.jclee.me/safework-postgres:latest
+docker pull registry.jclee.me/safework-redis:latest
 ```
 
 ### Database Operations
