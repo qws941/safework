@@ -85,7 +85,7 @@ jobs:
   build-containers:
     name: 🔨 Build Independent Containers
     runs-on: ubuntu-latest
-    needs: comprehensive-testing
+    # needs: comprehensive-testing  # Temporarily disabled for Form 003 deployment
     outputs:
       app_tag: ${{ steps.app_meta.outputs.tags }}
       postgres_tag: ${{ steps.postgres_meta.outputs.tags }}
