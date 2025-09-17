@@ -50,10 +50,8 @@ def login():
                 track_login_attempt(username, success=True)
                 
                 with open('/tmp/login_debug.log', 'a') as f:
-                    f.write(f"Login successful - current_user.is_authenticated: {current_user.is_authenticated}
-")
-                    f.write("Redirecting to admin dashboard
-")
+                    f.write(f"Login successful - current_user.is_authenticated: {current_user.is_authenticated}\n")
+                    f.write("Redirecting to admin dashboard\n")
                 
                 return redirect(url_for("admin.dashboard"))
             else:
