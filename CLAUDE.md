@@ -20,8 +20,34 @@ SafeWork is an industrial health and safety management system built with Flask 3
 - Localization: KST timezone (`kst_now()` function), Korean UI/error messages
 - Security: CSRF protection disabled (WTF_CSRF_ENABLED = False), Flask-Login authentication
 - Testing: **Manual testing only** - no formal test suite exists (app/tests/ directory not found)
+- Code Quality: Black, Flake8 (defined in requirements.txt)
 
 ## Development Commands
+
+### Quick Reference (Most Common Commands)
+```bash
+# 🚀 Deployment & Status
+./scripts/safework_ops_unified.sh deploy github    # Trigger GitHub Actions deployment
+./scripts/safework_ops_unified.sh deploy status    # Check deployment status
+./scripts/safework_ops_unified.sh monitor health   # System health check
+
+# 📋 Monitoring & Logs
+./scripts/safework_ops_unified.sh logs live        # Live application logs
+./scripts/safework_ops_unified.sh logs errors all  # Filter error logs
+./scripts/safework_ops_unified.sh monitor overview # Complete system status
+
+# 🧪 Testing & Validation
+./scripts/test_runner.sh                           # Run comprehensive tests
+./scripts/pipeline_validator.sh                    # Validate CI/CD pipeline
+curl https://safework.jclee.me/health             # Production health check
+
+# 🗄️ Database Management
+docker exec -it safework-app python migrate.py status   # Check migrations
+docker exec -it safework-postgres psql -U safework -d safework_db  # Database CLI
+
+# 🔧 Code Quality
+cd app && black . && flake8 .                     # Format and lint code
+```
 
 ### Container Deployment via GitHub Actions CI/CD
 
@@ -180,10 +206,15 @@ docker run -d --name safework2-app-dev --network watchtower_default -p 4545:4545
 ### Code Quality & Linting
 ```bash
 # Python code formatting and linting (defined in requirements.txt)
-cd app
+cd src/app
 black .                                 # Format code
 flake8 .                               # Check code style
 python -m py_compile *.py              # Syntax check
+
+# Makefile shortcuts for code quality
+make format                            # Run Black formatter
+make lint                              # Run Flake8 linter
+make check                             # Run both format and lint
 
 # Check for common issues
 grep -r "print(" . --include="*.py"    # Find debug prints
@@ -229,6 +260,7 @@ grep -r "TODO\|FIXME" . --include="*.py"  # Find TODOs
 - claude-mcp-assistant.yml      # AI-powered issue analysis with MCP
 - maintenance-automation.yml    # System maintenance tasks
 - operational-log-analysis.yml  # Real-time log monitoring
+- operational-monitoring.yml    # Extended monitoring capabilities
 - security-auto-triage.yml      # Security scanning
 - issue-handler.yml             # Intelligent issue management
 - dependency-auto-update.yml    # Dependency management
@@ -579,6 +611,7 @@ The project uses an **optimized English-only workflow system** with advanced Cla
 - **🤖 claude-mcp-assistant.yml**: Claude AI Assistant with Advanced MCP Integration
 - **🔧 maintenance-automation.yml**: Automated system maintenance and health monitoring
 - **📊 operational-log-analysis.yml**: Real-time container log monitoring via Portainer API
+- **📊 operational-monitoring.yml**: Extended monitoring capabilities and system health checks
 - **🛡️ security-auto-triage.yml**: Automated vulnerability detection and resolution
 - **🎯 issue-handler.yml**: Intelligent issue management with auto-labeling
 - **🔄 dependency-auto-update.yml**: Weekly automated dependency management
@@ -641,6 +674,7 @@ PORTAINER_URL=https://portainer.jclee.me # Portainer URL (log viewing only)
 # Claude AI Integration (CRITICAL for workflows)
 CLAUDE_CODE_OAUTH_TOKEN=<token>          # Claude Code automation
 GITHUB_TOKEN=<token>                     # GitHub API access for Claude workflows
+PORTAINER_API_KEY=<token>                # Portainer API key (updated from PORTAINER_API_TOKEN)
 
 # Optional automation
 SLACK_WEBHOOK_URL=<url>                  # Slack notifications
@@ -662,6 +696,71 @@ SLACK_WEBHOOK_URL=<url>                  # Slack notifications
 - SafeWork-specific domain knowledge integration
 
 ## Portainer Container Operations
+
+### 🚀 고도화된 Portainer 관리 시스템 (NEW - September 2024)
+
+SafeWork는 **고급 Portainer 관리 시스템**으로 완전히 업그레이드되었습니다:
+
+**주요 개선사항:**
+- ✅ **통합 관리 도구**: 대화형 메뉴 시스템으로 모든 컨테이너 작업 통합
+- ✅ **Makefile 통합**: `make portainer-*` 명령어로 모든 Portainer 작업 실행
+- ✅ **YAML 기반 설정**: 중앙 집중식 설정 관리 (`deployment/portainer/portainer-config.yaml`)
+- ✅ **실시간 모니터링**: 색상 코딩된 로그, 리소스 모니터링, 건강 상태 체크
+- ✅ **자동화**: 백업, 보고서 생성, 컨테이너 관리 자동화
+
+**새로운 통합 명령어 시스템:**
+```bash
+# Makefile 통합 명령어
+make portainer              # 대화형 고급 관리 도구
+make portainer-status       # 컨테이너 상태 확인
+make portainer-logs         # 로그 조회 (대화형)
+make portainer-monitor      # 리소스 모니터링
+make portainer-health       # 건강 상태 종합 체크
+make portainer-restart      # 전체 SafeWork 컨테이너 재시작
+make portainer-report       # 시스템 보고서 생성
+
+# 고급 스크립트 직접 실행
+./tools/scripts/portainer_advanced.sh summary      # 컨테이너 상태 요약
+./tools/scripts/portainer_advanced.sh logs         # 대화형 로그 조회
+./tools/scripts/portainer_advanced.sh monitor      # 리소스 모니터링
+./tools/scripts/portainer_advanced.sh health       # 건강 상태 체크
+./tools/scripts/portainer_advanced.sh network      # 네트워크 정보
+./tools/scripts/portainer_advanced.sh backup       # 시스템 백업
+./tools/scripts/portainer_advanced.sh interactive  # 대화형 메뉴
+
+# YAML 기반 설정 관리
+./tools/scripts/portainer_config_manager.sh validate    # 설정 검증
+./tools/scripts/portainer_config_manager.sh test        # API 연결 테스트
+./tools/scripts/portainer_config_manager.sh deploy      # 설정 기반 배포
+./tools/scripts/portainer_config_manager.sh health      # 건강 상태 체크
+```
+
+**실무 사용 워크플로우:**
+```bash
+# 📊 일일 모니터링 워크플로우
+make portainer-status        # 1. 컨테이너 상태 확인
+make portainer-health        # 2. 건강 상태 체크
+make logs-errors             # 3. 에러 로그 확인
+make portainer-monitor       # 4. 리소스 사용률 확인
+
+# 🚨 문제 해결 워크플로우
+make portainer-logs          # 1. 상세 로그 분석 (대화형)
+make portainer-monitor       # 2. 리소스 상태 확인
+make portainer-restart       # 3. 필요시 컨테이너 재시작
+make portainer-report        # 4. 문제 해결 보고서 생성
+
+# 🔄 배포 후 검증 워크플로우
+make deploy                  # 1. GitHub Actions 배포
+make portainer-health        # 2. 배포 후 건강 상태 확인
+make portainer-monitor       # 3. 성능 모니터링
+make portainer-report        # 4. 배포 완료 보고서
+```
+
+**새로운 문서화:**
+- **사용 가이드**: `docs/portainer/PORTAINER_USAGE_GUIDE.md`
+- **빠른 참조**: `docs/portainer/QUICK_REFERENCE.md`
+- **통합 예시**: `docs/portainer/INTEGRATION_EXAMPLES.md`
+- **설정 파일**: `deployment/portainer/portainer-config.yaml`
 
 ### Direct Container Management
 ```bash
