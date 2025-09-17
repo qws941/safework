@@ -1,0 +1,270 @@
+{% extends "admin/base_admin.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <h1>컨테이너 로그 조회</h1>
+
+            <!-- 컨테이너 선택 -->
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">컨테이너 선택</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                {% for container in containers %}
+                                <div class="col-md-4 mb-3">
+                                    <div class="card border-{{ 'success' if container.state == 'running' else 'danger' }}">
+                                        <div class="card-body">
+                                            <h6 class="card-title">{{ container.name }}</h6>
+                                            <p class="card-text">
+                                                <small>ID: {{ container.id }}</small><br>
+                                                <span class="badge badge-{{ 'success' if container.state == 'running' else 'danger' }}">
+                                                    {{ container.state|upper }}
+                                                </span>
+                                            </p>
+                                            <button class="btn btn-primary btn-sm" onclick="loadLogs('{{ container.id }}', '{{ container.name }}')">
+                                                로그 보기
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 로그 조회 옵션 -->
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">로그 조회 옵션</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <label for="logLines">조회할 라인 수:</label>
+                                    <select id="logLines" class="form-control">
+                                        <option value="50">최근 50줄</option>
+                                        <option value="100" selected>최근 100줄</option>
+                                        <option value="200">최근 200줄</option>
+                                        <option value="500">최근 500줄</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="refreshInterval">자동 새로고침:</label>
+                                    <select id="refreshInterval" class="form-control">
+                                        <option value="0">비활성화</option>
+                                        <option value="5">5초</option>
+                                        <option value="10" selected>10초</option>
+                                        <option value="30">30초</option>
+                                        <option value="60">1분</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="logFilter">로그 필터:</label>
+                                    <input type="text" id="logFilter" class="form-control" placeholder="필터링할 텍스트 입력">
+                                </div>
+                                <div class="col-md-3">
+                                    <label>&nbsp;</label>
+                                    <div>
+                                        <button class="btn btn-success" onclick="refreshLogs()">
+                                            <i class="bi bi-arrow-clockwise"></i> 새로고침
+                                        </button>
+                                        <button class="btn btn-warning" onclick="downloadLogs()">
+                                            <i class="bi bi-download"></i> 다운로드
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 로그 출력 영역 -->
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0" id="logs-title">로그 출력</h5>
+                            <div>
+                                <span id="log-status" class="badge badge-secondary">대기 중</span>
+                                <span id="auto-refresh-status" class="badge badge-info ml-2" style="display:none;"></span>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <pre id="logs-output" style="
+                                height: 600px;
+                                overflow-y: auto;
+                                background: #1e1e1e;
+                                color: #ffffff;
+                                padding: 15px;
+                                margin: 0;
+                                font-size: 12px;
+                                line-height: 1.4;
+                                border-radius: 0;
+                            ">컨테이너를 선택하여 로그를 확인하세요.</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentContainerId = null;
+let currentContainerName = null;
+let refreshTimer = null;
+let lastLogData = null;
+
+// 컨테이너 로그 로드
+function loadLogs(containerId, containerName) {
+    currentContainerId = containerId;
+    currentContainerName = containerName;
+
+    document.getElementById('logs-title').textContent = `${containerName} 로그`;
+    document.getElementById('log-status').textContent = '로딩 중';
+    document.getElementById('log-status').className = 'badge badge-warning';
+
+    refreshLogs();
+    setupAutoRefresh();
+}
+
+// 로그 새로고침
+function refreshLogs() {
+    if (!currentContainerId) {
+        document.getElementById('logs-output').textContent = '컨테이너를 선택하여 로그를 확인하세요.';
+        return;
+    }
+
+    const lines = document.getElementById('logLines').value;
+    const filter = document.getElementById('logFilter').value;
+
+    let url = `/admin/monitoring/api/logs/${currentContainerId}?lines=${lines}`;
+    if (filter) {
+        url += `&filter=${encodeURIComponent(filter)}`;
+    }
+
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            lastLogData = data;
+
+            let logs = data.logs;
+            if (filter) {
+                logs = logs.filter(line => line.toLowerCase().includes(filter.toLowerCase()));
+            }
+
+            // 로그 포맷팅 (에러/경고 강조)
+            const formattedLogs = logs.map(line => {
+                if (line.toLowerCase().includes('error') || line.toLowerCase().includes('exception')) {
+                    return `<span style="color: #ff6b6b;">${line}</span>`;
+                } else if (line.toLowerCase().includes('warning') || line.toLowerCase().includes('warn')) {
+                    return `<span style="color: #feca57;">${line}</span>`;
+                } else if (line.toLowerCase().includes('info')) {
+                    return `<span style="color: #48cae4;">${line}</span>`;
+                } else {
+                    return line;
+                }
+            });
+
+            document.getElementById('logs-output').innerHTML = formattedLogs.join('\n');
+
+            // 자동 스크롤 (맨 아래로)
+            const logsOutput = document.getElementById('logs-output');
+            logsOutput.scrollTop = logsOutput.scrollHeight;
+
+            // 상태 업데이트
+            document.getElementById('log-status').textContent = '로드 완료';
+            document.getElementById('log-status').className = 'badge badge-success';
+
+            // 업데이트 시간 표시
+            const now = new Date().toLocaleTimeString();
+            document.getElementById('log-status').title = `마지막 업데이트: ${now}`;
+        })
+        .catch(error => {
+            console.error('로그 로딩 실패:', error);
+            document.getElementById('logs-output').textContent = '로그 로딩에 실패했습니다: ' + error.message;
+            document.getElementById('log-status').textContent = '로딩 실패';
+            document.getElementById('log-status').className = 'badge badge-danger';
+        });
+}
+
+// 자동 새로고침 설정
+function setupAutoRefresh() {
+    // 기존 타이머 클리어
+    if (refreshTimer) {
+        clearInterval(refreshTimer);
+        refreshTimer = null;
+    }
+
+    const interval = parseInt(document.getElementById('refreshInterval').value);
+    if (interval > 0) {
+        refreshTimer = setInterval(refreshLogs, interval * 1000);
+        document.getElementById('auto-refresh-status').style.display = 'inline';
+        document.getElementById('auto-refresh-status').textContent = `${interval}초마다 자동 새로고침`;
+    } else {
+        document.getElementById('auto-refresh-status').style.display = 'none';
+    }
+}
+
+// 로그 다운로드
+function downloadLogs() {
+    if (!lastLogData) {
+        alert('먼저 로그를 로드해주세요.');
+        return;
+    }
+
+    const content = lastLogData.logs.join('\n');
+    const filename = `${currentContainerName}_logs_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.txt`;
+
+    const element = document.createElement('a');
+    element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(content));
+    element.setAttribute('download', filename);
+    element.style.display = 'none';
+
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+}
+
+// 이벤트 리스너 등록
+document.addEventListener('DOMContentLoaded', function() {
+    // 자동 새로고침 설정 변경시
+    document.getElementById('refreshInterval').addEventListener('change', setupAutoRefresh);
+
+    // 로그 라인 수 변경시
+    document.getElementById('logLines').addEventListener('change', function() {
+        if (currentContainerId) {
+            refreshLogs();
+        }
+    });
+
+    // 필터 입력시 (디바운싱)
+    let filterTimeout;
+    document.getElementById('logFilter').addEventListener('input', function() {
+        clearTimeout(filterTimeout);
+        filterTimeout = setTimeout(() => {
+            if (currentContainerId) {
+                refreshLogs();
+            }
+        }, 500);
+    });
+});
+
+// 페이지 언로드시 타이머 정리
+window.addEventListener('beforeunload', function() {
+    if (refreshTimer) {
+        clearInterval(refreshTimer);
+    }
+});
+</script>
+{% endblock %}

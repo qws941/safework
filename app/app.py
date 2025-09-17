@@ -86,6 +86,7 @@ def create_app(config_name=None):
     from routes.health import health_bp
     from routes.main import main_bp
     from routes.migration import migration_bp
+    from routes.monitoring import monitoring_bp
     from routes.survey import survey_bp
 
     app.register_blueprint(main_bp)
@@ -96,6 +97,7 @@ def create_app(config_name=None):
     app.register_blueprint(health_bp)
     app.register_blueprint(document_bp, url_prefix="/documents")
     app.register_blueprint(document_admin_bp, url_prefix="/admin/documents")
+    app.register_blueprint(monitoring_bp, url_prefix="/admin")
     
     # CSRF 특정 경로 면제 설정 - TEMPORARILY DISABLED
     # from routes.survey import musculoskeletal_symptom_survey

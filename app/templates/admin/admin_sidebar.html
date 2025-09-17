@@ -263,8 +263,23 @@
                     </a>
                 </li>
                 <li>
-                    <a href="#">
-                        <i class="bi bi-journal-text"></i> 시스템 로그
+                    <a href="{{ url_for('monitoring.dashboard') }}">
+                        <i class="bi bi-monitor"></i> 시스템 모니터링
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('monitoring.logs_page') }}">
+                        <i class="bi bi-journal-text"></i> 컨테이너 로그
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('monitoring.alerts_page') }}">
+                        <i class="bi bi-bell"></i> 알림 관리
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('monitoring.performance_page') }}">
+                        <i class="bi bi-speedometer"></i> 성능 모니터링
                     </a>
                 </li>
                 <li>

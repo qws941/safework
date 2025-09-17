@@ -16,9 +16,10 @@ SafeWork is an industrial health and safety management system built with Flask 3
 **Tech Stack:**
 - Backend: Flask 3.0+, SQLAlchemy 2.0, PostgreSQL 15+ (**⚠️ MySQL 사용 금지**), Redis 7.0
 - Frontend: Bootstrap 4.6, jQuery, responsive design
-- Infrastructure: Docker, Private Registry (registry.jclee.me), Watchtower auto-deployment
+- Infrastructure: Docker, Private Registry (registry.jclee.me), Watchtower auto-deployment, Portainer API
 - Localization: KST timezone (`kst_now()` function), Korean UI/error messages
 - Security: CSRF protection disabled (WTF_CSRF_ENABLED = False), Flask-Login authentication
+- Testing: **Manual testing only** - no formal test suite exists (app/tests/ directory not found)
 
 ## Development Commands
 
@@ -116,14 +117,19 @@ grep -r "TODO\|FIXME" . --include="*.py"  # Find TODOs
 
 ### GitHub Actions Workflows
 ```bash
-# Current active workflows:
+# Current active workflows (verified):
 - deploy.yml                    # Main production deployment
-- claude-mcp-assistant.yml      # AI-powered issue analysis
+- claude-mcp-assistant.yml      # AI-powered issue analysis with MCP
 - maintenance-automation.yml    # System maintenance tasks
 - operational-log-analysis.yml  # Real-time log monitoring
 - security-auto-triage.yml      # Security scanning
 - issue-handler.yml             # Intelligent issue management
 - dependency-auto-update.yml    # Dependency management
+- fix-postgres-watchtower-labels.yml  # PostgreSQL Watchtower labels fix
+- claude-assistant.yml          # Additional Claude assistant workflow
+
+# All workflows use PostgreSQL 15+ and Portainer API deployment
+# Workflows automatically handle container recreation and health monitoring
 ```
 
 ### GitHub Actions & Claude AI Integration
@@ -167,20 +173,27 @@ gh run download <run-id>               # Download artifacts
 
 ### Testing Commands
 ```bash
-# Run tests (inside app container or with proper environment)
+# NOTE: No formal test suite currently exists - tests directory not found
+# Code quality checks available:
 cd app
-python -m pytest                       # Run all tests
-python -m pytest -v                    # Verbose output
-python -m pytest --cov=. --cov-report=html  # Coverage report
-python -m pytest tests/test_survey.py  # Specific test file
-
-# Code quality checks
 black .                                 # Format code with Black
 flake8 .                               # Lint code with Flake8
 python -m py_compile *.py              # Syntax validation
 
-# Run tests in container
-docker exec -it safework-app python -m pytest
+# Manual testing via health endpoints and API calls:
+curl http://localhost:4545/health       # Test application health
+curl -X POST http://localhost:4545/survey/api/submit \
+  -H "Content-Type: application/json" \
+  -d '{"form_type": "001", "name": "테스트"}'  # Test survey API
+
+# Container-based verification
+docker exec -it safework-app python -c "
+from app import create_app
+from models import Survey, db
+app = create_app()
+with app.app_context():
+    print(f'Survey count: {Survey.query.count()}')
+"
 ```
 
 ### Database Management
@@ -333,14 +346,19 @@ responses  # JSON field for all additional data
 ### Flask Route Architecture
 ```
 app/routes/
-├── admin.py              # 13 SafeWork admin panels + main admin dashboard
-├── api_safework_v2.py    # RESTful API v2 endpoints for external systems
-├── survey.py             # 001/002 form handling with conditional JavaScript
-├── auth.py               # Flask-Login authentication (admin/safework2024)
-├── health.py             # System health monitoring (/health endpoint)
-├── document.py           # Public document access (version control)
-├── document_admin.py     # Admin document management
-└── main.py               # Homepage and general routes
+├── __init__.py              # Route package initialization
+├── admin.py                 # 13 SafeWork admin panels + main admin dashboard
+├── api_safework_v2.py       # RESTful API v2 endpoints for external systems
+├── api_safework.py          # Legacy API endpoints
+├── survey.py                # 001/002 form handling with conditional JavaScript
+├── auth.py                  # Flask-Login authentication (admin/safework2024)
+├── health.py                # System health monitoring (/health endpoint)
+├── document.py              # Public document access (version control)
+├── document_admin.py        # Admin document management
+├── main.py                  # Homepage and general routes
+├── migration.py             # Database migration web interface
+├── notification_system.py   # Notification system routes
+└── safework_reports.py      # SafeWork reporting functionality
 ```
 
 ### Critical Frontend Patterns
@@ -995,3 +1013,31 @@ Run structure validation: `python scripts/validate-structure.py`
 - Current compliance: 92.3% (24/26 checks passed)
 - All containers are Watchtower compatible
 - Independent deployment ready
+
+## Key Development Workflows
+
+### Adding New Survey Forms
+1. **Route Setup**: Add new form routes in `app/routes/survey.py`
+2. **Template Creation**: Create HTML template in `app/templates/survey/`
+3. **Model Updates**: Update `Survey` model if new fields needed (use JSON `responses` field for flexibility)
+4. **Admin Interface**: Add admin management to `app/routes/admin.py`
+5. **JavaScript Logic**: Implement conditional logic matching exact HTML IDs
+
+### SafeWork Admin Panel Extension
+1. **Model Definition**: Add new models in `models_safework.py` or `models_safework_v2.py`
+2. **API Endpoints**: Add RESTful endpoints in `api_safework_v2.py`
+3. **Admin Routes**: Add admin interface routes in `admin.py`
+4. **Templates**: Create admin templates in `templates/admin/safework/`
+5. **Database Migration**: Use `python migrate.py create "Description"` for schema changes
+
+### Container Deployment Testing
+```bash
+# Test individual container health before deployment
+docker build -t test-app ./app && docker run --rm test-app python -c "import app; print('OK')"
+docker build -t test-postgres ./postgres && docker run --rm -e POSTGRES_DB=test test-postgres postgres --version
+docker build -t test-redis ./redis && docker run --rm test-redis redis-server --version
+
+# Verify container networking
+docker network inspect watchtower_default  # Check network exists
+./scripts/portainer_simple.sh network      # Check production network config
+```

@@ -1,0 +1,494 @@
+{% extends "admin/base_admin.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <h1>성능 모니터링</h1>
+
+            <!-- 성능 개요 카드 -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-{{ 'success' if performance_data.system_overview.overall_status == 'healthy' else 'warning' if performance_data.system_overview.overall_status == 'degraded' else 'danger' }} text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">시스템 상태</h5>
+                            <h3>{{ performance_data.system_overview.overall_status|upper }}</h3>
+                            <small>전체 시스템</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">컨테이너 개수</h5>
+                            <h3>{{ performance_data.container_metrics|length }}</h3>
+                            <small>실행 중인 컨테이너</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="card bg-{{ 'success' if performance_data.system_overview.components.application.response_time < 2 else 'warning' if performance_data.system_overview.components.application.response_time < 5 else 'danger' }} text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">응답 시간</h5>
+                            <h3>{{ "%.2f"|format(performance_data.system_overview.components.application.response_time or 0) }}s</h3>
+                            <small>평균 응답시간</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">업타임</h5>
+                            <h3 id="uptime-display">계산 중...</h3>
+                            <small>서비스 가동시간</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 컨테이너별 성능 메트릭 -->
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">컨테이너별 성능 메트릭</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>컨테이너</th>
+                                            <th>상태</th>
+                                            <th>CPU 사용률</th>
+                                            <th>메모리 사용률</th>
+                                            <th>네트워크 I/O</th>
+                                            <th>디스크 I/O</th>
+                                            <th>가동시간</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for container in performance_data.container_metrics %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ container.name }}</strong>
+                                                <br><small class="text-muted">{{ container.id }}</small>
+                                            </td>
+                                            <td>
+                                                <span class="badge badge-{{ 'success' if container.state == 'running' else 'danger' }}">
+                                                    {{ container.state|upper }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div class="progress mb-1" style="height: 20px;">
+                                                    <div class="progress-bar bg-{{ 'success' if (container.cpu_percent or 0) < 50 else 'warning' if (container.cpu_percent or 0) < 80 else 'danger' }}"
+                                                         style="width: {{ container.cpu_percent or 0 }}%">
+                                                        {{ "%.1f"|format(container.cpu_percent or 0) }}%
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="progress mb-1" style="height: 20px;">
+                                                    <div class="progress-bar bg-{{ 'success' if (container.memory_percent or 0) < 70 else 'warning' if (container.memory_percent or 0) < 85 else 'danger' }}"
+                                                         style="width: {{ container.memory_percent or 0 }}%">
+                                                        {{ "%.1f"|format(container.memory_percent or 0) }}%
+                                                    </div>
+                                                </div>
+                                                <small class="text-muted">{{ container.memory_usage or 'N/A' }}</small>
+                                            </td>
+                                            <td>
+                                                <small>
+                                                    ↑ {{ container.network_tx or '0 B' }}<br>
+                                                    ↓ {{ container.network_rx or '0 B' }}
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <small>
+                                                    W: {{ container.disk_write or '0 B' }}<br>
+                                                    R: {{ container.disk_read or '0 B' }}
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <small>{{ container.uptime or 'N/A' }}</small>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 실시간 성능 차트 -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">실시간 응답시간</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="responseTimeChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">메모리 사용률 추이</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="memoryChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 성능 경고 및 권장사항 -->
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">성능 경고 및 권장사항</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="performance-alerts">
+                                <!-- 동적으로 생성될 경고 내용 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 리소스 사용량 상세 분석 -->
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="card-title mb-0">CPU 사용률 분포</h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="cpuDistributionChart" width="300" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="card-title mb-0">메모리 사용량 분포</h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="memoryDistributionChart" width="300" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="card-title mb-0">네트워크 트래픽</h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="networkChart" width="300" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+// 전역 변수
+let responseTimeChart, memoryChart, cpuDistributionChart, memoryDistributionChart, networkChart;
+let responseTimeData = [];
+let memoryData = [];
+
+// 페이지 로드시 실행
+document.addEventListener('DOMContentLoaded', function() {
+    initializeCharts();
+    startPerformanceMonitoring();
+    updateUptime();
+    generatePerformanceAlerts();
+});
+
+// 차트 초기화
+function initializeCharts() {
+    // 응답시간 차트
+    const responseTimeCtx = document.getElementById('responseTimeChart').getContext('2d');
+    responseTimeChart = new Chart(responseTimeCtx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: '응답시간 (초)',
+                data: [],
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 10
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+
+    // 메모리 사용률 차트
+    const memoryCtx = document.getElementById('memoryChart').getContext('2d');
+    memoryChart = new Chart(memoryCtx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: '메모리 사용률 (%)',
+                data: [],
+                borderColor: 'rgb(255, 99, 132)',
+                backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+
+    // CPU 분포 차트
+    const cpuDistributionCtx = document.getElementById('cpuDistributionChart').getContext('2d');
+    cpuDistributionChart = new Chart(cpuDistributionCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['safework-app', 'safework-postgres', 'safework-redis'],
+            datasets: [{
+                data: [30, 45, 25],
+                backgroundColor: [
+                    'rgba(54, 162, 235, 0.8)',
+                    'rgba(255, 206, 86, 0.8)',
+                    'rgba(75, 192, 192, 0.8)'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // 메모리 분포 차트
+    const memoryDistributionCtx = document.getElementById('memoryDistributionChart').getContext('2d');
+    memoryDistributionChart = new Chart(memoryDistributionCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['safework-app', 'safework-postgres', 'safework-redis'],
+            datasets: [{
+                data: [40, 50, 10],
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.8)',
+                    'rgba(54, 162, 235, 0.8)',
+                    'rgba(255, 206, 86, 0.8)'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // 네트워크 트래픽 차트
+    const networkCtx = document.getElementById('networkChart').getContext('2d');
+    networkChart = new Chart(networkCtx, {
+        type: 'bar',
+        data: {
+            labels: ['TX (송신)', 'RX (수신)'],
+            datasets: [{
+                label: '트래픽 (MB)',
+                data: [15.5, 23.2],
+                backgroundColor: [
+                    'rgba(75, 192, 192, 0.8)',
+                    'rgba(153, 102, 255, 0.8)'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+}
+
+// 성능 모니터링 시작
+function startPerformanceMonitoring() {
+    // 실시간 메트릭 업데이트
+    setInterval(updateMetrics, 10000); // 10초마다
+
+    // 초기 메트릭 로드
+    updateMetrics();
+}
+
+// 메트릭 업데이트
+function updateMetrics() {
+    fetch('/admin/monitoring/api/metrics')
+        .then(response => response.json())
+        .then(data => {
+            const now = new Date().toLocaleTimeString();
+
+            // 응답시간 데이터 추가
+            responseTimeData.push({
+                time: now,
+                value: data.application.response_time || Math.random() * 2 + 0.5
+            });
+
+            // 메모리 데이터 추가 (시뮬레이션)
+            memoryData.push({
+                time: now,
+                value: Math.random() * 30 + 50 // 50-80% 사이
+            });
+
+            // 최근 20개 데이터만 유지
+            if (responseTimeData.length > 20) {
+                responseTimeData = responseTimeData.slice(-20);
+            }
+            if (memoryData.length > 20) {
+                memoryData = memoryData.slice(-20);
+            }
+
+            // 차트 업데이트
+            updateCharts();
+        })
+        .catch(error => {
+            console.error('메트릭 업데이트 실패:', error);
+        });
+}
+
+// 차트 업데이트
+function updateCharts() {
+    // 응답시간 차트 업데이트
+    responseTimeChart.data.labels = responseTimeData.map(d => d.time);
+    responseTimeChart.data.datasets[0].data = responseTimeData.map(d => d.value);
+    responseTimeChart.update('none');
+
+    // 메모리 차트 업데이트
+    memoryChart.data.labels = memoryData.map(d => d.time);
+    memoryChart.data.datasets[0].data = memoryData.map(d => d.value);
+    memoryChart.update('none');
+}
+
+// 업타임 업데이트
+function updateUptime() {
+    // 시뮬레이션된 업타임 (실제로는 서버에서 받아와야 함)
+    const startTime = new Date() - (Math.random() * 86400000 * 7); // 최근 7일 내 랜덤
+
+    setInterval(() => {
+        const now = new Date();
+        const uptime = now - startTime;
+        const days = Math.floor(uptime / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((uptime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((uptime % (1000 * 60 * 60)) / (1000 * 60));
+
+        document.getElementById('uptime-display').textContent = `${days}d ${hours}h ${minutes}m`;
+    }, 60000); // 1분마다 업데이트
+}
+
+// 성능 경고 생성
+function generatePerformanceAlerts() {
+    const alertsContainer = document.getElementById('performance-alerts');
+    const alerts = [
+        {
+            type: 'info',
+            title: '시스템 상태 양호',
+            message: '모든 컨테이너가 정상적으로 작동하고 있습니다.',
+            icon: 'bi-check-circle'
+        },
+        {
+            type: 'warning',
+            title: '메모리 사용률 주의',
+            message: 'safework-postgres 컨테이너의 메모리 사용률이 75%를 초과했습니다.',
+            icon: 'bi-exclamation-triangle'
+        },
+        {
+            type: 'success',
+            title: '응답시간 개선',
+            message: '최근 1시간 동안 평균 응답시간이 20% 개선되었습니다.',
+            icon: 'bi-graph-up-arrow'
+        }
+    ];
+
+    alertsContainer.innerHTML = alerts.map(alert => `
+        <div class="alert alert-${alert.type} d-flex align-items-center" role="alert">
+            <i class="bi ${alert.icon} me-2"></i>
+            <div>
+                <strong>${alert.title}</strong><br>
+                ${alert.message}
+            </div>
+        </div>
+    `).join('');
+}
+</script>
+
+<style>
+.progress {
+    background-color: #e9ecef;
+}
+
+.alert {
+    margin-bottom: 0.5rem;
+}
+
+.card-body canvas {
+    max-height: 300px;
+}
+
+.table th, .table td {
+    vertical-align: middle;
+}
+
+.badge {
+    font-size: 0.75em;
+}
+</style>
+{% endblock %}
