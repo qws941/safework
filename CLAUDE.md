@@ -357,6 +357,7 @@ app/routes/
 ├── document_admin.py        # Admin document management
 ├── main.py                  # Homepage and general routes
 ├── migration.py             # Database migration web interface
+├── monitoring.py            # System monitoring endpoints (DISABLED: circular import issue)
 ├── notification_system.py   # Notification system routes
 └── safework_reports.py      # SafeWork reporting functionality
 ```
@@ -566,7 +567,21 @@ curl -X POST -H "X-API-Key: ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=" \
 ### Recent Database Schema Fixes & Current Issues
 **CRITICAL FIXES APPLIED:**
 
-1. **Survey Detail Data Display Issue (RESOLVED - December 2024):**
+1. **Admin Login 500 Error (ONGOING ISSUE - September 2024):**
+```python
+# Problem: Admin login fails with 500 error due to PostgreSQL connection issues
+# Error: sqlalchemy.exc.OperationalError: connection to server at "safework-postgres" failed: Connection refused
+# Status: UNRESOLVED - DB connection intermittently fails during authentication
+
+# Temporary workarounds attempted:
+# - Container restarts (both app and postgres)
+# - Network connectivity verification
+# - Session configuration review
+
+# Next steps: Investigate PostgreSQL connection pooling and authentication
+```
+
+2. **Survey Detail Data Display Issue (RESOLVED - December 2024):**
 ```python
 # Problem: Survey detail pages not displaying submitted form data properly
 # Root cause: Form data not being saved to responses JSON field during submission
@@ -652,13 +667,14 @@ if not survey:
 - **Database**: PostgreSQL 15+ in production with automated schema migration system
 - **Container Names**: safework-app, safework-postgres, safework-redis (all KST timezone)
 - **Database Name**: **CRITICAL** - Must use `safework_db` not `safework` to prevent connection errors
-- **Authentication**: Working correctly (login redirects function properly)
+- **Authentication**: ❌ **FAILING** - Admin login returns 500 error due to PostgreSQL connection issues
 - **Version Display**: Fixed property object bug - now shows "3.0.0"
 - **API Endpoints**: All SafeWork admin endpoints require authentication
 - **Test Data**: Survey submissions with complete JSON response data storage
 - **CSRF Protection**: Disabled for survey testing (WTF_CSRF_ENABLED=false)
 - **Schema Migration**: Automated via PostgreSQL init.sql and migration scripts
 - **Data Persistence**: Verified across container restarts with volume persistence
+- **Known Issues**: monitoring_bp disabled due to circular import, PostgreSQL connection intermittent
 
 ### Survey Data Display Troubleshooting (Updated December 2024)
 ```bash
@@ -686,6 +702,33 @@ curl -X POST http://localhost:4545/survey/001_musculoskeletal_symptom_survey \
 # - Displays all key-value pairs from responses JSON
 # - Special handling for musculo_details array data
 # - JSON raw data available in collapsible details section
+```
+
+### Admin Login 500 Error Troubleshooting (September 2024)
+```bash
+# CRITICAL ISSUE: Admin login fails with PostgreSQL connection error
+# Error: sqlalchemy.exc.OperationalError: connection to server at "safework-postgres" failed: Connection refused
+
+# 1. Verify container status
+curl -s -H "X-API-Key: ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=" \
+  "https://portainer.jclee.me/api/endpoints/3/docker/containers/json" | \
+  python3 -c "import json,sys; [print(f'{c[\"Names\"][0][1:]}: {c[\"State\"]} - {c[\"Status\"]}') for c in json.load(sys.stdin) if 'safework' in c[\"Names\"][0]]"
+
+# 2. Test admin login (triggers 500 error)
+curl -X POST -d "username=admin&password=safework2024" -s "https://safework.jclee.me/auth/login" | grep -o "<title>.*</title>"
+# Expected: <title>서버 오류 - SafeWork 안전보건 관리시스템</title>
+
+# 3. Check app container logs for connection errors
+curl -s -H "X-API-Key: ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=" \
+  "https://portainer.jclee.me/api/endpoints/3/docker/containers/[CONTAINER_ID]/logs?stdout=true&stderr=true&tail=20" | \
+  strings | grep -E "(Connection refused|OperationalError|sqlalchemy.exc)"
+
+# 4. Workaround attempts (not fully effective)
+# - Restart PostgreSQL container: curl -X POST [PORTAINER_API]/containers/[PG_ID]/restart
+# - Restart app container: curl -X POST [PORTAINER_API]/containers/[APP_ID]/restart
+# - Verify network connectivity between containers
+
+# Status: UNRESOLVED - requires deeper PostgreSQL connection pool investigation
 ```
 
 ### Survey API Testing & Verification
