@@ -331,11 +331,11 @@ def musculoskeletal_program():
 
         for part in body_parts:
             body_part_data[part] = {
-                'has_pain': request.form.get(f'{part}_has_pain') == 'on',
-                'pain_duration': request.form.get(f'{part}_pain_duration'),
-                'pain_intensity': request.form.get(f'{part}_pain_intensity'),
-                'pain_frequency': request.form.get(f'{part}_pain_frequency'),
-                'daily_interference': request.form.get(f'{part}_daily_interference')
+                'has_pain': request.form.get(f'{part}_pain') == '예',
+                'pain_duration': request.form.get(f'{part}_duration'),
+                'pain_intensity': request.form.get(f'{part}_intensity', type=int),
+                'pain_frequency': request.form.get(f'{part}_frequency'),
+                'daily_interference': request.form.get(f'{part}_interference')
             }
 
         # 관리대상자 분류 계산
