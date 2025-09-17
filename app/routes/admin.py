@@ -11,6 +11,7 @@ from sqlalchemy import and_, func, or_, text
 
 from forms import AdminFilterForm
 from models import AuditLog, Survey, SurveyStatistics, User, Process, db, MSDSModel, MSDSComponentModel, MSDSUsageRecordModel
+from utils.activity_tracker import track_admin_action, track_page_view
 try:
     from models_safework_v2 import (
         SafeworkWorker, SafeworkHealthCheck, SafeworkMedicalVisit,
@@ -62,6 +63,7 @@ def admin_required(f):
 @admin_required
 def dashboard():
     """관리자 대시보드 - SafeWork 대시보드로 리다이렉트"""
+    track_page_view("admin_dashboard")
     return redirect(url_for('admin.safework_dashboard'))
 
 
@@ -69,6 +71,7 @@ def dashboard():
 @admin_required
 def survey():
     """조사표 목록 관리 - 통합된 라우트"""
+    track_page_view("admin_survey_list")
     form = AdminFilterForm()
     page = request.args.get("page", 1, type=int)
 
@@ -144,6 +147,14 @@ def survey_detail(id):
     survey = db.session.get(Survey, id)
     if not survey:
         abort(404)
+
+    track_page_view("admin_survey_detail")
+    track_admin_action("VIEW_SURVEY", details={
+        'survey_id': id,
+        'survey_name': survey.name,
+        'form_type': survey.form_type
+    })
+
     return render_template("survey/admin_detail.html", survey=survey)
 
 
@@ -207,6 +218,11 @@ def review_survey(id):
 @admin_required
 def export_excel():
     """Excel 파일로 내보내기"""
+    track_admin_action("EXPORT_SURVEY_EXCEL", details={
+        'search_filter': request.args.get('search', ''),
+        'export_timestamp': datetime.now().isoformat()
+    })
+
     # 필터 적용 (URL 파라미터 기반)
     query = Survey.query
 
@@ -266,6 +282,11 @@ def export_excel():
 @admin_required
 def statistics():
     """통계 분석 페이지"""
+    track_page_view("admin_statistics")
+    track_admin_action("VIEW_STATISTICS", details={
+        'period': request.args.get("period", "30")
+    })
+
     # 기간별 통계
     period = request.args.get("period", "30")  # 기본 30일
 
@@ -349,6 +370,11 @@ def statistics():
 @admin_required
 def users():
     """사용자 관리"""
+    track_page_view("admin_users")
+    track_admin_action("VIEW_USERS", details={
+        'page': request.args.get("page", 1)
+    })
+
     page = request.args.get("page", 1, type=int)
     users = User.query.paginate(page=page, per_page=20, error_out=False)
 
@@ -359,8 +385,10 @@ def users():
 @admin_required
 def safework_dashboard():
     """SafeWork 안전보건관리 대시보드"""
+    track_page_view("safework_dashboard")
+
     from datetime import datetime, date, timedelta
-    
+
     # 현재 날짜 정보
     today = date.today().strftime("%Y-%m-%d")
     current_year = datetime.now().year
@@ -538,9 +566,11 @@ def safework_dashboard():
 
 
 @admin_bp.route("/safework/todos")
-@admin_required 
+@admin_required
 def safework_todos():
     """SafeWork Todo 관리 대시보드"""
+    track_page_view("safework_todos")
+
     page = request.args.get("page", 1, type=int)
     per_page = 10
     status_filter = request.args.get("status", "")
@@ -606,6 +636,11 @@ def safework_todos():
 @admin_required
 def safework_workers():
     """SafeWork 근로자 관리"""
+    track_page_view("safework_workers")
+    track_admin_action("VIEW_WORKERS", details={
+        'page': request.args.get("page", 1)
+    })
+
     page = request.args.get("page", 1, type=int)
     per_page = 10
     
@@ -666,6 +701,8 @@ def safework_workers():
 @admin_bp.route("/safework/health-checks")
 @admin_required
 def safework_health_checks():
+    track_page_view("safework_health_checks")
+    track_admin_action("VIEW_HEALTH_CHECKS")
     """SafeWork 건강검진 관리"""
 
     try:
@@ -771,6 +808,8 @@ def safework_health_checks():
 @admin_bp.route("/safework/medical-visits")
 @admin_required
 def safework_medical_visits():
+    track_page_view("safework_medical_visits")
+    track_admin_action("VIEW_MEDICAL_VISITS")
     """SafeWork 의무실 방문 관리"""
     from datetime import timedelta
     
@@ -880,6 +919,8 @@ def safework_medical_visits():
 @admin_bp.route("/safework/medications")
 @admin_required
 def safework_medications():
+    track_page_view("safework_medications")
+    track_admin_action("VIEW_MEDICATIONS")
     """SafeWork 의약품 관리"""
     
     try:
@@ -1306,6 +1347,8 @@ def safework_departments():
 @admin_bp.route("/msds")
 @admin_required
 def msds_dashboard():
+    track_page_view("msds_dashboard")
+    track_admin_action("VIEW_MSDS_DASHBOARD")
     """MSDS 관리 대시보드"""
     # 통계 데이터
     total_msds = MSDSModel.query.count()

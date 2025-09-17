@@ -34,8 +34,8 @@ env:
   PORTAINER_URL: https://portainer.jclee.me
   PORTAINER_TOKEN: ${{ secrets.PORTAINER_API_KEY }}
   
-  # 알림 설정
-  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+  # 알림 설정 (비활성화됨)
+  # SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
   
   # 모니터링 임계값
   HEALTH_THRESHOLD: 80
@@ -275,8 +275,8 @@ jobs:
             alert-message.txt
           retention-days: 7
 
-      - name: 🔔 Send Slack Notification
-        if: always() && env.SLACK_WEBHOOK_URL
+      - name: 🔔 Send Slack Notification (비활성화됨)
+        if: false  # 알림 시스템 비활성화
         run: |
           # Prepare Slack notification
           status_emoji="✅"

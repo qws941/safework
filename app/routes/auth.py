@@ -6,6 +6,7 @@ from werkzeug.security import generate_password_hash
 
 from forms import LoginForm, RegisterForm
 from models import User, db
+from utils.activity_tracker import track_login_attempt, track_logout, track_page_view
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -45,9 +46,14 @@ def login():
                 
                 login_user(user, remember=False)
                 
+                # 로그인 성공 추적
+                track_login_attempt(username, success=True)
+                
                 with open('/tmp/login_debug.log', 'a') as f:
-                    f.write(f"Login successful - current_user.is_authenticated: {current_user.is_authenticated}\n")
-                    f.write("Redirecting to admin dashboard\n")
+                    f.write(f"Login successful - current_user.is_authenticated: {current_user.is_authenticated}
+")
+                    f.write("Redirecting to admin dashboard
+")
                 
                 return redirect(url_for("admin.dashboard"))
             else:
@@ -57,12 +63,22 @@ def login():
             with open('/tmp/login_debug.log', 'a') as f:
                 f.write(f"Credentials don't match - expected admin/safework2024\n")
         
+        # 로그인 실패 추적
+        track_login_attempt(username, success=False)
+        
         flash("아이디 또는 비밀번호가 올바르지 않습니다.", "danger")
 
     form = LoginForm()
+    
+    # GET 요청시 페이지 조회 추적
+    if request.method == 'GET':
+        track_page_view("admin_login")
+    
     with open('/tmp/login_debug.log', 'a') as f:
-        f.write("Rendering login template\n")
-        f.write("=== LOGIN REQUEST END ===\n")
+        f.write("Rendering login template
+")
+        f.write("=== LOGIN REQUEST END ===
+")
     
     return render_template("auth/login.html", form=form)
 
@@ -116,6 +132,9 @@ def register():
 @login_required
 def logout():
     """로그아웃"""
+    # 로그아웃 추적
+    track_logout()
+    
     logout_user()
     flash("로그아웃되었습니다.", "info")
     return redirect(url_for("main.index"))
