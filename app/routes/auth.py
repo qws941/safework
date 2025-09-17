@@ -73,10 +73,8 @@ def login():
         track_page_view("admin_login")
     
     with open('/tmp/login_debug.log', 'a') as f:
-        f.write("Rendering login template
-")
-        f.write("=== LOGIN REQUEST END ===
-")
+        f.write("Rendering login template\n")
+        f.write("=== LOGIN REQUEST END ===\n")
     
     return render_template("auth/login.html", form=form)
 
