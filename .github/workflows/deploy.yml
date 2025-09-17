@@ -24,7 +24,7 @@ on:
         type: boolean
 
 env:
-  APP_NAME: safework
+  APP_NAME: safework2
   REGISTRY_HOST: registry.jclee.me
   REGISTRY_USER: admin
   REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
@@ -55,10 +55,37 @@ permissions:
   issues: write
 
 jobs:
+  # Phase 0: Comprehensive Testing
+  comprehensive-testing:
+    name: 🧪 Comprehensive Testing
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📂 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🐳 Set up Docker Environment
+        run: |
+          docker --version
+          docker network create safework2-test-network || true
+
+      - name: 🧪 Run Comprehensive Tests
+        run: |
+          chmod +x ./scripts/test_runner.sh
+          ./scripts/test_runner.sh
+
+      - name: 📊 Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-*.log
+          retention-days: 7
+
   # Phase 1: Build Independent Containers
   build-containers:
     name: 🔨 Build Independent Containers
     runs-on: ubuntu-latest
+    needs: comprehensive-testing
     outputs:
       app_tag: ${{ steps.app_meta.outputs.tags }}
       postgres_tag: ${{ steps.postgres_meta.outputs.tags }}
@@ -215,11 +242,97 @@ jobs:
           echo "✅ Continuing deployment - manual verification recommended"
 
 
-  # Phase 3: Success Notification
+  # Phase 3: Post-Deployment Validation using Integrated Script
+  post-deployment-validation:
+    name: ✅ Post-Deployment Validation
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    steps:
+      - name: 📂 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Validation Environment
+        run: |
+          # Make scripts executable
+          chmod +x ./scripts/integrated_build_deploy.sh
+          chmod +x ./scripts/test_runner.sh
+
+      - name: 🎯 Run Post-Deployment Status Check
+        run: |
+          echo "🔍 Running post-deployment validation using integrated script..."
+
+          # Configure the script to check remote deployment
+          export REGISTRY_HOST="${{ env.REGISTRY_HOST }}"
+          export PROJECT_NAME="${{ env.APP_NAME }}"
+
+          # Run status check
+          ./scripts/integrated_build_deploy.sh status || {
+            echo "⚠️ Local status check failed - checking production endpoints directly"
+
+            # Direct production health checks
+            curl -f "${{ env.PRD_URL }}/health" || echo "❌ Production health check failed"
+            curl -f "${{ env.PRD_URL }}/" || echo "❌ Production homepage check failed"
+          }
+
+      - name: 📊 Generate Deployment Report
+        run: |
+          echo "📋 Generating deployment validation report..."
+
+          {
+            echo "# SafeWork2 Deployment Validation Report"
+            echo "**Deployment Date:** $(date -u)"
+            echo "**Commit:** ${{ github.sha }}"
+            echo "**Branch:** ${{ github.ref_name }}"
+            echo ""
+            echo "## Production Health Status"
+
+            # Test main endpoints
+            if curl -f "${{ env.PRD_URL }}/health" &>/dev/null; then
+              echo "✅ Health endpoint: PASS"
+            else
+              echo "❌ Health endpoint: FAIL"
+            fi
+
+            if curl -f "${{ env.PRD_URL }}/" &>/dev/null; then
+              echo "✅ Homepage: PASS"
+            else
+              echo "❌ Homepage: FAIL"
+            fi
+
+            if curl -f "${{ env.PRD_URL }}/survey/001_musculoskeletal_symptom_survey" &>/dev/null; then
+              echo "✅ Survey 001: PASS"
+            else
+              echo "❌ Survey 001: FAIL"
+            fi
+
+            if curl -f "${{ env.PRD_URL }}/survey/002_new_employee_health_checkup_form" &>/dev/null; then
+              echo "✅ Survey 002: PASS"
+            else
+              echo "❌ Survey 002: FAIL"
+            fi
+
+            echo ""
+            echo "## Next Steps"
+            echo "- Monitor production logs for any issues"
+            echo "- Verify admin dashboard functionality"
+            echo "- Check database integrity if needed"
+
+          } > deployment-report.md
+
+          cat deployment-report.md
+
+      - name: 📤 Upload Deployment Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-report
+          path: deployment-report.md
+          retention-days: 30
+
+  # Phase 4: Success Notification
   notify-success:
     name: ✅ Deployment Success Notification
     runs-on: ubuntu-latest
-    needs: deploy-production
+    needs: post-deployment-validation
     if: success()
 
     steps:

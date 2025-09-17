@@ -24,6 +24,7 @@ def index():
 <ul>
 <li><a href="/survey/001_musculoskeletal_symptom_survey">근골격계 증상조사표</a></li>
 <li><a href="/survey/002_new_employee_health_checkup_form">신규 입사자 건강검진표</a></li>
+<li><a href="/survey/003_musculoskeletal_program">근골격계질환 예방관리 프로그램 조사표</a></li>
 </ul>
 </body>
 </html>'''
@@ -294,6 +295,131 @@ def new_employee_health_checkup_form():
         return redirect(url_for("survey.complete", id=survey.id))
 
     return render_template("survey/002_new_employee_health_checkup_form.html", kiosk_mode=kiosk_mode)
+
+
+@survey_bp.route("/003_musculoskeletal_program", methods=["GET", "POST"])
+def musculoskeletal_program():
+    """근골격계질환 예방관리 프로그램 조사표 (003) - 로그인 불필요"""
+    # CSRF 완전 우회 - 익명 설문조사용
+    try:
+        from flask import g
+        g._csrf_disabled = True
+    except:
+        pass
+
+    # Check if accessed via direct URL (kiosk mode)
+    kiosk_mode = request.args.get('kiosk') == '1' or request.referrer is None or 'survey' not in (request.referrer or '')
+
+    if request.method == 'POST':
+        # 기본적으로 익명 사용자 ID 1을 사용
+        user_id = 1  # 익명 사용자
+        if current_user.is_authenticated:
+            user_id = current_user.id
+
+        # 모든 폼 데이터를 수집하여 responses JSON 필드에 저장
+        all_form_data = {}
+        for key, value in request.form.items():
+            if key.endswith('[]'):
+                # 리스트 형태 데이터 처리
+                all_form_data[key] = request.form.getlist(key)
+            else:
+                all_form_data[key] = value
+
+        # 신체 부위별 통증 데이터 수집
+        body_parts = ['neck', 'shoulder', 'arm_elbow', 'hand_wrist', 'back', 'leg_foot']
+        body_part_data = {}
+
+        for part in body_parts:
+            body_part_data[part] = {
+                'has_pain': request.form.get(f'{part}_has_pain') == 'on',
+                'pain_duration': request.form.get(f'{part}_pain_duration'),
+                'pain_intensity': request.form.get(f'{part}_pain_intensity'),
+                'pain_frequency': request.form.get(f'{part}_pain_frequency'),
+                'daily_interference': request.form.get(f'{part}_daily_interference')
+            }
+
+        # 관리대상자 분류 계산
+        management_classification = calculate_management_classification(body_part_data)
+
+        # 데이터베이스 스키마에 맞춘 Survey 생성
+        survey = Survey(
+            user_id=user_id,
+            form_type="003",
+            # 기본 정보
+            name=request.form.get("name") or "익명",
+            age=request.form.get("age", type=int) or 30,
+            gender=request.form.get("gender") or "male",
+            department=request.form.get("department"),
+            position=request.form.get("position"),
+            employee_number=request.form.get("employee_number"),
+            # 근무 정보
+            work_years=request.form.get("work_experience", type=int),
+            work_months=request.form.get("work_months", type=int),
+            # 증상 여부 (6개 부위 중 하나라도 통증이 있으면 True)
+            has_symptoms=any(data['has_pain'] for data in body_part_data.values()),
+            # 모든 설문 응답 데이터를 JSON으로 저장
+            responses=all_form_data
+        )
+
+        # 상세 분석 데이터 추가
+        survey.responses['body_parts_analysis'] = body_part_data
+        survey.responses['management_classification'] = management_classification
+
+        try:
+            db.session.add(survey)
+            db.session.commit()
+
+            flash("근골격계질환 예방관리 프로그램 조사표가 성공적으로 제출되었습니다.", "success")
+            if kiosk_mode:
+                return redirect(url_for("survey.complete", id=survey.id, kiosk=1))
+            return redirect(url_for("survey.complete", id=survey.id))
+
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Survey 003 submission error: {str(e)}")
+            flash(f"설문 제출 중 오류가 발생했습니다: {str(e)}", "error")
+            return redirect(url_for("survey.musculoskeletal_program"))
+
+    return render_template("survey/003_musculoskeletal_program.html", kiosk_mode=kiosk_mode)
+
+
+def calculate_management_classification(body_part_data):
+    """관리대상자 분류 계산 함수"""
+    pain_reports = []
+    management_targets = []
+
+    for part_name, data in body_part_data.items():
+        if data['has_pain']:
+            duration = data.get('pain_duration', '')
+            frequency = data.get('pain_frequency', '')
+            intensity = data.get('pain_intensity', '')
+
+            # 통증호소자 기준 체크
+            is_pain_reporter = False
+            if '1주일이상' in duration or '1-4주' in duration or '1-6개월' in duration or '6개월이상' in duration:
+                if '주1-2회' in frequency or '주3-4회' in frequency or '매일' in frequency:
+                    if '중간정도' in intensity or '심한통증' in intensity or '매우심한통증' in intensity:
+                        is_pain_reporter = True
+
+            # 관리대상자 기준 체크
+            is_management_target = False
+            if '1주일이상' in duration or '1-4주' in duration or '1-6개월' in duration or '6개월이상' in duration:
+                if '주1-2회' in frequency or '주3-4회' in frequency or '매일' in frequency:
+                    if '심한통증' in intensity or '매우심한통증' in intensity:
+                        is_management_target = True
+
+            if is_pain_reporter:
+                pain_reports.append(part_name)
+            if is_management_target:
+                management_targets.append(part_name)
+
+    # 분류 결정
+    if management_targets:
+        return "관리대상자"
+    elif pain_reports:
+        return "통증호소자"
+    else:
+        return "정상"
 
 
 @survey_bp.route("/complete/<int:id>")
