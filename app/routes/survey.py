@@ -651,7 +651,7 @@ def api_submit():
         )
 
         # 디버깅: 커밋 후 다시 조회해서 확인
-        saved_survey = Survey.query.get(survey.id)
+        saved_survey = db.session.get(Survey, survey.id)
         current_app.logger.info(f"[DEBUG] Survey.responses after commit: {saved_survey.responses}")
 
         return (

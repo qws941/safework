@@ -85,4 +85,4 @@ LABEL com.centurylinklabs.watchtower.enable="true" \
 EXPOSE 4545
 
 # Run the application with connection retry logic
-CMD python app.py
+CMD ["python", "app.py"]

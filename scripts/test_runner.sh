@@ -194,18 +194,18 @@ test_api_endpoints() {
 test_database_connection() {
     log_info "데이터베이스 연결 테스트 시작..."
 
-    if docker exec safework2-postgres psql -U safework -d safework_db -c "SELECT 1;" >/dev/null 2>&1; then
+    if docker exec safework-postgres psql -U safework -d safework_db -c "SELECT 1;" >/dev/null 2>&1; then
         record_test "PostgreSQL 연결" "PASS" "데이터베이스 연결 성공"
 
         # 테이블 존재 확인
-        if docker exec safework2-postgres psql -U safework -d safework_db -c "\dt" | grep -q surveys; then
+        if docker exec safework-postgres psql -U safework -d safework_db -c "\dt" | grep -q surveys; then
             record_test "surveys 테이블 존재" "PASS" "테이블 존재 확인"
         else
             record_test "surveys 테이블 존재" "FAIL" "테이블 존재하지 않음"
         fi
 
         # 기본 쿼리 테스트
-        if docker exec safework2-postgres psql -U safework -d safework_db -c "SELECT COUNT(*) FROM surveys;" >/dev/null 2>&1; then
+        if docker exec safework-postgres psql -U safework -d safework_db -c "SELECT COUNT(*) FROM surveys;" >/dev/null 2>&1; then
             record_test "데이터베이스 쿼리" "PASS" "쿼리 실행 성공"
         else
             record_test "데이터베이스 쿼리" "FAIL" "쿼리 실행 실패"

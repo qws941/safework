@@ -135,10 +135,10 @@ stop_containers() {
     log_info "기존 컨테이너 중지 및 제거 중..."
 
     # 컨테이너 중지
-    docker stop safework2-app safework2-postgres safework2-redis 2>/dev/null || true
+    docker stop safework-app safework-postgres safework-redis 2>/dev/null || true
 
     # 컨테이너 제거
-    docker rm safework2-app safework2-postgres safework2-redis 2>/dev/null || true
+    docker rm safework-app safework-postgres safework-redis 2>/dev/null || true
 
     log_success "기존 컨테이너 정리 완료!"
 }
@@ -150,7 +150,7 @@ deploy_containers() {
     # PostgreSQL 컨테이너 시작
     log_info "PostgreSQL 컨테이너 시작 중..."
     docker run -d \
-        --name safework2-postgres \
+        --name safework-postgres \
         --network $NETWORK_NAME \
         -p 4546:5432 \
         -e TZ=Asia/Seoul \
@@ -167,7 +167,7 @@ deploy_containers() {
 
     # PostgreSQL 연결 확인
     for i in {1..30}; do
-        if docker exec safework2-postgres pg_isready -U safework >/dev/null 2>&1; then
+        if docker exec safework-postgres pg_isready -U safework >/dev/null 2>&1; then
             log_success "PostgreSQL 준비 완료!"
             break
         fi
@@ -181,7 +181,7 @@ deploy_containers() {
     # Redis 컨테이너 시작
     log_info "Redis 컨테이너 시작 중..."
     docker run -d \
-        --name safework2-redis \
+        --name safework-redis \
         --network $NETWORK_NAME \
         -p 4547:6379 \
         -e TZ=Asia/Seoul \
@@ -192,15 +192,15 @@ deploy_containers() {
     # Flask App 컨테이너 시작
     log_info "Flask 애플리케이션 컨테이너 시작 중..."
     docker run -d \
-        --name safework2-app \
+        --name safework-app \
         --network $NETWORK_NAME \
         -p 4545:4545 \
         -e TZ=Asia/Seoul \
-        -e DB_HOST=safework2-postgres \
+        -e DB_HOST=safework-postgres \
         -e DB_NAME=safework_db \
         -e DB_USER=safework \
         -e DB_PASSWORD=$DB_PASSWORD \
-        -e REDIS_HOST=safework2-redis \
+        -e REDIS_HOST=safework-redis \
         -e FLASK_CONFIG=production \
         --label "com.centurylinklabs.watchtower.enable=true" \
         --restart unless-stopped \
@@ -217,7 +217,7 @@ verify_deployment() {
     sleep 5
 
     # 각 컨테이너가 실행 중인지 확인
-    for container in safework2-postgres safework2-redis safework2-app; do
+    for container in safework-postgres safework-redis safework-app; do
         if docker ps | grep -q "$container"; then
             log_success "$container: 실행 중"
         else
@@ -257,15 +257,15 @@ show_logs() {
     echo ""
 
     echo "=== SafeWork2 App 로그 ==="
-    docker logs --tail 20 safework2-app 2>/dev/null || echo "App 컨테이너가 실행되지 않음"
+    docker logs --tail 20 safework-app 2>/dev/null || echo "App 컨테이너가 실행되지 않음"
     echo ""
 
     echo "=== SafeWork2 PostgreSQL 로그 ==="
-    docker logs --tail 10 safework2-postgres 2>/dev/null || echo "PostgreSQL 컨테이너가 실행되지 않음"
+    docker logs --tail 10 safework-postgres 2>/dev/null || echo "PostgreSQL 컨테이너가 실행되지 않음"
     echo ""
 
     echo "=== SafeWork2 Redis 로그 ==="
-    docker logs --tail 10 safework2-redis 2>/dev/null || echo "Redis 컨테이너가 실행되지 않음"
+    docker logs --tail 10 safework-redis 2>/dev/null || echo "Redis 컨테이너가 실행되지 않음"
 }
 
 # 롤백 기능

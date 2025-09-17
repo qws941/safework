@@ -1,0 +1,39 @@
+# PostgreSQL Docker ignore file for SafeWork
+# 빌드 컨텍스트에서 제외할 파일들
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# Database files (shouldn't be in build context)
+*.sql.backup
+*.dump
+*.bak
+
+# Documentation
+README.md
+docs/
+
+# Development files
+docker-compose*.yml
+Makefile

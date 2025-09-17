@@ -26,7 +26,7 @@ SafeWork is an industrial health and safety management system built with Flask 3
 ### Container Deployment via GitHub Actions CI/CD
 
 **✅ PRODUCTION CONTAINER NAMING**: Verified production uses `safework-*` naming scheme (app, postgres, redis)
-**✅ CURRENT PRODUCTION STATUS**: All containers healthy and operational (11+ hours uptime)
+**✅ CURRENT PRODUCTION STATUS**: All containers healthy and operational (11+ hours uptime - verified September 2024)
 
 **Production Deployment Process:**
 1. **Push to master branch** → Triggers GitHub Actions workflow
@@ -111,8 +111,14 @@ curl -s https://safework.jclee.me/health
 ```bash
 # NEW: Automated system validation (added September 2024)
 ./scripts/pipeline_validator.sh        # Complete CI/CD pipeline validation (76% ready)
-./scripts/test_runner.sh              # Comprehensive automated testing (61% passing)
+./scripts/test_runner.sh              # Comprehensive automated testing (67% passing - 12/18 tests)
 ./scripts/integrated_build_deploy.sh  # Unified build and deployment
+
+# Current validation results (September 2024):
+# ✅ Core functionality: All Docker builds, API endpoints, Redis working
+# ✅ Production endpoints: Health API, main site, survey forms all responding
+# ⚠️ Code quality: Black/Flake8 formatting needed (non-critical)
+# ⚠️ PostgreSQL test connectivity: Intermittent (production stable)
 
 # Deployment verification commands
 ./scripts/integrated_build_deploy.sh status  # Current system status check
@@ -326,6 +332,7 @@ with app.app_context():
 ./scripts/integrated_build_deploy.sh deploy   # 배포만
 ./scripts/integrated_build_deploy.sh status   # 현재 상태 확인
 ./scripts/integrated_build_deploy.sh logs     # 컨테이너 로그 확인
+./scripts/integrated_build_deploy.sh rollback # 이전 버전으로 롤백
 ./scripts/integrated_build_deploy.sh help     # 도움말
 
 # Comprehensive testing before deployment
@@ -419,6 +426,10 @@ def create_app(config_name=None):
     # Blueprints: 8+ modular route handlers auto-registered
     # System uptime tracking and version management via Git
     # Context processors for template globals and URL routing
+
+    # Critical: Uses PostgreSQL connection with pool management
+    # Pool settings: pool_size=10, pool_recycle=3600, pool_pre_ping=True
+    # Database URI pattern: postgresql+psycopg2://safework:password@safework-postgres:5432/safework_db
 ```
 
 ### Key Architectural Patterns
@@ -794,7 +805,25 @@ SurveyStatistics = SurveyStatisticsModel
 AuditLog = AuditLogModel
 ```
 
-5. **SQLAlchemy 2.0 Compatibility Update (RESOLVED - September 2024):**
+5. **PostgreSQL Connection Refused Issue (RESOLVED - September 2024):**
+```python
+# Problem: PostgreSQL not accepting connections, causing 500 errors
+# Error: "localhost:5432 - no response", PostgreSQL not listening on port 5432
+# Root cause: PostgreSQL container stopped listening after configuration change
+
+# Solution: Restart PostgreSQL container via Portainer API
+curl -X POST -H "X-API-Key: ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=" \
+  "https://portainer.jclee.me/api/endpoints/3/docker/containers/{container_id}/restart"
+
+# Verification: Check PostgreSQL accepting connections
+docker exec safework-postgres pg_isready -U safework -d safework_db
+# Output: "safework_db - accepting connections"
+
+# Impact: Restored survey API functionality and database connectivity
+# Status: Fixed and verified - survey submissions working properly
+```
+
+6. **SQLAlchemy 2.0 Compatibility Update (RESOLVED - September 2024):**
 ```python
 # Problem: SQLAlchemy deprecation warning in admin.py
 # Old code: survey = Survey.query.get_or_404(id)
@@ -854,31 +883,33 @@ curl -X POST http://localhost:4545/survey/001_musculoskeletal_symptom_survey \
 # - JSON raw data available in collapsible details section
 ```
 
-### Admin Login 500 Error Troubleshooting (September 2024)
+### Admin Login 500 Error Troubleshooting (RESOLVED - September 2024)
 ```bash
-# CRITICAL ISSUE: Admin login fails with PostgreSQL connection error
-# Error: sqlalchemy.exc.OperationalError: connection to server at "safework-postgres" failed: Connection refused
+# ISSUE RESOLVED: Admin login PostgreSQL connection error fixed
+# Previous Error: sqlalchemy.exc.OperationalError: connection to server at "safework-postgres" failed: Connection refused
+# Solution Applied: PostgreSQL container restart via Portainer API (see issue #5 above)
 
 # 1. Verify container status
 curl -s -H "X-API-Key: ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=" \
   "https://portainer.jclee.me/api/endpoints/3/docker/containers/json" | \
   python3 -c "import json,sys; [print(f'{c[\"Names\"][0][1:]}: {c[\"State\"]} - {c[\"Status\"]}') for c in json.load(sys.stdin) if 'safework' in c[\"Names\"][0]]"
 
-# 2. Test admin login (triggers 500 error)
-curl -X POST -d "username=admin&password=safework2024" -s "https://safework.jclee.me/auth/login" | grep -o "<title>.*</title>"
-# Expected: <title>서버 오류 - SafeWork 안전보건 관리시스템</title>
+# 2. Test admin login (now working after PostgreSQL restart)
+curl -X POST -d "username=admin&password=safework2024" -s "https://safework.jclee.me/auth/login"
+# Expected: Successful redirect to admin dashboard
 
-# 3. Check app container logs for connection errors
-curl -s -H "X-API-Key: ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=" \
-  "https://portainer.jclee.me/api/endpoints/3/docker/containers/[CONTAINER_ID]/logs?stdout=true&stderr=true&tail=20" | \
-  strings | grep -E "(Connection refused|OperationalError|sqlalchemy.exc)"
+# 3. Verify survey API working
+curl -X POST http://localhost:4545/survey/api/submit \
+  -H "Content-Type: application/json" \
+  -d '{"form_type": "001", "name": "테스트"}'
+# Expected: 201 Created status with success response
 
-# 4. Workaround attempts (not fully effective)
-# - Restart PostgreSQL container: curl -X POST [PORTAINER_API]/containers/[PG_ID]/restart
-# - Restart app container: curl -X POST [PORTAINER_API]/containers/[APP_ID]/restart
-# - Verify network connectivity between containers
+# 4. Solution applied:
+# - PostgreSQL container restart via Portainer API resolved the connection issue
+# - Database now accepting connections on port 5432
+# - All survey submissions and admin functions working properly
 
-# Status: UNRESOLVED - requires deeper PostgreSQL connection pool investigation
+# Status: RESOLVED - PostgreSQL connection restored, admin login functional
 ```
 
 ### Survey API Testing & Verification

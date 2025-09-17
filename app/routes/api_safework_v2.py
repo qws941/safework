@@ -622,7 +622,7 @@ def bulk_update_medication_expiry():
         
         updated_count = 0
         for update in updates:
-            medication = SafeworkMedication.query.get(update['id'])
+            medication = db.session.get(SafeworkMedication, update['id'])
             if medication:
                 if update.get('expiry_date'):
                     medication.expiry_date = datetime.strptime(

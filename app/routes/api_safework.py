@@ -345,7 +345,7 @@ def create_health_check_result():
     db.session.add(result)
     
     # 대상자 상태 업데이트
-    target = HealthCheckTarget.query.get(data['target_id'])
+    target = db.session.get(HealthCheckTarget, data['target_id'])
     if target:
         target.status = 'COMPLETED'
         target.actual_date = result.check_date

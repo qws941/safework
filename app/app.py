@@ -66,7 +66,7 @@ def create_app(config_name=None):
 
     @login_manager.user_loader
     def load_user(user_id):
-        return User.query.get(int(user_id))
+        return db.session.get(User, int(user_id))
 
     # Initialize Redis
     redis_client = redis.Redis(
@@ -107,7 +107,7 @@ def create_app(config_name=None):
     try:
         from routes.api_safework_v2 import api_safework_bp
 
-        app.register_blueprint(api_safework_bp, url_prefix="/api/safework")
+        app.register_blueprint(api_safework_bp, url_prefix="/api/safework/v2")
         app.logger.info("SafeWork API v2.0 loaded successfully")
     except ImportError as e:
         app.logger.warning(f"SafeWork API v2.0 not loaded: {e}")
