@@ -142,8 +142,8 @@ class DevelopmentConfig(Config):
         f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     )
 
-    # PostgreSQL connection options for development - inherit from base Config
-    # No need to redefine SQLALCHEMY_ENGINE_OPTIONS as it's already in base Config class
+    # Inherit SQLALCHEMY_ENGINE_OPTIONS from base Config class
+    # This includes DB_POOL_SIZE and other pool settings
 
     # CSRF 완전 비활성화 - 설문 테스트용 (환경변수에서 읽기)
     WTF_CSRF_ENABLED = os.environ.get("WTF_CSRF_ENABLED", "false").lower() == "true"
@@ -169,8 +169,8 @@ class ProductionConfig(Config):
         f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     )
 
-    # PostgreSQL connection options for production - inherit from base Config
-    # No need to redefine SQLALCHEMY_ENGINE_OPTIONS as it's already in base Config class
+    # Inherit SQLALCHEMY_ENGINE_OPTIONS from base Config class
+    # This includes DB_POOL_SIZE and other pool settings
 
     # Override with production values
     SECRET_KEY = os.environ.get("SECRET_KEY", "fallback-key-for-testing")
