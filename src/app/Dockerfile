@@ -21,18 +21,39 @@ ENV WTF_CSRF_ENABLED=false
 ENV WTF_CSRF_CHECK_DEFAULT=false
 
 # Database connection settings (PostgreSQL container-aware defaults)
-ENV DB_HOST=safework-postgres
-ENV DB_PORT=5432
-ENV DB_USER=safework
-ENV DB_NAME=safework
+# CRITICAL: DB_PASSWORD must be set via environment or secrets
+ENV DB_HOST=${DB_HOST:-safework-postgres}
+ENV DB_PORT=${DB_PORT:-5432}
+ENV DB_USER=${DB_USER:-safework}
+ENV DB_NAME=${DB_NAME:-safework_db}
+ENV DB_PASSWORD=${DB_PASSWORD}
+
+# Database pool and connection settings
+ENV DB_POOL_SIZE=${DB_POOL_SIZE:-10}
+ENV DB_POOL_TIMEOUT=${DB_POOL_TIMEOUT:-30}
+ENV DB_POOL_RECYCLE=${DB_POOL_RECYCLE:-3600}
+ENV DB_POOL_PRE_PING=${DB_POOL_PRE_PING:-true}
+ENV DB_ECHO=${DB_ECHO:-false}
 
 # Redis connection settings (container-aware defaults)
-ENV REDIS_HOST=safework-redis
-ENV REDIS_PORT=6379
-ENV REDIS_DB=0
+ENV REDIS_HOST=${REDIS_HOST:-safework-redis}
+ENV REDIS_PORT=${REDIS_PORT:-6379}
+ENV REDIS_DB=${REDIS_DB:-0}
+ENV REDIS_PASSWORD=${REDIS_PASSWORD}
+ENV REDIS_TIMEOUT=${REDIS_TIMEOUT:-10}
+ENV REDIS_SOCKET_CONNECT_TIMEOUT=${REDIS_SOCKET_CONNECT_TIMEOUT:-5}
+ENV REDIS_SOCKET_KEEPALIVE=${REDIS_SOCKET_KEEPALIVE:-true}
 
-# Admin settings (secure defaults - must be overridden)
-ENV ADMIN_USERNAME=admin
+# Admin settings (secure defaults - MUST be overridden in production)
+ENV ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+ENV ADMIN_PASSWORD=${ADMIN_PASSWORD}
+ENV SECRET_KEY=${SECRET_KEY}
+
+# Security settings
+ENV SESSION_COOKIE_SECURE=${SESSION_COOKIE_SECURE:-true}
+ENV SESSION_COOKIE_HTTPONLY=${SESSION_COOKIE_HTTPONLY:-true}
+ENV SESSION_COOKIE_SAMESITE=${SESSION_COOKIE_SAMESITE:-Lax}
+ENV PERMANENT_SESSION_LIFETIME=${PERMANENT_SESSION_LIFETIME:-3600}
 
 # Connection retry settings for independent container execution
 ENV DB_CONNECTION_RETRIES=60

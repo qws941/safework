@@ -19,14 +19,53 @@ def index():
     """설문 목록 페이지"""
     return '''<!DOCTYPE html>
 <html>
-<head><title>설문 목록 - SafeWork</title></head>
+<head>
+    <title>설문 목록 - SafeWork</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        h1 { color: #2c3e50; }
+        ul { list-style: none; padding: 0; }
+        li { margin: 15px 0; }
+        a { 
+            display: block; 
+            padding: 15px 20px; 
+            background: #f8f9fa; 
+            border-left: 4px solid #4CAF50; 
+            text-decoration: none; 
+            color: #2c3e50;
+            border-radius: 5px;
+            transition: background 0.2s;
+        }
+        a:hover { background: #e9ecef; }
+        .new-badge { 
+            background: #ff6b6b; 
+            color: white; 
+            padding: 3px 8px; 
+            border-radius: 12px; 
+            font-size: 12px; 
+            margin-left: 10px; 
+        }
+        .enhanced-badge { 
+            background: #4ecdc4; 
+            color: white; 
+            padding: 3px 8px; 
+            border-radius: 12px; 
+            font-size: 12px; 
+            margin-left: 10px; 
+        }
+    </style>
+</head>
 <body>
-<h1>SafeWork 설문 목록</h1>
+<h1>🏥 SafeWork 설문 목록</h1>
+<p>산업안전보건관리시스템 - 건강조사 설문</p>
 <ul>
-<li><a href="/survey/001_musculoskeletal_symptom_survey">근골격계 증상조사표</a></li>
-<li><a href="/survey/002_new_employee_health_checkup_form">신규 입사자 건강검진표</a></li>
-<li><a href="/survey/003_musculoskeletal_program">근골격계질환 예방관리 프로그램 조사표</a></li>
+<li><a href="/survey/001_musculoskeletal_symptom_survey">📋 근골격계 증상조사표 (Form 001)</a></li>
+<li><a href="/survey/002_new_employee_health_checkup_form">🩺 신규 입사자 건강검진표 (Form 002)</a></li>
+<li><a href="/survey/003_musculoskeletal_program">📊 근골격계질환 예방관리 프로그램 조사표 (Form 003) <span class="new-badge">기본</span></a></li>
+<li><a href="/survey/003_musculoskeletal_program_enhanced">🔬 근골격계질환 예방관리 프로그램 조사표 - 완전판 (Form 003 Enhanced) <span class="enhanced-badge">60+ 필드</span></a></li>
 </ul>
+<hr>
+<p><small>© 2024 SafeWork v3.0.0 - 한국 산업안전보건관리시스템</small></p>
 </body>
 </html>'''
 
@@ -404,6 +443,190 @@ def musculoskeletal_program():
 
     return render_template("survey/003_musculoskeletal_program.html", kiosk_mode=kiosk_mode)
 
+@survey_bp.route("/003_musculoskeletal_program_enhanced", methods=["GET", "POST"])
+def musculoskeletal_program_enhanced():
+    """근골격계질환 예방관리 프로그램 조사표 (003 Enhanced) - 60+ 필드 완전판"""
+    # CSRF 완전 우회 - 익명 설문조사용
+    try:
+        from flask import g
+        g._csrf_disabled = True
+    except:
+        pass
+
+    # Check if accessed via direct URL (kiosk mode)
+    kiosk_mode = request.args.get('kiosk') == '1' or request.referrer is None or 'survey' not in (request.referrer or '')
+
+    if request.method == 'POST':
+        # 기본적으로 익명 사용자 ID 1을 사용
+        user_id = 1  # 익명 사용자
+        if current_user.is_authenticated:
+            user_id = current_user.id
+
+        # 모든 폼 데이터를 수집하여 responses JSON 필드에 저장
+        all_form_data = {}
+        for key, value in request.form.items():
+            if key.endswith('[]'):
+                # 리스트 형태 데이터 처리
+                all_form_data[key] = request.form.getlist(key)
+            else:
+                all_form_data[key] = value
+
+        # 신체 부위별 통증 데이터 수집 (확장된 6개 부위)
+        body_parts = ['neck', 'shoulder', 'arm_elbow', 'hand_wrist', 'back', 'leg_foot']
+        body_part_data = {}
+
+        for part in body_parts:
+            body_part_data[part] = {
+                'has_pain': request.form.get(f'{part}_pain') == '예',
+                'pain_duration': request.form.get(f'{part}_duration'),
+                'pain_intensity': request.form.get(f'{part}_intensity', type=int),
+                'pain_frequency': request.form.get(f'{part}_frequency'),
+                'daily_interference': request.form.get(f'{part}_interference')
+            }
+
+        # 근무환경 위험요인 데이터 수집
+        work_environment = {
+            'work_posture': request.form.get('work_posture'),
+            'work_duration': request.form.get('work_duration'),
+            'repetitive_work': request.form.get('repetitive_work'),
+            'heavy_lifting': request.form.get('heavy_lifting'),
+            'vibration_exposure': request.form.get('vibration_exposure'),
+            'work_stress': request.form.get('work_stress'),
+            'work_environment_temp': request.form.get('work_environment_temp'),
+            'workplace_lighting': request.form.get('workplace_lighting'),
+        }
+
+        # 추가 건강 정보 수집
+        health_lifestyle = {
+            'previous_injury': request.form.get('previous_injury'),
+            'exercise_frequency': request.form.get('exercise_frequency'),
+            'smoking_status': request.form.get('smoking_status'),
+            'sleep_quality': request.form.get('sleep_quality'),
+            'current_treatment': request.form.get('current_treatment'),
+            'improvement_suggestions': request.form.get('improvement_suggestions'),
+            'additional_comments': request.form.get('additional_comments'),
+        }
+
+        # 관리대상자 분류 계산 (기존 함수 재사용)
+        management_classification = calculate_management_classification(body_part_data)
+
+        # 위험도 점수 계산 (새로운 기능)
+        risk_score = calculate_enhanced_risk_score(body_part_data, work_environment, health_lifestyle)
+
+        # 데이터베이스 스키마에 맞춘 Survey 생성
+        survey = Survey(
+            user_id=user_id,
+            form_type="003",
+            # 기본 정보
+            name=request.form.get("name") or "익명",
+            age=request.form.get("age", type=int) or 30,
+            gender=request.form.get("gender") or "남성",
+            department=request.form.get("department"),
+            position=request.form.get("position"),
+            employee_number=request.form.get("employee_number"),
+            # 근무 정보
+            work_years=request.form.get("work_years", type=int),
+            work_months=request.form.get("work_months", type=int),
+            # 증상 여부 (6개 부위 중 하나라도 통증이 있으면 True)
+            has_symptoms=any(data['has_pain'] for data in body_part_data.values()),
+            # 모든 설문 응답 데이터를 JSON으로 저장
+            responses=all_form_data
+        )
+
+        # 상세 분석 데이터 추가
+        survey.responses['body_parts_analysis'] = body_part_data
+        survey.responses['work_environment_analysis'] = work_environment
+        survey.responses['health_lifestyle_analysis'] = health_lifestyle
+        survey.responses['management_classification'] = management_classification
+        survey.responses['risk_score'] = risk_score
+        survey.responses['form_version'] = 'enhanced_v1.0'
+
+        try:
+            db.session.add(survey)
+            db.session.commit()
+
+            flash("근골격계질환 예방관리 프로그램 조사표(완전판)가 성공적으로 제출되었습니다.", "success")
+            if kiosk_mode:
+                return redirect(url_for("survey.complete", id=survey.id, kiosk=1))
+            return redirect(url_for("survey.complete", id=survey.id))
+
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Survey 003 Enhanced submission error: {str(e)}")
+            flash(f"설문 제출 중 오류가 발생했습니다: {str(e)}", "error")
+            return redirect(url_for("survey.musculoskeletal_program_enhanced"))
+
+    return render_template("survey/003_musculoskeletal_program_enhanced.html", kiosk_mode=kiosk_mode)
+
+
+def calculate_enhanced_risk_score(body_part_data, work_environment, health_lifestyle):
+    """향상된 위험도 점수 계산 함수"""
+    risk_score = 0
+    risk_factors = []
+    
+    # 신체 부위별 통증 점수 (기존 분류 기반)
+    pain_count = sum(1 for data in body_part_data.values() if data['has_pain'])
+    severe_pain_count = sum(1 for data in body_part_data.values() 
+                          if data['has_pain'] and str(data.get('pain_intensity', 0)) in ['8', '9', '10'])
+    
+    risk_score += pain_count * 10  # 통증 부위당 10점
+    risk_score += severe_pain_count * 15  # 심한 통증당 추가 15점
+    
+    if pain_count > 0:
+        risk_factors.append(f"통증 부위 {pain_count}개소")
+    if severe_pain_count > 0:
+        risk_factors.append(f"심한 통증 {severe_pain_count}개소")
+    
+    # 작업환경 위험요인 점수
+    work_risk_factors = {
+        'work_posture': {'굽힌자세': 15, '쪼그린자세': 20, '높은곳작업': 10},
+        'work_duration': {'4-6시간': 10, '6시간이상': 20},
+        'repetitive_work': {'예': 15},
+        'heavy_lifting': {'15-25kg': 15, '25kg이상': 25},
+        'vibration_exposure': {'전신진동': 10, '국소진동': 15, '둘다': 25},
+        'work_stress': {'높음': 10, '매우높음': 20}
+    }
+    
+    for factor, value in work_environment.items():
+        if factor in work_risk_factors and value in work_risk_factors[factor]:
+            points = work_risk_factors[factor][value]
+            risk_score += points
+            risk_factors.append(f"{factor}: {value} (+{points}점)")
+    
+    # 개인 건강 위험요인
+    lifestyle_risk = {
+        'exercise_frequency': {'없음': 10},
+        'smoking_status': {'현재흡연': 15},
+        'sleep_quality': {'나쁨': 10, '매우나쁨': 15},
+        'previous_injury': {'업무관련': 20, '둘다': 15}
+    }
+    
+    for factor, value in health_lifestyle.items():
+        if factor in lifestyle_risk and value in lifestyle_risk[factor]:
+            points = lifestyle_risk[factor][value]
+            risk_score += points
+            risk_factors.append(f"{factor}: {value} (+{points}점)")
+    
+    # 위험도 등급 결정
+    if risk_score >= 80:
+        risk_level = "매우 높음"
+    elif risk_score >= 60:
+        risk_level = "높음"
+    elif risk_score >= 40:
+        risk_level = "보통"
+    elif risk_score >= 20:
+        risk_level = "낮음"
+    else:
+        risk_level = "매우 낮음"
+    
+    return {
+        'total_score': risk_score,
+        'risk_level': risk_level,
+        'risk_factors': risk_factors,
+        'pain_count': pain_count,
+        'severe_pain_count': severe_pain_count
+    }
+
 
 def calculate_management_classification(body_part_data):
     """관리대상자 분류 계산 함수"""
@@ -416,18 +639,34 @@ def calculate_management_classification(body_part_data):
             frequency = data.get('pain_frequency', '')
             intensity = data.get('pain_intensity', '')
 
+            # 통증강도를 문자열로 변환 (폼에서 정수로 전송되는 경우 처리)
+            intensity_str = str(intensity) if intensity else ''
+            
+            # 통증강도 매핑 (1-10 숫자를 한국어 텍스트로 변환)
+            intensity_mapping = {
+                '1': '매우약함', '2': '매우약함', '3': '약함', '4': '약함',
+                '5': '보통', '6': '중간정도', '7': '중간정도', 
+                '8': '심한통증', '9': '매우심한통증', '10': '매우심한통증'
+            }
+            
+            # 숫자인 경우 한국어로 변환, 이미 한국어인 경우 그대로 사용
+            if intensity_str.isdigit():
+                intensity_korean = intensity_mapping.get(intensity_str, '보통')
+            else:
+                intensity_korean = intensity_str
+
             # 통증호소자 기준 체크
             is_pain_reporter = False
             if '1주일이상' in duration or '1-4주' in duration or '1-6개월' in duration or '6개월이상' in duration:
                 if '주1-2회' in frequency or '주3-4회' in frequency or '매일' in frequency:
-                    if '중간정도' in intensity or '심한통증' in intensity or '매우심한통증' in intensity:
+                    if '중간정도' in intensity_korean or '심한통증' in intensity_korean or '매우심한통증' in intensity_korean:
                         is_pain_reporter = True
 
             # 관리대상자 기준 체크
             is_management_target = False
             if '1주일이상' in duration or '1-4주' in duration or '1-6개월' in duration or '6개월이상' in duration:
                 if '주1-2회' in frequency or '주3-4회' in frequency or '매일' in frequency:
-                    if '심한통증' in intensity or '매우심한통증' in intensity:
+                    if '심한통증' in intensity_korean or '매우심한통증' in intensity_korean:
                         is_management_target = True
 
             if is_pain_reporter:

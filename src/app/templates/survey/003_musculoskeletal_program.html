@@ -1,0 +1,283 @@
+{% extends "base.html" %}
+
+{% block title %}근골격계질환 예방관리 프로그램 조사표 - {{ app_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .survey-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .section-header {
+        background: #f8f9fa;
+        border-left: 4px solid #4CAF50;
+        padding: 15px 20px;
+        margin: 20px 0 15px 0;
+        font-weight: 600;
+        color: #2c3e50;
+    }
+    .body-part-section {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        background: #f8f9fa;
+    }
+    .pain-details {
+        display: none;
+        margin-top: 15px;
+        padding: 15px;
+        background: white;
+        border-radius: 6px;
+        border: 1px solid #e9ecef;
+    }
+    .btn-primary {
+        background: #4CAF50;
+        border-color: #4CAF50;
+    }
+    .btn-primary:hover {
+        background: #45a049;
+        border-color: #45a049;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="survey-container">
+        <div class="text-center mb-4">
+            <h1 class="h2"><i class="bi bi-clipboard2-pulse"></i> 근골격계질환 예방관리 프로그램 조사표</h1>
+            <p class="text-muted">건강한 작업환경을 위한 근골격계 건강 상태 조사 (Form 003)</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="close" data-dismiss="alert">
+                            <span>&times;</span>
+                        </button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" id="form003">
+            <!-- 기본 정보 -->
+            <div class="section-header">
+                <i class="bi bi-person-circle"></i> 기본 정보
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="name">성명 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="name" name="name" required>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="age">나이 <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" id="age" name="age" min="18" max="100" required>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="gender">성별 <span class="text-danger">*</span></label>
+                        <select class="form-control" id="gender" name="gender" required>
+                            <option value="">선택하세요</option>
+                            <option value="남성">남성</option>
+                            <option value="여성">여성</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="department">부서/팀</label>
+                        <input type="text" class="form-control" id="department" name="department">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="position">직위/직책</label>
+                        <input type="text" class="form-control" id="position" name="position">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 신체 부위별 조사 -->
+            <div class="section-header">
+                <i class="bi bi-body-text"></i> 신체 부위별 통증 조사 (지난 1년간)
+            </div>
+
+            <!-- 목 부위 -->
+            <div class="body-part-section">
+                <h5 class="text-primary mb-3"><i class="bi bi-person-standing"></i> 목 (Neck)</h5>
+                <div class="form-check mb-3">
+                    <input type="checkbox" class="form-check-input" id="neck_pain" name="neck_pain" value="예" onchange="toggleDetails('neck')">
+                    <label class="form-check-label" for="neck_pain">
+                        목 부위에 통증이나 불편감이 있었습니까?
+                    </label>
+                </div>
+                <div id="neck_details" class="pain-details">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label for="neck_duration">지속기간</label>
+                            <select class="form-control" id="neck_duration" name="neck_duration">
+                                <option value="">선택하세요</option>
+                                <option value="1일미만">1일 미만</option>
+                                <option value="1-7일">1-7일</option>
+                                <option value="1주일이상">1주일 이상</option>
+                                <option value="1-4주">1-4주</option>
+                                <option value="1-6개월">1-6개월</option>
+                                <option value="6개월이상">6개월 이상</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="neck_intensity">통증강도 (1-10)</label>
+                            <select class="form-control" id="neck_intensity" name="neck_intensity">
+                                <option value="">선택하세요</option>
+                                <option value="1">1 (매우약함)</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4 (약함)</option>
+                                <option value="5">5</option>
+                                <option value="6">6 (중간정도)</option>
+                                <option value="7">7</option>
+                                <option value="8">8 (심한통증)</option>
+                                <option value="9">9</option>
+                                <option value="10">10 (매우심한통증)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="neck_frequency">발생빈도</label>
+                            <select class="form-control" id="neck_frequency" name="neck_frequency">
+                                <option value="">선택하세요</option>
+                                <option value="월1회미만">월 1회 미만</option>
+                                <option value="월1-3회">월 1-3회</option>
+                                <option value="주1-2회">주 1-2회</option>
+                                <option value="주3-4회">주 3-4회</option>
+                                <option value="매일">매일</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="neck_interference">일상생활 지장</label>
+                            <select class="form-control" id="neck_interference" name="neck_interference">
+                                <option value="">선택하세요</option>
+                                <option value="없음">없음</option>
+                                <option value="약간">약간</option>
+                                <option value="보통">보통</option>
+                                <option value="심함">심함</option>
+                                <option value="매우심함">매우 심함</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 어깨 부위 -->
+            <div class="body-part-section">
+                <h5 class="text-primary mb-3"><i class="bi bi-person-arms-up"></i> 어깨 (Shoulder)</h5>
+                <div class="form-check mb-3">
+                    <input type="checkbox" class="form-check-input" id="shoulder_pain" name="shoulder_pain" value="예" onchange="toggleDetails('shoulder')">
+                    <label class="form-check-label" for="shoulder_pain">
+                        어깨 부위에 통증이나 불편감이 있었습니까?
+                    </label>
+                </div>
+                <div id="shoulder_details" class="pain-details">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label for="shoulder_duration">지속기간</label>
+                            <select class="form-control" id="shoulder_duration" name="shoulder_duration">
+                                <option value="">선택하세요</option>
+                                <option value="1일미만">1일 미만</option>
+                                <option value="1-7일">1-7일</option>
+                                <option value="1주일이상">1주일 이상</option>
+                                <option value="1-4주">1-4주</option>
+                                <option value="1-6개월">1-6개월</option>
+                                <option value="6개월이상">6개월 이상</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="shoulder_intensity">통증강도 (1-10)</label>
+                            <select class="form-control" id="shoulder_intensity" name="shoulder_intensity">
+                                <option value="">선택하세요</option>
+                                <option value="1">1 (매우약함)</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4 (약함)</option>
+                                <option value="5">5</option>
+                                <option value="6">6 (중간정도)</option>
+                                <option value="7">7</option>
+                                <option value="8">8 (심한통증)</option>
+                                <option value="9">9</option>
+                                <option value="10">10 (매우심한통증)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="shoulder_frequency">발생빈도</label>
+                            <select class="form-control" id="shoulder_frequency" name="shoulder_frequency">
+                                <option value="">선택하세요</option>
+                                <option value="월1회미만">월 1회 미만</option>
+                                <option value="월1-3회">월 1-3회</option>
+                                <option value="주1-2회">주 1-2회</option>
+                                <option value="주3-4회">주 3-4회</option>
+                                <option value="매일">매일</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="shoulder_interference">일상생활 지장</label>
+                            <select class="form-control" id="shoulder_interference" name="shoulder_interference">
+                                <option value="">선택하세요</option>
+                                <option value="없음">없음</option>
+                                <option value="약간">약간</option>
+                                <option value="보통">보통</option>
+                                <option value="심함">심함</option>
+                                <option value="매우심함">매우 심함</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 제출 버튼 -->
+            <div class="text-center mt-4">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-check-circle"></i> 조사표 제출하기
+                </button>
+                <div class="mt-3">
+                    <a href="{{ url_for('survey.index') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> 설문 목록으로 돌아가기
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleDetails(bodyPart) {
+    const checkbox = document.getElementById(bodyPart + '_pain');
+    const details = document.getElementById(bodyPart + '_details');
+    
+    if (checkbox.checked) {
+        details.style.display = 'block';
+    } else {
+        details.style.display = 'none';
+        // 상세 필드 초기화
+        const selects = details.querySelectorAll('select');
+        selects.forEach(select => select.value = '');
+    }
+}
+</script>
+{% endblock %}

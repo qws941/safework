@@ -10,10 +10,23 @@ LABEL com.centurylinklabs.watchtower.enable="true" \
       org.label-schema.name="safework-redis" \
       org.label-schema.description="SafeWork Redis Cache with optimized configuration"
 
-# Environment variables
-ENV REDIS_REPLICATION_MODE=master \
-    REDIS_PASSWORD= \
-    TZ=Asia/Seoul
+# Environment variables with flexible configuration
+ENV REDIS_REPLICATION_MODE=${REDIS_REPLICATION_MODE:-master}
+ENV REDIS_PASSWORD=${REDIS_PASSWORD}
+ENV TZ=${TZ:-Asia/Seoul}
+
+# Redis configuration settings
+ENV REDIS_PORT=${REDIS_PORT:-6379}
+ENV REDIS_DATABASES=${REDIS_DATABASES:-16}
+ENV REDIS_MAXMEMORY=${REDIS_MAXMEMORY:-256mb}
+ENV REDIS_MAXMEMORY_POLICY=${REDIS_MAXMEMORY_POLICY:-allkeys-lru}
+ENV REDIS_SAVE_INTERVAL=${REDIS_SAVE_INTERVAL:-900 1}
+ENV REDIS_LOG_LEVEL=${REDIS_LOG_LEVEL:-notice}
+
+# Security and performance settings
+ENV REDIS_TIMEOUT=${REDIS_TIMEOUT:-300}
+ENV REDIS_TCP_KEEPALIVE=${REDIS_TCP_KEEPALIVE:-300}
+ENV REDIS_PROTECTED_MODE=${REDIS_PROTECTED_MODE:-yes}
 
 # Set timezone (Alpine)
 RUN apk add --no-cache tzdata && \

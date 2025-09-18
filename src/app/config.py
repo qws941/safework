@@ -1,4 +1,5 @@
 import os
+import os
 from datetime import timedelta
 
 
@@ -11,32 +12,44 @@ class Config:
         "dev-only-key-CHANGE-IN-PRODUCTION-" + str(hash("safework"))[:16]
     )
 
-    # Database (PostgreSQL)
+    # Database (PostgreSQL) - Enhanced with environment variable support
     DB_HOST = os.environ.get("DB_HOST", "safework-postgres")
     DB_PORT = int(os.environ.get("DB_PORT", 5432))
     DB_USER = os.environ.get("DB_USER", "safework")
-    DB_PASSWORD = os.environ.get("DB_PASSWORD", "safework2024")
+    DB_PASSWORD = os.environ.get("DB_PASSWORD")  # No default - must be set
     DB_NAME = os.environ.get("DB_NAME", "safework_db")
+    
+    # Database pool settings from environment
+    DB_POOL_SIZE = int(os.environ.get("DB_POOL_SIZE", 10))
+    DB_POOL_TIMEOUT = int(os.environ.get("DB_POOL_TIMEOUT", 30))
+    DB_POOL_RECYCLE = int(os.environ.get("DB_POOL_RECYCLE", 3600))
+    DB_POOL_PRE_PING = os.environ.get("DB_POOL_PRE_PING", "true").lower() == "true"
+    DB_ECHO = os.environ.get("DB_ECHO", "false").lower() == "true"
 
     SQLALCHEMY_DATABASE_URI = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
-        "pool_size": 10,
-        "pool_recycle": 3600,
-        "pool_pre_ping": True,
+        "pool_size": DB_POOL_SIZE,
+        "pool_recycle": DB_POOL_RECYCLE,
+        "pool_pre_ping": DB_POOL_PRE_PING,
+        "pool_timeout": DB_POOL_TIMEOUT,
+        "echo": DB_ECHO,
     }
 
-    # Redis
+    # Redis - Enhanced with environment variable support
     REDIS_HOST = os.environ.get("REDIS_HOST", "safework-redis")
     REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
     REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", "")
     REDIS_DB = int(os.environ.get("REDIS_DB", 0))
+    REDIS_TIMEOUT = int(os.environ.get("REDIS_TIMEOUT", 10))
+    REDIS_SOCKET_CONNECT_TIMEOUT = int(os.environ.get("REDIS_SOCKET_CONNECT_TIMEOUT", 5))
+    REDIS_SOCKET_KEEPALIVE = os.environ.get("REDIS_SOCKET_KEEPALIVE", "true").lower() == "true"
 
-    # Session
-    PERMANENT_SESSION_LIFETIME = timedelta(hours=24)
-    SESSION_COOKIE_SECURE = False  # Temporarily disabled for debugging
-    SESSION_COOKIE_HTTPONLY = True
-    SESSION_COOKIE_SAMESITE = "Lax"
+    # Session - Enhanced with environment variable support
+    PERMANENT_SESSION_LIFETIME = timedelta(seconds=int(os.environ.get("PERMANENT_SESSION_LIFETIME", 86400)))
+    SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "false").lower() == "true"
+    SESSION_COOKIE_HTTPONLY = os.environ.get("SESSION_COOKIE_HTTPONLY", "true").lower() == "true"
+    SESSION_COOKIE_SAMESITE = os.environ.get("SESSION_COOKIE_SAMESITE", "Lax")
 
     # File upload
     MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB
@@ -117,9 +130,11 @@ class DevelopmentConfig(Config):
 
     # PostgreSQL connection options for development
     SQLALCHEMY_ENGINE_OPTIONS = {
-        "pool_size": 10,
-        "pool_recycle": 3600,
-        "pool_pre_ping": True,
+        "pool_size": DB_POOL_SIZE,
+        "pool_recycle": DB_POOL_RECYCLE,
+        "pool_pre_ping": DB_POOL_PRE_PING,
+        "pool_timeout": DB_POOL_TIMEOUT,
+        "echo": DB_ECHO,
     }
 
     # CSRF 완전 비활성화 - 설문 테스트용 (환경변수에서 읽기)
@@ -144,9 +159,11 @@ class ProductionConfig(Config):
 
     # PostgreSQL connection options for production
     SQLALCHEMY_ENGINE_OPTIONS = {
-        "pool_size": 10,
-        "pool_recycle": 3600,
-        "pool_pre_ping": True,
+        "pool_size": DB_POOL_SIZE,
+        "pool_recycle": DB_POOL_RECYCLE,
+        "pool_pre_ping": DB_POOL_PRE_PING,
+        "pool_timeout": DB_POOL_TIMEOUT,
+        "echo": DB_ECHO,
     }
 
     # Override with production values
