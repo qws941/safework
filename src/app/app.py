@@ -54,11 +54,12 @@ def create_app(config_name=None):
         max_retries = int(os.environ.get("DB_CONNECTION_RETRIES", 60))
         retry_delay = int(os.environ.get("DB_CONNECTION_DELAY", 3))
 
+        # Initialize DB and migration only once, outside the retry loop
+        db.init_app(app)
+        migrate = Migrate(app, db)
+
         for attempt in range(max_retries):
             try:
-                db.init_app(app)
-                migrate = Migrate(app, db)
-
                 # Test connection
                 with app.app_context():
                     db.engine.connect()
