@@ -30,7 +30,7 @@ PORTAINER_URL="${PORTAINER_URL:-https://portainer.jclee.me}"
 PORTAINER_TOKEN="${PORTAINER_TOKEN:-ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=}"
 ENDPOINT_ID="${ENDPOINT_ID:-3}"
 PROJECT_NAME="${PROJECT_NAME:-safework}"
-NETWORK_NAME="${NETWORK_NAME:-watchtower_default}"
+NETWORK_NAME="${NETWORK_NAME:-safework_network}"
 
 # 설정 파일 로드
 if [[ -f "$CONFIG_FILE" ]]; then

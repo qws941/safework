@@ -196,17 +196,17 @@ docker pull registry.jclee.me/safework/postgres:latest
 docker pull registry.jclee.me/safework/redis:latest
 
 # Start PostgreSQL with KST timezone and automated schema migration
-docker run -d --name safework2-postgres --network watchtower_default -p 4546:5432 \
+docker run -d --name safework2-postgres --network safework_network -p 4546:5432 \
   -e TZ=Asia/Seoul -e POSTGRES_PASSWORD=safework2024 -e POSTGRES_DB=safework_db -e POSTGRES_USER=safework \
   registry.jclee.me/safework/postgres:latest
 
 # Start Redis with clean state
-docker run -d --name safework2-redis --network watchtower_default -p 4547:6379 \
+docker run -d --name safework2-redis --network safework_network -p 4547:6379 \
   -e TZ=Asia/Seoul \
   registry.jclee.me/safework/redis:latest
 
 # Start application with correct database name (safework_db) and KST timezone
-docker run -d --name safework2-app --network watchtower_default -p 4545:4545 \
+docker run -d --name safework2-app --network safework_network -p 4545:4545 \
   -e TZ=Asia/Seoul -e DB_HOST=safework2-postgres -e DB_NAME=safework_db -e DB_USER=safework \
   -e DB_PASSWORD=safework2024 -e REDIS_HOST=safework2-redis \
   registry.jclee.me/safework/app:latest
@@ -217,7 +217,7 @@ docker ps                              # Check running containers
 docker stop safework2-app safework2-postgres safework2-redis  # Stop all services
 
 # Development with code changes (mount local code)
-docker run -d --name safework2-app-dev --network watchtower_default -p 4545:4545 \
+docker run -d --name safework2-app-dev --network safework_network -p 4545:4545 \
   -v $(pwd)/app:/app -e FLASK_ENV=development \
   registry.jclee.me/safework/app:latest
 ```
@@ -1098,15 +1098,15 @@ docker stop safework2-app safework2-postgres safework2-redis
 docker rm safework2-app safework2-postgres safework2-redis
 # Restart using latest images from registry (built by GitHub Actions)
 # CRITICAL: Use correct image naming and environment variables
-docker run -d --name safework2-postgres --network watchtower_default -p 4546:5432 \
+docker run -d --name safework2-postgres --network safework_network -p 4546:5432 \
   -e TZ=Asia/Seoul -e POSTGRES_PASSWORD=safework2024 -e POSTGRES_DB=safework_db -e POSTGRES_USER=safework \
   --label "com.centurylinklabs.watchtower.enable=true" \
   registry.jclee.me/safework/postgres:latest
-docker run -d --name safework2-redis --network watchtower_default -p 4547:6379 \
+docker run -d --name safework2-redis --network safework_network -p 4547:6379 \
   -e TZ=Asia/Seoul \
   --label "com.centurylinklabs.watchtower.enable=true" \
   registry.jclee.me/safework/redis:latest
-docker run -d --name safework2-app --network watchtower_default -p 4545:4545 \
+docker run -d --name safework2-app --network safework_network -p 4545:4545 \
   -e TZ=Asia/Seoul -e DB_HOST=safework2-postgres -e DB_NAME=safework_db \
   -e DB_USER=safework -e DB_PASSWORD=safework2024 -e REDIS_HOST=safework2-redis \
   --label "com.centurylinklabs.watchtower.enable=true" \

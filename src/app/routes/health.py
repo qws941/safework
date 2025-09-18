@@ -79,10 +79,10 @@ def health_check():
         "config": flask_config,
         "version": current_app.config.get('APP_VERSION', '3.0.1-emergency-recovery'),
         "services": services_status,
-        "independent_deployment": {
+        "direct_deployment": {
             "postgres_container": services_status["database"] == "connected",
             "redis_container": services_status["redis"] == "connected", 
             "app_container": True,
-            "watchtower_enabled": True
+            "auto_deployment": True
         }
     }), 200

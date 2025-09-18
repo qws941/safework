@@ -218,10 +218,10 @@ validate_network_configuration() {
 
     # Docker 네트워크 설정 확인
     if command -v docker &> /dev/null; then
-        if docker network ls | grep -q "watchtower_default"; then
-            record_check "Docker 네트워크" "PASS" "watchtower_default 네트워크 존재"
+        if docker network ls | grep -q "safework_network"; then
+            record_check "Docker 네트워크" "PASS" "safework_network 네트워크 존재"
         else
-            record_check "Docker 네트워크" "WARNING" "watchtower_default 네트워크 없음 (자동 생성됨)"
+            record_check "Docker 네트워크" "WARNING" "safework_network 네트워크 없음 (자동 생성됨)"
         fi
     else
         record_check "Docker 환경" "FAIL" "Docker가 설치되지 않음"

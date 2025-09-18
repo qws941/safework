@@ -52,4 +52,6 @@ LABEL maintainer="SafeWork Team" \
       description="PostgreSQL 15 for SafeWork Industrial Health & Safety Management" \
       version="1.0" \
       service="database" \
-      com.centurylinklabs.watchtower.enable="true"
+      safework.deployment.auto="true" \
+      safework.service.type="database" \
+      safework.service.priority="high"

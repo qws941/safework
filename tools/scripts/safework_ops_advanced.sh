@@ -39,7 +39,7 @@ readonly REGISTRY_HOST="${REGISTRY_HOST:-registry.jclee.me}"
 readonly PROJECT_NAME="${PROJECT_NAME:-safework}"
 
 # 환경 설정
-readonly NETWORK_NAME="${NETWORK_NAME:-watchtower_default}"
+readonly NETWORK_NAME="${NETWORK_NAME:-safework_network}"
 readonly DB_PASSWORD="${DB_PASSWORD:-safework2024}"
 readonly PRODUCTION_URL="${PRODUCTION_URL:-https://safework.jclee.me}"
 

@@ -21,14 +21,14 @@ containers:
       - "DB_NAME=safework_db"
       - "DB_USER=safework"
       - "REDIS_HOST=safework-redis"
-    network: "watchtower_default"
+    network: "safework_network"
     restart_policy: "unless-stopped"
     health_check:
       endpoint: "/health"
       expected_status: 200
       timeout: 10
     labels:
-      - "com.centurylinklabs.watchtower.enable=true"
+      - "safework.deployment.auto=true"
       - "com.safework.service=app"
       - "com.safework.environment=production"
 
@@ -40,7 +40,7 @@ containers:
       - "TZ=Asia/Seoul"
       - "POSTGRES_DB=safework_db"
       - "POSTGRES_USER=safework"
-    network: "watchtower_default"
+    network: "safework_network"
     restart_policy: "unless-stopped"
     volumes:
       - "safework_postgres_data:/var/lib/postgresql/data"
@@ -50,7 +50,7 @@ containers:
       timeout: 10
       retries: 3
     labels:
-      - "com.centurylinklabs.watchtower.enable=true"
+      - "safework.deployment.auto=true"
       - "com.safework.service=database"
       - "com.safework.environment=production"
 
@@ -60,7 +60,7 @@ containers:
       - "4547:6379"
     environment:
       - "TZ=Asia/Seoul"
-    network: "watchtower_default"
+    network: "safework_network"
     restart_policy: "unless-stopped"
     volumes:
       - "safework_redis_data:/data"
@@ -70,13 +70,13 @@ containers:
       timeout: 5
       retries: 3
     labels:
-      - "com.centurylinklabs.watchtower.enable=true"
+      - "safework.deployment.auto=true"
       - "com.safework.service=cache"
       - "com.safework.environment=production"
 
 # 네트워크 설정
 networks:
-  watchtower_default:
+  safework_network:
     driver: bridge
     external: true
 

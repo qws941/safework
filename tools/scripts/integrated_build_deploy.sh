@@ -33,7 +33,7 @@ log_error() {
 # 환경 설정
 REGISTRY_HOST="registry.jclee.me"
 PROJECT_NAME="safework2"
-NETWORK_NAME="watchtower_default"
+NETWORK_NAME="safework_network"
 DB_PASSWORD="safework2024"
 PORTAINER_API_KEY="ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8="
 PORTAINER_URL="https://portainer.jclee.me"
@@ -157,7 +157,7 @@ deploy_containers() {
         -e POSTGRES_PASSWORD=$DB_PASSWORD \
         -e POSTGRES_DB=safework_db \
         -e POSTGRES_USER=safework \
-        --label "com.centurylinklabs.watchtower.enable=true" \
+        --label "safework.deployment.auto=true" \
         --restart unless-stopped \
         ${REGISTRY_HOST}/${PROJECT_NAME}/postgres:latest
 
@@ -185,7 +185,7 @@ deploy_containers() {
         --network $NETWORK_NAME \
         -p 4547:6379 \
         -e TZ=Asia/Seoul \
-        --label "com.centurylinklabs.watchtower.enable=true" \
+        --label "safework.deployment.auto=true" \
         --restart unless-stopped \
         ${REGISTRY_HOST}/${PROJECT_NAME}/redis:latest
 
@@ -202,7 +202,7 @@ deploy_containers() {
         -e DB_PASSWORD=$DB_PASSWORD \
         -e REDIS_HOST=safework-redis \
         -e FLASK_CONFIG=production \
-        --label "com.centurylinklabs.watchtower.enable=true" \
+        --label "safework.deployment.auto=true" \
         --restart unless-stopped \
         ${REGISTRY_HOST}/${PROJECT_NAME}/app:latest
 

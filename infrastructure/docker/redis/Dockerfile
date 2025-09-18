@@ -4,8 +4,10 @@ FROM redis:7-alpine
 # Define volume for Redis data persistence
 VOLUME ["/data"]
 
-# Watchtower label for auto-updates
-LABEL com.centurylinklabs.watchtower.enable="true" \
+# SafeWork deployment labels
+LABEL safework.deployment.auto="true" \
+      safework.service.type="cache" \
+      safework.service.priority="medium" \
       maintainer="SafeWork Team" \
       org.label-schema.name="safework-redis" \
       org.label-schema.description="SafeWork Redis Cache with optimized configuration"
