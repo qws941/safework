@@ -253,6 +253,24 @@ def musculoskeletal_symptom_survey():
             db.session.add(survey)
             db.session.commit()
 
+            # 🚀 RAW DATA 파일 생성 - 설문 제출마다 개별 파일 저장
+            try:
+                from utils.raw_data_exporter import export_survey_raw_data
+                
+                # JSON과 CSV 형태로 모두 저장
+                exported_files = export_survey_raw_data(
+                    survey_data=all_form_data,
+                    survey_id=survey.id,
+                    form_type="001",
+                    format_types=['json', 'csv']
+                )
+                
+                current_app.logger.info(f"✅ Raw data files created for survey {survey.id}: {exported_files}")
+                
+            except Exception as export_error:
+                # Raw data 저장 실패해도 설문 제출은 성공으로 처리
+                current_app.logger.warning(f"⚠️ Raw data export failed for survey {survey.id}: {str(export_error)}")
+
             # 설문 제출 추적
             track_survey_submission(
                 form_type="001",
@@ -340,20 +358,45 @@ def new_employee_health_checkup_form():
             responses=all_form_data
         )
 
-        db.session.add(survey)
-        db.session.commit()
+        try:
+            db.session.add(survey)
+            db.session.commit()
 
-        # 설문 제출 추적
-        track_survey_submission(
-            form_type="002",
-            survey_id=survey.id,
-            form_data=all_form_data
-        )
+            # 🚀 RAW DATA 파일 생성 - 설문 제출마다 개별 파일 저장
+            try:
+                from utils.raw_data_exporter import export_survey_raw_data
+                
+                # JSON과 CSV 형태로 모두 저장
+                exported_files = export_survey_raw_data(
+                    survey_data=all_form_data,
+                    survey_id=survey.id,
+                    form_type="002",
+                    format_types=['json', 'csv']
+                )
+                
+                current_app.logger.info(f"✅ Raw data files created for survey {survey.id}: {exported_files}")
+                
+            except Exception as export_error:
+                # Raw data 저장 실패해도 설문 제출은 성공으로 처리
+                current_app.logger.warning(f"⚠️ Raw data export failed for survey {survey.id}: {str(export_error)}")
 
-        flash("신규 입사자 건강검진 양식이 성공적으로 제출되었습니다.", "success")
-        if kiosk_mode:
-            return redirect(url_for("survey.complete", id=survey.id, kiosk=1))
-        return redirect(url_for("survey.complete", id=survey.id))
+            # 설문 제출 추적
+            track_survey_submission(
+                form_type="002",
+                survey_id=survey.id,
+                form_data=all_form_data
+            )
+
+            flash("신규 입사자 건강검진 양식이 성공적으로 제출되었습니다.", "success")
+            if kiosk_mode:
+                return redirect(url_for("survey.complete", id=survey.id, kiosk=1))
+            return redirect(url_for("survey.complete", id=survey.id))
+
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Survey 002 submission error: {str(e)}")
+            flash(f"설문 제출 중 오류가 발생했습니다: {str(e)}", "error")
+            return redirect(url_for("survey.new_employee_health_checkup_form"))
 
     return render_template("survey/002_new_employee_health_checkup_form.html", kiosk_mode=kiosk_mode)
 
@@ -429,6 +472,29 @@ def musculoskeletal_program():
         try:
             db.session.add(survey)
             db.session.commit()
+
+            # 🚀 RAW DATA 파일 생성 - 설문 제출마다 개별 파일 저장
+            try:
+                from utils.raw_data_exporter import export_survey_raw_data
+                
+                # 분석 데이터 포함하여 저장
+                complete_data = all_form_data.copy()
+                complete_data['body_parts_analysis'] = body_part_data
+                complete_data['management_classification'] = management_classification
+                
+                # JSON과 CSV 형태로 모두 저장
+                exported_files = export_survey_raw_data(
+                    survey_data=complete_data,
+                    survey_id=survey.id,
+                    form_type="003",
+                    format_types=['json', 'csv']
+                )
+                
+                current_app.logger.info(f"✅ Raw data files created for survey {survey.id}: {exported_files}")
+                
+            except Exception as export_error:
+                # Raw data 저장 실패해도 설문 제출은 성공으로 처리
+                current_app.logger.warning(f"⚠️ Raw data export failed for survey {survey.id}: {str(export_error)}")
 
             flash("근골격계질환 예방관리 프로그램 조사표가 성공적으로 제출되었습니다.", "success")
             if kiosk_mode:
@@ -544,6 +610,33 @@ def musculoskeletal_program_enhanced():
         try:
             db.session.add(survey)
             db.session.commit()
+
+            # 🚀 RAW DATA 파일 생성 - 설문 제출마다 개별 파일 저장
+            try:
+                from utils.raw_data_exporter import export_survey_raw_data
+                
+                # 완전한 분석 데이터 포함하여 저장
+                complete_data = all_form_data.copy()
+                complete_data['body_parts_analysis'] = body_part_data
+                complete_data['work_environment_analysis'] = work_environment
+                complete_data['health_lifestyle_analysis'] = health_lifestyle
+                complete_data['management_classification'] = management_classification
+                complete_data['risk_score'] = risk_score
+                complete_data['form_version'] = 'enhanced_v1.0'
+                
+                # JSON과 CSV 형태로 모두 저장
+                exported_files = export_survey_raw_data(
+                    survey_data=complete_data,
+                    survey_id=survey.id,
+                    form_type="003",
+                    format_types=['json', 'csv']
+                )
+                
+                current_app.logger.info(f"✅ Raw data files created for survey {survey.id}: {exported_files}")
+                
+            except Exception as export_error:
+                # Raw data 저장 실패해도 설문 제출은 성공으로 처리
+                current_app.logger.warning(f"⚠️ Raw data export failed for survey {survey.id}: {str(export_error)}")
 
             flash("근골격계질환 예방관리 프로그램 조사표(완전판)가 성공적으로 제출되었습니다.", "success")
             if kiosk_mode:
@@ -882,6 +975,24 @@ def api_submit():
         db.session.add(survey)
         db.session.commit()
 
+        # 🚀 RAW DATA 파일 생성 - API 제출도 개별 파일 저장
+        try:
+            from utils.raw_data_exporter import export_survey_raw_data
+            
+            # JSON과 CSV 형태로 모두 저장
+            exported_files = export_survey_raw_data(
+                survey_data=data,
+                survey_id=survey.id,
+                form_type=form_type,
+                format_types=['json', 'csv']
+            )
+            
+            current_app.logger.info(f"✅ Raw data files created for API survey {survey.id}: {exported_files}")
+            
+        except Exception as export_error:
+            # Raw data 저장 실패해도 API 제출은 성공으로 처리
+            current_app.logger.warning(f"⚠️ Raw data export failed for API survey {survey.id}: {str(export_error)}")
+
         # 설문 제출 추적
         track_survey_submission(
             form_type=form_type,
@@ -899,6 +1010,7 @@ def api_submit():
                     "success": True,
                     "survey_id": survey.id,
                     "message": "제출이 완료되었습니다.",
+                    "raw_data_exported": True  # Raw data 저장 여부 표시
                 }
             ),
             201,
@@ -906,4 +1018,5 @@ def api_submit():
 
     except Exception as e:
         db.session.rollback()
+        current_app.logger.error(f"API submit error: {str(e)}")
         return jsonify({"error": str(e)}), 500

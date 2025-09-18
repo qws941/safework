@@ -1,0 +1,434 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Raw Data 관리 대시보드{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-database text-primary"></i> Raw Data 관리 대시보드</h2>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-success" onclick="createBackup()">
+                        <i class="fas fa-download"></i> 전체 백업
+                    </button>
+                    <button type="button" class="btn btn-warning" onclick="cleanupFiles()">
+                        <i class="fas fa-broom"></i> 파일 정리
+                    </button>
+                    <button type="button" class="btn btn-info" onclick="refreshStats()">
+                        <i class="fas fa-sync"></i> 새로고침
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 통계 카드들 -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5>전체 파일 수</h5>
+                            <h3 id="total-files">{{ stats.total_files }}</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-file fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5>JSON 파일</h5>
+                            <h3 id="json-files">{{ stats.by_format.json }}</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-code fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5>CSV 파일</h5>
+                            <h3 id="csv-files">{{ stats.by_format.csv }}</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-table fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5>총 용량 (MB)</h5>
+                            <h3 id="total-size">{{ "%.2f"|format(stats.total_size_mb) }}</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-hdd fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 폼별 통계 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-chart-bar"></i> 설문 폼별 통계</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for form_type, data in stats.by_form_type.items() %}
+                        <div class="col-md-4">
+                            <div class="card border-left-primary">
+                                <div class="card-body">
+                                    <h6>Form {{ form_type }}</h6>
+                                    <p class="mb-1"><strong>JSON:</strong> {{ data.json }}개</p>
+                                    <p class="mb-1"><strong>CSV:</strong> {{ data.csv }}개</p>
+                                    <p class="mb-0"><strong>총계:</strong> {{ data.total }}개</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 최근 생성된 파일들 -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5><i class="fas fa-clock"></i> 최근 생성된 파일 (최대 20개)</h5>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="viewAllFiles()">
+                        <i class="fas fa-list"></i> 전체 파일 보기
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>파일명</th>
+                                    <th>폼 타입</th>
+                                    <th>크기 (MB)</th>
+                                    <th>생성 시간</th>
+                                    <th>액션</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recent-files-tbody">
+                                {% for file in recent_files %}
+                                <tr>
+                                    <td>
+                                        <code>{{ file.name }}</code>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-primary">Form {{ file.form_type }}</span>
+                                    </td>
+                                    <td>{{ "%.3f"|format(file.size_mb) }}</td>
+                                    <td>
+                                        <small>{{ file.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            {% if file.name.endswith('.json') %}
+                                            <button type="button" class="btn btn-outline-info" 
+                                                    onclick="viewFile('form_{{ file.form_type }}/{{ file.name }}')">
+                                                <i class="fas fa-eye"></i> 미리보기
+                                            </button>
+                                            {% endif %}
+                                            <button type="button" class="btn btn-outline-success" 
+                                                    onclick="downloadFile('form_{{ file.form_type }}/{{ file.name }}')">
+                                                <i class="fas fa-download"></i> 다운로드
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        
+                        {% if not recent_files %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-inbox fa-2x mb-2"></i>
+                            <p>아직 생성된 raw data 파일이 없습니다.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 파일 미리보기 모달 -->
+<div class="modal fade" id="fileViewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">파일 미리보기</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="file-content-container">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="sr-only">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">닫기</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 파일 정리 모달 -->
+<div class="modal fade" id="cleanupModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">파일 정리</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="cleanup-form">
+                    <div class="form-group">
+                        <label for="cleanup-days">보존 기간 (일)</label>
+                        <input type="number" class="form-control" id="cleanup-days" 
+                               value="30" min="1" max="365">
+                        <small class="form-text text-muted">
+                            이 기간보다 오래된 파일들이 삭제됩니다.
+                        </small>
+                    </div>
+                    
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="dry-run" checked>
+                        <label class="form-check-label" for="dry-run">
+                            시뮬레이션 모드 (실제로 삭제하지 않음)
+                        </label>
+                    </div>
+                </form>
+                
+                <div id="cleanup-result" class="mt-3" style="display: none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">취소</button>
+                <button type="button" class="btn btn-warning" onclick="executeCleanup()">정리 실행</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function refreshStats() {
+    fetch('/api/raw-data/stats')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const stats = data.stats;
+                document.getElementById('total-files').textContent = stats.total_files;
+                document.getElementById('json-files').textContent = stats.by_format.json;
+                document.getElementById('csv-files').textContent = stats.by_format.csv;
+                document.getElementById('total-size').textContent = stats.total_size_mb.toFixed(2);
+                
+                showToast('통계가 새로고침되었습니다.', 'success');
+            }
+        })
+        .catch(error => {
+            console.error('Error refreshing stats:', error);
+            showToast('통계 새로고침 중 오류가 발생했습니다.', 'error');
+        });
+}
+
+function viewFile(filePath) {
+    $('#fileViewModal').modal('show');
+    document.getElementById('file-content-container').innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+        </div>
+    `;
+    
+    fetch(`/api/raw-data/view/${filePath}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('file-content-container').innerHTML = `
+                    <div class="mb-3">
+                        <h6>파일 정보</h6>
+                        <p><strong>파일명:</strong> ${data.file_info.name}</p>
+                        <p><strong>크기:</strong> ${data.file_info.size_mb} MB</p>
+                        <p><strong>생성일:</strong> ${new Date(data.file_info.created_at).toLocaleString()}</p>
+                    </div>
+                    <div>
+                        <h6>내용</h6>
+                        <pre><code>${JSON.stringify(data.content, null, 2)}</code></pre>
+                    </div>
+                `;
+            } else {
+                document.getElementById('file-content-container').innerHTML = `
+                    <div class="alert alert-danger">
+                        파일을 불러올 수 없습니다: ${data.error}
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error viewing file:', error);
+            document.getElementById('file-content-container').innerHTML = `
+                <div class="alert alert-danger">
+                    파일 로드 중 오류가 발생했습니다.
+                </div>
+            `;
+        });
+}
+
+function downloadFile(filePath) {
+    window.open(`/api/raw-data/download/${filePath}`, '_blank');
+}
+
+function viewAllFiles() {
+    // 전체 파일 목록 페이지로 이동 (추후 구현)
+    showToast('전체 파일 목록 기능은 준비 중입니다.', 'info');
+}
+
+function cleanupFiles() {
+    $('#cleanupModal').modal('show');
+    document.getElementById('cleanup-result').style.display = 'none';
+}
+
+function executeCleanup() {
+    const days = document.getElementById('cleanup-days').value;
+    const dryRun = document.getElementById('dry-run').checked;
+    
+    fetch('/api/raw-data/cleanup', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            days: parseInt(days),
+            dry_run: dryRun
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        const resultDiv = document.getElementById('cleanup-result');
+        if (data.success) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-${dryRun ? 'info' : 'success'}">
+                    <h6>${data.message}</h6>
+                    <p>삭제 대상 파일: ${data.total_files_deleted}개</p>
+                    <p>절약 공간: ${data.total_size_freed_mb} MB</p>
+                </div>
+            `;
+            
+            if (!dryRun) {
+                refreshStats();
+            }
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    오류가 발생했습니다: ${data.error}
+                </div>
+            `;
+        }
+        resultDiv.style.display = 'block';
+    })
+    .catch(error => {
+        console.error('Error during cleanup:', error);
+        const resultDiv = document.getElementById('cleanup-result');
+        resultDiv.innerHTML = `
+            <div class="alert alert-danger">
+                정리 작업 중 오류가 발생했습니다.
+            </div>
+        `;
+        resultDiv.style.display = 'block';
+    });
+}
+
+function createBackup() {
+    if (!confirm('전체 raw data 백업을 생성하시겠습니까?')) {
+        return;
+    }
+    
+    showToast('백업을 생성 중입니다...', 'info');
+    
+    fetch('/api/raw-data/backup', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(`백업이 성공적으로 생성되었습니다. (${data.backup_size_mb} MB)`, 'success');
+        } else {
+            showToast(`백업 생성 실패: ${data.error}`, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error creating backup:', error);
+        showToast('백업 생성 중 오류가 발생했습니다.', 'error');
+    });
+}
+
+function showToast(message, type) {
+    // 간단한 토스트 알림 (Bootstrap toast 또는 기타 알림 라이브러리 사용 가능)
+    const alertClass = type === 'success' ? 'alert-success' : 
+                      type === 'error' ? 'alert-danger' : 
+                      type === 'info' ? 'alert-info' : 'alert-warning';
+    
+    const toast = document.createElement('div');
+    toast.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    toast.innerHTML = `
+        ${message}
+        <button type="button" class="close" data-dismiss="alert">
+            <span>&times;</span>
+        </button>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.parentNode.removeChild(toast);
+        }
+    }, 5000);
+}
+</script>
+{% endblock %}
