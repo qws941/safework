@@ -77,7 +77,7 @@ def health_check():
         "environment": environment,
         "current_url": current_url,
         "config": flask_config,
-        "version": current_app.config.get('APP_VERSION', '3.0.1-watchtower-verification'),
+        "version": current_app.config.get('APP_VERSION', '3.0.1-emergency-recovery'),
         "services": services_status,
         "independent_deployment": {
             "postgres_container": services_status["database"] == "connected",
