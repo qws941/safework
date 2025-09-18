@@ -128,14 +128,8 @@ class DevelopmentConfig(Config):
 
     SQLALCHEMY_DATABASE_URI = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-    # PostgreSQL connection options for development
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        "pool_size": int(os.environ.get("DB_POOL_SIZE", 10)),
-        "pool_recycle": int(os.environ.get("DB_POOL_RECYCLE", 3600)),
-        "pool_pre_ping": os.environ.get("DB_POOL_PRE_PING", "true").lower() == "true",
-        "pool_timeout": int(os.environ.get("DB_POOL_TIMEOUT", 30)),
-        "echo": os.environ.get("DB_ECHO", "false").lower() == "true",
-    }
+    # PostgreSQL connection options for development - inherit from base Config
+    # No need to redefine SQLALCHEMY_ENGINE_OPTIONS as it's already in base Config class
 
     # CSRF 완전 비활성화 - 설문 테스트용 (환경변수에서 읽기)
     WTF_CSRF_ENABLED = os.environ.get("WTF_CSRF_ENABLED", "false").lower() == "true"
@@ -157,14 +151,8 @@ class ProductionConfig(Config):
 
     SQLALCHEMY_DATABASE_URI = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-    # PostgreSQL connection options for production
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        "pool_size": int(os.environ.get("DB_POOL_SIZE", 10)),
-        "pool_recycle": int(os.environ.get("DB_POOL_RECYCLE", 3600)),
-        "pool_pre_ping": os.environ.get("DB_POOL_PRE_PING", "true").lower() == "true",
-        "pool_timeout": int(os.environ.get("DB_POOL_TIMEOUT", 30)),
-        "echo": os.environ.get("DB_ECHO", "false").lower() == "true",
-    }
+    # PostgreSQL connection options for production - inherit from base Config
+    # No need to redefine SQLALCHEMY_ENGINE_OPTIONS as it's already in base Config class
 
     # Override with production values
     SECRET_KEY = os.environ.get("SECRET_KEY", "fallback-key-for-testing")
