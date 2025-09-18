@@ -130,11 +130,11 @@ class DevelopmentConfig(Config):
 
     # PostgreSQL connection options for development
     SQLALCHEMY_ENGINE_OPTIONS = {
-        "pool_size": DB_POOL_SIZE,
-        "pool_recycle": DB_POOL_RECYCLE,
-        "pool_pre_ping": DB_POOL_PRE_PING,
-        "pool_timeout": DB_POOL_TIMEOUT,
-        "echo": DB_ECHO,
+        "pool_size": int(os.environ.get("DB_POOL_SIZE", 10)),
+        "pool_recycle": int(os.environ.get("DB_POOL_RECYCLE", 3600)),
+        "pool_pre_ping": os.environ.get("DB_POOL_PRE_PING", "true").lower() == "true",
+        "pool_timeout": int(os.environ.get("DB_POOL_TIMEOUT", 30)),
+        "echo": os.environ.get("DB_ECHO", "false").lower() == "true",
     }
 
     # CSRF 완전 비활성화 - 설문 테스트용 (환경변수에서 읽기)
@@ -159,11 +159,11 @@ class ProductionConfig(Config):
 
     # PostgreSQL connection options for production
     SQLALCHEMY_ENGINE_OPTIONS = {
-        "pool_size": DB_POOL_SIZE,
-        "pool_recycle": DB_POOL_RECYCLE,
-        "pool_pre_ping": DB_POOL_PRE_PING,
-        "pool_timeout": DB_POOL_TIMEOUT,
-        "echo": DB_ECHO,
+        "pool_size": int(os.environ.get("DB_POOL_SIZE", 10)),
+        "pool_recycle": int(os.environ.get("DB_POOL_RECYCLE", 3600)),
+        "pool_pre_ping": os.environ.get("DB_POOL_PRE_PING", "true").lower() == "true",
+        "pool_timeout": int(os.environ.get("DB_POOL_TIMEOUT", 30)),
+        "echo": os.environ.get("DB_ECHO", "false").lower() == "true",
     }
 
     # Override with production values
