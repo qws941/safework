@@ -39,9 +39,9 @@ pre_deployment_checks() {
         error "Docker is not installed or not in PATH"
     fi
 
-    # Check Docker Compose
-    if ! command -v docker-compose &> /dev/null; then
-        error "Docker Compose is not installed or not in PATH"
+    # Check curl for Portainer API calls
+    if ! command -v curl &> /dev/null; then
+        error "curl is not installed or not in PATH"
     fi
 
     # Check registry access
@@ -107,26 +107,137 @@ push_containers() {
     log "✅ Container push completed"
 }
 
-# Deploy to target environment
+# Deploy to target environment using Portainer API
 deploy_environment() {
     local env_name=${1:-development}
-    log "🚀 Deploying to ${env_name} environment..."
+    log "🚀 Deploying to ${env_name} environment using Portainer API..."
 
-    # Load environment-specific configuration
-    if [[ -f "deployment/environments/${env_name}/.env" ]]; then
-        log "Loading environment configuration for ${env_name}..."
-        export $(cat deployment/environments/${env_name}/.env | grep -v '^#' | xargs)
-    else
-        warn "No environment configuration found for ${env_name}"
-    fi
+    # Stop existing containers if they exist
+    log "Stopping existing SafeWork containers..."
+    curl -s -X POST \
+        -H "X-API-Key: ${PORTAINER_API_KEY}" \
+        "https://portainer.jclee.me/api/endpoints/3/docker/containers/safework-app/stop" || true
+    curl -s -X POST \
+        -H "X-API-Key: ${PORTAINER_API_KEY}" \
+        "https://portainer.jclee.me/api/endpoints/3/docker/containers/safework-postgres/stop" || true
+    curl -s -X POST \
+        -H "X-API-Key: ${PORTAINER_API_KEY}" \
+        "https://portainer.jclee.me/api/endpoints/3/docker/containers/safework-redis/stop" || true
 
-    # Deploy using docker-compose
-    cd infrastructure
-    docker-compose pull
-    docker-compose up -d --remove-orphans
-    cd ..
+    # Remove existing containers
+    log "Removing existing SafeWork containers..."
+    curl -s -X DELETE \
+        -H "X-API-Key: ${PORTAINER_API_KEY}" \
+        "https://portainer.jclee.me/api/endpoints/3/docker/containers/safework-app?force=true" || true
+    curl -s -X DELETE \
+        -H "X-API-Key: ${PORTAINER_API_KEY}" \
+        "https://portainer.jclee.me/api/endpoints/3/docker/containers/safework-postgres?force=true" || true
+    curl -s -X DELETE \
+        -H "X-API-Key: ${PORTAINER_API_KEY}" \
+        "https://portainer.jclee.me/api/endpoints/3/docker/containers/safework-redis?force=true" || true
 
-    log "✅ Deployment to ${env_name} completed"
+    # Pull latest images via Portainer
+    log "Pulling latest images..."
+    curl -s -X POST \
+        -H "X-API-Key: ${PORTAINER_API_KEY}" \
+        -H "Content-Type: application/json" \
+        "https://portainer.jclee.me/api/endpoints/3/docker/images/create" \
+        -d "{\"fromImage\": \"${REGISTRY_HOST}/${PROJECT_NAME}/postgres:latest\"}"
+
+    curl -s -X POST \
+        -H "X-API-Key: ${PORTAINER_API_KEY}" \
+        -H "Content-Type: application/json" \
+        "https://portainer.jclee.me/api/endpoints/3/docker/images/create" \
+        -d "{\"fromImage\": \"${REGISTRY_HOST}/${PROJECT_NAME}/redis:latest\"}"
+
+    curl -s -X POST \
+        -H "X-API-Key: ${PORTAINER_API_KEY}" \
+        -H "Content-Type: application/json" \
+        "https://portainer.jclee.me/api/endpoints/3/docker/images/create" \
+        -d "{\"fromImage\": \"${REGISTRY_HOST}/${PROJECT_NAME}/app:latest\"}"
+
+    # Create and start containers via Portainer API
+    log "Creating PostgreSQL container..."
+    curl -s -X POST \
+        -H "X-API-Key: ${PORTAINER_API_KEY}" \
+        -H "Content-Type: application/json" \
+        "https://portainer.jclee.me/api/endpoints/3/docker/containers/create?name=safework-postgres" \
+        -d "{
+            \"Image\": \"${REGISTRY_HOST}/${PROJECT_NAME}/postgres:latest\",
+            \"Env\": [
+                \"POSTGRES_PASSWORD=${POSTGRES_PASSWORD}\",
+                \"POSTGRES_DB=${POSTGRES_DB}\",
+                \"POSTGRES_USER=${POSTGRES_USER}\",
+                \"TZ=Asia/Seoul\"
+            ],
+            \"HostConfig\": {
+                \"NetworkMode\": \"watchtower_default\",
+                \"RestartPolicy\": {\"Name\": \"unless-stopped\"}
+            },
+            \"Labels\": {
+                \"com.centurylinklabs.watchtower.enable\": \"true\"
+            }
+        }"
+
+    log "Creating Redis container..."
+    curl -s -X POST \
+        -H "X-API-Key: ${PORTAINER_API_KEY}" \
+        -H "Content-Type: application/json" \
+        "https://portainer.jclee.me/api/endpoints/3/docker/containers/create?name=safework-redis" \
+        -d "{
+            \"Image\": \"${REGISTRY_HOST}/${PROJECT_NAME}/redis:latest\",
+            \"Env\": [\"TZ=Asia/Seoul\"],
+            \"HostConfig\": {
+                \"NetworkMode\": \"watchtower_default\",
+                \"RestartPolicy\": {\"Name\": \"unless-stopped\"}
+            },
+            \"Labels\": {
+                \"com.centurylinklabs.watchtower.enable\": \"true\"
+            }
+        }"
+
+    log "Creating App container..."
+    curl -s -X POST \
+        -H "X-API-Key: ${PORTAINER_API_KEY}" \
+        -H "Content-Type: application/json" \
+        "https://portainer.jclee.me/api/endpoints/3/docker/containers/create?name=safework-app" \
+        -d "{
+            \"Image\": \"${REGISTRY_HOST}/${PROJECT_NAME}/app:latest\",
+            \"Env\": [
+                \"DB_HOST=safework-postgres\",
+                \"DB_NAME=${POSTGRES_DB}\",
+                \"DB_USER=${POSTGRES_USER}\",
+                \"DB_PASSWORD=${POSTGRES_PASSWORD}\",
+                \"REDIS_HOST=safework-redis\",
+                \"SECRET_KEY=${SECRET_KEY}\",
+                \"TZ=Asia/Seoul\"
+            ],
+            \"HostConfig\": {
+                \"NetworkMode\": \"watchtower_default\",
+                \"RestartPolicy\": {\"Name\": \"unless-stopped\"}
+            },
+            \"Labels\": {
+                \"com.centurylinklabs.watchtower.enable\": \"true\"
+            }
+        }"
+
+    # Start all containers
+    log "Starting containers..."
+    curl -s -X POST \
+        -H "X-API-Key: ${PORTAINER_API_KEY}" \
+        "https://portainer.jclee.me/api/endpoints/3/docker/containers/safework-postgres/start"
+
+    sleep 5  # Wait for postgres to initialize
+
+    curl -s -X POST \
+        -H "X-API-Key: ${PORTAINER_API_KEY}" \
+        "https://portainer.jclee.me/api/endpoints/3/docker/containers/safework-redis/start"
+
+    curl -s -X POST \
+        -H "X-API-Key: ${PORTAINER_API_KEY}" \
+        "https://portainer.jclee.me/api/endpoints/3/docker/containers/safework-app/start"
+
+    log "✅ Deployment to ${env_name} completed via Portainer API"
 }
 
 # Health checks with retry logic
@@ -135,11 +246,12 @@ health_checks() {
 
     local max_attempts=30
     local attempt=1
+    local health_url="https://safework.jclee.me/health"
 
     while [[ $attempt -le $max_attempts ]]; do
         log "Health check attempt $attempt/$max_attempts..."
 
-        if curl -f -s http://localhost:4545/health > /dev/null; then
+        if curl -f -s "${health_url}" > /dev/null; then
             log "✅ Health check passed"
             return 0
         fi
@@ -201,7 +313,7 @@ monitor_performance() {
     log "Redis Memory Usage: ${redis_memory}"
 
     # Check response times
-    local response_time=$(curl -o /dev/null -s -w '%{time_total}\n' http://localhost:4545/health)
+    local response_time=$(curl -o /dev/null -s -w '%{time_total}\n' https://safework.jclee.me/health)
     log "Health endpoint response time: ${response_time}s"
 
     if (( $(echo "$response_time > 1.0" | bc -l) )); then
