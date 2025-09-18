@@ -9,7 +9,7 @@ from flask_login import current_user, login_required
 
 # SurveyForm removed - using direct HTML forms now
 from models import AuditLog, Survey, Company, Process, Role, db
-from utils.activity_tracker import ActivityTracker, track_survey_submission, track_page_view, track_api_call
+# Activity tracking temporarily disabled due to missing module
 
 survey_bp = Blueprint("survey", __name__)
 
@@ -272,11 +272,7 @@ def musculoskeletal_symptom_survey():
                 current_app.logger.warning(f"⚠️ Raw data export failed for survey {survey.id}: {str(export_error)}")
 
             # 설문 제출 추적
-            track_survey_submission(
-                form_type="001",
-                survey_id=survey.id,
-                form_data=all_form_data
-            )
+            # track_survey_submission(form_type="001", survey_id=survey.id, form_data=all_form_data)
 
             # Redis에 캐시 - to_dict() 메서드 미정의로 인해 임시 비활성화
             # if hasattr(current_app, "redis"):
@@ -306,7 +302,7 @@ def musculoskeletal_symptom_survey():
         return redirect(url_for("survey.complete", id=survey.id))
 
     # 페이지 조회 추적
-    track_page_view("001_musculoskeletal_symptom_survey")
+    # track_page_view("001_musculoskeletal_symptom_survey")
     
     return render_template("survey/001_musculoskeletal_symptom_survey.html", kiosk_mode=kiosk_mode)
 
@@ -318,8 +314,9 @@ def new_employee_health_checkup_form():
     kiosk_mode = request.args.get('kiosk') == '1' or request.referrer is None or 'survey' not in (request.referrer or '')
 
     if request.method == 'GET':
-        track_page_view("002_new_employee_health_checkup_form")
-
+        # track_page_view("002_new_employee_health_checkup_form")
+        pass
+    
     if request.method == 'POST':
         # 기본적으로 익명 사용자 ID 1을 사용
         user_id = 1  # 익명 사용자
@@ -381,11 +378,7 @@ def new_employee_health_checkup_form():
                 current_app.logger.warning(f"⚠️ Raw data export failed for survey {survey.id}: {str(export_error)}")
 
             # 설문 제출 추적
-            track_survey_submission(
-                form_type="002",
-                survey_id=survey.id,
-                form_data=all_form_data
-            )
+            # track_survey_submission(form_type="002", survey_id=survey.id, form_data=all_form_data)
 
             flash("신규 입사자 건강검진 양식이 성공적으로 제출되었습니다.", "success")
             if kiosk_mode:
@@ -929,11 +922,7 @@ def view(id):
 def api_submit():
     """API를 통한 제출 (외부 시스템 연동용)"""
     # API 호출 추적
-    track_api_call(
-        endpoint="/survey/api/submit",
-        method="POST",
-        payload_size=len(request.get_data()) if request.get_data() else 0
-    )
+    # track_api_call(endpoint="/survey/api/submit", method="POST", payload_size=len(request.get_data()) if request.get_data() else 0)
     data = request.get_json()
 
     if not data:
@@ -994,11 +983,7 @@ def api_submit():
             current_app.logger.warning(f"⚠️ Raw data export failed for API survey {survey.id}: {str(export_error)}")
 
         # 설문 제출 추적
-        track_survey_submission(
-            form_type=form_type,
-            survey_id=survey.id,
-            form_data=data
-        )
+        # track_survey_submission(form_type=form_type, survey_id=survey.id, form_data=data)
 
         # 디버깅: 커밋 후 다시 조회해서 확인
         saved_survey = db.session.get(Survey, survey.id)

@@ -27,46 +27,61 @@ def admin_required(f):
     return decorated_function
 
 
-@raw_data_bp.route('/admin/raw-data/dashboard')
+@raw_data_bp.route('/dashboard')
 @login_required
 @admin_required
 def dashboard():
-    """Raw Data 관리 대시보드"""
+    """Raw Data 관리 대시보드 - 향상된 기능"""
     try:
-        exporter = RawDataExporter()
+        from utils.system_monitor import SystemMonitor
+        monitor = SystemMonitor()
         
-        # 파일 통계 정보 가져오기
-        stats = exporter.get_file_stats()
+        # 시스템 헬스체크
+        health_status = monitor.get_system_health()
         
-        # 최근 생성된 파일 목록 (최대 20개)
+        # 추가 통계 정보
+        from pathlib import Path
+        import os
+        
+        raw_data_path = Path(current_app.root_path) / 'raw_data'
+        
+        # 폼별 파일 수 계산
+        form_stats = {}
+        if raw_data_path.exists():
+            for form_dir in raw_data_path.iterdir():
+                if form_dir.is_dir() and form_dir.name.startswith('form_'):
+                    form_type = form_dir.name.replace('form_', '')
+                    file_count = len([f for f in form_dir.glob('*.json')])
+                    form_stats[form_type] = file_count
+        
+        # 최근 파일 목록
         recent_files = []
-        for form_type in ['001', '002', '003']:
-            form_dir = exporter.base_path / f'form_{form_type}'
-            if form_dir.exists():
-                files = list(form_dir.glob('*.json'))
-                files.sort(key=lambda x: x.stat().st_ctime, reverse=True)
-                
-                for file_path in files[:7]:  # 각 폼당 최대 7개
-                    file_stat = file_path.stat()
-                    recent_files.append({
-                        'name': file_path.name,
-                        'form_type': form_type,
-                        'size_mb': round(file_stat.st_size / (1024 * 1024), 3),
-                        'created_at': datetime.fromtimestamp(file_stat.st_ctime),
-                        'path': str(file_path)
-                    })
+        if raw_data_path.exists():
+            all_files = []
+            for file_path in raw_data_path.rglob('*.json'):
+                if not 'backups' in str(file_path):  # 백업 파일 제외
+                    all_files.append(file_path)
+            
+            # 수정 시간 기준 정렬
+            all_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+            
+            for file_path in all_files[:10]:  # 최근 10개
+                stat = file_path.stat()
+                recent_files.append({
+                    'name': file_path.name,
+                    'path': str(file_path.relative_to(raw_data_path)),
+                    'size_kb': round(stat.st_size / 1024, 2),
+                    'modified': datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S')
+                })
         
-        # 생성 시간 순으로 정렬
-        recent_files.sort(key=lambda x: x['created_at'], reverse=True)
-        recent_files = recent_files[:20]  # 최대 20개
-        
-        return render_template('admin/raw_data_dashboard.html', 
-                             stats=stats, 
+        return render_template('admin/raw_data_dashboard_enhanced.html', 
+                             health_status=health_status,
+                             form_stats=form_stats,
                              recent_files=recent_files)
-    
+                             
     except Exception as e:
-        current_app.logger.error(f"Raw data dashboard error: {str(e)}")
-        flash(f'대시보드 로드 중 오류가 발생했습니다: {str(e)}', 'error')
+        current_app.logger.error(f"Raw data dashboard error: {e}")
+        flash(f"대시보드 로드 중 오류가 발생했습니다: {str(e)}", "error")
         return redirect(url_for('admin.dashboard'))
 
 
@@ -227,111 +242,134 @@ def view_file(file_path):
         return jsonify({'error': str(e)}), 500
 
 
-@raw_data_bp.route('/api/raw-data/cleanup', methods=['POST'])
+@raw_data_bp.route('/api/cleanup', methods=['POST'])
 @login_required
 @admin_required
 def cleanup_old_files():
-    """오래된 Raw Data 파일 정리"""
+    """오래된 파일 정리 API - 강화된 기능"""
     try:
-        days = request.json.get('days', 30)  # 기본 30일
-        dry_run = request.json.get('dry_run', True)  # 기본적으로 시뮬레이션
+        from utils.file_manager import file_manager
         
-        exporter = RawDataExporter()
-        cutoff_date = datetime.now() - timedelta(days=days)
+        # 요청 데이터 파싱
+        data = request.get_json() or {}
+        days_to_keep = data.get('days_to_keep', 30)
+        dry_run = data.get('dry_run', False)
         
-        deleted_files = []
-        total_size_freed = 0
-        
-        # 각 폼 디렉토리에서 오래된 파일 찾기
-        for form_type in ['001', '002', '003']:
-            form_dir = exporter.base_path / f'form_{form_type}'
-            if form_dir.exists():
-                for file_path in form_dir.iterdir():
-                    if file_path.is_file():
-                        file_date = datetime.fromtimestamp(file_path.stat().st_ctime)
-                        if file_date < cutoff_date:
-                            file_size = file_path.stat().st_size
-                            deleted_files.append({
-                                'name': file_path.name,
-                                'path': str(file_path),
-                                'created_at': file_date.isoformat(),
-                                'size_mb': round(file_size / (1024 * 1024), 3)
-                            })
-                            total_size_freed += file_size
-                            
-                            if not dry_run:
-                                file_path.unlink()  # 실제 삭제
-        
-        result = {
-            'success': True,
-            'deleted_files': deleted_files,
-            'total_files_deleted': len(deleted_files),
-            'total_size_freed_mb': round(total_size_freed / (1024 * 1024), 2),
-            'dry_run': dry_run
-        }
-        
-        if dry_run:
-            result['message'] = f'{days}일 이전 파일 {len(deleted_files)}개 (총 {result["total_size_freed_mb"]}MB)가 삭제 대상입니다.'
-        else:
-            result['message'] = f'{len(deleted_files)}개 파일을 삭제했습니다. (총 {result["total_size_freed_mb"]}MB 절약)'
-            current_app.logger.info(f"Raw data cleanup: {len(deleted_files)} files deleted, {result['total_size_freed_mb']}MB freed")
+        # 파일 정리 실행
+        result = file_manager.cleanup_old_files(
+            days_to_keep=days_to_keep,
+            dry_run=dry_run
+        )
         
         return jsonify(result)
-    
+        
     except Exception as e:
-        current_app.logger.error(f"파일 정리 오류: {str(e)}")
+        current_app.logger.error(f"Cleanup API error: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
         }), 500
 
 
-@raw_data_bp.route('/api/raw-data/backup', methods=['POST'])
+@raw_data_bp.route('/api/backup', methods=['POST'])
 @login_required
 @admin_required
 def create_backup():
-    """전체 Raw Data 백업 생성"""
+    """백업 생성 API - 강화된 기능"""
     try:
-        import shutil
-        import tempfile
-        from datetime import datetime
+        from utils.file_manager import file_manager
         
-        exporter = RawDataExporter()
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        # 요청 데이터 파싱
+        data = request.get_json() or {}
+        backup_type = data.get('backup_type', 'manual')
         
-        # 임시 백업 디렉토리 생성
-        backup_name = f'safework_rawdata_backup_{timestamp}'
+        # 백업 생성
+        result = file_manager.create_backup(backup_type=backup_type)
         
-        with tempfile.TemporaryDirectory() as temp_dir:
-            backup_path = Path(temp_dir) / backup_name
-            
-            # 전체 raw_data 디렉토리 복사
-            shutil.copytree(exporter.base_path, backup_path)
-            
-            # ZIP 파일로 압축
-            zip_path = Path(temp_dir) / f'{backup_name}.zip'
-            shutil.make_archive(str(zip_path.with_suffix('')), 'zip', temp_dir, backup_name)
-            
-            # 백업 디렉토리에 저장
-            final_backup_dir = exporter.base_path / 'backups'
-            final_backup_dir.mkdir(exist_ok=True)
-            final_backup_path = final_backup_dir / f'{backup_name}.zip'
-            
-            shutil.move(str(zip_path), str(final_backup_path))
-            
-            backup_size = final_backup_path.stat().st_size
-            
-            current_app.logger.info(f"Raw data backup created: {final_backup_path}")
-            
-            return jsonify({
-                'success': True,
-                'backup_file': str(final_backup_path),
-                'backup_size_mb': round(backup_size / (1024 * 1024), 2),
-                'message': f'백업이 성공적으로 생성되었습니다: {backup_name}.zip'
-            })
-    
+        return jsonify(result)
+        
     except Exception as e:
-        current_app.logger.error(f"백업 생성 오류: {str(e)}")
+        current_app.logger.error(f"Backup API error: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@raw_data_bp.route('/api/integrity-check', methods=['POST'])
+@login_required
+@admin_required
+def integrity_check():
+    """파일 무결성 검증 API"""
+    try:
+        from utils.file_manager import file_manager
+        
+        result = file_manager.verify_file_integrity()
+        return jsonify(result)
+        
+    except Exception as e:
+        current_app.logger.error(f"Integrity check API error: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@raw_data_bp.route('/api/storage-usage', methods=['GET'])
+@login_required
+@admin_required
+def storage_usage():
+    """스토리지 사용량 조회 API"""
+    try:
+        from utils.file_manager import file_manager
+        
+        result = file_manager.get_storage_usage()
+        return jsonify(result)
+        
+    except Exception as e:
+        current_app.logger.error(f"Storage usage API error: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@raw_data_bp.route('/api/system-health', methods=['GET'])
+@login_required
+@admin_required
+def system_health():
+    """시스템 헬스체크 API"""
+    try:
+        from utils.system_monitor import SystemMonitor
+        
+        monitor = SystemMonitor()
+        health_status = monitor.get_system_health()
+        
+        return jsonify(health_status)
+        
+    except Exception as e:
+        current_app.logger.error(f"System health API error: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@raw_data_bp.route('/api/archive', methods=['POST'])
+@login_required
+@admin_required
+def create_archive():
+    """파일 아카이브 생성 API"""
+    try:
+        from utils.file_manager import file_manager
+        
+        data = request.get_json() or {}
+        days_to_archive = data.get('days_to_archive', 90)
+        
+        result = file_manager.archive_old_files(days_to_archive=days_to_archive)
+        return jsonify(result)
+        
+    except Exception as e:
+        current_app.logger.error(f"Archive API error: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
