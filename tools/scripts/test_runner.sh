@@ -1,7 +1,14 @@
 #!/bin/bash
 
-# SafeWork2 종합 테스트 실행기 (Comprehensive Test Runner)
+# SafeWork 종합 테스트 실행기 (Comprehensive Test Runner)
 # 목적: 배포 전 전체 시스템 테스트 자동화
+# 
+# DEPRECATED: 이 스크립트는 더 이상 사용되지 않습니다.
+# 새로운 통합 검증 시스템을 사용하세요: ./tools/scripts/safework_validator_v2.sh
+# 
+# 마이그레이션 가이드:
+# - 기존: ./tools/scripts/test_runner.sh
+# - 신규: ./tools/scripts/safework_validator_v2.sh
 
 set -e
 

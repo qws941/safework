@@ -1,7 +1,14 @@
 #!/bin/bash
 
-# SafeWork2 파이프라인 검증기 (Pipeline Validator)
+# SafeWork 파이프라인 검증기 (Pipeline Validator)
 # 목적: GitHub Actions 파이프라인 및 전체 CI/CD 검증
+# 
+# DEPRECATED: 이 스크립트는 더 이상 사용되지 않습니다.
+# 새로운 통합 검증 시스템을 사용하세요: ./tools/scripts/safework_validator_v2.sh
+# 
+# 마이그레이션 가이드:
+# - 기존: ./tools/scripts/pipeline_validator.sh
+# - 신규: ./tools/scripts/safework_validator_v2.sh
 
 set -e
 

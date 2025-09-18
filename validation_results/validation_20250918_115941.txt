@@ -1,0 +1,48 @@
+SafeWork Enhanced Validation Results - 20250918_115941
+==================================================
+총 테스트: 39
+성공: 31
+경고: 8
+실패: 0
+성공률: 79%
+
+상세 결과:
+services_database_data: PASS:설문 데이터 8 건 확인
+environment_jq_available: PASS:jq 명령어 사용 가능
+services_database_connection: PASS:PostgreSQL 연결 성공
+containers_safework-redis_labels: WARNING:구 라벨 시스템 사용 중
+environment_docker_installed: PASS:Docker 27.5.1 설치됨
+security_safework-postgres_restart_policy: PASS:재시작 정책: unless-stopped
+security_DB_HOST_set: PASS:환경 변수 설정됨
+security_safework-redis_restart_policy: PASS:재시작 정책: unless-stopped
+containers_safework-postgres_labels: WARNING:구 라벨 시스템 사용 중
+security_SECRET_KEY_set: PASS:환경 변수 설정됨
+containers_safework-postgres_network: WARNING:구 네트워크 사용 중
+network_safework_network_exists: PASS:safework_network 존재 (driver: bridge)
+performance_safework-app_memory: PASS:메모리 사용량: 135.2MB
+security_safework-app_restart_policy: PASS:재시작 정책: unless-stopped
+services_api_health: PASS:API 헬스체크 성공
+security_port_4547_binding: PASS:포트 4547 바인딩됨
+network_network_configuration: PASS:네트워크 설정 확인 (subnet: 172.19.0.0/16)
+environment_docker_service: PASS:Docker 서비스 정상 실행 중
+services_redis_connection: PASS:Redis 연결 성공
+performance_api_response_time: PASS:응답 시간: 6ms
+containers_safework-app_status: PASS:실행 중 (health: healthy)
+security_ADMIN_PASSWORD_set: PASS:환경 변수 설정됨
+deployment_watchtower_cleanup: WARNING:Watchtower 워크플로우 잔존
+containers_safework-app_labels: WARNING:구 라벨 시스템 사용 중
+deployment_direct_deploy_script: PASS:새 배포 스크립트 사용 가능
+containers_safework-postgres_status: PASS:실행 중 (health: healthy)
+deployment_github_workflows: PASS:GitHub Actions 워크플로우 10 개 확인
+environment_git_available: PASS:git 명령어 사용 가능
+environment_curl_available: PASS:curl 명령어 사용 가능
+performance_safework-postgres_memory: PASS:메모리 사용량: 24.5MB
+performance_safework-redis_memory: PASS:메모리 사용량: 11.15MB
+security_port_4545_binding: PASS:포트 4545 바인딩됨
+services_api_functionality: PASS:API 기능 테스트 성공
+containers_safework-app_network: WARNING:구 네트워크 사용 중
+network_watchtower_network_status: WARNING:watchtower_default 여전히 존재 (컨테이너: 3개)
+security_DB_NAME_set: PASS:환경 변수 설정됨
+containers_safework-redis_status: PASS:실행 중 (health: healthy)
+containers_safework-redis_network: WARNING:구 네트워크 사용 중
+security_port_4546_binding: PASS:포트 4546 바인딩됨
