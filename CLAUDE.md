@@ -29,7 +29,7 @@ SafeWork is an industrial health and safety management system built with Flask 3
 ```bash
 # 🚀 Deployment & Status (Makefile shortcuts)
 make deploy                                         # Trigger GitHub Actions deployment
-make status                                         # Check deployment status  
+make status                                         # Check deployment status
 make health                                         # System health check
 make monitor                                        # Complete system overview
 
@@ -39,7 +39,7 @@ make logs-errors                                    # Filter error logs only
 make portainer                                      # Advanced Portainer management (interactive)
 make portainer-monitor                              # Resource monitoring
 
-# 🧪 Testing & Validation  
+# 🧪 Testing & Validation
 make test                                           # Run comprehensive tests
 make test-api                                       # Test API endpoints
 make validate                                       # Validate CI/CD pipeline
@@ -53,7 +53,7 @@ make db-backup                                      # Create database backup
 
 # 🔧 Code Quality
 make format                                         # Format code with Black
-make lint                                          # Lint code with Flake8  
+make lint                                          # Lint code with Flake8
 make check                                         # Run both format and lint
 
 # 🐳 Container Management
@@ -62,16 +62,15 @@ make up                                            # Start development environme
 make down                                          # Stop development environment
 make restart                                       # Restart all services
 
-# 📊 Volume Management (NEW)
-./tools/scripts/volume_manager.sh status          # Check volume status
-./tools/scripts/volume_manager.sh backup          # Backup all data
-./tools/scripts/volume_manager.sh verify          # Verify data integrity
+# 📊 Volume Management
+./scripts/volume_manager.sh status          # Check volume status
+./scripts/volume_manager.sh backup          # Backup all data
+./scripts/volume_manager.sh verify          # Verify data integrity
 ```
 
 ### Container Deployment via GitHub Actions CI/CD
 
 **✅ PRODUCTION CONTAINER NAMING**: Verified production uses `safework-*` naming scheme (app, postgres, redis)
-**✅ CURRENT PRODUCTION STATUS**: All containers healthy and operational (11+ hours uptime - verified September 2024)
 
 **Production Deployment Process:**
 1. **Push to master branch** → Triggers GitHub Actions workflow
@@ -91,101 +90,54 @@ git push origin master
 # 3. Pull latest images and restart containers via Portainer API
 # 4. Monitor deployment success via health checks
 
-# Production health verification (September 2024)
+# Production health verification
 curl -s https://safework.jclee.me/health
 # Response: {"service":"safework","status":"healthy","timestamp":"2025-09-17T10:09:15.655985"}
 ```
 
-### Unified Operations Management (NEW - September 2024)
+### Unified Operations Management
 ```bash
 # 🚀 UNIFIED SAFEWORK OPERATIONS SCRIPT - One command for all operations
-# Replaces 8+ individual scripts with single comprehensive interface
 ./scripts/safework_ops_unified.sh [COMMAND] [OPTIONS]
 
 # 📊 DEPLOYMENT COMMANDS
 ./scripts/safework_ops_unified.sh deploy status           # Show all container status + production health
 ./scripts/safework_ops_unified.sh deploy github          # Trigger GitHub Actions deployment
-./scripts/safework_ops_unified.sh deploy local           # Run local deployment (calls integrated_build_deploy.sh)
+./scripts/safework_ops_unified.sh deploy local           # Run local deployment
 
 # 📋 LOG MANAGEMENT COMMANDS
-./scripts/safework_ops_unified.sh logs live [container] [lines]    # Real-time log streaming (default: safework-app, 50 lines)
-./scripts/safework_ops_unified.sh logs recent [container] [lines]  # Recent logs (default: all, 20 lines)
+./scripts/safework_ops_unified.sh logs live [container] [lines]    # Real-time log streaming
+./scripts/safework_ops_unified.sh logs recent [container] [lines]  # Recent logs
 ./scripts/safework_ops_unified.sh logs errors [container]          # Filter error logs only
 
-# 🔍 MONITORING COMMANDS  
+# 🔍 MONITORING COMMANDS
 ./scripts/safework_ops_unified.sh monitor overview        # Complete system overview with container info
 ./scripts/safework_ops_unified.sh monitor health          # Comprehensive health check with scoring
 ./scripts/safework_ops_unified.sh monitor performance     # Performance metrics and resource usage
-./scripts/safework_ops_unified.sh monitor security        # Security status and vulnerability check
 
 # 🛠️ UTILITY COMMANDS
 ./scripts/safework_ops_unified.sh utils containers        # List all SafeWork containers
 ./scripts/safework_ops_unified.sh utils cleanup           # Clean up stopped containers and unused images
 ./scripts/safework_ops_unified.sh utils backup            # Backup database and configurations
 ./scripts/safework_ops_unified.sh utils restore [file]    # Restore from backup file
-
-# EXAMPLES - Common workflow patterns:
-# 1. Check system status before deployment
-./scripts/safework_ops_unified.sh monitor health && \
-./scripts/safework_ops_unified.sh deploy github
-
-# 2. Monitor deployment progress
-./scripts/safework_ops_unified.sh deploy status && \
-./scripts/safework_ops_unified.sh logs live safework-app
-
-# 3. Troubleshoot production issues
-./scripts/safework_ops_unified.sh logs errors all && \
-./scripts/safework_ops_unified.sh monitor health
-
-# 4. Complete system maintenance
-./scripts/safework_ops_unified.sh utils backup && \
-./scripts/safework_ops_unified.sh utils cleanup && \
-./scripts/safework_ops_unified.sh monitor overview
-
-# KEY BENEFITS:
-# ✅ Unified interface replacing 8+ separate scripts
-# ✅ Color-coded output with status indicators
-# ✅ Portainer API integration for real-time data  
-# ✅ Korean language support for operational messages
-# ✅ Error handling and debug mode (DEBUG=1)
-# ✅ Production-ready with comprehensive logging
-# ✅ GitHub Actions integration for CI/CD workflows
 ```
 
 ### System Validation & Deployment Verification
 ```bash
-# NEW: Automated system validation (added September 2024)
-./scripts/pipeline_validator.sh        # Complete CI/CD pipeline validation (76% ready)
-./scripts/test_runner.sh              # Comprehensive automated testing (67% passing - 12/18 tests)
+# Automated system validation
+./scripts/pipeline_validator.sh        # Complete CI/CD pipeline validation
+./scripts/test_runner.sh              # Comprehensive automated testing
 ./scripts/integrated_build_deploy.sh  # Unified build and deployment
-
-# Current validation results (September 2024):
-# ✅ Core functionality: All Docker builds, API endpoints, Redis working
-# ✅ Production endpoints: Health API, main site, survey forms all responding
-# ⚠️ Code quality: Black/Flake8 formatting needed (non-critical)
-# ⚠️ PostgreSQL test connectivity: Intermittent (production stable)
 
 # Deployment verification commands
 ./scripts/integrated_build_deploy.sh status  # Current system status check
 ./scripts/portainer_simple.sh status         # Production container health via Portainer API
 
 # Comprehensive deployment verification
-# 1. Run pipeline validation
-./scripts/pipeline_validator.sh              # Validates CI/CD readiness
-# 2. Execute test suite
-./scripts/test_runner.sh                     # Tests code quality, containers, APIs
-# 3. Verify production endpoints
 curl -s https://safework.jclee.me/health | jq .  # Health endpoint check
 curl -s -X POST https://safework.jclee.me/survey/api/submit \
   -H "Content-Type: application/json" \
   -d '{"form_type":"001","name":"테스트","age":30}' # API functionality test
-
-# VERIFICATION RESULTS (September 2024):
-# ✅ Production endpoints: All functional and verified
-# ✅ Database connectivity: PostgreSQL working with API submissions
-# ✅ Container health: All services running in healthy state
-# ⚠️ Code quality: Formatting improvements needed (non-critical)
-# ⚠️ Security: Hardcoded passwords should use environment variables
 ```
 
 ### Manual Container Setup (Development Only)
@@ -196,29 +148,19 @@ docker pull registry.jclee.me/safework/postgres:latest
 docker pull registry.jclee.me/safework/redis:latest
 
 # Start PostgreSQL with KST timezone and automated schema migration
-docker run -d --name safework2-postgres --network safework_network -p 4546:5432 \
+docker run -d --name safework-postgres --network safework_network -p 4546:5432 \
   -e TZ=Asia/Seoul -e POSTGRES_PASSWORD=safework2024 -e POSTGRES_DB=safework_db -e POSTGRES_USER=safework \
   registry.jclee.me/safework/postgres:latest
 
 # Start Redis with clean state
-docker run -d --name safework2-redis --network safework_network -p 4547:6379 \
+docker run -d --name safework-redis --network safework_network -p 4547:6379 \
   -e TZ=Asia/Seoul \
   registry.jclee.me/safework/redis:latest
 
 # Start application with correct database name (safework_db) and KST timezone
-docker run -d --name safework2-app --network safework_network -p 4545:4545 \
-  -e TZ=Asia/Seoul -e DB_HOST=safework2-postgres -e DB_NAME=safework_db -e DB_USER=safework \
-  -e DB_PASSWORD=safework2024 -e REDIS_HOST=safework2-redis \
-  registry.jclee.me/safework/app:latest
-
-# Container management
-docker logs -f safework2-app            # View application logs
-docker ps                              # Check running containers
-docker stop safework2-app safework2-postgres safework2-redis  # Stop all services
-
-# Development with code changes (mount local code)
-docker run -d --name safework2-app-dev --network safework_network -p 4545:4545 \
-  -v $(pwd)/app:/app -e FLASK_ENV=development \
+docker run -d --name safework-app --network safework_network -p 4545:4545 \
+  -e TZ=Asia/Seoul -e DB_HOST=safework-postgres -e DB_NAME=safework_db -e DB_USER=safework \
+  -e DB_PASSWORD=safework2024 -e REDIS_HOST=safework-redis \
   registry.jclee.me/safework/app:latest
 ```
 
@@ -240,168 +182,10 @@ grep -r "print(" . --include="*.py"    # Find debug prints
 grep -r "TODO\|FIXME" . --include="*.py"  # Find TODOs
 ```
 
-### Legacy Production Monitoring & Log Analysis Scripts
-```bash
-# LEGACY: Individual scripts (replaced by unified script - use safework_ops_unified.sh instead)
-./scripts/simple_production_query.sh           # Quick production status check
-./scripts/production_query_advanced.sh         # Detailed production analysis
-./scripts/portainer_production_logs.sh         # Production log analysis
-
-# Container management shortcuts
-./scripts/portainer_simple.sh status           # Container health overview
-./scripts/portainer_simple.sh logs safework2-app # View app container logs
-./scripts/portainer_simple.sh network          # Network configuration check
-./scripts/portainer_simple.sh                  # Show all SafeWork container info
-./scripts/portainer_simple.sh running          # List only running containers
-
-# Detailed monitoring script
-./scripts/portainer_queries.sh         # Comprehensive container analysis
-
-# Emergency recovery scripts (CRITICAL for production issues)
-./scripts/emergency_deploy.sh          # Emergency deployment with rollback
-./scripts/emergency_recovery.sh        # System-wide emergency recovery
-./scripts/system_status_report.sh      # Comprehensive system health report
-./scripts/direct_container_start.sh    # Direct container startup bypass
-
-# NEW: Integrated automation scripts (통합 자동화 스크립트)
-./scripts/integrated_build_deploy.sh   # 통합 빌드 및 배포 스크립트
-./scripts/test_runner.sh               # 종합 테스트 실행기
-./scripts/pipeline_validator.sh        # 파이프라인 검증기
-
-# Scripts automatically filter SafeWork containers and provide clean output
-# No need to remember complex API calls or JSON parsing
-```
-
-### GitHub Actions Workflows
-```bash
-# Current active workflows (verified):
-- deploy.yml                    # Main production deployment
-- claude-mcp-assistant.yml      # AI-powered issue analysis with MCP
-- maintenance-automation.yml    # System maintenance tasks
-- operational-log-analysis.yml  # Real-time log monitoring
-- operational-monitoring.yml    # Extended monitoring capabilities
-- security-auto-triage.yml      # Security scanning
-- issue-handler.yml             # Intelligent issue management
-- dependency-auto-update.yml    # Dependency management
-- fix-postgres-watchtower-labels.yml  # PostgreSQL Watchtower labels fix
-- claude-assistant.yml          # Additional Claude assistant workflow
-
-# All workflows use PostgreSQL 15+ and Portainer API deployment
-# Workflows automatically handle container recreation and health monitoring
-```
-
-### GitHub Actions & Claude AI Integration
-```bash
-# Trigger Claude AI assistance in issues or PRs
-# Simply mention @claude in any issue comment or PR discussion
-
-# Check workflow status
-gh run list --limit 10                 # View recent workflow runs
-gh workflow list                       # List all workflows
-gh run watch <run-id>                  # Watch specific workflow execution
-
-# Manual workflow triggers
-gh workflow run "🔄 Dependency Auto-Update" --ref master
-gh workflow run "📊 Operational Log Analysis" --ref master
-gh workflow run "🤖 CI Auto-Fix" --ref master
-
-# Issue management with Claude
-gh issue create --title "Bug: Description" --body "@claude Please analyze this issue"
-gh issue comment <issue-number> --body "@claude Please help with this problem"
-
-# View Claude analysis results
-gh issue view <issue-number>           # See Claude's issue analysis
-gh pr view <pr-number>                 # See Claude's PR review
-```
-
-### Workflow Development & Debugging
-```bash
-# Test workflow syntax locally
-cd .github/workflows
-yamllint *.yml                         # Validate YAML syntax
-
-# Check workflow file changes
-git diff HEAD~1 .github/workflows/     # See recent workflow changes
-git log --oneline .github/workflows/   # Workflow change history
-
-# Debug failed workflows
-gh run view <run-id> --log             # View detailed logs
-gh run download <run-id>               # Download artifacts
-```
-
-### Testing Commands
-```bash
-# 🚀 UNIFIED TESTING & VALIDATION (NEW - September 2024)
-# Use unified operations script for all testing and validation
-./scripts/safework_ops_unified.sh monitor health          # Comprehensive health check
-./scripts/safework_ops_unified.sh monitor performance     # Performance validation
-./scripts/safework_ops_unified.sh logs errors all         # Error log analysis
-./scripts/safework_ops_unified.sh deploy status           # Deployment status validation
-
-# Traditional testing suite
-./scripts/test_runner.sh               # 전체 시스템 테스트 실행 (7/18 passing as of validation)
-./scripts/pipeline_validator.sh        # CI/CD 파이프라인 검증 (68% ready as of validation)
-
-# Known test failures (September 2024):
-# - Python/Black/Flake8 commands not found in CI environment
-# - Container startup tests failing (registry authentication)
-# - Hardcoded password security checks failing
-# - Performance tests missing 'bc' command
-
-# Legacy: Manual code quality checks
-cd app
-black .                                 # Format code with Black
-flake8 .                               # Lint code with Flake8
-python -m py_compile *.py              # Syntax validation
-
-# Manual testing via health endpoints and API calls:
-curl http://localhost:4545/health       # Test application health (✅ Working locally)
-curl -X POST http://localhost:4545/survey/api/submit \
-  -H "Content-Type: application/json" \
-  -d '{"form_type": "001", "name": "테스트"}'  # Test survey API
-
-# Container-based verification (adjust container names based on current deployment)
-docker exec -it safework-app python -c "
-from app import create_app
-from models import Survey, db
-app = create_app()
-with app.app_context():
-    print(f'Survey count: {Survey.query.count()}')
-"
-```
-
-### Integrated Build & Deployment (통합 빌드 및 배포)
-```bash
-# 🚀 RECOMMENDED: Use unified operations script for all deployment tasks
-./scripts/safework_ops_unified.sh deploy github           # GitHub Actions deployment
-./scripts/safework_ops_unified.sh deploy local            # Local deployment
-./scripts/safework_ops_unified.sh deploy status           # Deployment status check
-
-# Legacy: Individual deployment commands
-./scripts/integrated_build_deploy.sh full     # 전체 빌드 및 배포
-./scripts/integrated_build_deploy.sh build    # 빌드만
-./scripts/integrated_build_deploy.sh deploy   # 배포만
-./scripts/integrated_build_deploy.sh status   # 현재 상태 확인
-./scripts/integrated_build_deploy.sh logs     # 컨테이너 로그 확인
-./scripts/integrated_build_deploy.sh rollback # 이전 버전으로 롤백
-./scripts/integrated_build_deploy.sh help     # 도움말
-
-# Comprehensive testing before deployment
-./scripts/test_runner.sh                      # 배포 전 종합 테스트
-
-# Pipeline validation
-./scripts/pipeline_validator.sh               # CI/CD 파이프라인 검증
-
-# Complete automation workflow (완전 자동화 워크플로우)
-./scripts/pipeline_validator.sh && \          # 1. 파이프라인 검증
-./scripts/test_runner.sh && \                 # 2. 종합 테스트
-./scripts/integrated_build_deploy.sh full     # 3. 전체 배포
-```
-
 ### Database Management
 ```bash
 # Enter app container
-docker exec -it safework2-app bash
+docker exec -it safework-app bash
 
 # Migration commands (inside container)
 python migrate.py status               # Check migration status
@@ -409,11 +193,11 @@ python migrate.py migrate              # Apply migrations
 python migrate.py create "Description" # Create new migration
 
 # Database inspection (PostgreSQL)
-docker exec -it safework2-postgres psql -U safework -d safework_db -c "\dt;"
-docker exec -it safework2-postgres psql -U safework -d safework_db -c "\d surveys;"
+docker exec -it safework-postgres psql -U safework -d safework_db -c "\dt;"
+docker exec -it safework-postgres psql -U safework -d safework_db -c "\d surveys;"
 
 # Check specific survey data
-docker exec -it safework2-postgres psql -U safework -d safework_db -c "SELECT id, name, form_type, responses FROM surveys ORDER BY id DESC LIMIT 5;"
+docker exec -it safework-postgres psql -U safework -d safework_db -c "SELECT id, name, form_type, responses FROM surveys ORDER BY id DESC LIMIT 5;"
 ```
 
 ### API Testing & Debugging
@@ -443,7 +227,7 @@ curl http://localhost:4545/health              # Application health
 curl https://safework.jclee.me/health         # Production health
 
 # Verify database connectivity from container (SQLAlchemy 2.0 compatible)
-docker exec -it safework2-app python -c "
+docker exec -it safework-app python -c "
 from app import create_app
 from models import Survey, db
 app = create_app()
@@ -468,13 +252,13 @@ with app.app_context():
 
 ## Architecture Overview
 
-### Flask Application Factory (app/app.py)
+### Flask Application Factory (src/app/app.py)
 ```python
 def create_app(config_name=None):
     # Factory pattern with config-based initialization
     # Extensions: SQLAlchemy, Flask-Login, Flask-Migrate, Redis
     # CSRF: Currently disabled (WTF_CSRF_ENABLED = False)
-    # Blueprints: 8+ modular route handlers auto-registered
+    # Blueprints: 15+ modular route handlers auto-registered
     # System uptime tracking and version management via Git
     # Context processors for template globals and URL routing
 
@@ -505,24 +289,24 @@ def create_app(config_name=None):
 - KST timezone enforcement across all containers
 
 ### Model Architecture & Database Design
-**Core Models (models.py):**
+**Core Models (src/app/models.py):**
 - `User`: Flask-Login authentication integration
-- `Survey`: Unified table for 001/002 forms using `form_type` discriminator + JSON `data` field
+- `Survey`: Unified table for 001/002 forms using `form_type` discriminator + JSON `responses` field
 - `AuditLog`: System activity tracking
 - `kst_now()`: Consistent KST timezone function for all timestamps
 
-**SafeWork Models (models_safework.py + models_safework_v2.py):**
+**SafeWork Models (src/app/models_safework.py + models_safework_v2.py):**
 - 13+ specialized tables: `safework_workers`, `safework_health_checks`, `safework_medications`, etc.
 - Industrial safety management domain models
 
-**Document Models (models_document.py):**
+**Document Models (src/app/models_document.py):**
 - `Document`, `DocumentVersion`, `DocumentAccessLog`: Version control with access tracking
 
 **Key Database Patterns:**
 ```sql
 -- Survey system with discriminator
 surveys.form_type = '001' | '002'  -- Form type identifier
-surveys.responses (JSON)           -- Flexible form field storage (MySQL JSON, PostgreSQL JSONB)
+surveys.responses (JSONB)          -- Flexible form field storage (PostgreSQL JSONB)
 
 -- Anonymous submissions
 user_id = 1  -- Special user for anonymous form submissions
@@ -531,29 +315,12 @@ user_id = 1  -- Special user for anonymous form submissions
 created_at = kst_now()  -- Always use KST timezone
 ```
 
-**Critical Survey Model Fields (for API endpoints):**
-The Survey model uses **minimal essential columns only** - optimized for database compatibility:
-```python
-# Essential fields (September 2024 Schema Optimization)
-user_id, form_type, name, age, gender
-department, position, employee_id
-years_of_service, employee_number
-work_years, work_months, has_symptoms
-status, created_at, updated_at
-responses  # JSON field for all additional data
-
-# Schema Optimization Notes:
-# - Removed problematic columns: hire_date, submission_date, employment_type
-# - All extended data stored in JSON responses field
-# - Minimal model prevents database column mismatch errors
-# - Flexible JSON storage for 001/002 form variations
-```
-
 ### Flask Route Architecture
 ```
-app/routes/
+src/app/routes/
 ├── __init__.py              # Route package initialization
 ├── admin.py                 # 13 SafeWork admin panels + main admin dashboard
+├── admin_legacy.py          # Legacy admin routes (deprecated)
 ├── api_safework_v2.py       # RESTful API v2 endpoints for external systems
 ├── api_safework.py          # Legacy API endpoints
 ├── survey.py                # 001/002 form handling with conditional JavaScript
@@ -563,8 +330,9 @@ app/routes/
 ├── document_admin.py        # Admin document management
 ├── main.py                  # Homepage and general routes
 ├── migration.py             # Database migration web interface
-├── monitoring.py            # System monitoring endpoints (DISABLED: circular import issue)
+├── monitoring.py            # System monitoring endpoints
 ├── notification_system.py   # Notification system routes
+├── raw_data_admin.py        # Raw data management
 └── safework_reports.py      # SafeWork reporting functionality
 ```
 
@@ -583,47 +351,48 @@ app/routes/
 ```
 
 ### Configuration Management
-**Multi-Environment Setup (config.py):**
+**Multi-Environment Setup (src/app/config.py):**
 ```python
 # Environment-specific database configuration
 config = {
     "development": DevelopmentConfig,  # PostgreSQL, CSRF disabled
     "production": ProductionConfig,    # PostgreSQL, CSRF disabled
-    "testing": TestingConfig,          # MySQL, CSRF disabled
+    "testing": TestingConfig,          # PostgreSQL, CSRF disabled
     "default": DevelopmentConfig,
 }
 
 # Key configuration patterns:
-# - Database switching: PostgreSQL (prod/dev) vs MySQL (testing)
+# - Consistent PostgreSQL across all environments
 # - CSRF protection completely disabled across all environments
 # - File upload limits: 50MB with specific allowed extensions
 # - Session configuration with security headers
 # - Redis integration for caching and session storage
+# - Environment variable support for all database settings
 ```
 
 **SafeWork Admin Panel Pattern:**
 ```python
-# 1. Model Definition (models_safework.py)
+# 1. Model Definition (src/app/models_safework.py)
 class SafeworkWorker(db.Model):
     __tablename__ = "safework_workers"
 
-# 2. API Endpoint (api_safework_v2.py)
-@api_safework_bp.route('/workers', methods=['GET', 'POST']) 
+# 2. API Endpoint (src/app/routes/api_safework_v2.py)
+@api_safework_bp.route('/workers', methods=['GET', 'POST'])
 @login_required
 def handle_workers():
     # CRUD operations with JSON responses
 
-# 3. Admin Interface (admin.py + templates/admin/safework/)
+# 3. Admin Interface (src/app/routes/admin.py + templates/admin/safework/)
 @admin_bp.route('/safework/workers')
-@login_required  
+@login_required
 def safework_workers():
     # Bootstrap 4.6 + jQuery AJAX integration
 ```
 
 ## Deployment & Infrastructure
 
-### Advanced GitHub Actions CI/CD Pipeline
-The project uses an **optimized English-only workflow system** with advanced Claude AI integration:
+### GitHub Actions CI/CD Pipeline
+The project uses an **optimized workflow system** with advanced Claude AI integration:
 
 **Current Active Workflows:**
 - **🚀 deploy.yml**: SafeWork Production Deployment with auto-rollback and emergency recovery
@@ -634,14 +403,6 @@ The project uses an **optimized English-only workflow system** with advanced Cla
 - **🛡️ security-auto-triage.yml**: Automated vulnerability detection and resolution
 - **🎯 issue-handler.yml**: Intelligent issue management with auto-labeling
 - **🔄 dependency-auto-update.yml**: Weekly automated dependency management
-- **🔧 fix-postgres-watchtower-labels.yml**: PostgreSQL Watchtower labels fix workflow
-
-**Recent Optimizations (September 2024):**
-- ✅ **Workflow Consolidation**: Reduced from 9 to 6 optimized workflows
-- ✅ **English Conversion**: All workflow files converted to English
-- ✅ **MCP Integration**: Advanced Multiple MCP Protocol tools (Sequential Thinking, Serena Code Analysis, Shrimp Task Management)
-- ✅ **Auto-Recovery**: Emergency rollback and self-healing deployment system
-- ✅ **Container Testing**: Independent container connectivity validation
 
 **Deployment Triggers:**
 1. Push to `master` branch triggers all workflows
@@ -653,10 +414,10 @@ The project uses an **optimized English-only workflow system** with advanced Cla
 ### Infrastructure Components
 - **Registry**: registry.jclee.me (credentials in GitHub secrets)
 - **Production**: https://safework.jclee.me
-- **Development**: https://safework-dev.jclee.me  
+- **Development**: https://safework-dev.jclee.me
 - **Portainer**: portainer.jclee.me (Container management and log viewing via API)
 - **Watchtower**: watchtower.jclee.me (Automatic container deployment via HTTP API)
-- **Images**: 
+- **Images**:
   - registry.jclee.me/safework/app:latest
   - registry.jclee.me/safework/postgres:latest
   - registry.jclee.me/safework/redis:latest
@@ -674,7 +435,7 @@ SafeWork uses **completely independent Docker containers** with no docker-compos
 # Core deployment secrets
 APP_NAME=safework                        # Application name for container naming
 REGISTRY_HOST=registry.jclee.me         # Docker registry host
-REGISTRY_USER=admin                     # Registry username  
+REGISTRY_USER=admin                     # Registry username
 REGISTRY_PASSWORD=<password>             # Docker registry auth
 WATCHTOWER_HTTP_API_TOKEN=<token>        # Watchtower HTTP API token
 WATCHTOWER_URL=https://watchtower.jclee.me # Watchtower API URL
@@ -693,7 +454,7 @@ PORTAINER_URL=https://portainer.jclee.me # Portainer URL (log viewing only)
 # Claude AI Integration (CRITICAL for workflows)
 CLAUDE_CODE_OAUTH_TOKEN=<token>          # Claude Code automation
 GITHUB_TOKEN=<token>                     # GitHub API access for Claude workflows
-PORTAINER_API_KEY=<token>                # Portainer API key (updated from PORTAINER_API_TOKEN)
+PORTAINER_API_KEY=<token>                # Portainer API key
 
 # Optional automation
 SLACK_WEBHOOK_URL=<url>                  # Slack notifications
@@ -702,7 +463,7 @@ SLACK_WEBHOOK_URL=<url>                  # Slack notifications
 ### Claude AI Workflow Integration
 **Trigger Methods:**
 - **Issue Comments**: `@claude` in any issue comment
-- **PR Comments**: `@claude` in pull request discussions  
+- **PR Comments**: `@claude` in pull request discussions
 - **Issue Labels**: Issues with `claude-actionable` or `needs-analysis` labels
 - **Workflow Failures**: Automatic CI failure analysis and repair
 - **Dependency Updates**: Weekly automated dependency scans
@@ -715,71 +476,6 @@ SLACK_WEBHOOK_URL=<url>                  # Slack notifications
 - SafeWork-specific domain knowledge integration
 
 ## Portainer Container Operations
-
-### 🚀 고도화된 Portainer 관리 시스템 (NEW - September 2024)
-
-SafeWork는 **고급 Portainer 관리 시스템**으로 완전히 업그레이드되었습니다:
-
-**주요 개선사항:**
-- ✅ **통합 관리 도구**: 대화형 메뉴 시스템으로 모든 컨테이너 작업 통합
-- ✅ **Makefile 통합**: `make portainer-*` 명령어로 모든 Portainer 작업 실행
-- ✅ **YAML 기반 설정**: 중앙 집중식 설정 관리 (`deployment/portainer/portainer-config.yaml`)
-- ✅ **실시간 모니터링**: 색상 코딩된 로그, 리소스 모니터링, 건강 상태 체크
-- ✅ **자동화**: 백업, 보고서 생성, 컨테이너 관리 자동화
-
-**새로운 통합 명령어 시스템:**
-```bash
-# Makefile 통합 명령어
-make portainer              # 대화형 고급 관리 도구
-make portainer-status       # 컨테이너 상태 확인
-make portainer-logs         # 로그 조회 (대화형)
-make portainer-monitor      # 리소스 모니터링
-make portainer-health       # 건강 상태 종합 체크
-make portainer-restart      # 전체 SafeWork 컨테이너 재시작
-make portainer-report       # 시스템 보고서 생성
-
-# 고급 스크립트 직접 실행
-./tools/scripts/portainer_advanced.sh summary      # 컨테이너 상태 요약
-./tools/scripts/portainer_advanced.sh logs         # 대화형 로그 조회
-./tools/scripts/portainer_advanced.sh monitor      # 리소스 모니터링
-./tools/scripts/portainer_advanced.sh health       # 건강 상태 체크
-./tools/scripts/portainer_advanced.sh network      # 네트워크 정보
-./tools/scripts/portainer_advanced.sh backup       # 시스템 백업
-./tools/scripts/portainer_advanced.sh interactive  # 대화형 메뉴
-
-# YAML 기반 설정 관리
-./tools/scripts/portainer_config_manager.sh validate    # 설정 검증
-./tools/scripts/portainer_config_manager.sh test        # API 연결 테스트
-./tools/scripts/portainer_config_manager.sh deploy      # 설정 기반 배포
-./tools/scripts/portainer_config_manager.sh health      # 건강 상태 체크
-```
-
-**실무 사용 워크플로우:**
-```bash
-# 📊 일일 모니터링 워크플로우
-make portainer-status        # 1. 컨테이너 상태 확인
-make portainer-health        # 2. 건강 상태 체크
-make logs-errors             # 3. 에러 로그 확인
-make portainer-monitor       # 4. 리소스 사용률 확인
-
-# 🚨 문제 해결 워크플로우
-make portainer-logs          # 1. 상세 로그 분석 (대화형)
-make portainer-monitor       # 2. 리소스 상태 확인
-make portainer-restart       # 3. 필요시 컨테이너 재시작
-make portainer-report        # 4. 문제 해결 보고서 생성
-
-# 🔄 배포 후 검증 워크플로우
-make deploy                  # 1. GitHub Actions 배포
-make portainer-health        # 2. 배포 후 건강 상태 확인
-make portainer-monitor       # 3. 성능 모니터링
-make portainer-report        # 4. 배포 완료 보고서
-```
-
-**새로운 문서화:**
-- **사용 가이드**: `docs/portainer/PORTAINER_USAGE_GUIDE.md`
-- **빠른 참조**: `docs/portainer/QUICK_REFERENCE.md`
-- **통합 예시**: `docs/portainer/INTEGRATION_EXAMPLES.md`
-- **설정 파일**: `deployment/portainer/portainer-config.yaml`
 
 ### Direct Container Management
 ```bash
@@ -808,251 +504,14 @@ curl -X POST -H "X-API-Key: ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=" \
 ./scripts/portainer_simple.sh network       # Check network configuration
 ./scripts/portainer_simple.sh               # Show all information
 
-# Raw API calls (if needed)
-curl -H "X-API-Key: ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=" \
-  "https://portainer.jclee.me/api/endpoints/3/docker/containers/json"
-
-# Create new container via Portainer
-curl -X POST -H "X-API-Key: ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=" \
-  -H "Content-Type: application/json" \
-  "https://portainer.jclee.me/api/endpoints/3/docker/containers/create?name=safework2-postgres" \
-  -d '{
-    "Image": "registry.jclee.me/safework/postgres:latest",
-    "Env": ["POSTGRES_PASSWORD=safework2024", "POSTGRES_DB=safework_db", "POSTGRES_USER=safework"],
-    "HostConfig": {
-      "PortBindings": {"5432/tcp": [{"HostPort": "4546"}]},
-      "NetworkMode": "watchtower_default"
-    }
-  }'
-
-# Remove duplicate containers
-curl -X DELETE -H "X-API-Key: ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=" \
-  "https://portainer.jclee.me/api/endpoints/3/docker/containers/<container_id>?force=true"
-
-# Execute SQL commands in PostgreSQL container
-curl -X POST -H "X-API-Key: ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=" \
-  -H "Content-Type: application/json" \
-  "https://portainer.jclee.me/api/endpoints/3/docker/containers/safework2-postgres/exec" \
-  -d '{
-    "Cmd": ["psql", "-U", "safework", "-d", "safework_db", "-c", "ALTER TABLE surveys ADD COLUMN submission_date TIMESTAMP DEFAULT NOW();"],
-    "AttachStdout": true,
-    "AttachStderr": true
-  }'
-```
-
-### Recent Database Schema Fixes & Current Issues
-**CRITICAL FIXES APPLIED:**
-
-1. **Admin Login 500 Error (ONGOING ISSUE - September 2024):**
-```python
-# Problem: Admin login fails with 500 error due to PostgreSQL connection issues
-# Error: sqlalchemy.exc.OperationalError: connection to server at "safework-postgres" failed: Connection refused
-# Status: UNRESOLVED - DB connection intermittently fails during authentication
-
-# Temporary workarounds attempted:
-# - Container restarts (both app and postgres)
-# - Network connectivity verification
-# - Session configuration review
-
-# Next steps: Investigate PostgreSQL connection pooling and authentication
-```
-
-2. **Survey Detail Data Display Issue (RESOLVED - December 2024):**
-```python
-# Problem: Survey detail pages not displaying submitted form data properly
-# Root cause: Form data not being saved to responses JSON field during submission
-
-# Solution: Updated survey.py to save ALL form data to responses field
-# Before: Only saved basic fields to database columns
-# After: All form data (including complex musculo_details) saved to responses JSON
-
-# Changes made:
-# 1. survey.py: Collect all form data into responses field
-all_form_data = {}
-for key, value in request.form.items():
-    if key.endswith('[]'):
-        all_form_data[key] = request.form.getlist(key)
-    else:
-        all_form_data[key] = value
-if musculo_details:
-    all_form_data['musculo_details'] = musculo_details
-
-# 2. admin_detail.html: Display submitted data in table format
-# Shows original submitted data exactly as user entered it
-
-# Impact: Survey detail pages now show complete submitted data as originally entered
-# Status: Fixed in commit 3c21fa2, deployed and verified
-```
-
-2. **APP_VERSION Property Object Display Bug (RESOLVED):**
-```python
-# Problem: Footer showing "<property object at 0x...>" instead of version number
-# Root cause: Flask config copying property decorator instead of value
-# Solution: Explicit conversion in app.py after config loading
-config_obj = config[config_name]()
-app.config['APP_VERSION'] = config_obj.APP_VERSION  # Gets actual string value
-
-# Fallback handling also updated for property object issue:
-app_version = "3.0.0"  # Direct hardcoding instead of property reference
-```
-
-2. **submission_date Column Issue (RESOLVED):**
-```python
-# Problem: Missing submission_date column causing 500 errors
-# Solution: Added actual database column instead of property
-submission_date = db.Column(db.DateTime, default=kst_now)
-
-# Manual fix applied via Portainer API:
-ALTER TABLE surveys ADD COLUMN submission_date TIMESTAMP DEFAULT NOW();
-```
-
-3. **Database Configuration Standardization (RESOLVED):**
-```python
-# Standardized to PostgreSQL 15+ for all environments
-# Current Status: PostgreSQL 15+ (production, development, testing)
-# Container: safework-postgres (port 4546)
-# Benefits: Consistent JSONB support, better performance for survey data
-```
-
-4. **Model Import Issues (RESOLVED):**
-```python
-# Problem: ImportError: cannot import name 'AuditLog' from 'models'
-# Solution: Added backward compatibility aliases at end of models.py
-Survey = SurveyModel
-SurveyStatistics = SurveyStatisticsModel
-AuditLog = AuditLogModel
-```
-
-5. **PostgreSQL Connection Refused Issue (RESOLVED - September 2024):**
-```python
-# Problem: PostgreSQL not accepting connections, causing 500 errors
-# Error: "localhost:5432 - no response", PostgreSQL not listening on port 5432
-# Root cause: PostgreSQL container stopped listening after configuration change
-
-# Solution: Restart PostgreSQL container via Portainer API
-curl -X POST -H "X-API-Key: ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=" \
-  "https://portainer.jclee.me/api/endpoints/3/docker/containers/{container_id}/restart"
-
-# Verification: Check PostgreSQL accepting connections
-docker exec safework-postgres pg_isready -U safework -d safework_db
-# Output: "safework_db - accepting connections"
-
-# Impact: Restored survey API functionality and database connectivity
-# Status: Fixed and verified - survey submissions working properly
-```
-
-6. **SQLAlchemy 2.0 Compatibility Update (RESOLVED - September 2024):**
-```python
-# Problem: SQLAlchemy deprecation warning in admin.py
-# Old code: survey = Survey.query.get_or_404(id)
-# Warning: "The Query.get() method is considered legacy"
-
-# Solution: Updated to SQLAlchemy 2.0 pattern
-from models import Survey, db
-survey = db.session.get(Survey, id)
-if not survey:
-    abort(404)
-
-# Impact: Eliminates deprecation warnings and ensures future compatibility
-# Status: Fixed in commit 49edd5b, deployed with survey data display fix
-```
-
-**CURRENT SYSTEM STATUS (Updated September 2024 - PRODUCTION OPERATIONAL):**
-- **Database**: PostgreSQL 15+ in production with automated schema migration system
-- **Container Names**: ✅ **PRODUCTION VERIFIED** - Running as safework-* containers (app, postgres, redis)
-- **Container Health**: ✅ **ALL HEALTHY** - 11+ hours uptime with healthy status verified
-- **Database Name**: **CRITICAL** - Must use `safework_db` not `safework` to prevent connection errors
-- **Local Services**: ✅ **WORKING** - localhost:4545 accessible and healthy
-- **Production Services**: ✅ **OPERATIONAL** - https://safework.jclee.me responding with healthy status
-- **Infrastructure**: ✅ Registry (registry.jclee.me) and Portainer (portainer.jclee.me) accessible
-- **API Endpoints**: ✅ **VERIFIED** - Survey submission API working with complete data storage
-- **Form 003 Analysis**: ✅ **COMPLETED** - 60+ field Excel template analyzed for future implementation
-- **Survey Data Storage**: ✅ **VERIFIED** - All form fields properly saved to JSONB responses field
-- **CSRF Protection**: Disabled for survey testing (WTF_CSRF_ENABLED=false)
-- **Schema Migration**: Automated via PostgreSQL init.sql and migration scripts
-- **Data Persistence**: Verified across container restarts with volume persistence
-- **Deployment Status**: ✅ **PRODUCTION STABLE AND OPERATIONAL**
-
-### Survey Data Display Troubleshooting (Updated December 2024)
-```bash
-# Debug survey detail pages not displaying submitted data properly
-# RESOLVED: Form data now properly saved to responses JSON field
-
-# Check survey data in database with complete responses
-docker exec -it safework2-postgres psql -U safework -d safework_db \
-  -c "SELECT id, name, form_type, jsonb_pretty(responses) FROM surveys WHERE id = 2;"
-
-# Verify all form fields are saved in responses JSON
-docker exec -it safework2-postgres psql -U safework -d safework_db \
-  -c "SELECT responses ? 'name', responses ? 'age', responses ? 'musculo_details' FROM surveys WHERE id = 2;"
-
-# Test new survey submission (all data saved to responses field)
-curl -X POST http://localhost:4545/survey/001_musculoskeletal_symptom_survey \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d 'name=테스트사용자&age=30&gender=남성&department=개발부&position=개발자&current_symptom=예'
-
-# Access detailed survey view to see all submitted data
-# URL pattern: https://safework.jclee.me/admin/survey/<id>
-# Now displays: Table format with all form fields + JSON collapsible view
-
-# Template structure (fixed):
-# - Displays all key-value pairs from responses JSON
-# - Special handling for musculo_details array data
-# - JSON raw data available in collapsible details section
-```
-
-### Admin Login 500 Error Troubleshooting (RESOLVED - September 2024)
-```bash
-# ISSUE RESOLVED: Admin login PostgreSQL connection error fixed
-# Previous Error: sqlalchemy.exc.OperationalError: connection to server at "safework-postgres" failed: Connection refused
-# Solution Applied: PostgreSQL container restart via Portainer API (see issue #5 above)
-
-# 1. Verify container status
-curl -s -H "X-API-Key: ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=" \
-  "https://portainer.jclee.me/api/endpoints/3/docker/containers/json" | \
-  python3 -c "import json,sys; [print(f'{c[\"Names\"][0][1:]}: {c[\"State\"]} - {c[\"Status\"]}') for c in json.load(sys.stdin) if 'safework' in c[\"Names\"][0]]"
-
-# 2. Test admin login (now working after PostgreSQL restart)
-curl -X POST -d "username=admin&password=safework2024" -s "https://safework.jclee.me/auth/login"
-# Expected: Successful redirect to admin dashboard
-
-# 3. Verify survey API working
-curl -X POST http://localhost:4545/survey/api/submit \
-  -H "Content-Type: application/json" \
-  -d '{"form_type": "001", "name": "테스트"}'
-# Expected: 201 Created status with success response
-
-# 4. Solution applied:
-# - PostgreSQL container restart via Portainer API resolved the connection issue
-# - Database now accepting connections on port 5432
-# - All survey submissions and admin functions working properly
-
-# Status: RESOLVED - PostgreSQL connection restored, admin login functional
-```
-
-### Survey API Testing & Verification
-```bash
-# Test survey submission (should return 201 Created)
-curl -X POST http://localhost:4545/survey/api/submit \
-  -H "Content-Type: application/json" \
-  -d '{
-    "form_type": "001",
-    "name": "테스트 사용자",
-    "age": 30,
-    "gender": "남성",
-    "years_of_service": 5,
-    "employee_number": "EMP001",
-    "department": "개발부",
-    "position": "개발자",
-    "employee_id": "DEV001",
-    "work_years": 3,
-    "work_months": 6,
-    "data": {"has_symptoms": true}
-  }'
-
-# Verify data saved in PostgreSQL
-docker exec -it safework2-postgres psql -U safework -d safework_db \
-  -c "SELECT id, name, form_type, age, gender, department, position, submission_date, created_at FROM surveys ORDER BY id DESC LIMIT 5;"
+# Advanced Portainer management (interactive)
+./scripts/portainer_advanced.sh summary      # Container status summary
+./scripts/portainer_advanced.sh logs         # Interactive log viewing
+./scripts/portainer_advanced.sh monitor      # Resource monitoring
+./scripts/portainer_advanced.sh health       # Health status check
+./scripts/portainer_advanced.sh network      # Network information
+./scripts/portainer_advanced.sh backup       # System backup
+./scripts/portainer_advanced.sh interactive  # Interactive menu
 ```
 
 ## Error Detection & Resolution
@@ -1074,57 +533,34 @@ docker exec -it safework2-postgres psql -U safework -d safework_db \
 - Redis AOF permission errors → **SOLUTION**: Remove and recreate Redis container with clean state
 - Container timezone issues → **SOLUTION**: Add `-e TZ=Asia/Seoul` to all container runs
 
-**Critical Model Alias Fix Applied:**
-```python
-# Required aliases at end of models.py for backward compatibility
-Survey = SurveyModel
-SurveyStatistics = SurveyStatisticsModel  
-AuditLog = AuditLogModel
-```
-
 ### Troubleshooting Commands
 ```bash
 # Container status (correct container names)
 docker ps                                           # Check container status
-docker logs -f safework2-app                         # View application logs
-docker logs -f safework2-postgres                    # View database logs
+docker logs -f safework-app                         # View application logs
+docker logs -f safework-postgres                    # View database logs
 
 # Force GitHub Actions re-deployment
 git commit --allow-empty -m "Trigger: Force redeploy"
 git push origin master                              # Triggers GitHub Actions build
 
 # Independent container restart (use GitHub Actions images)
-docker stop safework2-app safework2-postgres safework2-redis
-docker rm safework2-app safework2-postgres safework2-redis
-# Restart using latest images from registry (built by GitHub Actions)
-# CRITICAL: Use correct image naming and environment variables
-docker run -d --name safework2-postgres --network safework_network -p 4546:5432 \
-  -e TZ=Asia/Seoul -e POSTGRES_PASSWORD=safework2024 -e POSTGRES_DB=safework_db -e POSTGRES_USER=safework \
-  --label "com.centurylinklabs.watchtower.enable=true" \
-  registry.jclee.me/safework/postgres:latest
-docker run -d --name safework2-redis --network safework_network -p 4547:6379 \
-  -e TZ=Asia/Seoul \
-  --label "com.centurylinklabs.watchtower.enable=true" \
-  registry.jclee.me/safework/redis:latest
-docker run -d --name safework2-app --network safework_network -p 4545:4545 \
-  -e TZ=Asia/Seoul -e DB_HOST=safework2-postgres -e DB_NAME=safework_db \
-  -e DB_USER=safework -e DB_PASSWORD=safework2024 -e REDIS_HOST=safework2-redis \
-  --label "com.centurylinklabs.watchtower.enable=true" \
-  registry.jclee.me/safework/app:latest
+docker stop safework-app safework-postgres safework-redis
+docker rm safework-app safework-postgres safework-redis
 
 # Database management
-docker exec -it safework2-app python migrate.py status              # Check migration status
-docker exec -it safework2-app python migrate.py migrate             # Run migrations
+docker exec -it safework-app python migrate.py status              # Check migration status
+docker exec -it safework-app python migrate.py migrate             # Run migrations
 
 # Portainer API debugging (endpoint 3)
 curl -H "X-API-Key: ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=" \
      "https://portainer.jclee.me/api/endpoints/3/docker/containers/json" # List containers
 
 # Direct PostgreSQL access (current production database)
-docker exec -it safework2-postgres psql -U safework -d safework_db   # PostgreSQL CLI
+docker exec -it safework-postgres psql -U safework -d safework_db   # PostgreSQL CLI
 
 # Database connectivity verification (critical for troubleshooting)
-docker exec safework2-app python -c "
+docker exec safework-app python -c "
 from app import create_app
 from models import Survey, db
 app = create_app()
@@ -1136,14 +572,14 @@ with app.app_context():
         print(f'❌ Database connection failed: {e}')
 "
 
-# 🚀 UNIFIED TROUBLESHOOTING (NEW - September 2024)
+# UNIFIED TROUBLESHOOTING
 # Use unified operations script for streamlined troubleshooting workflow
 
 # Quick system health check
 ./scripts/safework_ops_unified.sh monitor health         # Comprehensive health assessment
 ./scripts/safework_ops_unified.sh deploy status          # Current deployment status
 
-# Analyze production issues  
+# Analyze production issues
 ./scripts/safework_ops_unified.sh logs errors all        # Find all error logs
 ./scripts/safework_ops_unified.sh logs recent all 50     # Recent activity across containers
 ./scripts/safework_ops_unified.sh monitor performance    # Performance metrics
@@ -1197,6 +633,13 @@ DB_NAME=safework_db                   # Database name
 DB_USER=safework                      # Database user
 DB_PASSWORD=safework2024              # Database password
 
+# Database pool settings
+DB_POOL_SIZE=10                       # Connection pool size
+DB_POOL_TIMEOUT=30                    # Pool timeout seconds
+DB_POOL_RECYCLE=3600                  # Pool recycle time
+DB_POOL_PRE_PING=true                 # Enable connection pre-ping
+DB_ECHO=false                         # Database query echo
+
 # Redis cache
 REDIS_HOST=safework-redis             # Container name
 REDIS_PORT=6379                       # Redis port
@@ -1216,97 +659,6 @@ UPLOAD_FOLDER=/app/uploads           # Upload directory
 MAX_CONTENT_LENGTH=52428800          # 50MB max file size
 ```
 
-## Claude Code 자동화 모니터링 시스템
-
-### Portainer API 기반 컨테이너 로그 감시
-SafeWork는 **실시간 컨테이너 로그 감시**와 **자동 에러 감지** 시스템을 포함합니다:
-
-```bash
-# Portainer API 설정
-PORTAINER_URL=https://portainer.jclee.me
-PORTAINER_API_TOKEN=ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=
-PORTAINER_ENDPOINT_ID=3                  # Portainer endpoint ID
-
-# 모니터링 대상 컨테이너 (PRODUCTION VERIFIED)
-SAFEWORK_CONTAINERS=[
-  "safework-app",      # Flask application container (✅ VERIFIED RUNNING)
-  "safework-postgres", # PostgreSQL database container (✅ VERIFIED RUNNING)
-  "safework-redis"     # Redis cache container (✅ VERIFIED RUNNING)
-]
-
-# 모니터링 URL
-SAFEWORK_PROD_URL=https://safework.jclee.me      # Production monitoring
-SAFEWORK_DEV_URL=https://safework-dev.jclee.me   # Development monitoring
-```
-
-### 실시간 에러 로그 감지 및 자동 이슈 등록
-**🚨 Critical Error Detection Patterns:**
-```python
-# 감지 대상 에러 패턴
-ERROR_PATTERNS = [
-    "ImportError|ModuleNotFoundError",     # Python import errors
-    "OperationalError.*database",          # Database connection errors
-    "gunicorn.errors.HaltServer",         # Gunicorn server errors
-    "Worker failed to boot",              # Worker process failures
-    "500 Internal Server Error",          # HTTP 500 errors
-    "CRITICAL|FATAL",                     # Critical log levels
-    "Exception in.*survey",               # Survey system errors
-    "PostgreSQL.*connection.*failed",      # Database connectivity
-    "Redis.*connection.*failed",          # Cache connectivity
-    "Memory usage.*90%",                  # High memory usage
-    "Disk usage.*90%"                     # High disk usage
-]
-```
-
-### 자동화된 로그 분석 및 이슈 생성
-- **감시 주기**: 5분마다 실시간 로그 수집
-- **에러 감지**: 패턴 매칭 기반 즉시 감지
-- **자동 이슈 등록**: GitHub Issues API를 통한 자동 생성
-- **Claude AI 분석**: 에러 원인 분석 및 해결책 제안
-- **한국어 보고서**: 한국어로 된 상세 분석 보고서
-- **Slack 알림**: 즉시 Slack 채널 알림 발송
-
-### GitHub Actions 워크플로우 자동화
-**📊 Operational Log Analysis 워크플로우:**
-```yaml
-# .github/workflows/operational-log-analysis.yml
-name: 📊 Operational Log Analysis
-on:
-  schedule:
-    - cron: '*/5 * * * *'  # Every 5 minutes
-  workflow_dispatch:
-
-jobs:
-  log-monitoring:
-    runs-on: ubuntu-latest
-    steps:
-      - name: 🔍 Fetch Container Logs via Portainer API
-        run: |
-          # Portainer API를 통한 실시간 로그 수집
-          # 에러 패턴 감지 및 분석
-          # 임계 에러 감지시 GitHub Issue 자동 생성
-          
-      - name: 🤖 Claude AI Error Analysis
-        uses: anthropics/claude-code-action@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          anthropic_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          prompt: |
-            컨테이너 로그를 분석하여 에러 원인과 해결책을 제시해주세요:
-            - 에러 패턴 식별 및 분류
-            - 근본 원인 분석 (RCA)
-            - 즉시 조치사항 및 장기 해결책
-            - 예방책 및 모니터링 개선안
-```
-
-### 고급 로그 분석 기능
-1. **🔍 실시간 컨테이너 상태 모니터링**: CPU, 메모리, 디스크 사용률
-2. **⚡ 성능 메트릭 추적**: 응답시간, 데이터베이스 쿼리 성능, 캐시 적중률
-3. **🚨 에러 패턴 감지**: 애플리케이션 오류, 데이터베이스 타임아웃, 보안 경고
-4. **🛡️ 보안 모니터링**: 인증 실패, 의심스러운 접근 패턴 감지
-5. **📊 비즈니스 로직 건강성**: 설문 제출률, 관리 패널 사용 패턴
-6. **🤖 Claude AI 자동 분석**: 한국어 분석 보고서 및 GitHub Actions 연동
-
 ## Key API Endpoints
 ```bash
 # Core endpoints
@@ -1316,7 +668,6 @@ jobs:
 # Survey forms (anonymous access)
 /survey/001_musculoskeletal_symptom_survey     # Anonymous form - ✅ Production verified
 /survey/002_new_employee_health_checkup_form   # Anonymous form - ✅ Production verified
-# Future: /survey/003_musculoskeletal_program  # 60+ field Excel template analyzed (not yet implemented)
 
 # Survey API endpoints
 /survey/api/submit                             # Form submission API - ✅ Verified working with JSONB storage
@@ -1330,25 +681,6 @@ jobs:
 /api/safework/v2/workers                     # Worker CRUD operations
 /api/safework/v2/health-checks               # Health record management
 /api/safework/v2/medications                 # Medicine inventory CRUD
-```
-
-## System Validation Reports
-Generated validation reports provide comprehensive system health analysis:
-
-```bash
-# Latest system validation reports (September 2024)
-SYSTEM_VALIDATION_REPORT.md              # Complete error analysis and resolution guide
-DEPLOYMENT_VERIFICATION_REPORT.md        # Comprehensive deployment verification results
-
-# Current system status (VERIFIED September 2024):
-# ✅ Production environment: 100% operational and verified
-# ✅ Database connectivity: PostgreSQL working with API submissions
-# ✅ Container health: All services running in healthy state
-# ✅ API functionality: Survey submission API confirmed working
-# ✅ Local environment: 100% functional
-# ⚠️ Code quality: Formatting improvements recommended (non-critical)
-# ⚠️ Security: Environment variable migration recommended (non-critical)
-# ⚠️ Docker configurations: Syntax warnings (builds succeed despite warnings)
 ```
 
 ## Production Guidelines
@@ -1370,89 +702,6 @@ DEPLOYMENT_VERIFICATION_REPORT.md        # Comprehensive deployment verification
 - Database indexing on key lookup fields
 - Pagination (20 items per page) for large datasets
 
-## Project Structure Guidelines
-
-### Root Directory Restrictions
-**ONLY ALLOWED in root directory:**
-- `CLAUDE.md` - This file
-- `README.md` - Project documentation
-- `.gitignore` - Git ignore rules
-
-**PROHIBITED in root directory:**
-- Backup files (`*backup*`, `*.bak`, `*-v2*`, `*-copy*`, `*-old*`)
-- Additional documentation (use `docs/` directory)
-- Configuration files (use `config/` directory)
-- Docker compose files (project uses independent containers)
-
-### Independent Container Structure
-Each service has its own complete build context:
-- `src/app/` - Flask application with Dockerfile, .dockerignore, requirements.txt
-- `infrastructure/docker/postgres/` - PostgreSQL 15+ with Dockerfile, complete schema, migrations
-- `infrastructure/docker/redis/` - Redis 7 with Dockerfile, .dockerignore, redis.conf
-- `tools/scripts/` - Comprehensive management and automation scripts
-- `deployment/` - Production deployment configurations and Portainer settings
-
-### Quality Validation & System Health Monitoring
-```bash
-# Automated validation scripts (added September 2024)
-./scripts/pipeline_validator.sh        # CI/CD pipeline readiness check
-./scripts/test_runner.sh              # Comprehensive system testing
-./scripts/integrated_build_deploy.sh  # Unified deployment validation
-
-# Manual structure validation
-python scripts/validate-structure.py  # Project structure compliance
-
-# Current system health (September 2024 validation results):
-# - Pipeline readiness: 68% (19/31 checks passed)
-# - Test suite: 61% (11/18 tests passed)
-# - Container compliance: Watchtower compatible but naming mismatch
-# - Production status: Service outage requiring immediate attention
-```
-
-### Recent Deployment Verification Results (September 2024)
-✅ **PRODUCTION DEPLOYMENT SUCCESSFULLY VERIFIED**
-
-**Resolved Issues:**
-1. **Production Service**: ✅ **RESTORED** - https://safework.jclee.me now fully operational
-2. **Database Connectivity**: ✅ **FIXED** - PostgreSQL container restarted and API verified working
-3. **Container Health**: ✅ **VERIFIED** - All containers (app, postgres, redis) running in healthy state
-4. **API Functionality**: ✅ **CONFIRMED** - Survey submission API successfully processing requests
-
-**Remaining Issues (Non-Critical):**
-1. **Code Quality**: Black/Flake8 formatting improvements needed
-2. **Security Enhancement**: Hardcoded passwords should be moved to environment variables
-3. **Docker Configuration**: Syntax errors in Dockerfiles (containers build successfully despite warnings)
-4. **Missing Files**: postgres/.dockerignore file should be created
-
-## Volume Management & Data Persistence
-
-### Docker Volume Management System (NEW)
-SafeWork includes a comprehensive volume management system for data persistence:
-
-```bash
-# Volume Manager Commands
-./tools/scripts/volume_manager.sh status          # Show all volume status
-./tools/scripts/volume_manager.sh create          # Create persistent volumes  
-./tools/scripts/volume_manager.sh backup          # Backup all data
-./tools/scripts/volume_manager.sh verify          # Verify data integrity
-./tools/scripts/volume_manager.sh migrate         # Migrate from old volumes
-./tools/scripts/volume_manager.sh cleanup         # Clean unused volumes
-
-# Key Features:
-# - Named volume persistence: safework-postgres-data-persistent
-# - Automated backup with timestamps
-# - Data integrity verification
-# - Volume migration from anonymous to named volumes
-# - Color-coded status reporting
-```
-
-### Data Persistence Architecture
-- **PostgreSQL**: `safework-postgres-data-persistent` volume with 46.3M+ verified data
-- **Redis**: `safework-redis-data-persistent` volume for cache persistence  
-- **Uploads**: `safework-uploads-persistent` volume for file storage
-- **Backup Location**: `/home/jclee/app/safework/backups` with timestamped files
-- **Health Monitoring**: Automatic connection verification and data integrity checks
-
 ## Key Development Workflows
 
 ### Adding New Survey Forms
@@ -1462,81 +711,12 @@ SafeWork includes a comprehensive volume management system for data persistence:
 4. **Admin Interface**: Add admin management to `src/app/routes/admin.py`
 5. **JavaScript Logic**: Implement conditional logic matching exact HTML IDs
 
-### Makefile Automation System (NEW)
-The project includes a comprehensive Makefile for streamlined development:
-
-```bash
-# Development Environment
-make setup                    # Initial development environment setup
-make install                  # Install Python dependencies
-make dev-setup               # Complete developer environment with git hooks
-
-# Code Quality & Testing
-make format                  # Format code with Black
-make lint                   # Lint code with Flake8
-make check                  # Run both format and lint
-make test                   # Run comprehensive test suite
-make test-api               # Test API endpoints specifically
-make validate               # Validate project structure and CI/CD
-
-# Container & Database Management  
-make build                  # Build all Docker images
-make up                     # Start development environment
-make down                   # Stop development environment
-make restart                # Restart all services
-make db-migrate            # Run database migrations
-make db-status             # Check migration status
-make db-shell              # Access PostgreSQL CLI
-make db-backup             # Create database backup
-
-# Production & Monitoring
-make deploy                 # Trigger GitHub Actions deployment
-make status                 # Check deployment status
-make health                 # System health check
-make monitor                # Complete system overview
-make logs                   # View live application logs
-make logs-errors           # Filter error logs only
-
-# Portainer Integration
-make portainer             # Interactive Portainer management
-make portainer-status      # Container status via Portainer API
-make portainer-monitor     # Resource monitoring
-make portainer-health      # Health check via Portainer
-make portainer-restart     # Restart SafeWork containers
-
-# Maintenance
-make clean                 # Clean build artifacts and cache
-make backup                # Full system backup
-make info                  # Display project information
-```
-
 ### SafeWork Admin Panel Extension
 1. **Model Definition**: Add new models in `src/app/models_safework.py` or `src/app/models_safework_v2.py`
 2. **API Endpoints**: Add RESTful endpoints in `src/app/routes/api_safework_v2.py`
 3. **Admin Routes**: Add admin interface routes in `src/app/routes/admin.py`
 4. **Templates**: Create admin templates in `src/app/templates/admin/safework/`
 5. **Database Migration**: Use `python migrate.py create "Description"` for schema changes
-
-### Form 003 Enhanced Implementation (NEW)
-The project includes a comprehensive Form 003 Enhanced musculoskeletal program survey:
-
-**Key Features:**
-- **60+ Form Fields**: Complete industrial safety assessment covering 6 body parts
-- **Real-time Risk Assessment**: JavaScript-based scoring with 130-point maximum
-- **Enhanced Template**: `src/app/templates/survey/003_musculoskeletal_program_enhanced.html`
-- **Work Environment Factors**: Comprehensive workplace risk evaluation
-- **Management Classification**: Automated risk level determination based on intensity scores
-- **Korean Compliance**: Fully compliant with 산업안전보건법 제39조 requirements
-
-**Risk Assessment Algorithm:**
-```javascript
-// Risk scoring covers:
-// - Body part pain assessment (6 areas: 목, 어깨, 팔/팔꿈치, 손/손가락/손목, 허리, 다리/발)
-// - Pain intensity (1-10 scale) and frequency evaluation  
-// - Work environment factors (repetitive motion, heavy lifting, awkward postures)
-// - Health and lifestyle factors (exercise, stress, sleep quality)
-// - Automatic management classification (저위험/중위험/고위험)
-```
 
 ### Container Deployment Testing
 ```bash
@@ -1552,34 +732,75 @@ make health                                    # Comprehensive health check
 make test-api                                  # Test API endpoints
 
 # Volume persistence verification
-./tools/scripts/volume_manager.sh verify      # Verify data integrity
-./tools/scripts/volume_manager.sh status      # Check volume status
+./scripts/volume_manager.sh verify      # Verify data integrity
+./scripts/volume_manager.sh status      # Check volume status
 ```
 
-## Recent Enhancements & Current Status
+## Project Structure Guidelines
 
-### Major Improvements (September 2024)
-- ✅ **PostgreSQL Data Persistence**: Fixed container restart data loss with named volumes
-- ✅ **Makefile Integration**: Comprehensive automation with 30+ make commands
-- ✅ **Volume Management**: Advanced volume manager with backup/restore capabilities
-- ✅ **Portainer Enhancement**: Advanced API integration with interactive management
-- ✅ **Form 003 Enhanced**: Complete 60+ field industrial safety assessment
-- ✅ **Production Stability**: Verified 100% operational with automated health monitoring
+### Root Directory Restrictions
+**ONLY ALLOWED in root directory:**
+- `CLAUDE.md` - This file
+- `README.md` - Project documentation
+- `Makefile` - Main automation interface
+- `.gitignore` - Git ignore rules
 
-### Current Production Status
-- **Database**: PostgreSQL 15+ with 46.3M+ verified persistent data
-- **API Health**: All endpoints responding correctly (verified December 2024)
-- **Container Health**: All services (app, postgres, redis) running healthy
-- **Data Persistence**: Confirmed across container restarts with named volumes
-- **Deployment**: GitHub Actions automated with Portainer API orchestration
-- **Monitoring**: Real-time health checks and automated error detection
+**PROHIBITED in root directory:**
+- Backup files (`*backup*`, `*.bak`, `*-v2*`, `*-copy*`, `*-old*`)
+- Additional documentation (use `docs/` directory)
+- Configuration files (use `config/` directory)
+- Docker compose files (project uses independent containers)
+
+### Independent Container Structure
+Each service has its own complete build context:
+- `src/app/` - Flask application with Dockerfile, .dockerignore, requirements.txt
+- `infrastructure/docker/postgres/` - PostgreSQL 15+ with Dockerfile, complete schema, migrations
+- `infrastructure/docker/redis/` - Redis 7 with Dockerfile, .dockerignore, redis.conf
+- `scripts/` - Comprehensive management and automation scripts
+- `assets/` - Static assets and form templates
 
 ### Key Files for Development
 ```
 ├── Makefile                                    # Main automation interface
 ├── src/app/                                   # Flask application source
 ├── infrastructure/docker/                     # Container definitions
-├── tools/scripts/                            # Management and automation scripts
-├── deployment/                               # Production deployment configs
+├── scripts/                                  # Management and automation scripts
+├── assets/                                   # Static assets and forms
 └── CLAUDE.md                                 # This guidance file
+```
+
+## Testing Commands
+
+### Comprehensive Testing
+```bash
+# Main testing entry point
+make test                               # Run comprehensive test suite
+
+# Specific test types
+make test-api                          # Test API endpoints specifically
+make test-integration                  # Integration tests
+curl http://localhost:4545/health      # Local health check
+curl https://safework.jclee.me/health  # Production health check
+
+# Manual testing via health endpoints and API calls
+curl -X POST http://localhost:4545/survey/api/submit \
+  -H "Content-Type: application/json" \
+  -d '{"form_type": "001", "name": "테스트"}'  # Test survey API
+
+# Container-based verification (adjust container names based on current deployment)
+docker exec -it safework-app python -c "
+from app import create_app
+from models import Survey, db
+app = create_app()
+with app.app_context():
+    print(f'Survey count: {Survey.query.count()}')
+"
+```
+
+### Validation Scripts
+```bash
+# Project structure and pipeline validation
+make validate                          # Project structure validation
+./scripts/pipeline_validator.sh        # CI/CD pipeline validation
+./scripts/test_runner.sh              # Comprehensive system testing
 ```
