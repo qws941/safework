@@ -40,10 +40,16 @@ class User(UserMixin, db.Model):
 
     # Relationships
     surveys = db.relationship(
-        "SurveyModel", foreign_keys="SurveyModel.user_id", backref="user", lazy="dynamic"
+        "SurveyModel",
+        foreign_keys="SurveyModel.user_id",
+        backref="user",
+        lazy="dynamic",
     )
     audit_logs = db.relationship(
-        "AuditLogModel", foreign_keys="AuditLogModel.user_id", backref="user", lazy="dynamic"
+        "AuditLogModel",
+        foreign_keys="AuditLogModel.user_id",
+        backref="user",
+        lazy="dynamic",
     )
 
     def set_password(self, password):
@@ -64,10 +70,10 @@ class SurveyModel(db.Model):
     # 필수 필드만 포함 (실제 DB 스키마 기준)
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    
+
     # 양식 구분 필드
     form_type = db.Column(db.String(50), nullable=False)
-    
+
     # 기본 정보 (확실히 존재하는 컬럼만)
     name = db.Column(db.String(50))
     department = db.Column(db.String(50))
@@ -77,12 +83,12 @@ class SurveyModel(db.Model):
     age = db.Column(db.Integer)
     years_of_service = db.Column(db.Integer)
     employee_number = db.Column(db.String(50))
-    
+
     # 업무 정보 (기본)
     work_years = db.Column(db.Integer)
     work_months = db.Column(db.Integer)
     has_symptoms = db.Column(db.Boolean, default=False)
-    
+
     # 메타데이터 (최소한)
     status = db.Column(db.String(20), default="submitted")
     submission_date = db.Column(db.DateTime, default=kst_now)
@@ -132,7 +138,6 @@ class SurveyModel(db.Model):
 
     def __repr__(self):
         return f"<Survey {self.name or 'Anonymous'} - {self.form_type}>"
-
 
 
 class SurveyStatisticsModel(db.Model):
@@ -199,157 +204,173 @@ class AuditLogModel(db.Model):
         return f"<AuditLog {self.action} by {self.user_id}>"
 
 
-# === 건설업 마스터 데이터 모델 === 
+# === 건설업 마스터 데이터 모델 ===
+
 
 class CompanyModel(db.Model):
     """Company Master Table"""
+
     __tablename__ = "companies"
-    
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)  # 업체명
     is_active = db.Column(db.Boolean, default=True)  # 활성화 상태
     display_order = db.Column(db.Integer, default=0)  # 표시 순서
-    
+
     created_at = db.Column(db.DateTime, default=kst_now)
     updated_at = db.Column(db.DateTime, default=kst_now, onupdate=kst_now)
-    
+
     def __repr__(self):
         return f"<Company {self.name}>"
 
 
 class ProcessModel(db.Model):
     """Process Master Table"""
+
     __tablename__ = "processes"
-    
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)  # 공정명
     description = db.Column(db.String(200))  # 공정 설명
     is_active = db.Column(db.Boolean, default=True)  # 활성화 상태
     display_order = db.Column(db.Integer, default=0)  # 표시 순서
-    
+
     created_at = db.Column(db.DateTime, default=kst_now)
     updated_at = db.Column(db.DateTime, default=kst_now, onupdate=kst_now)
-    
+
     def __repr__(self):
         return f"<Process {self.name}>"
 
 
 class RoleModel(db.Model):
     """Role Master Table"""
+
     __tablename__ = "roles"
-    
+
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False, unique=True)  # 직위/역할
     description = db.Column(db.String(200))  # 역할 설명
     is_active = db.Column(db.Boolean, default=True)  # 활성화 상태
     display_order = db.Column(db.Integer, default=0)  # 표시 순서
-    
+
     created_at = db.Column(db.DateTime, default=kst_now)
     updated_at = db.Column(db.DateTime, default=kst_now, onupdate=kst_now)
-    
+
     def __repr__(self):
         return f"<Role {self.title}>"
 
 
 # === MSDS Management System Models ===
 
+
 class MSDSModel(db.Model):
     """MSDS (Material Safety Data Sheet) Master Table"""
+
     __tablename__ = "msds"
-    
+
     id = db.Column(db.Integer, primary_key=True)
     substance_name = db.Column(db.String(200), nullable=False)  # 화학물질명
     cas_number = db.Column(db.String(50))  # CAS 번호
     manufacturer = db.Column(db.String(200))  # 제조업체
     supplier = db.Column(db.String(200))  # 공급업체
-    
+
     # MSDS 문서 정보
     msds_number = db.Column(db.String(100))  # MSDS 문서번호
     revision_date = db.Column(db.Date)  # 개정일자
-    
+
     # 분류 정보
     hazard_classification = db.Column(db.JSON)  # 유해성 분류 (JSON)
     ghs_pictograms = db.Column(db.JSON)  # GHS 그림문자 (JSON)
     signal_word = db.Column(db.String(50))  # 신호어 (위험/경고)
-    
+
     # 특별관리물질 여부
     is_special_management = db.Column(db.Boolean, default=False)
     special_management_type = db.Column(db.String(100))  # 특별관리 유형
-    
+
     # 문서 첨부
     msds_file_path = db.Column(db.String(500))  # MSDS 파일 경로
     msds_image_path = db.Column(db.String(500))  # MSDS 이미지 경로
     ocr_extracted_text = db.Column(db.Text)  # OCR 추출 텍스트
-    
+
     # 메타데이터
     registration_date = db.Column(db.DateTime, default=kst_now)
     last_review_date = db.Column(db.DateTime)
     next_review_date = db.Column(db.DateTime)
     status = db.Column(db.String(20), default="active")  # active/inactive/expired
     notes = db.Column(db.Text)
-    
+
     created_at = db.Column(db.DateTime, default=kst_now)
     updated_at = db.Column(db.DateTime, default=kst_now, onupdate=kst_now)
-    
+
     # Relationships
-    components = db.relationship("MSDSComponentModel", backref="msds", lazy="dynamic", cascade="all, delete-orphan")
-    usage_records = db.relationship("MSDSUsageRecordModel", backref="msds", lazy="dynamic")
-    
+    components = db.relationship(
+        "MSDSComponentModel",
+        backref="msds",
+        lazy="dynamic",
+        cascade="all, delete-orphan",
+    )
+    usage_records = db.relationship(
+        "MSDSUsageRecordModel", backref="msds", lazy="dynamic"
+    )
+
     def __repr__(self):
         return f"<MSDS {self.substance_name}>"
 
 
 class MSDSComponentModel(db.Model):
     """MSDS Chemical Component Details"""
+
     __tablename__ = "msds_components"
-    
+
     id = db.Column(db.Integer, primary_key=True)
     msds_id = db.Column(db.Integer, db.ForeignKey("msds.id"), nullable=False)
-    
+
     component_name = db.Column(db.String(200), nullable=False)  # 성분명
     cas_number = db.Column(db.String(50))  # CAS 번호
     concentration_min = db.Column(db.Numeric(5, 2))  # 최소 농도 (%)
     concentration_max = db.Column(db.Numeric(5, 2))  # 최대 농도 (%)
     concentration_exact = db.Column(db.Numeric(5, 2))  # 정확한 농도 (%)
-    
+
     # 유해성 정보
     hazard_statements = db.Column(db.JSON)  # 유해문구 (JSON)
     precautionary_statements = db.Column(db.JSON)  # 예방조치문구 (JSON)
-    
+
     created_at = db.Column(db.DateTime, default=kst_now)
     updated_at = db.Column(db.DateTime, default=kst_now, onupdate=kst_now)
-    
+
     def __repr__(self):
         return f"<MSDSComponent {self.component_name}>"
 
 
 class MSDSUsageRecordModel(db.Model):
     """MSDS Usage Tracking"""
+
     __tablename__ = "msds_usage_records"
-    
+
     id = db.Column(db.Integer, primary_key=True)
     msds_id = db.Column(db.Integer, db.ForeignKey("msds.id"), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    
+
     usage_date = db.Column(db.DateTime, default=kst_now)
     workplace_area = db.Column(db.String(100))  # 사용 작업장
     usage_purpose = db.Column(db.String(200))  # 사용 목적
     quantity_used = db.Column(db.Numeric(10, 2))  # 사용량
     quantity_unit = db.Column(db.String(20))  # 단위 (kg, L, etc.)
-    
+
     # 안전조치 정보
     ppe_used = db.Column(db.JSON)  # 사용한 보호구 (JSON)
     safety_measures = db.Column(db.Text)  # 안전조치사항
-    
+
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=kst_now)
-    
+
     def __repr__(self):
         return f"<MSDSUsage {self.msds_id} on {self.usage_date}>"
 
+
 # MSDS Model Aliases for import compatibility
 MSDS = MSDSModel
-MSDSComponent = MSDSComponentModel  
+MSDSComponent = MSDSComponentModel
 MSDSUsageRecord = MSDSUsageRecordModel
 
 # Core Model Aliases for backward compatibility

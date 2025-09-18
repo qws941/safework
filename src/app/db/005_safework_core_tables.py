@@ -3,13 +3,15 @@ SafeWork Core Tables Migration - Phase 1
 근로자 관리, 부서 관리, 건강검진 관리 핵심 테이블 생성
 """
 
+
 def upgrade(db):
     """Create SafeWork core tables"""
-    
+
     # ========================================
     # 1. 부서 정보 테이블
     # ========================================
-    db.execute("""
+    db.execute(
+        """
         CREATE TABLE IF NOT EXISTS departments (
             id INT PRIMARY KEY AUTO_INCREMENT,
             code VARCHAR(20) UNIQUE,
@@ -22,12 +24,14 @@ def upgrade(db):
             INDEX idx_parent (parent_id),
             INDEX idx_risk (risk_level)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    """)
-    
+    """
+    )
+
     # ========================================
     # 2. 근로자 기본정보 테이블
     # ========================================
-    db.execute("""
+    db.execute(
+        """
         CREATE TABLE IF NOT EXISTS workers (
             id INT PRIMARY KEY AUTO_INCREMENT,
             employee_number VARCHAR(20) UNIQUE NOT NULL,
@@ -53,12 +57,14 @@ def upgrade(db):
             INDEX idx_status (status),
             FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    """)
-    
+    """
+    )
+
     # ========================================
     # 3. 건강검진 계획 테이블
     # ========================================
-    db.execute("""
+    db.execute(
+        """
         CREATE TABLE IF NOT EXISTS health_check_plans (
             id INT PRIMARY KEY AUTO_INCREMENT,
             year INT NOT NULL,
@@ -73,12 +79,14 @@ def upgrade(db):
             INDEX idx_year_type (year, type),
             INDEX idx_status (status)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    """)
-    
+    """
+    )
+
     # ========================================
     # 4. 건강검진 대상자 테이블
     # ========================================
-    db.execute("""
+    db.execute(
+        """
         CREATE TABLE IF NOT EXISTS health_check_targets (
             id INT PRIMARY KEY AUTO_INCREMENT,
             plan_id INT NOT NULL,
@@ -97,12 +105,14 @@ def upgrade(db):
             INDEX idx_status (status),
             INDEX idx_scheduled_date (scheduled_date)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    """)
-    
+    """
+    )
+
     # ========================================
     # 5. 건강검진 결과 테이블
     # ========================================
-    db.execute("""
+    db.execute(
+        """
         CREATE TABLE IF NOT EXISTS health_check_results (
             id INT PRIMARY KEY AUTO_INCREMENT,
             target_id INT NOT NULL,
@@ -148,12 +158,14 @@ def upgrade(db):
             INDEX idx_follow_up (follow_up_required),
             INDEX idx_check_date (check_date)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    """)
-    
+    """
+    )
+
     # ========================================
     # 6. 의무실 방문 기록 테이블
     # ========================================
-    db.execute("""
+    db.execute(
+        """
         CREATE TABLE IF NOT EXISTS medical_visits (
             id INT PRIMARY KEY AUTO_INCREMENT,
             worker_id INT NOT NULL,
@@ -173,12 +185,14 @@ def upgrade(db):
             INDEX idx_visit_date (visit_date),
             INDEX idx_worker (worker_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    """)
-    
+    """
+    )
+
     # ========================================
     # 7. 의약품 관리 테이블
     # ========================================
-    db.execute("""
+    db.execute(
+        """
         CREATE TABLE IF NOT EXISTS medications (
             id INT PRIMARY KEY AUTO_INCREMENT,
             name VARCHAR(200) NOT NULL,
@@ -196,14 +210,16 @@ def upgrade(db):
             INDEX idx_stock (current_stock),
             INDEX idx_category (category)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    """)
-    
+    """
+    )
+
     # ========================================
     # 초기 데이터 삽입
     # ========================================
-    
+
     # 기본 부서 생성
-    db.execute("""
+    db.execute(
+        """
         INSERT INTO departments (code, name, risk_level) VALUES 
         ('HQ', '본사', 'LOW'),
         ('PROD', '생산부', 'HIGH'),
@@ -211,40 +227,45 @@ def upgrade(db):
         ('RND', '연구개발부', 'MEDIUM'),
         ('ADMIN', '경영지원부', 'LOW')
         ON DUPLICATE KEY UPDATE name=VALUES(name)
-    """)
-    
+    """
+    )
+
     # 테스트용 근로자 데이터
-    db.execute("""
+    db.execute(
+        """
         INSERT INTO workers (employee_number, name, department_id, position, hire_date, gender, blood_type) VALUES 
         ('2024001', '김철수', 1, '과장', '2020-03-01', 'M', 'A+'),
         ('2024002', '이영희', 2, '사원', '2022-07-15', 'F', 'B+'),
         ('2024003', '박민수', 2, '대리', '2019-11-20', 'M', 'O+')
         ON DUPLICATE KEY UPDATE name=VALUES(name)
-    """)
-    
+    """
+    )
+
     print("✅ SafeWork core tables created successfully")
+
 
 def downgrade(db):
     """Drop SafeWork core tables"""
     tables = [
-        'medical_visits',
-        'medications',
-        'health_check_results',
-        'health_check_targets', 
-        'health_check_plans',
-        'workers',
-        'departments'
+        "medical_visits",
+        "medications",
+        "health_check_results",
+        "health_check_targets",
+        "health_check_plans",
+        "workers",
+        "departments",
     ]
-    
+
     for table in tables:
         db.execute(f"DROP TABLE IF EXISTS {table}")
-    
+
     print("✅ SafeWork core tables dropped successfully")
+
 
 # 마이그레이션 메타데이터
 metadata = {
-    'version': '005',
-    'description': 'SafeWork Core Tables - Phase 1',
-    'author': 'SafeWork Team',
-    'created_at': '2024-01-28'
+    "version": "005",
+    "description": "SafeWork Core Tables - Phase 1",
+    "author": "SafeWork Team",
+    "created_at": "2024-01-28",
 }

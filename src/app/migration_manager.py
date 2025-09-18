@@ -44,13 +44,19 @@ class MigrationManager:
             # PostgreSQL에서 migrations 테이블이 있는지 확인만 함
             with db.engine.connect() as conn:
                 result = conn.execute(
-                    db.text("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'public' AND TABLE_NAME = 'migrations'")
+                    db.text(
+                        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'public' AND TABLE_NAME = 'migrations'"
+                    )
                 ).scalar()
 
                 if result > 0:
-                    current_app.logger.info("Migrations table exists (created by init.sql)")
+                    current_app.logger.info(
+                        "Migrations table exists (created by init.sql)"
+                    )
                 else:
-                    current_app.logger.warning("Migrations table not found - should be created by init.sql")
+                    current_app.logger.warning(
+                        "Migrations table not found - should be created by init.sql"
+                    )
         except Exception as e:
             current_app.logger.error(f"Error checking migration table: {e}")
 
@@ -181,7 +187,7 @@ class MigrationManager:
                 )
                 db.session.add(migration_record)
                 current_app.logger.info(f"Created new migration record: {version}")
-            
+
             db.session.commit()
         except Exception as e:
             current_app.logger.error(f"Failed to record migration: {e}")

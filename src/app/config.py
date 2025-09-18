@@ -7,9 +7,9 @@ class Config:
     """Base configuration"""
 
     SECRET_KEY = os.environ.get(
-        "SECRET_KEY", 
+        "SECRET_KEY",
         # WARNING: Change this in production! Use a strong random key
-        "dev-only-key-CHANGE-IN-PRODUCTION-" + str(hash("safework"))[:16]
+        "dev-only-key-CHANGE-IN-PRODUCTION-" + str(hash("safework"))[:16],
     )
 
     # Database (PostgreSQL) - Enhanced with environment variable support
@@ -18,7 +18,7 @@ class Config:
     DB_USER = os.environ.get("DB_USER", "safework")
     DB_PASSWORD = os.environ.get("DB_PASSWORD")  # No default - must be set
     DB_NAME = os.environ.get("DB_NAME", "safework_db")
-    
+
     # Database pool settings from environment
     DB_POOL_SIZE = int(os.environ.get("DB_POOL_SIZE", 10))
     DB_POOL_TIMEOUT = int(os.environ.get("DB_POOL_TIMEOUT", 30))
@@ -26,7 +26,9 @@ class Config:
     DB_POOL_PRE_PING = os.environ.get("DB_POOL_PRE_PING", "true").lower() == "true"
     DB_ECHO = os.environ.get("DB_ECHO", "false").lower() == "true"
 
-    SQLALCHEMY_DATABASE_URI = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    SQLALCHEMY_DATABASE_URI = (
+        f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_size": DB_POOL_SIZE,
@@ -42,13 +44,23 @@ class Config:
     REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", "")
     REDIS_DB = int(os.environ.get("REDIS_DB", 0))
     REDIS_TIMEOUT = int(os.environ.get("REDIS_TIMEOUT", 10))
-    REDIS_SOCKET_CONNECT_TIMEOUT = int(os.environ.get("REDIS_SOCKET_CONNECT_TIMEOUT", 5))
-    REDIS_SOCKET_KEEPALIVE = os.environ.get("REDIS_SOCKET_KEEPALIVE", "true").lower() == "true"
+    REDIS_SOCKET_CONNECT_TIMEOUT = int(
+        os.environ.get("REDIS_SOCKET_CONNECT_TIMEOUT", 5)
+    )
+    REDIS_SOCKET_KEEPALIVE = (
+        os.environ.get("REDIS_SOCKET_KEEPALIVE", "true").lower() == "true"
+    )
 
     # Session - Enhanced with environment variable support
-    PERMANENT_SESSION_LIFETIME = timedelta(seconds=int(os.environ.get("PERMANENT_SESSION_LIFETIME", 86400)))
-    SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "false").lower() == "true"
-    SESSION_COOKIE_HTTPONLY = os.environ.get("SESSION_COOKIE_HTTPONLY", "true").lower() == "true"
+    PERMANENT_SESSION_LIFETIME = timedelta(
+        seconds=int(os.environ.get("PERMANENT_SESSION_LIFETIME", 86400))
+    )
+    SESSION_COOKIE_SECURE = (
+        os.environ.get("SESSION_COOKIE_SECURE", "false").lower() == "true"
+    )
+    SESSION_COOKIE_HTTPONLY = (
+        os.environ.get("SESSION_COOKIE_HTTPONLY", "true").lower() == "true"
+    )
     SESSION_COOKIE_SAMESITE = os.environ.get("SESSION_COOKIE_SAMESITE", "Lax")
 
     # File upload
@@ -59,7 +71,7 @@ class Config:
     # Application
     APP_NAME = "SafeWork 안전보건 관리시스템"
     ITEMS_PER_PAGE = 20
-    
+
     # Environment URLs
     DEV_URL = os.environ.get("DEV_URL", "https://safework-dev.jclee.me")
     PRD_URL = os.environ.get("PRD_URL", "https://safework.jclee.me")
@@ -70,16 +82,16 @@ class Config:
     def APP_VERSION(self):
         """단순 버전 표시 (워크플로우에서만 관리)"""
         return "3.0.0"
-    
+
     @property
     def APP_VERSION_INFO(self):
         """단순 버전 정보"""
         return {
-            "version": self.APP_VERSION, 
+            "version": self.APP_VERSION,
             "source": "static",
-            "note": "Version managed by GitHub Actions workflow only"
+            "note": "Version managed by GitHub Actions workflow only",
         }
-    
+
     def get_current_url(self):
         """현재 환경에 맞는 URL 반환"""
         env = os.environ.get("FLASK_CONFIG", "development")
@@ -89,11 +101,11 @@ class Config:
             return self.DEV_URL
         else:
             return self.LOCAL_URL
-    
+
     def get_health_check_url(self):
         """헬스체크 URL 반환"""
         return f"{self.get_current_url()}/health"
-    
+
     def get_api_base_url(self):
         """API 베이스 URL 반환"""
         return f"{self.get_current_url()}/api/safework/v2"
@@ -126,14 +138,18 @@ class DevelopmentConfig(Config):
     DB_PASSWORD = os.environ.get("DB_PASSWORD", "safework2024")
     DB_NAME = os.environ.get("DB_NAME", "safework_db")
 
-    SQLALCHEMY_DATABASE_URI = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    SQLALCHEMY_DATABASE_URI = (
+        f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    )
 
     # PostgreSQL connection options for development - inherit from base Config
     # No need to redefine SQLALCHEMY_ENGINE_OPTIONS as it's already in base Config class
 
     # CSRF 완전 비활성화 - 설문 테스트용 (환경변수에서 읽기)
     WTF_CSRF_ENABLED = os.environ.get("WTF_CSRF_ENABLED", "false").lower() == "true"
-    WTF_CSRF_CHECK_DEFAULT = os.environ.get("WTF_CSRF_CHECK_DEFAULT", "false").lower() == "true"
+    WTF_CSRF_CHECK_DEFAULT = (
+        os.environ.get("WTF_CSRF_CHECK_DEFAULT", "false").lower() == "true"
+    )
 
 
 class ProductionConfig(Config):
@@ -149,7 +165,9 @@ class ProductionConfig(Config):
     DB_PASSWORD = os.environ.get("DB_PASSWORD", "safework2024")
     DB_NAME = os.environ.get("DB_NAME", "safework_db")
 
-    SQLALCHEMY_DATABASE_URI = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    SQLALCHEMY_DATABASE_URI = (
+        f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    )
 
     # PostgreSQL connection options for production - inherit from base Config
     # No need to redefine SQLALCHEMY_ENGINE_OPTIONS as it's already in base Config class
@@ -162,7 +180,9 @@ class ProductionConfig(Config):
 
     # CSRF 완전 비활성화 - 설문 테스트용 (환경변수에서 읽기)
     WTF_CSRF_ENABLED = os.environ.get("WTF_CSRF_ENABLED", "false").lower() == "true"
-    WTF_CSRF_CHECK_DEFAULT = os.environ.get("WTF_CSRF_CHECK_DEFAULT", "false").lower() == "true"
+    WTF_CSRF_CHECK_DEFAULT = (
+        os.environ.get("WTF_CSRF_CHECK_DEFAULT", "false").lower() == "true"
+    )
 
 
 class TestingConfig(Config):
@@ -176,9 +196,11 @@ class TestingConfig(Config):
     DB_PASSWORD = os.environ.get("DB_PASSWORD", "safework_test_password")
     DB_NAME = os.environ.get("DB_NAME", "safework_test")
 
-    SQLALCHEMY_DATABASE_URI = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    SQLALCHEMY_DATABASE_URI = (
+        f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    )
     WTF_CSRF_ENABLED = False
-    
+
     # PostgreSQL connection options for testing
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_size": 5,

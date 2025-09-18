@@ -3,8 +3,7 @@
 import json
 from datetime import datetime
 
-from flask import (Blueprint, flash, jsonify, redirect, render_template,
-                   request, url_for)
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from migration_manager import MigrationManager
@@ -175,9 +174,7 @@ def api_create_migration():
         # 마이그레이션 설명 가져오기
         if not request.json or "description" not in request.json:
             return (
-                jsonify(
-                    {"success": False, "error": "마이그레이션 설명을 입력해주세요."}
-                ),
+                jsonify({"success": False, "error": "마이그레이션 설명을 입력해주세요."}),
                 400,
             )
 

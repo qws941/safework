@@ -6,11 +6,13 @@ Migration 008: Add SafeWork Todo Management Table
 
 from datetime import datetime
 
+
 def upgrade(db):
     """Create safework_todos table for todo management"""
-    
+
     # SafeWork Todo 관리 테이블 생성
-    db.execute("""
+    db.execute(
+        """
         CREATE TABLE IF NOT EXISTS safework_todos (
             id INT AUTO_INCREMENT PRIMARY KEY,
             title VARCHAR(200) NOT NULL COMMENT '제목',
@@ -38,18 +40,21 @@ def upgrade(db):
             INDEX idx_github_issue (github_issue),
             INDEX idx_created_at (created_at)
         ) COMMENT='SafeWork 프로젝트 Todo 관리'
-    """)
-    
+    """
+    )
+
     # 기본 샘플 데이터 추가
-    db.execute("""
+    db.execute(
+        """
         INSERT INTO safework_todos (title, description, priority, status, category, github_issue, progress) VALUES
         ('📋 Todo 리스트 관리 대시보드 구현', 'SafeWork 프로젝트의 Todo 관리를 위한 대시보드 시스템 구축', 'High', 'In Progress', 'Development', '16', 80),
         ('🏗️ 건설업 맞춤 기본정보 폼 리디자인', '업체/공정/직위 필드 추가 및 건설업 특화 폼 개발', 'High', 'In Progress', 'Development', '5', 60),
         ('🔧 데이터베이스 마이그레이션 시스템 점검', '기존 마이그레이션의 안정성 검토 및 최적화', 'Normal', 'Pending', 'Development', NULL, 0),
         ('📝 API 문서화 업데이트', 'SafeWork API v2 문서화 및 사용 가이드 작성', 'Normal', 'Pending', 'Documentation', NULL, 0),
         ('🧪 단위 테스트 커버리지 확대', 'SafeWork 모든 모듈의 테스트 커버리지 80% 달성', 'Normal', 'Pending', 'Testing', NULL, 0)
-    """)
-    
+    """
+    )
+
     print("✅ Migration 008 completed: SafeWork Todo management table created")
 
 

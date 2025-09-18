@@ -11,7 +11,7 @@ import os
 
 # Add the app directory to Python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-sys.path.insert(0, '/app')  # Docker container path
+sys.path.insert(0, "/app")  # Docker container path
 
 try:
     from models import User, db
@@ -29,7 +29,9 @@ def upgrade():
 
     if not existing_admin and not existing_safewrork:
         # Create admin user with actual credentials
-        admin_user = User(username="safewrork", email="admin@safework.local", is_admin=True)
+        admin_user = User(
+            username="safewrork", email="admin@safework.local", is_admin=True
+        )
         admin_user.set_password("123")
 
         db.session.add(admin_user)
@@ -46,7 +48,7 @@ def downgrade():
     # Check for both possible admin usernames
     admin_user = User.query.filter_by(username="admin").first()
     safewrork_user = User.query.filter_by(username="safewrork").first()
-    
+
     user_to_remove = admin_user or safewrork_user
 
     if user_to_remove:

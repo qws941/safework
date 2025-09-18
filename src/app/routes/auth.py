@@ -15,74 +15,78 @@ auth_bp = Blueprint("auth", __name__)
 def login():
     """로그인"""
     # 디버그 파일 로깅
-    with open('/tmp/login_debug.log', 'a') as f:
+    with open("/tmp/login_debug.log", "a") as f:
         f.write(f"\n=== LOGIN REQUEST START {datetime.now()} ===\n")
         f.write(f"Method: {request.method}\n")
         f.write(f"Content-Type: {request.content_type}\n")
         f.write(f"Form data: {dict(request.form)}\n")
         f.write(f"Is authenticated: {current_user.is_authenticated}\n")
-    
+
     if current_user.is_authenticated:
-        with open('/tmp/login_debug.log', 'a') as f:
+        with open("/tmp/login_debug.log", "a") as f:
             f.write("Already authenticated - redirecting to dashboard\n")
         return redirect(url_for("admin.dashboard"))
 
     if request.method == "POST":
-        username = request.form.get('username', '').strip()
-        password = request.form.get('password', '')
-        
-        with open('/tmp/login_debug.log', 'a') as f:
-            f.write(f"POST - Username: '{username}', Password length: {len(password)}\n")
-        
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+
+        with open("/tmp/login_debug.log", "a") as f:
+            f.write(
+                f"POST - Username: '{username}', Password length: {len(password)}\n"
+            )
+
         # 관리자 계정 직접 처리
-        if username == 'admin' and password == 'safework2024':
-            with open('/tmp/login_debug.log', 'a') as f:
+        if username == "admin" and password == "safework2024":
+            with open("/tmp/login_debug.log", "a") as f:
                 f.write("Admin credentials matched - attempting login\n")
-            
-            user = User.query.filter_by(username='admin').first()
+
+            user = User.query.filter_by(username="admin").first()
             if user:
-                with open('/tmp/login_debug.log', 'a') as f:
+                with open("/tmp/login_debug.log", "a") as f:
                     f.write(f"User found: {user.username}, ID: {user.id}\n")
-                
+
                 login_user(user, remember=False)
-                
+
                 # 로그인 성공 추적
                 track_login_attempt(username, success=True)
-                
-                with open('/tmp/login_debug.log', 'a') as f:
-                    f.write(f"Login successful - current_user.is_authenticated: {current_user.is_authenticated}\n")
+
+                with open("/tmp/login_debug.log", "a") as f:
+                    f.write(
+                        f"Login successful - current_user.is_authenticated: {current_user.is_authenticated}\n"
+                    )
                     f.write("Redirecting to admin dashboard\n")
-                
+
                 return redirect(url_for("admin.dashboard"))
             else:
-                with open('/tmp/login_debug.log', 'a') as f:
+                with open("/tmp/login_debug.log", "a") as f:
                     f.write("Admin user not found in database\n")
         else:
-            with open('/tmp/login_debug.log', 'a') as f:
+            with open("/tmp/login_debug.log", "a") as f:
                 f.write(f"Credentials don't match - expected admin/safework2024\n")
-        
+
         # 로그인 실패 추적
         track_login_attempt(username, success=False)
-        
+
         flash("아이디 또는 비밀번호가 올바르지 않습니다.", "danger")
 
     form = LoginForm()
-    
+
     # GET 요청시 페이지 조회 추적
-    if request.method == 'GET':
+    if request.method == "GET":
         track_page_view("admin_login")
-    
-    with open('/tmp/login_debug.log', 'a') as f:
+
+    with open("/tmp/login_debug.log", "a") as f:
         f.write("Rendering login template\n")
         f.write("=== LOGIN REQUEST END ===\n")
-    
+
     return render_template("auth/login.html", form=form)
 
 
 @auth_bp.route("/bypass-admin", methods=["GET"])
 def bypass_admin():
     """임시 관리자 인증 우회"""
-    user = User.query.filter_by(username='admin').first()
+    user = User.query.filter_by(username="admin").first()
     if user:
         login_user(user, remember=False)
         return redirect(url_for("admin.dashboard"))
@@ -130,19 +134,21 @@ def logout():
     """로그아웃"""
     # 로그아웃 추적
     track_logout()
-    
+
     logout_user()
     flash("로그아웃되었습니다.", "info")
     return redirect(url_for("main.index"))
+
 
 @auth_bp.route("/admin-access")
 def admin_access():
     """임시 관리자 액세스 (디버깅용)"""
     from flask import current_app
+
     current_app.logger.error("ADMIN ACCESS: Route called")
-    
+
     # admin 사용자 강제 로그인
-    user = User.query.filter_by(username='admin').first()
+    user = User.query.filter_by(username="admin").first()
     if user:
         current_app.logger.error(f"ADMIN ACCESS: User found - {user.username}")
         login_user(user, remember=False)

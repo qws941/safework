@@ -23,7 +23,7 @@ def about():
 def health():
     """헬스체크 엔드포인트"""
     return {
-        "status": "healthy", 
+        "status": "healthy",
         "service": "safework",
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.utcnow().isoformat(),
     }, 200

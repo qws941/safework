@@ -34,8 +34,7 @@ ENV POSTGRES_LOG_TIMEZONE=Asia/Seoul
 COPY complete-schema.sql /docker-entrypoint-initdb.d/01-complete-schema.sql
 COPY init.sql /docker-entrypoint-initdb.d/02-init.sql
 
-# Copy migrations directory if it exists
-COPY migrations/ /docker-entrypoint-initdb.d/migrations/ 2>/dev/null || true
+# Note: migrations directory not available during build, handled at runtime if needed
 
 # Create volume for data persistence
 VOLUME ["/var/lib/postgresql/data"]

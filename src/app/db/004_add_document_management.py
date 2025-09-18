@@ -9,7 +9,7 @@ import os
 
 # Add the app directory to Python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-sys.path.insert(0, '/app')  # Docker container path
+sys.path.insert(0, "/app")  # Docker container path
 
 try:
     from models import db
@@ -22,16 +22,18 @@ from sqlalchemy import text
 def create_index_if_not_exists(conn, index_name, table_name, columns):
     """Helper function to create index only if it doesn't exist (MySQL compatible)"""
     result = conn.execute(
-        text("""
+        text(
+            """
         SELECT COUNT(*) as count
         FROM INFORMATION_SCHEMA.STATISTICS 
         WHERE table_schema = DATABASE() 
         AND table_name = :table_name 
         AND index_name = :index_name
-        """),
-        {"table_name": table_name, "index_name": index_name}
+        """
+        ),
+        {"table_name": table_name, "index_name": index_name},
     ).fetchone()
-    
+
     if result[0] == 0:
         conn.execute(text(f"CREATE INDEX {index_name} ON {table_name}({columns})"))
         print(f"  ✓ Created index {index_name} on {table_name}({columns})")
@@ -42,25 +44,29 @@ def create_index_if_not_exists(conn, index_name, table_name, columns):
 def table_exists(conn, table_name):
     """Check if table exists in MySQL"""
     result = conn.execute(
-        text("""
+        text(
+            """
         SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES 
         WHERE table_schema = DATABASE() 
         AND table_name = :table_name
-        """),
-        {"table_name": table_name}
+        """
+        ),
+        {"table_name": table_name},
     ).fetchone()
     return result[0] > 0
 
 
 def upgrade():
     """Apply the migration - Create document management tables"""
-    
+
     with db.engine.connect() as conn:
         trans = conn.begin()
         try:
             # Create document categories table
             if not table_exists(conn, "document_categories"):
-                conn.execute(text("""
+                conn.execute(
+                    text(
+                        """
                 CREATE TABLE document_categories (
                     id INTEGER PRIMARY KEY AUTO_INCREMENT,
                     name VARCHAR(100) NOT NULL UNIQUE,
@@ -70,12 +76,16 @@ def upgrade():
                     is_active BOOLEAN DEFAULT TRUE,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 );
-                """))
+                """
+                    )
+                )
                 print("  ✓ Created document_categories table")
-            
+
             # Create documents table
             if not table_exists(conn, "documents"):
-                conn.execute(text("""
+                conn.execute(
+                    text(
+                        """
                 CREATE TABLE documents (
                     id INTEGER PRIMARY KEY AUTO_INCREMENT,
                     title VARCHAR(200) NOT NULL,
@@ -108,12 +118,16 @@ def upgrade():
                     FOREIGN KEY (category_id) REFERENCES document_categories(id),
                     FOREIGN KEY (uploaded_by) REFERENCES users(id)
                 );
-                """))
+                """
+                    )
+                )
                 print("  ✓ Created documents table")
-            
+
             # Create document versions table
             if not table_exists(conn, "document_versions"):
-                conn.execute(text("""
+                conn.execute(
+                    text(
+                        """
                 CREATE TABLE document_versions (
                     id INTEGER PRIMARY KEY AUTO_INCREMENT,
                     document_id INTEGER NOT NULL,
@@ -127,12 +141,16 @@ def upgrade():
                     FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE,
                     FOREIGN KEY (uploaded_by) REFERENCES users(id)
                 );
-                """))
+                """
+                    )
+                )
                 print("  ✓ Created document_versions table")
-            
+
             # Create document access logs table
             if not table_exists(conn, "document_access_logs"):
-                conn.execute(text("""
+                conn.execute(
+                    text(
+                        """
                 CREATE TABLE document_access_logs (
                     id INTEGER PRIMARY KEY AUTO_INCREMENT,
                     document_id INTEGER NOT NULL,
@@ -144,12 +162,16 @@ def upgrade():
                     FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE,
                     FOREIGN KEY (user_id) REFERENCES users(id)
                 );
-                """))
+                """
+                    )
+                )
                 print("  ✓ Created document_access_logs table")
-            
+
             # Create document templates table
             if not table_exists(conn, "document_templates"):
-                conn.execute(text("""
+                conn.execute(
+                    text(
+                        """
                 CREATE TABLE document_templates (
                     id INTEGER PRIMARY KEY AUTO_INCREMENT,
                     name VARCHAR(100) NOT NULL,
@@ -164,20 +186,44 @@ def upgrade():
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
                 );
-                """))
+                """
+                    )
+                )
                 print("  ✓ Created document_templates table")
-            
+
             # Create indexes for better performance
-            create_index_if_not_exists(conn, "idx_documents_category", "documents", "category_id")
-            create_index_if_not_exists(conn, "idx_documents_type", "documents", "document_type")
-            create_index_if_not_exists(conn, "idx_documents_uploaded_by", "documents", "uploaded_by")
-            create_index_if_not_exists(conn, "idx_documents_number", "documents", "document_number")
-            create_index_if_not_exists(conn, "idx_document_versions_document", "document_versions", "document_id")
-            create_index_if_not_exists(conn, "idx_document_access_document", "document_access_logs", "document_id")
-            create_index_if_not_exists(conn, "idx_document_access_user", "document_access_logs", "user_id")
-            
+            create_index_if_not_exists(
+                conn, "idx_documents_category", "documents", "category_id"
+            )
+            create_index_if_not_exists(
+                conn, "idx_documents_type", "documents", "document_type"
+            )
+            create_index_if_not_exists(
+                conn, "idx_documents_uploaded_by", "documents", "uploaded_by"
+            )
+            create_index_if_not_exists(
+                conn, "idx_documents_number", "documents", "document_number"
+            )
+            create_index_if_not_exists(
+                conn,
+                "idx_document_versions_document",
+                "document_versions",
+                "document_id",
+            )
+            create_index_if_not_exists(
+                conn,
+                "idx_document_access_document",
+                "document_access_logs",
+                "document_id",
+            )
+            create_index_if_not_exists(
+                conn, "idx_document_access_user", "document_access_logs", "user_id"
+            )
+
             # Insert default categories (MySQL compatible - use INSERT IGNORE)
-            conn.execute(text("""
+            conn.execute(
+                text(
+                    """
             INSERT IGNORE INTO document_categories (name, description, icon, sort_order) VALUES
             ('정책 및 규정', '회사 정책, 규정, 지침 문서', 'fa-gavel', 1),
             ('안전 가이드', '안전 작업 지침 및 가이드라인', 'fa-shield-alt', 2),
@@ -187,11 +233,13 @@ def upgrade():
             ('인증서', '안전 관련 인증서 및 자격증', 'fa-certificate', 6),
             ('매뉴얼', '장비 및 시스템 사용 매뉴얼', 'fa-book', 7),
             ('기타', '기타 문서 및 자료', 'fa-folder', 8);
-            """))
-            
+            """
+                )
+            )
+
             print("✅ Created document management tables and indexes")
             trans.commit()
-            
+
         except Exception as e:
             trans.rollback()
             raise e
@@ -199,27 +247,27 @@ def upgrade():
 
 def downgrade():
     """Rollback the migration - Drop document management tables"""
-    
+
     with db.engine.connect() as conn:
         trans = conn.begin()
         try:
             # Drop tables in reverse order to avoid foreign key constraints
             tables = [
-                'document_access_logs',
-                'document_versions',
-                'document_templates',
-                'documents',
-                'document_categories'
+                "document_access_logs",
+                "document_versions",
+                "document_templates",
+                "documents",
+                "document_categories",
             ]
-            
+
             for table in tables:
                 if table_exists(conn, table):
                     conn.execute(text(f"DROP TABLE {table}"))
                     print(f"  ✓ Dropped {table} table")
-            
+
             print("✅ Dropped document management tables")
             trans.commit()
-            
+
         except Exception as e:
             trans.rollback()
             print(f"⚠️  Error during downgrade: {e}")

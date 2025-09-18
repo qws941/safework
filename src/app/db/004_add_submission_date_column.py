@@ -19,23 +19,29 @@ def upgrade():
     """Add submission_date column to surveys table"""
     try:
         # Create the submission_date column with default value
-        db.engine.execute("""
+        db.engine.execute(
+            """
             ALTER TABLE surveys
             ADD COLUMN IF NOT EXISTS submission_date TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-        """)
+        """
+        )
 
         # Update existing records to set submission_date = created_at
-        db.engine.execute("""
+        db.engine.execute(
+            """
             UPDATE surveys
             SET submission_date = created_at
             WHERE submission_date IS NULL
-        """)
+        """
+        )
 
         # Create index for performance
-        db.engine.execute("""
+        db.engine.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_surveys_submission_date
             ON surveys (submission_date)
-        """)
+        """
+        )
 
         print("✅ Added submission_date column to surveys table")
         print("✅ Updated existing records with submission_date = created_at")
@@ -67,6 +73,7 @@ if __name__ == "__main__":
 
     # Create app context for migration
     from app import create_app
+
     app = create_app()
 
     with app.app_context():

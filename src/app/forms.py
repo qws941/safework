@@ -1,9 +1,23 @@
 from flask_wtf import FlaskForm
-from wtforms import (BooleanField, DateField, IntegerField, PasswordField,
-                     RadioField, SelectField, StringField, SubmitField,
-                     TextAreaField)
-from wtforms.validators import (DataRequired, Email, EqualTo, Length,
-                                NumberRange, Optional)
+from wtforms import (
+    BooleanField,
+    DateField,
+    IntegerField,
+    PasswordField,
+    RadioField,
+    SelectField,
+    StringField,
+    SubmitField,
+    TextAreaField,
+)
+from wtforms.validators import (
+    DataRequired,
+    Email,
+    EqualTo,
+    Length,
+    NumberRange,
+    Optional,
+)
 
 
 class LoginForm(FlaskForm):
@@ -36,9 +50,7 @@ class SurveyForm(FlaskForm):
 
     # I. 기본정보 (PDF 테이블과 동일)
     name = StringField("성명", validators=[DataRequired(), Length(min=2, max=100)])
-    age = IntegerField(
-        "연령", validators=[DataRequired(), NumberRange(min=18, max=100)]
-    )
+    age = IntegerField("연령", validators=[DataRequired(), NumberRange(min=18, max=100)])
     gender = RadioField(
         "성별", choices=[("남", "남"), ("여", "여")], validators=[DataRequired()]
     )

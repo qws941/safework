@@ -7,13 +7,15 @@ SafeWork 실시간 알림 시스템 테이블 생성
 
 from datetime import datetime
 
+
 def upgrade(connection):
     """마이그레이션 실행"""
     cursor = connection.cursor()
-    
+
     try:
         # SafeWork 알림 테이블 생성
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS safework_notifications (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 user_id INT NOT NULL,
@@ -33,10 +35,12 @@ def upgrade(connection):
                 INDEX idx_priority (priority)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             COMMENT='SafeWork 알림 테이블'
-        """)
-        
+        """
+        )
+
         # 알림 설정 테이블 생성
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS safework_notification_settings (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 user_id INT UNIQUE NOT NULL,
@@ -52,44 +56,53 @@ def upgrade(connection):
                 UNIQUE KEY unique_user_settings (user_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             COMMENT='SafeWork 알림 설정 테이블'
-        """)
-        
+        """
+        )
+
         # 의약품 테이블에 자동 재주문 필드 추가
-        cursor.execute("""
+        cursor.execute(
+            """
             ALTER TABLE safework_medications 
             ADD COLUMN IF NOT EXISTS auto_reorder_enabled BOOLEAN DEFAULT FALSE COMMENT '자동 재주문 사용',
             ADD COLUMN IF NOT EXISTS reorder_point INT NULL COMMENT '재주문 시점 재고량',
             ADD COLUMN IF NOT EXISTS reorder_quantity INT NULL COMMENT '재주문 수량',
             ADD COLUMN IF NOT EXISTS preferred_supplier VARCHAR(200) NULL COMMENT '선호 공급업체'
-        """)
-        
+        """
+        )
+
         # 알림 관련 인덱스 추가
-        cursor.execute("""
+        cursor.execute(
+            """
             ALTER TABLE safework_medications
             ADD INDEX IF NOT EXISTS idx_stock_alerts (current_stock, minimum_stock, is_active),
             ADD INDEX IF NOT EXISTS idx_expiry_alerts (expiry_date, is_active, current_stock),
             ADD INDEX IF NOT EXISTS idx_auto_reorder (auto_reorder_enabled, reorder_point)
-        """)
-        
+        """
+        )
+
         # 건강검진 테이블에 알림 관련 인덱스 추가
-        cursor.execute("""
+        cursor.execute(
+            """
             ALTER TABLE safework_health_checks
             ADD INDEX IF NOT EXISTS idx_next_check_date (next_check_date, worker_id)
-        """)
-        
+        """
+        )
+
         # 기본 알림 설정 데이터 삽입 (관리자용)
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT IGNORE INTO safework_notification_settings 
             (user_id, email_enabled, browser_enabled, medication_alerts, visit_reminders, health_check_reminders)
             SELECT id, TRUE, TRUE, TRUE, TRUE, TRUE 
             FROM users 
             WHERE role = 'admin'
-        """)
-        
+        """
+        )
+
         connection.commit()
         print("✅ SafeWork 실시간 알림 시스템 테이블이 성공적으로 생성되었습니다.")
         return True
-        
+
     except Exception as e:
         connection.rollback()
         print(f"❌ 마이그레이션 실행 중 오류 발생: {e}")
@@ -101,25 +114,27 @@ def upgrade(connection):
 def downgrade(connection):
     """마이그레이션 롤백"""
     cursor = connection.cursor()
-    
+
     try:
         # 추가된 필드 제거
-        cursor.execute("""
+        cursor.execute(
+            """
             ALTER TABLE safework_medications 
             DROP COLUMN IF EXISTS auto_reorder_enabled,
             DROP COLUMN IF EXISTS reorder_point,
             DROP COLUMN IF EXISTS reorder_quantity,
             DROP COLUMN IF EXISTS preferred_supplier
-        """)
-        
+        """
+        )
+
         # 알림 테이블 삭제
         cursor.execute("DROP TABLE IF EXISTS safework_notifications")
         cursor.execute("DROP TABLE IF EXISTS safework_notification_settings")
-        
+
         connection.commit()
         print("✅ SafeWork 실시간 알림 시스템 테이블이 성공적으로 제거되었습니다.")
         return True
-        
+
     except Exception as e:
         connection.rollback()
         print(f"❌ 롤백 실행 중 오류 발생: {e}")
@@ -130,8 +145,8 @@ def downgrade(connection):
 
 # 마이그레이션 정보
 MIGRATION_INFO = {
-    'version': '006',
-    'description': 'SafeWork 실시간 알림 시스템',
-    'author': 'SafeWork System',
-    'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    "version": "006",
+    "description": "SafeWork 실시간 알림 시스템",
+    "author": "SafeWork System",
+    "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
 }

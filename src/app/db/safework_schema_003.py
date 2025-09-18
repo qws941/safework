@@ -2,6 +2,7 @@
 
 from datetime import datetime
 
+
 def get_migration():
     return {
         "version": "003",
@@ -153,5 +154,5 @@ def get_migration():
             DROP TABLE IF EXISTS safework_health_plans;
             DROP TABLE IF EXISTS safework_workers;
         """,
-        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }

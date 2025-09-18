@@ -1,14 +1,25 @@
 import json
 from datetime import datetime
 
-from flask import (Blueprint, current_app, flash, jsonify, redirect,
-                   render_template, request, url_for, session)
+from flask import (
+    Blueprint,
+    current_app,
+    flash,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    url_for,
+    session,
+)
 from flask_login import current_user, login_required
+
 # CSRF imports removed for survey testing
 # from flask_wtf import FlaskForm  # REMOVED FOR SURVEY TESTING
 
 # SurveyForm removed - using direct HTML forms now
 from models import AuditLog, Survey, Company, Process, Role, db
+
 # Activity tracking temporarily disabled due to missing module
 
 survey_bp = Blueprint("survey", __name__)
@@ -17,7 +28,7 @@ survey_bp = Blueprint("survey", __name__)
 @survey_bp.route("/")
 def index():
     """설문 목록 페이지"""
-    return '''<!DOCTYPE html>
+    return """<!DOCTYPE html>
 <html>
 <head>
     <title>설문 목록 - SafeWork</title>
@@ -67,13 +78,13 @@ def index():
 <hr>
 <p><small>© 2024 SafeWork v3.0.0 - 한국 산업안전보건관리시스템</small></p>
 </body>
-</html>'''
+</html>"""
 
 
 @survey_bp.route("/statistics")
 def statistics():
     """설문 통계 페이지 (임시로 관리자 대시보드 사용)"""
-    return redirect(url_for('admin.dashboard'))
+    return redirect(url_for("admin.dashboard"))
 
 
 def get_or_create_company(name):
@@ -81,7 +92,7 @@ def get_or_create_company(name):
     if not name or name.strip() == "":
         # 기본 회사 생성 또는 찾기
         name = "기타"
-    
+
     company = Company.query.filter_by(name=name).first()
     if not company:
         try:
@@ -94,7 +105,9 @@ def get_or_create_company(name):
             company = Company.query.filter_by(name=name).first()
             if not company:
                 # 여전히 찾을 수 없으면 에러 발생
-                current_app.logger.error(f"Failed to get or create company '{name}': {str(e)}")
+                current_app.logger.error(
+                    f"Failed to get or create company '{name}': {str(e)}"
+                )
                 raise e
     return company.id
 
@@ -104,7 +117,7 @@ def get_or_create_process(name):
     if not name or name.strip() == "":
         # 기본 공정 생성 또는 찾기
         name = "기타"
-    
+
     process = Process.query.filter_by(name=name).first()
     if not process:
         try:
@@ -117,7 +130,9 @@ def get_or_create_process(name):
             process = Process.query.filter_by(name=name).first()
             if not process:
                 # 여전히 찾을 수 없으면 에러 발생
-                current_app.logger.error(f"Failed to get or create process '{name}': {str(e)}")
+                current_app.logger.error(
+                    f"Failed to get or create process '{name}': {str(e)}"
+                )
                 raise e
     return process.id
 
@@ -127,7 +142,7 @@ def get_or_create_role(title):
     if not title or title.strip() == "":
         # 기본 역할 생성 또는 찾기
         title = "기타"
-    
+
     role = Role.query.filter_by(title=title).first()
     if not role:
         try:
@@ -140,7 +155,9 @@ def get_or_create_role(title):
             role = Role.query.filter_by(title=title).first()
             if not role:
                 # 여전히 찾을 수 없으면 에러 발생
-                current_app.logger.error(f"Failed to get or create role '{title}': {str(e)}")
+                current_app.logger.error(
+                    f"Failed to get or create role '{title}': {str(e)}"
+                )
                 raise e
     return role.id
 
@@ -156,13 +173,18 @@ def musculoskeletal_symptom_survey():
     # CSRF 완전 우회 - 익명 설문조사용
     try:
         from flask import g
+
         g._csrf_disabled = True
     except:
         pass
     """근골격계 증상조사표 (001) - 로그인 불필요"""
     # Check if accessed via direct URL (kiosk mode)
-    kiosk_mode = request.args.get('kiosk') == '1' or request.referrer is None or 'survey' not in (request.referrer or '')
-    if request.method == 'POST':
+    kiosk_mode = (
+        request.args.get("kiosk") == "1"
+        or request.referrer is None
+        or "survey" not in (request.referrer or "")
+    )
+    if request.method == "POST":
         # 기본적으로 익명 사용자 ID 1을 사용
         user_id = 1  # 익명 사용자
         if current_user.is_authenticated:
@@ -176,42 +198,54 @@ def musculoskeletal_symptom_survey():
                 musculo_details = json.loads(musculo_details_json)
             except json.JSONDecodeError:
                 current_app.logger.warning("Invalid JSON musculo details data received")
-        
+
         # 기존 호환성을 위한 부위별 데이터 딕셔너리 생성
         symptom_data_dict = {}
         for detail in musculo_details:
-            part_name = detail.get('part', '')
+            part_name = detail.get("part", "")
             # 영어 부위명을 한글로 변환
             part_map = {
-                'neck': '목',
-                'shoulder': '어깨',
-                'arm': '팔/팔꿈치', 
-                'hand': '손/손목/손가락',
-                'waist': '허리',
-                'leg': '다리/발'
+                "neck": "목",
+                "shoulder": "어깨",
+                "arm": "팔/팔꿈치",
+                "hand": "손/손목/손가락",
+                "waist": "허리",
+                "leg": "다리/발",
             }
             korean_part = part_map.get(part_name, part_name)
-            
+
             # 기존 구조에 맞춰 데이터 변환
             symptom_data_dict[korean_part] = {
-                'side': detail.get('side'),
-                'duration': detail.get('duration'),
-                'severity': detail.get('severity'), 
-                'frequency': detail.get('frequency'),
-                'last_week': detail.get('last_week'),
-                'consequences': detail.get('consequences', []),
-                'consequence_other': detail.get('consequence_other')
+                "side": detail.get("side"),
+                "duration": detail.get("duration"),
+                "severity": detail.get("severity"),
+                "frequency": detail.get("frequency"),
+                "last_week": detail.get("last_week"),
+                "consequences": detail.get("consequences", []),
+                "consequence_other": detail.get("consequence_other"),
             }
 
         # 회사, 공정, 역할 처리
-        company_name = request.form.get("company_custom") if request.form.get("company") == "__custom__" else request.form.get("company")
-        process_name = request.form.get("process_custom") if request.form.get("process") == "__custom__" else request.form.get("process")
-        role_name = request.form.get("role_custom") if request.form.get("role") == "__custom__" else request.form.get("role")
+        company_name = (
+            request.form.get("company_custom")
+            if request.form.get("company") == "__custom__"
+            else request.form.get("company")
+        )
+        process_name = (
+            request.form.get("process_custom")
+            if request.form.get("process") == "__custom__"
+            else request.form.get("process")
+        )
+        role_name = (
+            request.form.get("role_custom")
+            if request.form.get("role") == "__custom__"
+            else request.form.get("role")
+        )
 
         # 모든 폼 데이터를 수집하여 responses JSON 필드에 저장
         all_form_data = {}
         for key, value in request.form.items():
-            if key.endswith('[]'):
+            if key.endswith("[]"):
                 # 리스트 형태 데이터 처리
                 all_form_data[key] = request.form.getlist(key)
             else:
@@ -219,8 +253,8 @@ def musculoskeletal_symptom_survey():
 
         # 근골격계 상세 데이터 추가
         if musculo_details:
-            all_form_data['musculo_details'] = musculo_details
-            all_form_data['symptom_data_dict'] = symptom_data_dict
+            all_form_data["musculo_details"] = musculo_details
+            all_form_data["symptom_data_dict"] = symptom_data_dict
 
         # 데이터베이스 스키마에 맞춘 Survey 생성
         survey = Survey(
@@ -238,13 +272,13 @@ def musculoskeletal_symptom_survey():
             work_years=request.form.get("work_years", type=int),
             work_months=request.form.get("work_months", type=int),
             # 모든 설문 응답 데이터를 JSON으로 저장
-            responses=all_form_data
+            responses=all_form_data,
         )
 
         # 추가 증상 데이터를 JSON으로 저장 - 임시 비활성화 (DB 컬럼 없음)
         # symptoms_data = {
         #     "pain_frequency": request.form.get("pain_frequency"),
-        #     "pain_timing": request.form.get("pain_timing"),  
+        #     "pain_timing": request.form.get("pain_timing"),
         #     "pain_characteristics": request.form.get("pain_characteristics"),
         # }
         # survey.symptoms_data = symptoms_data
@@ -256,20 +290,24 @@ def musculoskeletal_symptom_survey():
             # 🚀 RAW DATA 파일 생성 - 설문 제출마다 개별 파일 저장
             try:
                 from utils.raw_data_exporter import export_survey_raw_data
-                
+
                 # JSON과 CSV 형태로 모두 저장
                 exported_files = export_survey_raw_data(
                     survey_data=all_form_data,
                     survey_id=survey.id,
                     form_type="001",
-                    format_types=['json', 'csv']
+                    format_types=["json", "csv"],
                 )
-                
-                current_app.logger.info(f"✅ Raw data files created for survey {survey.id}: {exported_files}")
-                
+
+                current_app.logger.info(
+                    f"✅ Raw data files created for survey {survey.id}: {exported_files}"
+                )
+
             except Exception as export_error:
                 # Raw data 저장 실패해도 설문 제출은 성공으로 처리
-                current_app.logger.warning(f"⚠️ Raw data export failed for survey {survey.id}: {str(export_error)}")
+                current_app.logger.warning(
+                    f"⚠️ Raw data export failed for survey {survey.id}: {str(export_error)}"
+                )
 
             # 설문 제출 추적
             # track_survey_submission(form_type="001", survey_id=survey.id, form_data=all_form_data)
@@ -303,21 +341,27 @@ def musculoskeletal_symptom_survey():
 
     # 페이지 조회 추적
     # track_page_view("001_musculoskeletal_symptom_survey")
-    
-    return render_template("survey/001_musculoskeletal_symptom_survey.html", kiosk_mode=kiosk_mode)
+
+    return render_template(
+        "survey/001_musculoskeletal_symptom_survey.html", kiosk_mode=kiosk_mode
+    )
 
 
 @survey_bp.route("/002_new_employee_health_checkup_form", methods=["GET", "POST"])
 def new_employee_health_checkup_form():
     """신규 입사자 건강검진 양식 (002) - 로그인 불필요"""
     # Check if accessed via direct URL (kiosk mode)
-    kiosk_mode = request.args.get('kiosk') == '1' or request.referrer is None or 'survey' not in (request.referrer or '')
+    kiosk_mode = (
+        request.args.get("kiosk") == "1"
+        or request.referrer is None
+        or "survey" not in (request.referrer or "")
+    )
 
-    if request.method == 'GET':
+    if request.method == "GET":
         # track_page_view("002_new_employee_health_checkup_form")
         pass
-    
-    if request.method == 'POST':
+
+    if request.method == "POST":
         # 기본적으로 익명 사용자 ID 1을 사용
         user_id = 1  # 익명 사용자
         if current_user.is_authenticated:
@@ -326,7 +370,7 @@ def new_employee_health_checkup_form():
         # 모든 폼 데이터를 수집하여 responses JSON 필드에 저장
         all_form_data = {}
         for key, value in request.form.items():
-            if key.endswith('[]'):
+            if key.endswith("[]"):
                 # 리스트 형태 데이터 처리
                 all_form_data[key] = request.form.getlist(key)
             else:
@@ -352,7 +396,7 @@ def new_employee_health_checkup_form():
             medication_history=request.form.get("medication_history"),
             allergy_history=request.form.get("allergy_history"),
             # 모든 설문 응답 데이터를 JSON으로 저장
-            responses=all_form_data
+            responses=all_form_data,
         )
 
         try:
@@ -362,20 +406,24 @@ def new_employee_health_checkup_form():
             # 🚀 RAW DATA 파일 생성 - 설문 제출마다 개별 파일 저장
             try:
                 from utils.raw_data_exporter import export_survey_raw_data
-                
+
                 # JSON과 CSV 형태로 모두 저장
                 exported_files = export_survey_raw_data(
                     survey_data=all_form_data,
                     survey_id=survey.id,
                     form_type="002",
-                    format_types=['json', 'csv']
+                    format_types=["json", "csv"],
                 )
-                
-                current_app.logger.info(f"✅ Raw data files created for survey {survey.id}: {exported_files}")
-                
+
+                current_app.logger.info(
+                    f"✅ Raw data files created for survey {survey.id}: {exported_files}"
+                )
+
             except Exception as export_error:
                 # Raw data 저장 실패해도 설문 제출은 성공으로 처리
-                current_app.logger.warning(f"⚠️ Raw data export failed for survey {survey.id}: {str(export_error)}")
+                current_app.logger.warning(
+                    f"⚠️ Raw data export failed for survey {survey.id}: {str(export_error)}"
+                )
 
             # 설문 제출 추적
             # track_survey_submission(form_type="002", survey_id=survey.id, form_data=all_form_data)
@@ -391,7 +439,9 @@ def new_employee_health_checkup_form():
             flash(f"설문 제출 중 오류가 발생했습니다: {str(e)}", "error")
             return redirect(url_for("survey.new_employee_health_checkup_form"))
 
-    return render_template("survey/002_new_employee_health_checkup_form.html", kiosk_mode=kiosk_mode)
+    return render_template(
+        "survey/002_new_employee_health_checkup_form.html", kiosk_mode=kiosk_mode
+    )
 
 
 @survey_bp.route("/003_musculoskeletal_program", methods=["GET", "POST"])
@@ -400,14 +450,19 @@ def musculoskeletal_program():
     # CSRF 완전 우회 - 익명 설문조사용
     try:
         from flask import g
+
         g._csrf_disabled = True
     except:
         pass
 
     # Check if accessed via direct URL (kiosk mode)
-    kiosk_mode = request.args.get('kiosk') == '1' or request.referrer is None or 'survey' not in (request.referrer or '')
+    kiosk_mode = (
+        request.args.get("kiosk") == "1"
+        or request.referrer is None
+        or "survey" not in (request.referrer or "")
+    )
 
-    if request.method == 'POST':
+    if request.method == "POST":
         # 기본적으로 익명 사용자 ID 1을 사용
         user_id = 1  # 익명 사용자
         if current_user.is_authenticated:
@@ -416,23 +471,23 @@ def musculoskeletal_program():
         # 모든 폼 데이터를 수집하여 responses JSON 필드에 저장
         all_form_data = {}
         for key, value in request.form.items():
-            if key.endswith('[]'):
+            if key.endswith("[]"):
                 # 리스트 형태 데이터 처리
                 all_form_data[key] = request.form.getlist(key)
             else:
                 all_form_data[key] = value
 
         # 신체 부위별 통증 데이터 수집
-        body_parts = ['neck', 'shoulder', 'arm_elbow', 'hand_wrist', 'back', 'leg_foot']
+        body_parts = ["neck", "shoulder", "arm_elbow", "hand_wrist", "back", "leg_foot"]
         body_part_data = {}
 
         for part in body_parts:
             body_part_data[part] = {
-                'has_pain': request.form.get(f'{part}_pain') == '예',
-                'pain_duration': request.form.get(f'{part}_duration'),
-                'pain_intensity': request.form.get(f'{part}_intensity', type=int),
-                'pain_frequency': request.form.get(f'{part}_frequency'),
-                'daily_interference': request.form.get(f'{part}_interference')
+                "has_pain": request.form.get(f"{part}_pain") == "예",
+                "pain_duration": request.form.get(f"{part}_duration"),
+                "pain_intensity": request.form.get(f"{part}_intensity", type=int),
+                "pain_frequency": request.form.get(f"{part}_frequency"),
+                "daily_interference": request.form.get(f"{part}_interference"),
             }
 
         # 관리대상자 분류 계산
@@ -453,14 +508,14 @@ def musculoskeletal_program():
             work_years=request.form.get("work_experience", type=int),
             work_months=request.form.get("work_months", type=int),
             # 증상 여부 (6개 부위 중 하나라도 통증이 있으면 True)
-            has_symptoms=any(data['has_pain'] for data in body_part_data.values()),
+            has_symptoms=any(data["has_pain"] for data in body_part_data.values()),
             # 모든 설문 응답 데이터를 JSON으로 저장
-            responses=all_form_data
+            responses=all_form_data,
         )
 
         # 상세 분석 데이터 추가
-        survey.responses['body_parts_analysis'] = body_part_data
-        survey.responses['management_classification'] = management_classification
+        survey.responses["body_parts_analysis"] = body_part_data
+        survey.responses["management_classification"] = management_classification
 
         try:
             db.session.add(survey)
@@ -469,25 +524,29 @@ def musculoskeletal_program():
             # 🚀 RAW DATA 파일 생성 - 설문 제출마다 개별 파일 저장
             try:
                 from utils.raw_data_exporter import export_survey_raw_data
-                
+
                 # 분석 데이터 포함하여 저장
                 complete_data = all_form_data.copy()
-                complete_data['body_parts_analysis'] = body_part_data
-                complete_data['management_classification'] = management_classification
-                
+                complete_data["body_parts_analysis"] = body_part_data
+                complete_data["management_classification"] = management_classification
+
                 # JSON과 CSV 형태로 모두 저장
                 exported_files = export_survey_raw_data(
                     survey_data=complete_data,
                     survey_id=survey.id,
                     form_type="003",
-                    format_types=['json', 'csv']
+                    format_types=["json", "csv"],
                 )
-                
-                current_app.logger.info(f"✅ Raw data files created for survey {survey.id}: {exported_files}")
-                
+
+                current_app.logger.info(
+                    f"✅ Raw data files created for survey {survey.id}: {exported_files}"
+                )
+
             except Exception as export_error:
                 # Raw data 저장 실패해도 설문 제출은 성공으로 처리
-                current_app.logger.warning(f"⚠️ Raw data export failed for survey {survey.id}: {str(export_error)}")
+                current_app.logger.warning(
+                    f"⚠️ Raw data export failed for survey {survey.id}: {str(export_error)}"
+                )
 
             flash("근골격계질환 예방관리 프로그램 조사표가 성공적으로 제출되었습니다.", "success")
             if kiosk_mode:
@@ -500,7 +559,10 @@ def musculoskeletal_program():
             flash(f"설문 제출 중 오류가 발생했습니다: {str(e)}", "error")
             return redirect(url_for("survey.musculoskeletal_program"))
 
-    return render_template("survey/003_musculoskeletal_program.html", kiosk_mode=kiosk_mode)
+    return render_template(
+        "survey/003_musculoskeletal_program.html", kiosk_mode=kiosk_mode
+    )
+
 
 @survey_bp.route("/003_musculoskeletal_program_enhanced", methods=["GET", "POST"])
 def musculoskeletal_program_enhanced():
@@ -508,14 +570,19 @@ def musculoskeletal_program_enhanced():
     # CSRF 완전 우회 - 익명 설문조사용
     try:
         from flask import g
+
         g._csrf_disabled = True
     except:
         pass
 
     # Check if accessed via direct URL (kiosk mode)
-    kiosk_mode = request.args.get('kiosk') == '1' or request.referrer is None or 'survey' not in (request.referrer or '')
+    kiosk_mode = (
+        request.args.get("kiosk") == "1"
+        or request.referrer is None
+        or "survey" not in (request.referrer or "")
+    )
 
-    if request.method == 'POST':
+    if request.method == "POST":
         # 기본적으로 익명 사용자 ID 1을 사용
         user_id = 1  # 익명 사용자
         if current_user.is_authenticated:
@@ -524,53 +591,55 @@ def musculoskeletal_program_enhanced():
         # 모든 폼 데이터를 수집하여 responses JSON 필드에 저장
         all_form_data = {}
         for key, value in request.form.items():
-            if key.endswith('[]'):
+            if key.endswith("[]"):
                 # 리스트 형태 데이터 처리
                 all_form_data[key] = request.form.getlist(key)
             else:
                 all_form_data[key] = value
 
         # 신체 부위별 통증 데이터 수집 (확장된 6개 부위)
-        body_parts = ['neck', 'shoulder', 'arm_elbow', 'hand_wrist', 'back', 'leg_foot']
+        body_parts = ["neck", "shoulder", "arm_elbow", "hand_wrist", "back", "leg_foot"]
         body_part_data = {}
 
         for part in body_parts:
             body_part_data[part] = {
-                'has_pain': request.form.get(f'{part}_pain') == '예',
-                'pain_duration': request.form.get(f'{part}_duration'),
-                'pain_intensity': request.form.get(f'{part}_intensity', type=int),
-                'pain_frequency': request.form.get(f'{part}_frequency'),
-                'daily_interference': request.form.get(f'{part}_interference')
+                "has_pain": request.form.get(f"{part}_pain") == "예",
+                "pain_duration": request.form.get(f"{part}_duration"),
+                "pain_intensity": request.form.get(f"{part}_intensity", type=int),
+                "pain_frequency": request.form.get(f"{part}_frequency"),
+                "daily_interference": request.form.get(f"{part}_interference"),
             }
 
         # 근무환경 위험요인 데이터 수집
         work_environment = {
-            'work_posture': request.form.get('work_posture'),
-            'work_duration': request.form.get('work_duration'),
-            'repetitive_work': request.form.get('repetitive_work'),
-            'heavy_lifting': request.form.get('heavy_lifting'),
-            'vibration_exposure': request.form.get('vibration_exposure'),
-            'work_stress': request.form.get('work_stress'),
-            'work_environment_temp': request.form.get('work_environment_temp'),
-            'workplace_lighting': request.form.get('workplace_lighting'),
+            "work_posture": request.form.get("work_posture"),
+            "work_duration": request.form.get("work_duration"),
+            "repetitive_work": request.form.get("repetitive_work"),
+            "heavy_lifting": request.form.get("heavy_lifting"),
+            "vibration_exposure": request.form.get("vibration_exposure"),
+            "work_stress": request.form.get("work_stress"),
+            "work_environment_temp": request.form.get("work_environment_temp"),
+            "workplace_lighting": request.form.get("workplace_lighting"),
         }
 
         # 추가 건강 정보 수집
         health_lifestyle = {
-            'previous_injury': request.form.get('previous_injury'),
-            'exercise_frequency': request.form.get('exercise_frequency'),
-            'smoking_status': request.form.get('smoking_status'),
-            'sleep_quality': request.form.get('sleep_quality'),
-            'current_treatment': request.form.get('current_treatment'),
-            'improvement_suggestions': request.form.get('improvement_suggestions'),
-            'additional_comments': request.form.get('additional_comments'),
+            "previous_injury": request.form.get("previous_injury"),
+            "exercise_frequency": request.form.get("exercise_frequency"),
+            "smoking_status": request.form.get("smoking_status"),
+            "sleep_quality": request.form.get("sleep_quality"),
+            "current_treatment": request.form.get("current_treatment"),
+            "improvement_suggestions": request.form.get("improvement_suggestions"),
+            "additional_comments": request.form.get("additional_comments"),
         }
 
         # 관리대상자 분류 계산 (기존 함수 재사용)
         management_classification = calculate_management_classification(body_part_data)
 
         # 위험도 점수 계산 (새로운 기능)
-        risk_score = calculate_enhanced_risk_score(body_part_data, work_environment, health_lifestyle)
+        risk_score = calculate_enhanced_risk_score(
+            body_part_data, work_environment, health_lifestyle
+        )
 
         # 데이터베이스 스키마에 맞춘 Survey 생성
         survey = Survey(
@@ -587,18 +656,18 @@ def musculoskeletal_program_enhanced():
             work_years=request.form.get("work_years", type=int),
             work_months=request.form.get("work_months", type=int),
             # 증상 여부 (6개 부위 중 하나라도 통증이 있으면 True)
-            has_symptoms=any(data['has_pain'] for data in body_part_data.values()),
+            has_symptoms=any(data["has_pain"] for data in body_part_data.values()),
             # 모든 설문 응답 데이터를 JSON으로 저장
-            responses=all_form_data
+            responses=all_form_data,
         )
 
         # 상세 분석 데이터 추가
-        survey.responses['body_parts_analysis'] = body_part_data
-        survey.responses['work_environment_analysis'] = work_environment
-        survey.responses['health_lifestyle_analysis'] = health_lifestyle
-        survey.responses['management_classification'] = management_classification
-        survey.responses['risk_score'] = risk_score
-        survey.responses['form_version'] = 'enhanced_v1.0'
+        survey.responses["body_parts_analysis"] = body_part_data
+        survey.responses["work_environment_analysis"] = work_environment
+        survey.responses["health_lifestyle_analysis"] = health_lifestyle
+        survey.responses["management_classification"] = management_classification
+        survey.responses["risk_score"] = risk_score
+        survey.responses["form_version"] = "enhanced_v1.0"
 
         try:
             db.session.add(survey)
@@ -607,29 +676,33 @@ def musculoskeletal_program_enhanced():
             # 🚀 RAW DATA 파일 생성 - 설문 제출마다 개별 파일 저장
             try:
                 from utils.raw_data_exporter import export_survey_raw_data
-                
+
                 # 완전한 분석 데이터 포함하여 저장
                 complete_data = all_form_data.copy()
-                complete_data['body_parts_analysis'] = body_part_data
-                complete_data['work_environment_analysis'] = work_environment
-                complete_data['health_lifestyle_analysis'] = health_lifestyle
-                complete_data['management_classification'] = management_classification
-                complete_data['risk_score'] = risk_score
-                complete_data['form_version'] = 'enhanced_v1.0'
-                
+                complete_data["body_parts_analysis"] = body_part_data
+                complete_data["work_environment_analysis"] = work_environment
+                complete_data["health_lifestyle_analysis"] = health_lifestyle
+                complete_data["management_classification"] = management_classification
+                complete_data["risk_score"] = risk_score
+                complete_data["form_version"] = "enhanced_v1.0"
+
                 # JSON과 CSV 형태로 모두 저장
                 exported_files = export_survey_raw_data(
                     survey_data=complete_data,
                     survey_id=survey.id,
                     form_type="003",
-                    format_types=['json', 'csv']
+                    format_types=["json", "csv"],
                 )
-                
-                current_app.logger.info(f"✅ Raw data files created for survey {survey.id}: {exported_files}")
-                
+
+                current_app.logger.info(
+                    f"✅ Raw data files created for survey {survey.id}: {exported_files}"
+                )
+
             except Exception as export_error:
                 # Raw data 저장 실패해도 설문 제출은 성공으로 처리
-                current_app.logger.warning(f"⚠️ Raw data export failed for survey {survey.id}: {str(export_error)}")
+                current_app.logger.warning(
+                    f"⚠️ Raw data export failed for survey {survey.id}: {str(export_error)}"
+                )
 
             flash("근골격계질환 예방관리 프로그램 조사표(완전판)가 성공적으로 제출되었습니다.", "success")
             if kiosk_mode:
@@ -642,57 +715,62 @@ def musculoskeletal_program_enhanced():
             flash(f"설문 제출 중 오류가 발생했습니다: {str(e)}", "error")
             return redirect(url_for("survey.musculoskeletal_program_enhanced"))
 
-    return render_template("survey/003_musculoskeletal_program_enhanced.html", kiosk_mode=kiosk_mode)
+    return render_template(
+        "survey/003_musculoskeletal_program_enhanced.html", kiosk_mode=kiosk_mode
+    )
 
 
 def calculate_enhanced_risk_score(body_part_data, work_environment, health_lifestyle):
     """향상된 위험도 점수 계산 함수"""
     risk_score = 0
     risk_factors = []
-    
+
     # 신체 부위별 통증 점수 (기존 분류 기반)
-    pain_count = sum(1 for data in body_part_data.values() if data['has_pain'])
-    severe_pain_count = sum(1 for data in body_part_data.values() 
-                          if data['has_pain'] and str(data.get('pain_intensity', 0)) in ['8', '9', '10'])
-    
+    pain_count = sum(1 for data in body_part_data.values() if data["has_pain"])
+    severe_pain_count = sum(
+        1
+        for data in body_part_data.values()
+        if data["has_pain"] and str(data.get("pain_intensity", 0)) in ["8", "9", "10"]
+    )
+
     risk_score += pain_count * 10  # 통증 부위당 10점
     risk_score += severe_pain_count * 15  # 심한 통증당 추가 15점
-    
+
     if pain_count > 0:
         risk_factors.append(f"통증 부위 {pain_count}개소")
     if severe_pain_count > 0:
         risk_factors.append(f"심한 통증 {severe_pain_count}개소")
-    
+
     # 작업환경 위험요인 점수
     work_risk_factors = {
-        'work_posture': {'굽힌자세': 15, '쪼그린자세': 20, '높은곳작업': 10},
-        'work_duration': {'4-6시간': 10, '6시간이상': 20},
-        'repetitive_work': {'예': 15},
-        'heavy_lifting': {'15-25kg': 15, '25kg이상': 25},
-        'vibration_exposure': {'전신진동': 10, '국소진동': 15, '둘다': 25},
-        'work_stress': {'높음': 10, '매우높음': 20}
+        "work_posture": {"굽힌자세": 15, "쪼그린자세": 20, "높은곳작업": 10},
+        "work_duration": {"4-6시간": 10, "6시간이상": 20},
+        "repetitive_work": {"예": 15},
+        "heavy_lifting": {"15-25kg": 15, "25kg이상": 25},
+        "vibration_exposure": {"전신진동": 10, "국소진동": 15, "둘다": 25},
+        "work_stress": {"높음": 10, "매우높음": 20},
     }
-    
+
     for factor, value in work_environment.items():
         if factor in work_risk_factors and value in work_risk_factors[factor]:
             points = work_risk_factors[factor][value]
             risk_score += points
             risk_factors.append(f"{factor}: {value} (+{points}점)")
-    
+
     # 개인 건강 위험요인
     lifestyle_risk = {
-        'exercise_frequency': {'없음': 10},
-        'smoking_status': {'현재흡연': 15},
-        'sleep_quality': {'나쁨': 10, '매우나쁨': 15},
-        'previous_injury': {'업무관련': 20, '둘다': 15}
+        "exercise_frequency": {"없음": 10},
+        "smoking_status": {"현재흡연": 15},
+        "sleep_quality": {"나쁨": 10, "매우나쁨": 15},
+        "previous_injury": {"업무관련": 20, "둘다": 15},
     }
-    
+
     for factor, value in health_lifestyle.items():
         if factor in lifestyle_risk and value in lifestyle_risk[factor]:
             points = lifestyle_risk[factor][value]
             risk_score += points
             risk_factors.append(f"{factor}: {value} (+{points}점)")
-    
+
     # 위험도 등급 결정
     if risk_score >= 80:
         risk_level = "매우 높음"
@@ -704,13 +782,13 @@ def calculate_enhanced_risk_score(body_part_data, work_environment, health_lifes
         risk_level = "낮음"
     else:
         risk_level = "매우 낮음"
-    
+
     return {
-        'total_score': risk_score,
-        'risk_level': risk_level,
-        'risk_factors': risk_factors,
-        'pain_count': pain_count,
-        'severe_pain_count': severe_pain_count
+        "total_score": risk_score,
+        "risk_level": risk_level,
+        "risk_factors": risk_factors,
+        "pain_count": pain_count,
+        "severe_pain_count": severe_pain_count,
     }
 
 
@@ -720,39 +798,60 @@ def calculate_management_classification(body_part_data):
     management_targets = []
 
     for part_name, data in body_part_data.items():
-        if data['has_pain']:
-            duration = data.get('pain_duration', '')
-            frequency = data.get('pain_frequency', '')
-            intensity = data.get('pain_intensity', '')
+        if data["has_pain"]:
+            duration = data.get("pain_duration", "")
+            frequency = data.get("pain_frequency", "")
+            intensity = data.get("pain_intensity", "")
 
             # 통증강도를 문자열로 변환 (폼에서 정수로 전송되는 경우 처리)
-            intensity_str = str(intensity) if intensity else ''
-            
+            intensity_str = str(intensity) if intensity else ""
+
             # 통증강도 매핑 (1-10 숫자를 한국어 텍스트로 변환)
             intensity_mapping = {
-                '1': '매우약함', '2': '매우약함', '3': '약함', '4': '약함',
-                '5': '보통', '6': '중간정도', '7': '중간정도', 
-                '8': '심한통증', '9': '매우심한통증', '10': '매우심한통증'
+                "1": "매우약함",
+                "2": "매우약함",
+                "3": "약함",
+                "4": "약함",
+                "5": "보통",
+                "6": "중간정도",
+                "7": "중간정도",
+                "8": "심한통증",
+                "9": "매우심한통증",
+                "10": "매우심한통증",
             }
-            
+
             # 숫자인 경우 한국어로 변환, 이미 한국어인 경우 그대로 사용
             if intensity_str.isdigit():
-                intensity_korean = intensity_mapping.get(intensity_str, '보통')
+                intensity_korean = intensity_mapping.get(intensity_str, "보통")
             else:
                 intensity_korean = intensity_str
 
             # 통증호소자 기준 체크
             is_pain_reporter = False
-            if '1주일이상' in duration or '1-4주' in duration or '1-6개월' in duration or '6개월이상' in duration:
-                if '주1-2회' in frequency or '주3-4회' in frequency or '매일' in frequency:
-                    if '중간정도' in intensity_korean or '심한통증' in intensity_korean or '매우심한통증' in intensity_korean:
+            if (
+                "1주일이상" in duration
+                or "1-4주" in duration
+                or "1-6개월" in duration
+                or "6개월이상" in duration
+            ):
+                if "주1-2회" in frequency or "주3-4회" in frequency or "매일" in frequency:
+                    if (
+                        "중간정도" in intensity_korean
+                        or "심한통증" in intensity_korean
+                        or "매우심한통증" in intensity_korean
+                    ):
                         is_pain_reporter = True
 
             # 관리대상자 기준 체크
             is_management_target = False
-            if '1주일이상' in duration or '1-4주' in duration or '1-6개월' in duration or '6개월이상' in duration:
-                if '주1-2회' in frequency or '주3-4회' in frequency or '매일' in frequency:
-                    if '심한통증' in intensity_korean or '매우심한통증' in intensity_korean:
+            if (
+                "1주일이상" in duration
+                or "1-4주" in duration
+                or "1-6개월" in duration
+                or "6개월이상" in duration
+            ):
+                if "주1-2회" in frequency or "주3-4회" in frequency or "매일" in frequency:
+                    if "심한통증" in intensity_korean or "매우심한통증" in intensity_korean:
                         is_management_target = True
 
             if is_pain_reporter:
@@ -773,7 +872,7 @@ def calculate_management_classification(body_part_data):
 def complete(id):
     """제출 완료 페이지"""
     survey = Survey.query.get_or_404(id)
-    kiosk_mode = request.args.get('kiosk') == '1'
+    kiosk_mode = request.args.get("kiosk") == "1"
     return render_template("survey/complete.html", survey=survey, kiosk_mode=kiosk_mode)
 
 
@@ -803,20 +902,19 @@ def admin_dashboard():
 def admin_001_musculoskeletal():
     """관리자 - 001 근골격계 증상조사표 목록"""
     page = request.args.get("page", 1, type=int)
-    
-    surveys = Survey.query.filter(
-        db.or_(
-            Survey.form_type.contains("001"),
-            Survey.form_type == None  # 기존 데이터 호환성
+
+    surveys = (
+        Survey.query.filter(
+            db.or_(
+                Survey.form_type.contains("001"), Survey.form_type == None  # 기존 데이터 호환성
+            )
         )
-    ).order_by(Survey.submission_date.desc()).paginate(
-        page=page, per_page=20, error_out=False
+        .order_by(Survey.submission_date.desc())
+        .paginate(page=page, per_page=20, error_out=False)
     )
-    
+
     return render_template(
-        "survey/admin_001_list.html",
-        surveys=surveys,
-        title="근골격계 증상조사표 (001) 목록"
+        "survey/admin_001_list.html", surveys=surveys, title="근골격계 증상조사표 (001) 목록"
     )
 
 
@@ -825,17 +923,15 @@ def admin_001_musculoskeletal():
 def admin_002_new_employee():
     """관리자 - 002 신규 입사자 건강검진 양식 목록"""
     page = request.args.get("page", 1, type=int)
-    
-    surveys = Survey.query.filter(
-        Survey.form_type.contains("002")
-    ).order_by(Survey.submission_date.desc()).paginate(
-        page=page, per_page=20, error_out=False
+
+    surveys = (
+        Survey.query.filter(Survey.form_type.contains("002"))
+        .order_by(Survey.submission_date.desc())
+        .paginate(page=page, per_page=20, error_out=False)
     )
-    
+
     return render_template(
-        "survey/admin_002_list.html",
-        surveys=surveys,
-        title="신규 입사자 건강검진 양식 (002) 목록"
+        "survey/admin_002_list.html", surveys=surveys, title="신규 입사자 건강검진 양식 (002) 목록"
     )
 
 
@@ -853,7 +949,7 @@ def admin_export(form_type):
     import pandas as pd
     from io import BytesIO
     from flask import send_file
-    
+
     # 양식별 데이터 조회
     if form_type == "001":
         surveys = Survey.query.filter(
@@ -863,44 +959,57 @@ def admin_export(form_type):
         surveys = Survey.query.filter(Survey.form_type.contains("002")).all()
     else:
         surveys = Survey.query.all()
-    
+
     # DataFrame 생성
     data = []
     for survey in surveys:
         # timezone 정보 제거 (Excel 호환성)
-        submission_date = survey.submission_date.replace(tzinfo=None) if survey.submission_date else None
-        data.append({
-            "제출일시": submission_date,
-            "사번": survey.employee_number,
-            "이름": survey.name,
-            "부서": survey.department,
-            "직위": survey.position,
-            "나이": survey.age,
-            "성별": survey.gender,
-            "근무연수": survey.work_years,
-            # 추가 필드들...
-        })
-    
+        submission_date = (
+            survey.submission_date.replace(tzinfo=None)
+            if survey.submission_date
+            else None
+        )
+        data.append(
+            {
+                "제출일시": submission_date,
+                "사번": survey.employee_number,
+                "이름": survey.name,
+                "부서": survey.department,
+                "직위": survey.position,
+                "나이": survey.age,
+                "성별": survey.gender,
+                "근무연수": survey.work_years,
+                # 추가 필드들...
+            }
+        )
+
     df = pd.DataFrame(data)
 
     # timezone 정보가 있는 datetime 컬럼들 처리 (Excel 호환성)
     for col in df.columns:
-        if df[col].dtype == 'object':
+        if df[col].dtype == "object":
             # datetime 객체인지 확인하고 timezone 제거
-            df[col] = df[col].apply(lambda x: x.replace(tzinfo=None) if pd.notnull(x) and hasattr(x, 'replace') and hasattr(x, 'tzinfo') and x.tzinfo is not None else x)
+            df[col] = df[col].apply(
+                lambda x: x.replace(tzinfo=None)
+                if pd.notnull(x)
+                and hasattr(x, "replace")
+                and hasattr(x, "tzinfo")
+                and x.tzinfo is not None
+                else x
+            )
 
     # 엑셀 파일 생성
     output = BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='조사표 데이터')
-    
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name="조사표 데이터")
+
     output.seek(0)
-    
+
     return send_file(
         output,
-        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         as_attachment=True,
-        download_name=f'survey_data_{form_type}_{datetime.now().strftime("%Y%m%d")}.xlsx'
+        download_name=f'survey_data_{form_type}_{datetime.now().strftime("%Y%m%d")}.xlsx',
     )
 
 
@@ -951,7 +1060,9 @@ def api_submit():
             employee_id=data.get("employee_id"),
             work_years=data.get("work_years", 0),
             work_months=data.get("work_months", 0),
-            has_symptoms=data.get("data", {}).get("has_symptoms", data.get("has_symptoms", False)),
+            has_symptoms=data.get("data", {}).get(
+                "has_symptoms", data.get("has_symptoms", False)
+            ),
             # employment_type=data.get("employment_type"),  # 컬럼 없음 - 주석처리
             responses=data,  # 전체 요청 데이터 저장
             data=data.get("data", {}),  # 상세 응답 데이터를 data 필드에 저장
@@ -959,7 +1070,9 @@ def api_submit():
         )
 
         # 디버깅: Survey 객체 생성 후 상태 확인
-        current_app.logger.info(f"[DEBUG] Survey.responses before commit: {survey.responses}")
+        current_app.logger.info(
+            f"[DEBUG] Survey.responses before commit: {survey.responses}"
+        )
 
         db.session.add(survey)
         db.session.commit()
@@ -967,27 +1080,33 @@ def api_submit():
         # 🚀 RAW DATA 파일 생성 - API 제출도 개별 파일 저장
         try:
             from utils.raw_data_exporter import export_survey_raw_data
-            
+
             # JSON과 CSV 형태로 모두 저장
             exported_files = export_survey_raw_data(
                 survey_data=data,
                 survey_id=survey.id,
                 form_type=form_type,
-                format_types=['json', 'csv']
+                format_types=["json", "csv"],
             )
-            
-            current_app.logger.info(f"✅ Raw data files created for API survey {survey.id}: {exported_files}")
-            
+
+            current_app.logger.info(
+                f"✅ Raw data files created for API survey {survey.id}: {exported_files}"
+            )
+
         except Exception as export_error:
             # Raw data 저장 실패해도 API 제출은 성공으로 처리
-            current_app.logger.warning(f"⚠️ Raw data export failed for API survey {survey.id}: {str(export_error)}")
+            current_app.logger.warning(
+                f"⚠️ Raw data export failed for API survey {survey.id}: {str(export_error)}"
+            )
 
         # 설문 제출 추적
         # track_survey_submission(form_type=form_type, survey_id=survey.id, form_data=data)
 
         # 디버깅: 커밋 후 다시 조회해서 확인
         saved_survey = db.session.get(Survey, survey.id)
-        current_app.logger.info(f"[DEBUG] Survey.responses after commit: {saved_survey.responses}")
+        current_app.logger.info(
+            f"[DEBUG] Survey.responses after commit: {saved_survey.responses}"
+        )
 
         return (
             jsonify(
@@ -995,7 +1114,7 @@ def api_submit():
                     "success": True,
                     "survey_id": survey.id,
                     "message": "제출이 완료되었습니다.",
-                    "raw_data_exported": True  # Raw data 저장 여부 표시
+                    "raw_data_exported": True,  # Raw data 저장 여부 표시
                 }
             ),
             201,
