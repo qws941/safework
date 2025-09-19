@@ -66,6 +66,12 @@ make restart                                       # Restart all services
 ./scripts/volume_manager.sh status          # Check volume status
 ./scripts/volume_manager.sh backup          # Backup all data
 ./scripts/volume_manager.sh verify          # Verify data integrity
+
+# 🛠️ Development Helpers
+make help                                          # Show all available Makefile commands
+make info                                          # Display project information and URLs
+make clean                                         # Clean build artifacts and caches
+make dev-setup                                     # Complete development environment setup
 ```
 
 ### Container Deployment via GitHub Actions CI/CD
@@ -804,3 +810,40 @@ make validate                          # Project structure validation
 ./scripts/pipeline_validator.sh        # CI/CD pipeline validation
 ./scripts/test_runner.sh              # Comprehensive system testing
 ```
+
+### Single Test Execution (Development)
+```bash
+# Run single test file (requires virtual environment activation)
+cd src/app && source venv/bin/activate && python -m pytest tests/test_survey.py -v
+cd src/app && source venv/bin/activate && python -m pytest tests/test_auth.py::test_login -v
+
+# Run tests with coverage
+cd src/app && source venv/bin/activate && python -m pytest --cov=app tests/ --cov-report=html
+
+# Run specific test categories
+cd src/app && source venv/bin/activate && python -m pytest -m "unit" tests/     # Unit tests only
+cd src/app && source venv/bin/activate && python -m pytest -m "integration" tests/  # Integration tests only
+```
+
+## Critical Development Notes
+
+### Script Path Conventions
+The project has scripts in two locations with different purposes:
+- `scripts/` - Main automation and management scripts
+- `tools/scripts/` - Advanced tooling and specialized scripts
+
+**Important**: The Makefile references `./tools/scripts/` paths, but these should be updated to `./scripts/` paths:
+```bash
+# Current Makefile references (need updating)
+./tools/scripts/safework_ops_unified.sh
+./tools/scripts/portainer_advanced.sh
+
+# Actual script locations
+./scripts/safework_ops_unified.sh
+./scripts/portainer_advanced.sh
+```
+
+### Container Network Requirements
+- **Network Creation**: SafeWork requires a dedicated Docker network for inter-container communication
+- **Network Name**: Project uses `safework_network` (not `safework2-network` as shown in README)
+- **Critical**: Ensure network exists before starting containers independently
