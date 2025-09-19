@@ -130,13 +130,26 @@ db-backup: ## 데이터베이스 백업
 	@echo "$(GREEN)✅ 백업 완료$(NC)"
 
 ##@ 배포 & 운영
-deploy: ## Production 배포 (GitHub Actions 트리거)
-	@echo "$(GREEN)🚀 Production 배포 시작...$(NC)"
-	./tools/scripts/safework_ops_unified.sh deploy github
+deploy: ## Production 배포 (Portainer API 안정화 버전)
+	@echo "$(GREEN)🚀 Production 배포 시작 (Watchtower 의존성 제거)...$(NC)"
+	@echo "$(YELLOW)📋 안정화된 Portainer API 전용 배포 파이프라인$(NC)"
+	./scripts/portainer_deployment_stable.sh deploy
 
 deploy-local: ## 로컬 배포 실행
 	@echo "$(GREEN)🏠 로컬 배포 실행...$(NC)"
 	./tools/scripts/safework_ops_unified.sh deploy local
+
+deploy-github: ## GitHub Actions 배포 트리거
+	@echo "$(GREEN)🐙 GitHub Actions 배포 트리거...$(NC)"
+	git add . && git commit -m "Deploy: Trigger production deployment via GitHub Actions" && git push origin master
+
+deploy-status: ## 배포 상태 확인 (Portainer API)
+	@echo "$(GREEN)📊 배포 상태 확인...$(NC)"
+	./scripts/portainer_deployment_stable.sh status
+
+deploy-health: ## 프로덕션 헬스 체크
+	@echo "$(GREEN)🏥 프로덕션 헬스 체크...$(NC)"
+	./scripts/portainer_deployment_stable.sh health
 
 status: ## 시스템 상태 확인
 	@echo "$(GREEN)📊 시스템 상태 확인...$(NC)"

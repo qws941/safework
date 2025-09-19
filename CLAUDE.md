@@ -422,7 +422,7 @@ The project uses an **optimized workflow system** with advanced Claude AI integr
 - **Production**: https://safework.jclee.me
 - **Development**: https://safework-dev.jclee.me
 - **Portainer**: portainer.jclee.me (Container management and log viewing via API)
-- **Watchtower**: watchtower.jclee.me (Automatic container deployment via HTTP API)
+- **Portainer API**: Direct container management and deployment orchestration
 - **Images**:
   - registry.jclee.me/safework/app:latest
   - registry.jclee.me/safework/postgres:latest
@@ -443,8 +443,8 @@ APP_NAME=safework                        # Application name for container naming
 REGISTRY_HOST=registry.jclee.me         # Docker registry host
 REGISTRY_USER=admin                     # Registry username
 REGISTRY_PASSWORD=<password>             # Docker registry auth
-WATCHTOWER_HTTP_API_TOKEN=<token>        # Watchtower HTTP API token
-WATCHTOWER_URL=https://watchtower.jclee.me # Watchtower API URL
+# Portainer API for direct container management
+PORTAINER_API_KEY=<token>                # Portainer API key for container operations
 
 # Database credentials
 POSTGRES_PASSWORD=<password>             # PostgreSQL password
@@ -732,7 +732,7 @@ docker build -t test-postgres ./infrastructure/docker/postgres && docker run --r
 docker build -t test-redis ./infrastructure/docker/redis && docker run --rm test-redis redis-server --version
 
 # Verify container networking and deployment
-docker network inspect watchtower_default      # Check network exists
+docker network inspect safework_network       # Check network exists
 make portainer-status                          # Check container status via Portainer
 make health                                    # Comprehensive health check
 make test-api                                  # Test API endpoints

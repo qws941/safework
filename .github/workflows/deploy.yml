@@ -173,30 +173,22 @@ jobs:
       - name: 📂 Checkout Repository
         uses: actions/checkout@v4
 
-      - name: 🔄 Direct Container Update via Portainer API
+      - name: 🔄 Stable Portainer Deployment (Watchtower-free)
         run: |
-          echo "🐳 Updating SafeWork containers directly via Portainer API..."
+          echo "🚀 SafeWork 안정화 배포 시작 (Watchtower 의존성 제거)"
 
-          # Function to pull latest image and restart container
-          update_container() {
-            local container_name="$1"
-            local image_name="$2"
+          # 배포 스크립트 실행 권한 설정
+          chmod +x ./scripts/portainer_deployment_stable.sh
 
-            echo "📥 Pulling latest image for $container_name..."
-            curl -s -X POST -H "X-API-Key: ${{ env.PORTAINER_API_KEY }}" \
-              -H "Content-Type: application/json" \
-              "${{ env.PORTAINER_URL }}/api/endpoints/3/docker/images/create" \
-              -d "{\"fromImage\": \"$image_name\"}"
+          # 환경 변수 설정
+          export PORTAINER_URL="${{ env.PORTAINER_URL }}"
+          export PORTAINER_API_KEY="${{ env.PORTAINER_API_KEY }}"
+          export REGISTRY_HOST="${{ env.REGISTRY_HOST }}"
+          export APP_NAME="${{ env.APP_NAME }}"
+          export PRODUCTION_URL="${{ env.PRD_URL }}"
 
-            echo "🔄 Restarting $container_name..."
-            curl -s -X POST -H "X-API-Key: ${{ env.PORTAINER_API_KEY }}" \
-              "${{ env.PORTAINER_URL }}/api/endpoints/3/docker/containers/$container_name/restart"
-          }
-
-          # Update each container
-          update_container "safework-app" "${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/app:latest"
-          update_container "safework-postgres" "${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/postgres:latest"
-          update_container "safework-redis" "${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/redis:latest"
+          # 안정화된 배포 실행
+          ./scripts/portainer_deployment_stable.sh deploy
 
       - name: ⏱️ Wait for Container Restart
         run: sleep 45
