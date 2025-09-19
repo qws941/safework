@@ -11,6 +11,8 @@ from flask import (
     request,
     url_for,
     session,
+    send_from_directory,
+    abort,
 )
 from flask_login import current_user, login_required
 
@@ -19,6 +21,9 @@ from flask_login import current_user, login_required
 
 # SurveyForm removed - using direct HTML forms now
 from models import AuditLog, Survey, Company, Process, Role, db
+
+# 슬랙 알림 기능 추가
+from utils.slack_notifier import send_survey_slack_notification, send_system_slack_alert
 
 # Activity tracking temporarily disabled due to missing module
 
@@ -309,6 +314,48 @@ def musculoskeletal_symptom_survey():
                     f"⚠️ Raw data export failed for survey {survey.id}: {str(export_error)}"
                 )
 
+            # 원본 설문지 HTML 저장
+            original_html_path = None
+            try:
+                from utils.survey_html_saver import save_survey_original_html
+                original_html_path = save_survey_original_html(all_form_data, survey.id, "001")
+                current_app.logger.info(f"✅ Original survey HTML saved: {original_html_path}")
+            except Exception as html_error:
+                current_app.logger.warning(f"⚠️ Original HTML save failed for survey {survey.id}: {str(html_error)}")
+
+            # HTML 보고서 URL 생성
+            report_url = url_for('survey.survey_report', id=survey.id, _external=True)
+
+            # 원본 HTML URL 생성 (새로운 커스텀 라우트 사용)
+            original_html_url = None
+            if original_html_path:
+                # survey_originals/survey_001_123_20241219_143045.html -> survey_001_123_20241219_143045.html
+                filename = original_html_path.split('/')[-1] if '/' in original_html_path else original_html_path
+                original_html_url = url_for('survey.serve_original_survey', filename=filename, _external=True)
+
+            # Slack 알림 전송 (HTML 보고서 URL 포함)
+            try:
+                from utils.slack_notifier import send_survey_slack_notification
+
+                # 설문 데이터에 보고서 URL 추가
+                survey_data_for_slack = {
+                    'id': survey.id,
+                    'form_type': survey.form_type,
+                    'name': survey.name,
+                    'age': survey.age,
+                    'gender': survey.gender,
+                    'department': survey.department,
+                    'position': survey.position,
+                    'report_url': report_url,
+                    'original_html_url': original_html_url
+                }
+
+                send_survey_slack_notification(survey_data_for_slack)
+                current_app.logger.info(f"✅ Slack notification sent for survey {survey.id} with report URL: {report_url}")
+
+            except Exception as slack_error:
+                current_app.logger.warning(f"⚠️ Slack notification failed for survey {survey.id}: {str(slack_error)}")
+
             # 설문 제출 추적
             # track_survey_submission(form_type="001", survey_id=survey.id, form_data=all_form_data)
 
@@ -333,6 +380,22 @@ def musculoskeletal_symptom_survey():
         #     )
         #     db.session.add(log)
         #     db.session.commit()
+
+        # 슬랙 알림 전송 (설문 제출 완료)
+        try:
+            survey_data = {
+                'id': survey.id,
+                'form_type': survey.form_type,
+                'name': survey.name,
+                'department': survey.department,
+                'position': survey.position,
+                'age': survey.age,
+                'responses': all_form_data
+            }
+            send_survey_slack_notification(survey_data)
+            current_app.logger.info(f"✅ 슬랙 알림 전송 완료: 설문 ID {survey.id}")
+        except Exception as slack_error:
+            current_app.logger.warning(f"⚠️ 슬랙 알림 전송 실패: {str(slack_error)}")
 
         flash("증상조사표가 성공적으로 제출되었습니다.", "success")
         if kiosk_mode:
@@ -427,6 +490,22 @@ def new_employee_health_checkup_form():
 
             # 설문 제출 추적
             # track_survey_submission(form_type="002", survey_id=survey.id, form_data=all_form_data)
+
+            # 슬랙 알림 전송 (002 설문 제출 완료)
+            try:
+                survey_data = {
+                    'id': survey.id,
+                    'form_type': survey.form_type,
+                    'name': survey.name,
+                    'department': survey.department,
+                    'position': survey.position,
+                    'age': survey.age,
+                    'responses': all_form_data
+                }
+                send_survey_slack_notification(survey_data)
+                current_app.logger.info(f"✅ 슬랙 알림 전송 완료: 설문 ID {survey.id}")
+            except Exception as slack_error:
+                current_app.logger.warning(f"⚠️ 슬랙 알림 전송 실패: {str(slack_error)}")
 
             flash("신규 입사자 건강검진 양식이 성공적으로 제출되었습니다.", "success")
             if kiosk_mode:
@@ -547,6 +626,51 @@ def musculoskeletal_program():
                 current_app.logger.warning(
                     f"⚠️ Raw data export failed for survey {survey.id}: {str(export_error)}"
                 )
+
+            # 원본 설문지 HTML 저장 (전체 데이터 포함)
+            original_html_path = None
+            try:
+                from utils.survey_html_saver import save_survey_original_html
+                # 분석 데이터 포함한 전체 데이터로 HTML 생성
+                html_data = complete_data.copy()
+                original_html_path = save_survey_original_html(html_data, survey.id, "003")
+                current_app.logger.info(f"✅ Original survey HTML saved: {original_html_path}")
+            except Exception as html_error:
+                current_app.logger.warning(f"⚠️ Original HTML save failed for survey {survey.id}: {str(html_error)}")
+
+            # HTML 보고서 URL 생성
+            report_url = url_for('survey.survey_report', id=survey.id, _external=True)
+
+            # 원본 HTML URL 생성 (새로운 커스텀 라우트 사용)
+            original_html_url = None
+            if original_html_path:
+                # survey_originals/survey_001_123_20241219_143045.html -> survey_001_123_20241219_143045.html
+                filename = original_html_path.split('/')[-1] if '/' in original_html_path else original_html_path
+                original_html_url = url_for('survey.serve_original_survey', filename=filename, _external=True)
+
+            # Slack 알림 전송 (HTML 보고서 URL 포함)
+            try:
+                from utils.slack_notifier import send_survey_slack_notification
+
+                # 설문 데이터에 보고서 URL 추가
+                survey_data_for_slack = {
+                    'id': survey.id,
+                    'form_type': survey.form_type,
+                    'name': survey.name,
+                    'age': survey.age,
+                    'gender': survey.gender,
+                    'department': survey.department,
+                    'position': survey.position,
+                    'management_classification': management_classification,
+                    'report_url': report_url,
+                    'original_html_url': original_html_url
+                }
+
+                send_survey_slack_notification(survey_data_for_slack)
+                current_app.logger.info(f"✅ Slack notification sent for survey {survey.id} with report URL: {report_url}")
+
+            except Exception as slack_error:
+                current_app.logger.warning(f"⚠️ Slack notification failed for survey {survey.id}: {str(slack_error)}")
 
             flash("근골격계질환 예방관리 프로그램 조사표가 성공적으로 제출되었습니다.", "success")
             if kiosk_mode:
@@ -1027,6 +1151,25 @@ def view(id):
     return render_template("survey/view.html", survey=survey)
 
 
+@survey_bp.route("/report/<int:id>")
+def survey_report(id):
+    """설문조사 HTML 보고서 생성 및 제공"""
+    from datetime import datetime
+
+    survey = Survey.query.get_or_404(id)
+
+    # 현재 시간 정보
+    current_time = datetime.now()
+
+    # HTML 보고서 렌더링
+    return render_template(
+        "survey/survey_report.html",
+        survey=survey,
+        current_time=current_time,
+        config=current_app.config
+    )
+
+
 @survey_bp.route("/api/submit", methods=["POST"])
 def api_submit():
     """API를 통한 제출 (외부 시스템 연동용)"""
@@ -1124,3 +1267,26 @@ def api_submit():
         db.session.rollback()
         current_app.logger.error(f"API submit error: {str(e)}")
         return jsonify({"error": str(e)}), 500
+
+
+@survey_bp.route("/original/<filename>")
+def serve_original_survey(filename):
+    """원본 설문지 HTML 파일 제공"""
+    import os
+
+    # 보안 검증: survey_원형식 파일명만 허용
+    if not filename.startswith('survey_') or not filename.endswith('.html'):
+        abort(404)
+
+    # 파일 경로 설정 (컨테이너 내부 경로)
+    survey_originals_dir = "/app/static/survey_originals"
+
+    # 로컬 개발환경에서는 다른 경로 사용
+    if not os.path.exists(survey_originals_dir):
+        survey_originals_dir = os.path.join(current_app.root_path, "static", "survey_originals")
+
+    try:
+        return send_from_directory(survey_originals_dir, filename)
+    except FileNotFoundError:
+        current_app.logger.error(f"Original survey file not found: {filename}")
+        abort(404)

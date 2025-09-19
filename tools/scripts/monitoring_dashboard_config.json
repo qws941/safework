@@ -9,7 +9,7 @@
   "alert_channels": {
     "email": "admin@safework.jclee.me",
     "webhooks": [
-      "https://hooks.slack.com/services/safework-alerts"
+      "${SLACK_WEBHOOK_URL}"
     ]
   },
   "monitoring_intervals": {

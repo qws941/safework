@@ -15,7 +15,7 @@ class SlackNotifier:
     """슬랙 알림 전송 클래스"""
 
     def __init__(self, webhook_url=None):
-        self.webhook_url = webhook_url or os.getenv('SLACK_WEBHOOK_URL', 'https://hooks.slack.com/services/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')
+        self.webhook_url = webhook_url or os.getenv('SLACK_WEBHOOK_URL')
 
     def send_notification(self, message, color="#36a64f", title="SafeWork 알림", fields=None):
         """
@@ -153,14 +153,27 @@ class SlackNotifier:
 
         form_name = form_type_names.get(survey_data.get('form_type', ''), '알 수 없는 설문')
 
+        # 보고서 URL 포함 메시지 생성
+        report_url = survey_data.get('report_url')
+        original_html_url = survey_data.get('original_html_url')
+        management_classification = survey_data.get('management_classification')
+
         message = f"""
 🆕 새로운 설문지가 제출되었습니다!
 
 📋 **설문 유형**: {form_name}
 👤 **제출자**: {survey_data.get('name', '익명')}
 🏢 **부서**: {survey_data.get('department', '미확인')}
-💼 **직급**: {survey_data.get('position', '미확인')}
+💼 **직급**: {survey_data.get('position', '미확인')}"""
 
+        # Form 003 관리대상자 분류 정보 추가
+        if management_classification:
+            message += f"\n🏥 **관리분류**: {management_classification}"
+
+        message += f"""
+
+📝 **설문지 원본**: {original_html_url or 'N/A'}
+📄 **분석 보고서**: {report_url or 'N/A'}
 🔍 자세한 내용은 SafeWork 관리자 페이지에서 확인하세요.
 📊 관리자 페이지: https://safework.jclee.me/admin
         """.strip()

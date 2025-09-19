@@ -96,7 +96,11 @@ down: ## 개발 서버 중지
 	cd infrastructure && $(COMPOSE) down
 	@echo "$(GREEN)✅ 서버 중지 완료$(NC)"
 
-restart: down up ## 개발 서버 재시작
+restart: ## 고도화된 SafeWork 컨테이너 재시작 (건강 상태 모니터링 포함)
+	@echo "$(GREEN)🔄 SafeWork 고도화 재시작...$(NC)"
+	./tools/scripts/safework_restart_advanced.sh restart
+
+restart-simple: down up ## 기본 개발 서버 재시작
 
 logs: ## 애플리케이션 로그 확인
 	@echo "$(GREEN)📋 로그 확인 중...$(NC)"
@@ -176,6 +180,64 @@ portainer-restart: ## SafeWork 컨테이너 재시작 (Portainer API)
 	./tools/scripts/portainer_advanced.sh restart safework-app
 	./tools/scripts/portainer_advanced.sh restart safework-postgres
 	./tools/scripts/portainer_advanced.sh restart safework-redis
+
+##@ 고도화된 재시작 시스템
+restart-app: ## App 컨테이너만 재시작 (건강 상태 모니터링)
+	@echo "$(GREEN)🔄 App 컨테이너 재시작...$(NC)"
+	./tools/scripts/safework_restart_advanced.sh restart-app
+
+restart-db: ## PostgreSQL 컨테이너만 재시작 (건강 상태 모니터링)
+	@echo "$(GREEN)🔄 PostgreSQL 컨테이너 재시작...$(NC)"
+	./tools/scripts/safework_restart_advanced.sh restart-db
+
+restart-redis: ## Redis 컨테이너만 재시작 (건강 상태 모니터링)
+	@echo "$(GREEN)🔄 Redis 컨테이너 재시작...$(NC)"
+	./tools/scripts/safework_restart_advanced.sh restart-redis
+
+restart-emergency: ## 긴급 복구 재시작 (전체 시스템 복구)
+	@echo "$(RED)🚨 긴급 복구 재시작...$(NC)"
+	./tools/scripts/safework_restart_advanced.sh emergency
+
+restart-status: ## 재시작 후 상태 확인
+	@echo "$(GREEN)📊 재시작 상태 확인...$(NC)"
+	./tools/scripts/safework_restart_advanced.sh status
+
+restart-health: ## 재시작 후 상세 건강 상태 체크
+	@echo "$(GREEN)🏥 재시작 건강 상태 체크...$(NC)"
+	./tools/scripts/safework_restart_advanced.sh health
+
+restart-logs: ## 재시작 관련 로그 확인
+	@echo "$(GREEN)📋 재시작 로그 확인...$(NC)"
+	./tools/scripts/safework_restart_advanced.sh logs
+
+##@ 모니터링 시스템
+monitoring: ## 실시간 모니터링 시작 (Portainer 기반)
+	@echo "$(GREEN)👀 SafeWork 실시간 모니터링 시작...$(NC)"
+	./tools/scripts/safework_monitoring_advanced.sh monitor
+
+monitoring-status: ## 현재 시스템 상태 확인
+	@echo "$(GREEN)📊 시스템 상태 확인...$(NC)"
+	./tools/scripts/safework_monitoring_advanced.sh status
+
+monitoring-health: ## 상세 건강 상태 및 성능 점검
+	@echo "$(GREEN)🏥 상세 건강 상태 점검...$(NC)"
+	./tools/scripts/safework_monitoring_advanced.sh health
+
+monitoring-performance: ## 성능 메트릭 확인
+	@echo "$(GREEN)📈 성능 메트릭 확인...$(NC)"
+	./tools/scripts/safework_monitoring_advanced.sh performance
+
+monitoring-logs: ## 컨테이너 로그 분석
+	@echo "$(GREEN)📋 컨테이너 로그 분석...$(NC)"
+	./tools/scripts/safework_monitoring_advanced.sh logs
+
+test-slack: ## 슬랙 알림 테스트
+	@echo "$(GREEN)📱 슬랙 알림 테스트...$(NC)"
+	./tools/scripts/safework_monitoring_advanced.sh test-slack
+
+emergency-alert: ## 긴급 상황 슬랙 알림 발송
+	@echo "$(RED)🚨 긴급 상황 알림 발송...$(NC)"
+	./tools/scripts/safework_monitoring_advanced.sh emergency
 
 ##@ 개발 도구
 shell: ## Flask 애플리케이션 셸 실행
