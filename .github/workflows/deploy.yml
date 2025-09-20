@@ -9,9 +9,9 @@ on:
   push:
     branches: [master]
     paths:
-      - 'app/**'
-      - 'postgres/**'
-      - 'redis/**'
+      - 'src/app/**'
+      - 'infrastructure/docker/postgres/**'
+      - 'infrastructure/docker/redis/**'
       - 'Dockerfile*'
       - '.github/workflows/deploy.yml'
 
@@ -160,8 +160,8 @@ jobs:
       - name: 🐳 Build and Push App Container
         uses: docker/build-push-action@v5
         with:
-          context: ./app
-          file: ./app/Dockerfile
+          context: ./src/app
+          file: ./src/app/Dockerfile
           push: true
           tags: ${{ steps.app_meta.outputs.tags }}
           labels: ${{ steps.app_meta.outputs.labels }}
@@ -173,8 +173,8 @@ jobs:
       - name: 🐳 Build and Push Postgres Container
         uses: docker/build-push-action@v5
         with:
-          context: ./postgres
-          file: ./postgres/Dockerfile
+          context: ./infrastructure/docker/postgres
+          file: ./infrastructure/docker/postgres/Dockerfile
           push: true
           tags: ${{ steps.postgres_meta.outputs.tags }}
           labels: ${{ steps.postgres_meta.outputs.labels }}
@@ -182,8 +182,8 @@ jobs:
       - name: 🐳 Build and Push Redis Container
         uses: docker/build-push-action@v5
         with:
-          context: ./redis
-          file: ./redis/Dockerfile
+          context: ./infrastructure/docker/redis
+          file: ./infrastructure/docker/redis/Dockerfile
           push: true
           tags: ${{ steps.redis_meta.outputs.tags }}
           labels: ${{ steps.redis_meta.outputs.labels }}
