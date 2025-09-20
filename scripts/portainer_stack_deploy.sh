@@ -13,8 +13,11 @@ readonly LOG_FILE="/tmp/safework_stack_deploy_$(date +%Y%m%d_%H%M%S).log"
 
 # Portainer API 설정
 readonly PORTAINER_URL="https://portainer.jclee.me"
-readonly PORTAINER_TOKEN="ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8="
-readonly ENDPOINT_ID="3"
+readonly PORTAINER_TOKEN="ptr_zdHC0mAdjC7hk7pZ8r2+pJZO+bLxBD/TaB3iPuQwx9Q="
+
+# Endpoint 매핑
+readonly ENDPOINT_SYNOLOGY="1"    # 운영 환경 (synology)
+readonly ENDPOINT_JCLEE_DEV="2"   # 개발 환경 (jclee-dev)
 
 # 스택 설정
 readonly STACK_NAME="safework"
@@ -24,6 +27,27 @@ readonly ENV_FILE=".env"
 # 환경별 설정
 readonly LOCAL_REGISTRY="localhost:5000"
 readonly PROD_REGISTRY="registry.jclee.me"
+
+# 서비스 URL 패턴
+readonly PROD_URL_PATTERN="{basedir}.jclee.me"       # 운영: safework.jclee.me
+readonly DEV_URL_PATTERN="{basedir}-dev.jclee.me"    # 개발: safework-dev.jclee.me
+
+# 환경별 endpoint 매핑 함수
+get_endpoint_id() {
+    local environment="$1"
+    case "$environment" in
+        "production"|"prod")
+            echo "$ENDPOINT_SYNOLOGY"
+            ;;
+        "development"|"dev"|"local")
+            echo "$ENDPOINT_JCLEE_DEV"
+            ;;
+        *)
+            log "ERROR" "지원하지 않는 환경: $environment"
+            return 1
+            ;;
+    esac
+}
 
 # 타임아웃 설정
 readonly API_TIMEOUT=30
@@ -292,8 +316,9 @@ EOF
 # =============================================================================
 get_stack_id() {
     local stack_name="$1"
+    local endpoint_id="${2:-$ENDPOINT_SYNOLOGY}"  # 기본값은 운영 환경
     local stacks=$(portainer_api_call "GET" "stacks")
-    echo "$stacks" | jq -r ".[] | select(.Name == \"$stack_name\") | .Id" 2>/dev/null || echo ""
+    echo "$stacks" | jq -r ".[] | select(.Name == \"$stack_name\" and .EndpointId == $endpoint_id) | .Id" 2>/dev/null || echo ""
 }
 
 list_stacks() {
@@ -314,12 +339,21 @@ deploy_stack() {
 
     log_info "SafeWork 스택 배포 시작: $environment 환경"
 
+    # 환경별 endpoint ID 가져오기
+    local endpoint_id=$(get_endpoint_id "$environment")
+    if [ $? -ne 0 ]; then
+        log_error "유효하지 않은 환경: $environment"
+        return 1
+    fi
+
+    log_info "사용할 Endpoint ID: $endpoint_id (환경: $environment)"
+
     # 기존 스택 확인
-    local existing_stack_id=$(get_stack_id "$STACK_NAME")
-    
+    local existing_stack_id=$(get_stack_id "$STACK_NAME" "$endpoint_id")
+
     if [ -n "$existing_stack_id" ]; then
         log_warn "기존 스택 발견 (ID: $existing_stack_id). 업데이트 모드로 진행"
-        update_stack "$existing_stack_id" "$environment" "$registry_host"
+        update_stack "$existing_stack_id" "$environment" "$registry_host" "$endpoint_id"
         return $?
     fi
 
@@ -336,7 +370,7 @@ deploy_stack() {
         --arg name "$STACK_NAME" \
         --arg compose "$compose_content" \
         --arg env "$env_content" \
-        --argjson endpoint_id "$ENDPOINT_ID" \
+        --argjson endpoint_id "$endpoint_id" \
         '{
             Name: $name,
             SwarmID: "",
@@ -386,8 +420,9 @@ update_stack() {
     local stack_id="$1"
     local environment="$2"
     local registry_host="$3"
+    local endpoint_id="$4"
 
-    log_info "스택 업데이트 시작 (ID: $stack_id)"
+    log_info "스택 업데이트 시작 (ID: $stack_id, Environment: $environment, Endpoint: $endpoint_id)"
 
     # Docker Compose 및 환경 파일 생성
     create_docker_compose "$environment" "$registry_host"
@@ -399,7 +434,7 @@ update_stack() {
     # 스택 업데이트 데이터 준비
     local update_data=$(jq -n \
         --arg compose "$compose_content" \
-        --argjson endpoint_id "$ENDPOINT_ID" \
+        --argjson endpoint_id "$endpoint_id" \
         '{
             StackFileContent: $compose,
             Env: [

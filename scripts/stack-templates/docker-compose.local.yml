@@ -2,6 +2,7 @@ version: '3.8'
 
 # SafeWork Local Development Stack
 # 로컬 개발 환경용 Docker Compose 설정
+# 서비스 URL: safework-dev.jclee.me
 
 networks:
   safework_network:

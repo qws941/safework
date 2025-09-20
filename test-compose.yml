@@ -1,0 +1,6 @@
+version: "3.8"
+services:
+  test-compose:
+    image: hello-world
+    container_name: test-compose
+

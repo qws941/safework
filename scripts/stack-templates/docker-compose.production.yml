@@ -1,7 +1,8 @@
 version: '3.8'
 
 # SafeWork Production Stack
-# 운영 환경용 Docker Compose 설정 - 고가용성 및 보안 최적화
+# 운영 환경용 Docker Compose 설정
+# 서비스 URL: safework.jclee.me - 고가용성 및 보안 최적화
 
 networks:
   safework_network:

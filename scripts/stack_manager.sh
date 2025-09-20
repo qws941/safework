@@ -23,8 +23,11 @@ readonly TEMP_DIR="/tmp/safework_stack_deploy"
 
 # Portainer 설정
 readonly PORTAINER_URL="https://portainer.jclee.me"
-readonly PORTAINER_TOKEN="ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8="
-readonly ENDPOINT_ID="3"
+readonly PORTAINER_TOKEN="ptr_zdHC0mAdjC7hk7pZ8r2+pJZO+bLxBD/TaB3iPuQwx9Q="
+
+# Endpoint 매핑
+readonly ENDPOINT_SYNOLOGY="1"    # 운영 환경 (synology)
+readonly ENDPOINT_JCLEE_DEV="2"   # 개발 환경 (jclee-dev)
 
 # 색상 코드
 readonly RED='\033[0;31m'
