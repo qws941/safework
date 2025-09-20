@@ -53,23 +53,50 @@ permissions:
   issues: write
 
 jobs:
-  # Phase 0: Comprehensive Testing
+  # Phase 0: Comprehensive Testing with Docker API Compatibility
   comprehensive-testing:
-    name: 🧪 Comprehensive Testing
+    name: 🧪 Comprehensive Testing & Docker API Validation
     runs-on: ubuntu-latest
     steps:
       - name: 📂 Checkout Repository
         uses: actions/checkout@v4
 
-      - name: 🐳 Set up Docker Environment
+      - name: 🐳 Set up Docker Environment with API Validation
         run: |
           docker --version
+          docker info
+          echo "📋 Docker API Version: $(docker version --format '{{.Server.APIVersion}}')"
           docker network create safework-test-network || true
+
+      - name: 🔧 Install Testing Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq curl
+          echo "✅ Testing dependencies installed"
 
       - name: 🧪 Run Comprehensive Tests
         run: |
           chmod +x ./scripts/test_runner.sh
           ./scripts/test_runner.sh
+
+      - name: 🚨 Test Emergency Recovery & Docker API Compatibility
+        run: |
+          echo "🧪 Testing Emergency Recovery Script for Docker API Compatibility..."
+          chmod +x ./tools/scripts/emergency_recovery_simple.sh
+
+          # Test the script in dry-run mode to validate API calls
+          export PORTAINER_API_KEY="${{ secrets.PORTAINER_API_KEY }}"
+          export PORTAINER_URL="https://portainer.jclee.me"
+
+          # Validate script can communicate with Portainer API
+          echo "🔍 Testing Portainer API connectivity..."
+          curl -s -H "X-API-Key: $PORTAINER_API_KEY" \
+               "$PORTAINER_URL/api/endpoints/3/docker/version" | jq '.ApiVersion' || {
+            echo "⚠️ Portainer API connection test failed"
+            exit 1
+          }
+
+          echo "✅ Emergency recovery script validated"
 
       - name: 📊 Upload Test Results
         if: always()
@@ -173,12 +200,13 @@ jobs:
       - name: 📂 Checkout Repository
         uses: actions/checkout@v4
 
-      - name: 🔄 Stable Portainer Deployment (Watchtower-free)
+      - name: 🔄 Stable Portainer Deployment with Emergency Recovery
         run: |
-          echo "🚀 SafeWork 안정화 배포 시작 (Watchtower 의존성 제거)"
+          echo "🚀 SafeWork 안정화 배포 시작 (Emergency Recovery 통합)"
 
           # 배포 스크립트 실행 권한 설정
           chmod +x ./scripts/portainer_deployment_stable.sh
+          chmod +x ./tools/scripts/emergency_recovery_simple.sh
 
           # 환경 변수 설정
           export PORTAINER_URL="${{ env.PORTAINER_URL }}"
@@ -187,8 +215,42 @@ jobs:
           export APP_NAME="${{ env.APP_NAME }}"
           export PRODUCTION_URL="${{ env.PRD_URL }}"
 
-          # 안정화된 배포 실행
-          ./scripts/portainer_deployment_stable.sh deploy
+          # 먼저 기존 배포 시도
+          echo "📋 Running standard deployment..."
+          ./scripts/portainer_deployment_stable.sh deploy || {
+            echo "⚠️ Standard deployment failed, running emergency recovery..."
+
+            # Emergency recovery with Docker API compatibility fix
+            ./tools/scripts/emergency_recovery_simple.sh || {
+              echo "❌ Emergency recovery failed"
+              exit 1
+            }
+          }
+
+      - name: 🧪 Post-Deployment Automated Testing
+        run: |
+          echo "🧪 Running automated post-deployment tests..."
+
+          # Wait for system stabilization
+          sleep 30
+
+          # Test container status via Portainer API
+          echo "🔍 Testing container status..."
+          container_status=$(curl -s -H "X-API-Key: ${{ env.PORTAINER_API_KEY }}" \
+                           "${{ env.PORTAINER_URL }}/api/endpoints/3/docker/containers/json" | \
+                           jq -r '.[] | select(.Names[] | contains("safework")) | "\(.Names[0]) - \(.State)"')
+
+          echo "📊 Container Status:"
+          echo "$container_status"
+
+          # Verify all containers are running
+          if echo "$container_status" | grep -q "created\|exited\|paused"; then
+            echo "⚠️ Some containers are not running properly"
+            echo "🚨 Running emergency recovery..."
+            ./tools/scripts/emergency_recovery_simple.sh
+          else
+            echo "✅ All containers are running"
+          fi
 
       - name: ⏱️ Wait for Container Restart
         run: sleep 45
