@@ -23,8 +23,7 @@ services:
     volumes:
       - safework_postgres_data:/var/lib/postgresql/data
     networks:
-      safework_network:
-        ipv4_address: 172.20.0.10
+      - safework_network
     restart: always
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-safework} -d ${DB_NAME:-safework_db}"]
@@ -48,8 +47,7 @@ services:
     volumes:
       - safework_redis_data:/data
     networks:
-      safework_network:
-        ipv4_address: 172.20.0.11
+      - safework_network
     restart: always
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -101,8 +99,7 @@ services:
     volumes:
       - safework_app_uploads:/app/uploads
     networks:
-      safework_network:
-        ipv4_address: 172.20.0.12
+      - safework_network
     ports:
       - "${APP_PORT:-4545}:4545"
     restart: always
