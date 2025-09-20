@@ -3,7 +3,7 @@ version: '3.8'
 networks:
   safework_network:
     external: true
-    name: safework_network
+    name: 638cf4d2dcb5
 
 volumes:
   safework_postgres_data:
