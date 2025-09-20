@@ -105,7 +105,7 @@ AUTOMATION_EXECUTION_REPORT.md
 # Prohibited root configuration files (use config/ or service directories)
 /Dockerfile
 /.env.example
-/docker-compose*.yml
+# /docker-compose*.yml  # Temporarily allow docker-compose.yml in root for production deployment
 /*.conf
 /*.ini
 /*.cfg
