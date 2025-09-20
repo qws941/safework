@@ -22,8 +22,8 @@ from flask_login import current_user, login_required
 # SurveyForm removed - using direct HTML forms now
 from models import AuditLog, Survey, Company, Process, Role, db
 
-# 슬랙 알림 기능 추가
-from utils.slack_notifier import send_survey_slack_notification, send_system_slack_alert
+# 슬랙 알림 기능 - HTML 원데이터 형식
+from utils.slack_notifications import slack_notifier
 
 # Activity tracking temporarily disabled due to missing module
 
@@ -1244,6 +1244,17 @@ def api_submit():
 
         # 설문 제출 추적
         # track_survey_submission(form_type=form_type, survey_id=survey.id, form_data=data)
+
+        # 🚀 새로운 HTML 원데이터 형식 Slack 알림 발송
+        try:
+            slack_notifier.send_survey_submission_with_raw_data(
+                survey_id=survey.id,
+                survey_data=data,
+                form_type=form_type
+            )
+            current_app.logger.info(f"✅ HTML 원데이터 Slack 알림 전송 완료: 설문 ID {survey.id}")
+        except Exception as slack_error:
+            current_app.logger.warning(f"⚠️ Slack 알림 전송 실패: {str(slack_error)}")
 
         # 디버깅: 커밋 후 다시 조회해서 확인
         saved_survey = db.session.get(Survey, survey.id)

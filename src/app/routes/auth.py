@@ -1,6 +1,6 @@
+import os
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from datetime import datetime
-from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 from werkzeug.security import generate_password_hash
 
@@ -36,12 +36,15 @@ def login():
                 f"POST - Username: '{username}', Password length: {len(password)}\n"
             )
 
-        # 관리자 계정 직접 처리
-        if username == "admin" and password == "safework2024":
+        # 관리자 계정 환경변수 처리
+        admin_username = os.environ.get("ADMIN_USERNAME", "admin")
+        admin_password = os.environ.get("ADMIN_PASSWORD", "safework2024")
+
+        if username == admin_username and password == admin_password:
             with open("/tmp/login_debug.log", "a") as f:
                 f.write("Admin credentials matched - attempting login\n")
 
-            user = User.query.filter_by(username="admin").first()
+            user = User.query.filter_by(username=admin_username).first()
             if user:
                 with open("/tmp/login_debug.log", "a") as f:
                     f.write(f"User found: {user.username}, ID: {user.id}\n")
@@ -63,7 +66,7 @@ def login():
                     f.write("Admin user not found in database\n")
         else:
             with open("/tmp/login_debug.log", "a") as f:
-                f.write(f"Credentials don't match - expected admin/safework2024\n")
+                f.write(f"Credentials don't match - expected {admin_username}\n")
 
         # 로그인 실패 추적
         track_login_attempt(username, success=False)
@@ -86,7 +89,8 @@ def login():
 @auth_bp.route("/bypass-admin", methods=["GET"])
 def bypass_admin():
     """임시 관리자 인증 우회"""
-    user = User.query.filter_by(username="admin").first()
+    admin_username = os.environ.get("ADMIN_USERNAME", "admin")
+    user = User.query.filter_by(username=admin_username).first()
     if user:
         login_user(user, remember=False)
         return redirect(url_for("admin.dashboard"))
@@ -148,7 +152,8 @@ def admin_access():
     current_app.logger.error("ADMIN ACCESS: Route called")
 
     # admin 사용자 강제 로그인
-    user = User.query.filter_by(username="admin").first()
+    admin_username = os.environ.get("ADMIN_USERNAME", "admin")
+    user = User.query.filter_by(username=admin_username).first()
     if user:
         current_app.logger.error(f"ADMIN ACCESS: User found - {user.username}")
         login_user(user, remember=False)
