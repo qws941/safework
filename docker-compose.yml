@@ -1,28 +1,20 @@
 version: '3.8'
 
-# SafeWork Production Docker Compose
-# 운영 환경용 Docker Compose 설정
-# 서비스 URL: https://safework.jclee.me
-
 networks:
   safework_network:
-    driver: bridge
+    external: true
     name: safework_network
-    ipam:
-      driver: default
-      config:
-        - subnet: 172.20.0.0/16
 
 volumes:
   safework_postgres_data:
+    external: true
     name: safework_postgres_data
-    driver: local
   safework_redis_data:
+    external: true
     name: safework_redis_data
-    driver: local
   safework_app_uploads:
+    external: true
     name: safework_app_uploads
-    driver: local
 
 services:
   safework-postgres:
