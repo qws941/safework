@@ -64,20 +64,20 @@ def create_app(config_name=None):
                 with app.app_context():
                     db.engine.connect()
                     app.logger.info(
-                        f"✅ Database connected successfully on attempt {attempt + 1}"
+                        f"✅ Database connected 상태정상 on attempt {attempt + 1}"
                     )
                     return True
 
             except Exception as e:
                 if attempt < max_retries - 1:
                     app.logger.warning(
-                        f"⚠️ Database connection attempt {attempt + 1} failed: {e}"
+                        f"⚠️ Database connection attempt {attempt + 1} 오류: {e}"
                     )
                     app.logger.info(f"🔄 Retrying in {retry_delay} seconds...")
                     time_module.sleep(retry_delay)
                 else:
                     app.logger.error(
-                        f"❌ Database connection failed after {max_retries} attempts: {e}"
+                        f"❌ Database connection 오류 after {max_retries} attempts: {e}"
                     )
                     raise
         return False
@@ -108,20 +108,20 @@ def create_app(config_name=None):
                 redis_client.ping()
                 app.redis = redis_client
                 app.logger.info(
-                    f"✅ Redis connected successfully on attempt {attempt + 1}"
+                    f"✅ Redis connected 상태정상 on attempt {attempt + 1}"
                 )
                 return True
 
             except Exception as e:
                 if attempt < max_retries - 1:
                     app.logger.warning(
-                        f"⚠️ Redis connection attempt {attempt + 1} failed: {e}"
+                        f"⚠️ Redis connection attempt {attempt + 1} 오류: {e}"
                     )
                     app.logger.info(f"🔄 Retrying in {retry_delay} seconds...")
                     time_module.sleep(retry_delay)
                 else:
                     app.logger.error(
-                        f"❌ Redis connection failed after {max_retries} attempts: {e}"
+                        f"❌ Redis connection 오류 after {max_retries} attempts: {e}"
                     )
                     # Redis 실패는 치명적이지 않음 - 캐시 없이 동작
                     app.redis = None
@@ -167,7 +167,7 @@ def create_app(config_name=None):
                 db.engine.connect()
                 return True
         except Exception as e:
-            app.logger.error(f"Database health check failed: {e}")
+            app.logger.error(f"Database health check 오류: {e}")
             return False
 
     def check_redis_health():
@@ -178,7 +178,7 @@ def create_app(config_name=None):
                 return True
             return False
         except Exception as e:
-            app.logger.error(f"Redis health check failed: {e}")
+            app.logger.error(f"Redis health check 오류: {e}")
             return False
 
     # Add health check functions to app
@@ -209,7 +209,7 @@ def create_app(config_name=None):
         from routes.api_safework_v2 import api_safework_bp
 
         app.register_blueprint(api_safework_bp, url_prefix="/api/safework/v2")
-        app.logger.info("✅ SafeWork API v2.0 loaded successfully")
+        app.logger.info("✅ SafeWork API v2.0 loaded 상태정상")
     except ImportError as e:
         app.logger.warning(f"⚠️ SafeWork API v2.0 not loaded: {e}")
 
@@ -304,7 +304,7 @@ def create_app(config_name=None):
                         "note": "Temporary version from Git SHA",
                     }
                 else:
-                    raise Exception("Git command failed")
+                    raise Exception("Git command 오류")
         except Exception:
             app_version = "3.0.0"
             version_info = {

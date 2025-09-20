@@ -309,7 +309,7 @@ def musculoskeletal_symptom_survey():
                 )
 
             except Exception as export_error:
-                # Raw data 저장 실패해도 설문 제출은 성공으로 처리
+                # Raw data 저장 오류해도 설문 제출은 완료로 처리
                 current_app.logger.warning(
                     f"⚠️ Raw data export failed for survey {survey.id}: {str(export_error)}"
                 )
@@ -395,9 +395,9 @@ def musculoskeletal_symptom_survey():
             send_survey_slack_notification(survey_data)
             current_app.logger.info(f"✅ 슬랙 알림 전송 완료: 설문 ID {survey.id}")
         except Exception as slack_error:
-            current_app.logger.warning(f"⚠️ 슬랙 알림 전송 실패: {str(slack_error)}")
+            current_app.logger.warning(f"⚠️ 슬랙 알림 전송 오류: {str(slack_error)}")
 
-        flash("증상조사표가 성공적으로 제출되었습니다.", "success")
+        flash("증상조사표가 완료되었습니다 제출되었습니다.", "success")
         if kiosk_mode:
             return redirect(url_for("survey.complete", id=survey.id, kiosk=1))
         return redirect(url_for("survey.complete", id=survey.id))
@@ -483,7 +483,7 @@ def new_employee_health_checkup_form():
                 )
 
             except Exception as export_error:
-                # Raw data 저장 실패해도 설문 제출은 성공으로 처리
+                # Raw data 저장 오류해도 설문 제출은 완료로 처리
                 current_app.logger.warning(
                     f"⚠️ Raw data export failed for survey {survey.id}: {str(export_error)}"
                 )
@@ -505,9 +505,9 @@ def new_employee_health_checkup_form():
                 send_survey_slack_notification(survey_data)
                 current_app.logger.info(f"✅ 슬랙 알림 전송 완료: 설문 ID {survey.id}")
             except Exception as slack_error:
-                current_app.logger.warning(f"⚠️ 슬랙 알림 전송 실패: {str(slack_error)}")
+                current_app.logger.warning(f"⚠️ 슬랙 알림 전송 오류: {str(slack_error)}")
 
-            flash("신규 입사자 건강검진 양식이 성공적으로 제출되었습니다.", "success")
+            flash("신규 입사자 건강검진 양식이 완료되었습니다 제출되었습니다.", "success")
             if kiosk_mode:
                 return redirect(url_for("survey.complete", id=survey.id, kiosk=1))
             return redirect(url_for("survey.complete", id=survey.id))
@@ -622,7 +622,7 @@ def musculoskeletal_program():
                 )
 
             except Exception as export_error:
-                # Raw data 저장 실패해도 설문 제출은 성공으로 처리
+                # Raw data 저장 오류해도 설문 제출은 완료로 처리
                 current_app.logger.warning(
                     f"⚠️ Raw data export failed for survey {survey.id}: {str(export_error)}"
                 )
@@ -672,7 +672,7 @@ def musculoskeletal_program():
             except Exception as slack_error:
                 current_app.logger.warning(f"⚠️ Slack notification failed for survey {survey.id}: {str(slack_error)}")
 
-            flash("근골격계질환 예방관리 프로그램 조사표가 성공적으로 제출되었습니다.", "success")
+            flash("근골격계질환 예방관리 프로그램 조사표가 완료되었습니다 제출되었습니다.", "success")
             if kiosk_mode:
                 return redirect(url_for("survey.complete", id=survey.id, kiosk=1))
             return redirect(url_for("survey.complete", id=survey.id))
@@ -823,12 +823,12 @@ def musculoskeletal_program_enhanced():
                 )
 
             except Exception as export_error:
-                # Raw data 저장 실패해도 설문 제출은 성공으로 처리
+                # Raw data 저장 오류해도 설문 제출은 완료로 처리
                 current_app.logger.warning(
                     f"⚠️ Raw data export failed for survey {survey.id}: {str(export_error)}"
                 )
 
-            flash("근골격계질환 예방관리 프로그램 조사표(완전판)가 성공적으로 제출되었습니다.", "success")
+            flash("근골격계질환 예방관리 프로그램 조사표(완전판)가 완료되었습니다 제출되었습니다.", "success")
             if kiosk_mode:
                 return redirect(url_for("survey.complete", id=survey.id, kiosk=1))
             return redirect(url_for("survey.complete", id=survey.id))
@@ -989,7 +989,7 @@ def calculate_management_classification(body_part_data):
     elif pain_reports:
         return "통증호소자"
     else:
-        return "정상"
+        return "상태정상"
 
 
 @survey_bp.route("/complete/<int:id>")
@@ -1237,7 +1237,7 @@ def api_submit():
             )
 
         except Exception as export_error:
-            # Raw data 저장 실패해도 API 제출은 성공으로 처리
+            # Raw data 저장 오류해도 API 제출은 성공으로 처리
             current_app.logger.warning(
                 f"⚠️ Raw data export failed for API survey {survey.id}: {str(export_error)}"
             )
@@ -1254,7 +1254,7 @@ def api_submit():
             )
             current_app.logger.info(f"✅ HTML 원데이터 Slack 알림 전송 완료: 설문 ID {survey.id}")
         except Exception as slack_error:
-            current_app.logger.warning(f"⚠️ Slack 알림 전송 실패: {str(slack_error)}")
+            current_app.logger.warning(f"⚠️ Slack 알림 전송 오류: {str(slack_error)}")
 
         # 디버깅: 커밋 후 다시 조회해서 확인
         saved_survey = db.session.get(Survey, survey.id)

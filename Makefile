@@ -1,4 +1,4 @@
-# SafeWork 개발 자동화 Makefile
+# SafeWork 개발 시스템자동 Makefile
 # 한국 산업안전보건관리시스템
 
 .PHONY: help setup build test lint format clean deploy logs health
@@ -132,7 +132,7 @@ db-backup: ## 데이터베이스 백업
 ##@ 배포 & 운영 (근본 해결책 적용)
 deploy: ## Production 배포 (환경별 구성 기반, 하드코딩 제거)
 	@echo "$(GREEN)🚀 SafeWork 근본 해결책 배포...$(NC)"
-	@echo "$(YELLOW)📋 환경별 구성 기반 자동화 배포$(NC)"
+	@echo "$(YELLOW)📋 환경별 구성 기반 시스템자동 배포$(NC)"
 	cd scripts && python3 safework_root_solution.py deploy --environment production
 
 deploy-dev: ## Development 환경 배포

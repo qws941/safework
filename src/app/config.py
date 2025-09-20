@@ -77,15 +77,15 @@ class Config:
     PRD_URL = os.environ.get("PRD_URL", "https://safework.jclee.me")
     LOCAL_URL = os.environ.get("LOCAL_URL", "http://localhost:4545")
 
-    # Simple version (managed by workflow only)
+    # 표준 버전 (워크플로우에서만 관리)
     @property
     def APP_VERSION(self):
-        """단순 버전 표시 (워크플로우에서만 관리)"""
+        """표준 버전 표시 (워크플로우에서만 관리)"""
         return "3.0.0"
 
     @property
     def APP_VERSION_INFO(self):
-        """단순 버전 정보"""
+        """표준 버전 정보"""
         return {
             "version": self.APP_VERSION,
             "source": "static",
@@ -145,7 +145,7 @@ class DevelopmentConfig(Config):
     # Inherit SQLALCHEMY_ENGINE_OPTIONS from base Config class
     # This includes DB_POOL_SIZE and other pool settings
 
-    # CSRF 완전 비활성화 - 설문 테스트용 (환경변수에서 읽기)
+    # CSRF 전체 비활성화 - 설문 테스트용 (환경변수에서 읽기)
     WTF_CSRF_ENABLED = os.environ.get("WTF_CSRF_ENABLED", "false").lower() == "true"
     WTF_CSRF_CHECK_DEFAULT = (
         os.environ.get("WTF_CSRF_CHECK_DEFAULT", "false").lower() == "true"
@@ -178,7 +178,7 @@ class ProductionConfig(Config):
     # if not SECRET_KEY:
     #     raise ValueError("SECRET_KEY must be set in production")
 
-    # CSRF 완전 비활성화 - 설문 테스트용 (환경변수에서 읽기)
+    # CSRF 전체 비활성화 - 설문 테스트용 (환경변수에서 읽기)
     WTF_CSRF_ENABLED = os.environ.get("WTF_CSRF_ENABLED", "false").lower() == "true"
     WTF_CSRF_CHECK_DEFAULT = (
         os.environ.get("WTF_CSRF_CHECK_DEFAULT", "false").lower() == "true"

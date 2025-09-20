@@ -90,7 +90,7 @@ def test_api_submission():
             if response.status_code == 201:
                 result = response.json()
                 survey_id = result.get("survey_id")
-                print(f"✅ 성공: Survey ID {survey_id}")
+                print(f"✅ 완료: Survey ID {survey_id}")
 
                 submitted_surveys.append(
                     {
@@ -100,7 +100,7 @@ def test_api_submission():
                     }
                 )
             else:
-                print(f"❌ 실패: HTTP {response.status_code}")
+                print(f"❌ 오류: HTTP {response.status_code}")
                 print(f"응답: {response.text}")
 
         except requests.exceptions.RequestException as e:
@@ -151,9 +151,9 @@ def test_form_submission():
         )
 
         if response.status_code in [200, 302]:
-            print("✅ 웹 폼 제출 성공")
+            print("✅ 웹 폼 제출 완료")
         else:
-            print(f"❌ 웹 폼 제출 실패: HTTP {response.status_code}")
+            print(f"❌ 웹 폼 제출 오류: HTTP {response.status_code}")
 
     except requests.exceptions.RequestException as e:
         print(f"❌ 웹 폼 요청 오류: {str(e)}")
@@ -275,18 +275,18 @@ def test_system_health():
             print(f"⚠️ 헬스 체크 응답: HTTP {response.status_code}")
 
     except requests.exceptions.RequestException as e:
-        print(f"❌ 서버 연결 실패: {str(e)}")
+        print(f"❌ 서버 연결 오류: {str(e)}")
         return False
 
     # 메인 페이지 확인
     try:
         response = requests.get(f"{BASE_URL}/", timeout=5)
         if response.status_code == 200:
-            print("✅ 메인 페이지 접근 가능")
+            print("✅ 메인 페이지 접근 상태정상")
         else:
             print(f"⚠️ 메인 페이지 응답: HTTP {response.status_code}")
     except requests.exceptions.RequestException as e:
-        print(f"❌ 메인 페이지 접근 실패: {str(e)}")
+        print(f"❌ 메인 페이지 접근 오류: {str(e)}")
 
     return True
 
@@ -312,7 +312,7 @@ def print_test_summary():
     print("🔧 추가 확인 사항:")
     print("   - 관리자 대시보드: http://localhost:4545/admin/raw-data/dashboard")
     print("   - API 문서: 각 라우트의 독스트링 참조")
-    print("   - 파일 백업: 자동 백업 시스템 동작 확인")
+    print("   - 파일 백업: 시스템자동 백업 시스템 동작 확인")
 
 
 def main():
@@ -323,7 +323,7 @@ def main():
 
     # 1. 시스템 상태 확인
     if not test_system_health():
-        print("❌ 시스템 상태 확인 실패. 서버가 실행 중인지 확인하세요.")
+        print("❌ 시스템 상태 확인 오류. 서버가 실행 중인지 확인하세요.")
         return
 
     # 2. API 테스트

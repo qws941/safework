@@ -71,7 +71,7 @@ def temp_admin_access():
     user = User.query.filter_by(username="admin").first()
     if user:
         login_user(user, remember=False)
-        flash("임시 관리자 로그인 성공", "success")
+        flash("임시 관리자 로그인 완료", "success")
         return redirect(url_for("admin.dashboard"))
     else:
         flash("관리자 사용자를 찾을 수 없습니다.", "danger")
@@ -241,7 +241,7 @@ def review_survey(id):
     try:
         survey = Survey.query.get_or_404(id)
 
-        # 템플릿을 사용하여 정상적인 응답 반환
+        # 템플릿을 사용하여 상태정상 응답 반환
         return render_template("admin/review_survey.html", survey=survey)
 
     except Exception as e:
@@ -586,7 +586,7 @@ def safework_dashboard():
 
     # 기본값들
     medical_change = -5.2
-    env_status = "정상"
+    env_status = "상태정상"
     next_measurement = "2024-06-15"
 
     # 알림 데이터 (실제 데이터 기반)
@@ -980,7 +980,7 @@ def safework_medical_visits():
         medical_visits = []
         for row in visits_query:
             # vital_signs는 JSON 필드이므로 파싱 필요 (현재는 기본값 사용)
-            vital_signs = {"bp": "정상", "hr": "정상", "bt": "정상"}
+            vital_signs = {"bp": "상태정상", "hr": "상태정상", "bt": "상태정상"}
 
             visit = {
                 "id": row[0],
@@ -1749,7 +1749,7 @@ def msds_create():
 
             db.session.commit()
 
-            flash("MSDS가 성공적으로 등록되었습니다.", "success")
+            flash("MSDS가 완료되었습니다.", "success")
             return redirect(url_for("admin.msds_list"))
 
         except Exception as e:
@@ -1809,7 +1809,7 @@ def msds_edit(msds_id):
                 ).date()
 
             db.session.commit()
-            flash("MSDS가 성공적으로 수정되었습니다.", "success")
+            flash("MSDS가 완료되었습니다.", "success")
             return redirect(url_for("admin.msds_detail", msds_id=msds_id))
 
         except Exception as e:
