@@ -129,11 +129,23 @@ db-backup: ## 데이터베이스 백업
 	$(DOCKER) exec safework-postgres pg_dump -U safework -d safework_db > backup_$(shell date +%Y%m%d_%H%M%S).sql
 	@echo "$(GREEN)✅ 백업 완료$(NC)"
 
-##@ 배포 & 운영
-deploy: ## Production 배포 (Portainer API 안정화 버전)
-	@echo "$(GREEN)🚀 Production 배포 시작 (Watchtower 의존성 제거)...$(NC)"
-	@echo "$(YELLOW)📋 안정화된 Portainer API 전용 배포 파이프라인$(NC)"
-	./scripts/portainer_deployment_stable.sh deploy
+##@ 배포 & 운영 (근본 해결책 적용)
+deploy: ## Production 배포 (환경별 구성 기반, 하드코딩 제거)
+	@echo "$(GREEN)🚀 SafeWork 근본 해결책 배포...$(NC)"
+	@echo "$(YELLOW)📋 환경별 구성 기반 자동화 배포$(NC)"
+	cd scripts && python3 safework_root_solution.py deploy --environment production
+
+deploy-dev: ## Development 환경 배포
+	@echo "$(GREEN)🏠 Development 환경 배포...$(NC)"
+	cd scripts && python3 safework_root_solution.py deploy --environment development
+
+deploy-force: ## 강제 재생성 배포
+	@echo "$(GREEN)🔄 강제 재생성 배포...$(NC)"
+	cd scripts && python3 safework_root_solution.py deploy --environment production --force
+
+deploy-validate: ## 배포 전 환경 검증
+	@echo "$(GREEN)🔍 배포 환경 검증...$(NC)"
+	cd scripts && python3 safework_root_solution.py validate --environment production
 
 deploy-local: ## 로컬 배포 실행
 	@echo "$(GREEN)🏠 로컬 배포 실행...$(NC)"
