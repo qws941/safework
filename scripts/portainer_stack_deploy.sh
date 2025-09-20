@@ -47,6 +47,159 @@ readonly BLUE='\033[0;34m'
 readonly NC='\033[0m'
 
 # =============================================================================
+# 코드 변경사항 반영 함수 (고도화)
+# =============================================================================
+
+# Git 변경사항 확인 함수
+check_git_changes() {
+    log_info "Git 변경사항 확인 중..."
+    
+    if ! git rev-parse --git-dir > /dev/null 2>&1; then
+        log_warn "Git 저장소가 아닙니다. 코드 변경 추적을 건너뜁니다."
+        return 0
+    fi
+    
+    local uncommitted_changes=$(git status --porcelain)
+    local current_commit=$(git rev-parse HEAD)
+    local remote_commit=$(git rev-parse origin/master 2>/dev/null || echo "")
+    
+    if [ -n "$uncommitted_changes" ]; then
+        log_warn "⚠️ 커밋되지 않은 변경사항이 있습니다:"
+        echo "$uncommitted_changes"
+        return 1
+    fi
+    
+    if [ -n "$remote_commit" ] && [ "$current_commit" != "$remote_commit" ]; then
+        log_warn "⚠️ 로컬과 원격 저장소가 동기화되지 않았습니다."
+        log_info "현재 커밋: ${current_commit:0:8}"
+        log_info "원격 커밋: ${remote_commit:0:8}"
+        return 1
+    fi
+    
+    log_success "✅ Git 상태 정상 (커밋: ${current_commit:0:8})"
+    return 0
+}
+
+# 이미지 태그 생성 함수 (Git 커밋 기반)
+generate_image_tag() {
+    local environment="$1"
+    local commit_hash=""
+    local timestamp=$(date +"%Y%m%d-%H%M%S")
+    
+    if git rev-parse --git-dir > /dev/null 2>&1; then
+        commit_hash=$(git rev-parse --short HEAD)
+        echo "${environment}-${commit_hash}-${timestamp}"
+    else
+        echo "${environment}-${timestamp}"
+    fi
+}
+
+# Docker 이미지 빌드 및 푸시 함수
+build_and_push_images() {
+    local environment="$1"
+    local registry_host="$2"
+    local image_tag="${3:-latest}"
+    
+    log_info "Docker 이미지 빌드 및 푸시 시작 (태그: $image_tag)"
+    
+    # 빌드할 서비스 목록
+    local services=("app" "postgres" "redis")
+    local build_paths=("src/app" "infrastructure/docker/postgres" "infrastructure/docker/redis")
+    
+    for i in "${!services[@]}"; do
+        local service="${services[$i]}"
+        local build_path="${build_paths[$i]}"
+        local full_image_name="${registry_host}/${STACK_NAME}/${service}:${image_tag}"
+        local latest_image_name="${registry_host}/${STACK_NAME}/${service}:latest"
+        
+        log_info "빌드 중: $service ($build_path)"
+        
+        if [ -d "$build_path" ]; then
+            # Docker 이미지 빌드
+            if docker build -t "$full_image_name" -t "$latest_image_name" "$build_path"; then
+                log_success "✅ 빌드 완료: $service"
+                
+                # 레지스트리에 푸시
+                if docker push "$full_image_name" && docker push "$latest_image_name"; then
+                    log_success "✅ 푸시 완료: $service ($image_tag, latest)"
+                else
+                    log_error "❌ 푸시 실패: $service"
+                    return 1
+                fi
+            else
+                log_error "❌ 빌드 실패: $service"
+                return 1
+            fi
+        else
+            log_warn "⚠️ 빌드 경로를 찾을 수 없음: $build_path"
+        fi
+    done
+    
+    log_success "🎉 모든 이미지 빌드 및 푸시 완료"
+    return 0
+}
+
+# 강제 이미지 풀 함수 (Portainer API 사용)
+force_pull_images() {
+    local endpoint_id="$1"
+    local registry_host="$2"
+    
+    log_info "최신 이미지 강제 풀 시작..."
+    
+    local services=("app" "postgres" "redis")
+    
+    for service in "${services[@]}"; do
+        local image_name="${registry_host}/${STACK_NAME}/${service}:latest"
+        log_info "이미지 풀: $image_name"
+        
+        # Portainer API를 통한 이미지 풀
+        local pull_response=$(portainer_api_call "POST" "endpoints/$endpoint_id/docker/images/create" "{\"fromImage\":\"$image_name\"}")
+        
+        if [ $? -eq 0 ]; then
+            log_success "✅ 이미지 풀 완료: $service"
+        else
+            log_warn "⚠️ 이미지 풀 실패: $service (계속 진행)"
+        fi
+    done
+}
+
+# 배포 전 준비 함수 (코드 변경사항 반영)
+prepare_deployment() {
+    local environment="$1"
+    local registry_host="$2"
+    local force_rebuild="${3:-false}"
+    
+    log_info "배포 준비 시작: $environment 환경"
+    
+    # Git 상태 확인
+    if ! check_git_changes; then
+        if [ "$force_rebuild" != "true" ]; then
+            log_error "Git 상태가 배포에 적합하지 않습니다. --force 옵션을 사용하거나 Git 상태를 정리하세요."
+            return 1
+        else
+            log_warn "⚠️ Git 상태 경고를 무시하고 계속 진행합니다."
+        fi
+    fi
+    
+    # 프로덕션 환경에서는 항상 최신 이미지 빌드
+    if [ "$environment" = "production" ]; then
+        log_info "프로덕션 환경: 최신 코드로 이미지 빌드 시작"
+        local new_tag=$(generate_image_tag "$environment")
+        
+        if build_and_push_images "$environment" "$registry_host" "$new_tag"; then
+            log_success "✅ 프로덕션 이미지 준비 완료"
+            return 0
+        else
+            log_error "❌ 프로덕션 이미지 빌드 실패"
+            return 1
+        fi
+    fi
+    
+    log_success "✅ 배포 준비 완료"
+    return 0
+}
+
+# =============================================================================
 # 공통 유틸리티 함수
 # =============================================================================
 
@@ -491,6 +644,12 @@ deploy_stack() {
 
     log_info "SafeWork 스택 배포 시작: $environment 환경"
 
+    # 배포 준비 - 코드 변경사항 확인 및 이미지 빌드
+    if ! prepare_deployment "$environment" "$registry_host"; then
+        log_error "배포 준비 실패"
+        return 1
+    fi
+
     # 환경별 endpoint ID 가져오기
     local endpoint_id=$(get_endpoint_id "$environment")
     if [ $? -ne 0 ]; then
@@ -560,6 +719,17 @@ update_stack() {
     local endpoint_id="$4"
 
     log_info "스택 업데이트 시작 (ID: $stack_id, Environment: $environment, Endpoint: $endpoint_id)"
+
+    # 배포 준비 - 코드 변경사항 확인 및 이미지 빌드
+    if ! prepare_deployment "$environment" "$registry_host"; then
+        log_error "배포 준비 실패"
+        return 1
+    fi
+
+    # 최신 이미지 강제 풀링 (Portainer API 사용)
+    if ! force_pull_images "$endpoint_id" "$registry_host"; then
+        log_warn "이미지 풀링 실패 - 기존 이미지로 진행"
+    fi
 
     # Docker Compose 및 환경 파일 생성
     create_docker_compose "$environment" "$registry_host"

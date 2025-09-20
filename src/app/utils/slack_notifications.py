@@ -23,7 +23,7 @@ class SafeWorkSlackNotifier:
         # 토큰이 없으면 환경변수에서 기본값 사용하지 않음 (보안상 권장)
         # 모든 토큰은 명시적으로 환경변수에서 설정되어야 함
 
-        self.default_channel = "#sadework"
+        self.default_channel = "#safework-alerts"
 
         # 사용 가능한 방법 로깅
         if self.webhook_url:
