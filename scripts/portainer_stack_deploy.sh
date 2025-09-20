@@ -8,40 +8,27 @@ set -euo pipefail
 # =============================================================================
 # 설정 및 상수 정의
 # =============================================================================
-readonly SCRIPT_VERSION="2.0.0"
+readonly SCRIPT_VERSION="2.2.0"
 readonly SCRIPT_NAME="SafeWork Portainer Stack Deploy"
 readonly LOG_FILE="/tmp/safework_stack_deploy_$(date +%Y%m%d_%H%M%S).log"
 
-# Portainer API 설정
-readonly PORTAINER_URL="https://portainer.jclee.me"
-readonly PORTAINER_TOKEN="ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8="
+# 설정 파일 경로
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly CONFIG_FILE="${SCRIPT_DIR}/config/portainer_config.env"
 
-# Endpoint 매핑
-readonly ENDPOINT_PRODUCTION="3"    # 운영 환경 (endpoint 3)
-readonly ENDPOINT_DEV="2"           # 개발 환경 (endpoint 2)
-
-# 스택 설정
-readonly STACK_NAME="safework"
+# 임시 파일 설정
 readonly STACK_FILE="docker-compose.yml"
 readonly ENV_FILE=".env"
-
-# 환경별 설정
-readonly LOCAL_REGISTRY="localhost:5000"
-readonly PROD_REGISTRY="registry.jclee.me"
-
-# 서비스 URL 패턴
-readonly PROD_URL_PATTERN="{basedir}.jclee.me"       # 운영: safework.jclee.me
-readonly DEV_URL_PATTERN="{basedir}-dev.jclee.me"    # 개발: safework-dev.jclee.me
 
 # 환경별 endpoint 매핑 함수
 get_endpoint_id() {
     local environment="$1"
     case "$environment" in
         "production"|"prod")
-            echo "$ENDPOINT_PRODUCTION"
+            echo "${ENDPOINT_PRODUCTION}"
             ;;
         "development"|"dev"|"local")
-            echo "$ENDPOINT_DEV"
+            echo "${ENDPOINT_DEV}"
             ;;
         *)
             log "ERROR" "지원하지 않는 환경: $environment"
@@ -50,10 +37,7 @@ get_endpoint_id() {
     esac
 }
 
-# 타임아웃 설정
-readonly API_TIMEOUT=30
-readonly DEPLOYMENT_TIMEOUT=300
-readonly HEALTH_CHECK_TIMEOUT=120
+# 설정에서 로드된 값들을 readonly로 설정 (변수가 정의되었는지 확인)
 
 # 색상 코드
 readonly RED='\033[0;31m'
@@ -61,6 +45,94 @@ readonly GREEN='\033[0;32m'
 readonly YELLOW='\033[0;33m'
 readonly BLUE='\033[0;34m'
 readonly NC='\033[0m'
+
+# =============================================================================
+# 공통 유틸리티 함수
+# =============================================================================
+
+# 서비스 대기 함수 (중복 제거)
+wait_for_service_ready() {
+    local service_type="${1:-container}"
+    local wait_time=10
+    
+    case "$service_type" in
+        "application")
+            wait_time=20
+            log_info "애플리케이션 완전 시작 대기 중..."
+            ;;
+        "container")
+            wait_time=10
+            log_info "컨테이너 완전 시작 대기 중..."
+            ;;
+        "stack")
+            wait_time=10
+            log_info "스택 배포 대기 중..."
+            ;;
+    esac
+    
+    sleep "$wait_time"
+}
+
+# 애플리케이션 헬스 체크 함수 (중복 제거)
+check_app_health() {
+    log_info "애플리케이션 헬스 체크 진행 중..."
+    
+    # Try production URL first, then localhost
+    local health_url="${PRODUCTION_URL}/health"
+    if curl -s -f "$health_url" > /dev/null 2>&1; then
+        local health_response=$(curl -s "$health_url" | jq -r '.status' 2>/dev/null || echo "ok")
+        log_success "Production 애플리케이션 헬스 체크 성공: $health_response"
+        return 0
+    elif curl -s -f "${LOCAL_URL}/health" > /dev/null 2>&1; then
+        local health_response=$(curl -s "${LOCAL_URL}/health" | jq -r '.status' 2>/dev/null || echo "ok")
+        log_success "Local 애플리케이션 헬스 체크 성공: $health_response"
+        return 0
+    else
+        log_error "애플리케이션 헬스 체크 실패"
+        return 1
+    fi
+}
+
+# 컨테이너 상태 체크 함수 (중복 제거)
+check_single_container_status() {
+    local container_name="$1"
+    local containers="$2"
+    
+    local container_info=$(echo "$containers" | jq -r ".[] | select(.Names[] | contains(\"$container_name\"))")
+    
+    if [ -n "$container_info" ]; then
+        local status=$(echo "$container_info" | jq -r '.State')
+        local health=$(echo "$container_info" | jq -r '.Status')
+        
+        case "$status" in
+            "running")
+                log_success "✅ $container_name: 실행 중 ($health)"
+                return 0
+                ;;
+            *)
+                log_error "❌ $container_name: $status ($health)"
+                return 1
+                ;;
+        esac
+    else
+        log_error "⚠️ $container_name: 컨테이너를 찾을 수 없음"
+        return 1
+    fi
+}
+
+# API 연결 체크 함수 (중복 제거)
+check_api_connectivity() {
+    local api_url="$1"
+    local timeout="${2:-5}"
+    
+    if ! curl -s -f --connect-timeout "$timeout" "$api_url" > /dev/null 2>&1; then
+        log_error "API에 연결할 수 없습니다: $api_url"
+        return 1
+    fi
+    
+    log_info "API 연결 확인 완료: $api_url"
+    return 0
+}
 
 # =============================================================================
 # 로깅 함수
@@ -85,6 +157,26 @@ show_header() {
     echo "=========================================="
     echo -e "${NC}"
     log_info "스크립트 시작 - 로그 파일: $LOG_FILE"
+}
+
+# 모듈화된 설정 파일들 로드 (로깅 함수 정의 후)
+load_config_modules() {
+    local config_dir="${SCRIPT_DIR}/config"
+    local config_files=("portainer_config.env" "database.env" "redis.env" "application.env" "infrastructure.env")
+    
+    log_info "모듈화된 설정 파일 로드 시작..."
+    
+    for config_file in "${config_files[@]}"; do
+        local file_path="${config_dir}/${config_file}"
+        if [ -f "$file_path" ]; then
+            source "$file_path"
+            log_info "✅ 설정 모듈 로드: $config_file"
+        else
+            log_warn "⚠️ 설정 파일을 찾을 수 없음: $config_file"
+        fi
+    done
+    
+    log_info "설정 파일 로드 완료"
 }
 
 # =============================================================================
@@ -135,6 +227,139 @@ portainer_api_call() {
 }
 
 # =============================================================================
+# Docker Compose 서비스 생성 함수 (중복 제거)
+# =============================================================================
+
+# 공통 서비스 속성 생성 함수
+generate_common_service_config() {
+    local service_name="$1"
+    local image_tag="$2"
+    local registry_host="$3"
+    
+    cat << EOF
+    image: ${registry_host}/${STACK_NAME}/${image_tag}:latest
+    container_name: ${STACK_NAME}-${service_name}
+    hostname: ${STACK_NAME}-${service_name}
+    environment:
+      - TZ=${TIMEZONE}
+EOF
+}
+
+# 공통 로깅 설정 생성 함수
+generate_logging_config() {
+    cat << EOF
+    logging:
+      driver: "${LOG_DRIVER}"
+      options:
+        max-size: "${LOG_MAX_SIZE}"
+        max-file: "${LOG_MAX_FILE}"
+EOF
+}
+
+# 공통 네트워크 및 재시작 정책 생성 함수
+generate_common_runtime_config() {
+    cat << EOF
+    networks:
+      - ${STACK_NAME}_network
+    restart: ${RESTART_POLICY}
+EOF
+}
+
+# PostgreSQL 서비스 생성 함수
+generate_postgres_service() {
+    local registry_host="$1"
+    
+    cat << EOF
+  ${STACK_NAME}-postgres:
+$(generate_common_service_config "postgres" "postgres" "$registry_host")
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_INITDB_ARGS=${POSTGRES_INITDB_ARGS}
+      - PGDATA=${PGDATA}
+    volumes:
+      - ${STACK_NAME}_postgres_data:/var/lib/postgresql/data
+$(generate_common_runtime_config)
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: ${HEALTH_CHECK_INTERVAL}
+      timeout: ${HEALTH_CHECK_TIMEOUT}
+      retries: ${HEALTH_CHECK_RETRIES}
+      start_period: ${HEALTH_CHECK_START_PERIOD}
+$(generate_logging_config)
+EOF
+}
+
+# Redis 서비스 생성 함수
+generate_redis_service() {
+    local registry_host="$1"
+    
+    cat << EOF
+  ${STACK_NAME}-redis:
+$(generate_common_service_config "redis" "redis" "$registry_host")
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    volumes:
+      - ${STACK_NAME}_redis_data:/data
+$(generate_common_runtime_config)
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: ${HEALTH_CHECK_INTERVAL}
+      timeout: ${HEALTH_CHECK_TIMEOUT}
+      retries: 5
+      start_period: 30s
+$(generate_logging_config)
+EOF
+}
+
+# 애플리케이션 서비스 생성 함수
+generate_app_service() {
+    local registry_host="$1"
+    local secret_key="$2"
+    local admin_password="$3"
+    local flask_config="$4"
+    local debug="$5"
+    
+    cat << EOF
+  ${STACK_NAME}-app:
+$(generate_common_service_config "app" "app" "$registry_host")
+      - FLASK_CONFIG=${flask_config}
+      - DEBUG=${debug}
+      - DB_HOST=${STACK_NAME}-postgres
+      - DB_PORT=${DB_PORT}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=${STACK_NAME}-redis
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DB=${REDIS_DB}
+      - SECRET_KEY=${secret_key}
+      - ADMIN_USERNAME=${ADMIN_USERNAME}
+      - ADMIN_PASSWORD=${admin_password}
+      - WTF_CSRF_ENABLED=${WTF_CSRF_ENABLED}
+      - UPLOAD_FOLDER=${UPLOAD_FOLDER}
+      - MAX_CONTENT_LENGTH=${MAX_CONTENT_LENGTH}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FILE=\${APP_LOG_FILE}
+    volumes:
+      - ${STACK_NAME}_app_uploads:${UPLOAD_FOLDER}
+$(generate_common_runtime_config)
+    ports:
+      - "${APP_PORT}:${APP_PORT}"
+    depends_on:
+      - ${STACK_NAME}-postgres
+      - ${STACK_NAME}-redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${APP_PORT}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: ${HEALTH_CHECK_RETRIES}
+      start_period: 120s
+$(generate_logging_config)
+EOF
+}
+
+# =============================================================================
 # 스택 설정 생성 함수
 # =============================================================================
 create_docker_compose() {
@@ -143,118 +368,36 @@ create_docker_compose() {
 
     log_info "Docker Compose 파일 생성: $environment 환경"
 
+    # 환경별 설정값 결정
+    local secret_key="${SECRET_KEY_PRODUCTION}"
+    local admin_password="${ADMIN_PASSWORD_PRODUCTION}"
+    local flask_config="production"
+    local debug="false"
+
+    if [ "$environment" = "local" ]; then
+        secret_key="${SECRET_KEY_LOCAL}"
+        admin_password="${ADMIN_PASSWORD_LOCAL}"
+        flask_config="development"
+        debug="true"
+    fi
+
     cat > "$STACK_FILE" << EOF
 version: '3.8'
 
 networks:
-  safework_network:
+  ${STACK_NAME}_network:
 
 volumes:
-  safework_postgres_data:
-  safework_redis_data:
-  safework_app_uploads:
+  ${STACK_NAME}_postgres_data:
+  ${STACK_NAME}_redis_data:
+  ${STACK_NAME}_app_uploads:
 
 services:
-  safework-postgres:
-    image: ${registry_host}/safework/postgres:latest
-    container_name: safework-postgres
-    hostname: safework-postgres
-    environment:
-      - TZ=Asia/Seoul
-      - POSTGRES_PASSWORD=safework2024
-      - POSTGRES_DB=safework_db
-      - POSTGRES_USER=safework
-      - POSTGRES_INITDB_ARGS=--encoding=UTF8 --locale=C
-      - PGDATA=/var/lib/postgresql/data/pgdata
-    volumes:
-      - safework_postgres_data:/var/lib/postgresql/data
-    networks:
-      - safework_network
-    restart: always
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U safework -d safework_db"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 60s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+$(generate_postgres_service "$registry_host")
 
-  safework-redis:
-    image: ${registry_host}/safework/redis:latest
-    container_name: safework-redis
-    hostname: safework-redis
-    environment:
-      - TZ=Asia/Seoul
-      - REDIS_PASSWORD=
-    volumes:
-      - safework_redis_data:/data
-    networks:
-      - safework_network
-    restart: always
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+$(generate_redis_service "$registry_host")
 
-  safework-app:
-    image: ${registry_host}/safework/app:latest
-    container_name: safework-app
-    hostname: safework-app
-    environment:
-      - TZ=Asia/Seoul
-      - FLASK_CONFIG=production
-      - DEBUG=false
-      - DB_HOST=safework-postgres
-      - DB_PORT=5432
-      - DB_NAME=safework_db
-      - DB_USER=safework
-      - DB_PASSWORD=safework2024
-      - REDIS_HOST=safework-redis
-      - REDIS_PORT=6379
-      - REDIS_PASSWORD=
-      - REDIS_DB=0
-      - SECRET_KEY=safework-production-secret-key-2024
-      - ADMIN_USERNAME=admin
-      - ADMIN_PASSWORD=admin123
-      - WTF_CSRF_ENABLED=false
-      - UPLOAD_FOLDER=/app/uploads
-      - MAX_CONTENT_LENGTH=52428800
-      - LOG_LEVEL=INFO
-      - LOG_FILE=/app/logs/app.log
-    volumes:
-      - safework_app_uploads:/app/uploads
-    networks:
-      - safework_network
-    ports:
-      - "4545:4545"
-    restart: always
-    depends_on:
-      safework-postgres:
-        condition: service_healthy
-      safework-redis:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4545/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 10
-      start_period: 120s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+$(generate_app_service "$registry_host" "$secret_key" "$admin_password" "$flask_config" "$debug")
 EOF
 
     log_success "Docker Compose 파일 생성 완료: $STACK_FILE"
@@ -507,7 +650,7 @@ monitor_stack_deployment() {
             case "$status" in
                 1|"active")
                     log_success "스택 배포 완료"
-                    sleep 10  # 컨테이너 완전 시작 대기
+                    wait_for_service_ready "container"
                     # Get endpoint_id from stack info
                     local endpoint_id=$(echo "$stack_info" | jq -r '.EndpointId // "3"')
                     check_stack_health "$endpoint_id"
@@ -523,7 +666,7 @@ monitor_stack_deployment() {
             esac
         fi
 
-        sleep 10
+        wait_for_service_ready "stack"
     done
 }
 
@@ -538,23 +681,8 @@ check_stack_health() {
 
     for container in "safework-postgres" "safework-redis" "safework-app"; do
         total_count=$((total_count + 1))
-        local container_info=$(echo "$containers" | jq -r ".[] | select(.Names[] | contains(\"$container\"))")
-        
-        if [ -n "$container_info" ]; then
-            local status=$(echo "$container_info" | jq -r '.State')
-            local health=$(echo "$container_info" | jq -r '.Status')
-            
-            case "$status" in
-                "running")
-                    log_success "✅ $container: 실행 중 ($health)"
-                    healthy_count=$((healthy_count + 1))
-                    ;;
-                *)
-                    log_error "❌ $container: $status ($health)"
-                    ;;
-            esac
-        else
-            log_error "⚠️ $container: 컨테이너를 찾을 수 없음"
+        if check_single_container_status "$container" "$containers"; then
+            healthy_count=$((healthy_count + 1))
         fi
     done
 
@@ -563,20 +691,12 @@ check_stack_health() {
     # 애플리케이션 헬스 체크
     if [ $healthy_count -eq $total_count ]; then
         log_info "애플리케이션 헬스 체크 진행 중..."
-        sleep 20  # 애플리케이션 완전 시작 대기
-
-        # Try production URL first, then localhost
-        local health_url="https://safework.jclee.me/health"
-        if curl -s -f "$health_url" > /dev/null 2>&1; then
-            local health_response=$(curl -s "$health_url" | jq -r '.status' 2>/dev/null || echo "ok")
-            log_success "Production 애플리케이션 헬스 체크 성공: $health_response"
-            return 0
-        elif curl -s -f "http://localhost:4545/health" > /dev/null 2>&1; then
-            local health_response=$(curl -s "http://localhost:4545/health" | jq -r '.status' 2>/dev/null || echo "ok")
-            log_success "Local 애플리케이션 헬스 체크 성공: $health_response"
+        wait_for_service_ready "application"
+        
+        if check_app_health; then
             return 0
         else
-            log_error "애플리케이션 헬스 체크 실패 (production 및 local 모두 실패)"
+            log_error "애플리케이션 헬스 체크 실패"
             return 1
         fi
     else
@@ -644,8 +764,7 @@ check_prerequisites() {
     done
 
     # Portainer API 연결 확인
-    if ! curl -s -f --connect-timeout 5 "$PORTAINER_URL/api/status" > /dev/null 2>&1; then
-        log_error "Portainer API에 연결할 수 없습니다: $PORTAINER_URL"
+    if ! check_api_connectivity "$PORTAINER_URL/api/status" 5; then
         return 1
     fi
 
@@ -658,7 +777,10 @@ check_prerequisites() {
 # =============================================================================
 main() {
     show_header
-
+    
+    # 설정 파일 로드
+    load_config_modules
+    
     # 전제 조건 확인
     check_prerequisites || {
         log_error "전제 조건 확인 실패"
