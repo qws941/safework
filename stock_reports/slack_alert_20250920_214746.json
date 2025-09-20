@@ -1,0 +1,60 @@
+{
+  "channel": "#safework-alerts",
+  "text": "🚨 SafeWork 의약품 재고 부족 알림 (4개 항목)",
+  "attachments": [
+    {
+      "color": "danger",
+      "title": "🔴 긴급 보충 필요 (1개)",
+      "fields": [
+        {
+          "title": "📦 밴드 (대형)",
+          "value": "현재: 3개 | 최소: 50개 | 부족: 47개",
+          "short": false
+        }
+      ],
+      "footer": "SafeWork 재고 관리 시스템",
+      "ts": 1758372466
+    },
+    {
+      "color": "warning",
+      "title": "🟡 보충 필요 (2개)",
+      "fields": [
+        {
+          "title": "📦 아세트아미노펜 500mg",
+          "value": "현재: 5정 | 부족: 15정",
+          "short": true
+        },
+        {
+          "title": "📦 이부프로펜 200mg",
+          "value": "현재: 12정 | 부족: 18정",
+          "short": true
+        }
+      ],
+      "footer": "SafeWork 재고 관리 시스템"
+    },
+    {
+      "color": "good",
+      "title": "🟢 관찰 필요 (1개)",
+      "fields": [
+        {
+          "title": "📦 포비돈 요오드",
+          "value": "현재: 2병 | 부족: 8병",
+          "short": true
+        }
+      ],
+      "footer": "SafeWork 재고 관리 시스템"
+    },
+    {
+      "color": "#36a64f",
+      "title": "🔗 시스템 접속",
+      "fields": [
+        {
+          "title": "관리 대시보드",
+          "value": "<https://safework.jclee.me/admin/safework/medications|의약품 관리> | <https://safework.jclee.me/health|시스템 상태>",
+          "short": false
+        }
+      ],
+      "footer": "생성 시간: 2025-09-20 21:47:46 KST"
+    }
+  ]
+}
