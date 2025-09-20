@@ -249,31 +249,96 @@ jobs:
           # Deploy using enhanced script
           ./deployment/scripts/deploy-enhanced.sh deploy ${{ github.event.inputs.environment || 'production' }}
 
-      - name: 🔄 Update Production Containers
+      - name: 🔄 Enhanced Production Container Update
         if: github.event.inputs.environment == 'production' || github.ref == 'refs/heads/master'
         run: |
-          echo "🐳 Updating production containers via Portainer API..."
+          echo "🐳 Enhanced production container update via Portainer API..."
 
-          # Function to update container
+          # Advanced container update function with validation
           update_container() {
             local container_name="$1"
             local image_name="$2"
+            local max_retries=3
+            local retry_count=0
 
-            echo "📥 Pulling latest image for $container_name..."
-            curl -s -X POST -H "X-API-Key: ${{ env.PORTAINER_API_KEY }}" \
-              -H "Content-Type: application/json" \
-              "${{ env.PORTAINER_URL }}/api/endpoints/3/docker/images/create" \
-              -d "{\"fromImage\": \"$image_name\"}"
+            echo "🔍 Checking container status: $container_name"
 
+            # Get container status
+            container_status=$(curl -s -H "X-API-Key: ${{ env.PORTAINER_API_KEY }}" \
+              "${{ env.PORTAINER_URL }}/api/endpoints/3/docker/containers/json?all=true" | \
+              jq -r ".[] | select(.Names[] | contains(\"$container_name\")) | .State")
+
+            echo "📊 Current status: $container_status"
+
+            # Pull latest image with retry logic
+            while [ $retry_count -lt $max_retries ]; do
+              echo "📥 Pulling latest image for $container_name (attempt $((retry_count + 1))/$max_retries)..."
+
+              pull_response=$(curl -s -w "%{http_code}" -X POST \
+                -H "X-API-Key: ${{ env.PORTAINER_API_KEY }}" \
+                -H "Content-Type: application/json" \
+                "${{ env.PORTAINER_URL }}/api/endpoints/3/docker/images/create" \
+                -d "{\"fromImage\": \"$image_name\"}")
+
+              http_code="${pull_response: -3}"
+
+              if [ "$http_code" = "200" ] || [ "$http_code" = "201" ]; then
+                echo "✅ Image pull successful for $container_name"
+                break
+              else
+                echo "⚠️ Image pull failed (HTTP $http_code), retrying..."
+                ((retry_count++))
+                sleep 5
+              fi
+            done
+
+            # Restart container with validation
             echo "🔄 Restarting $container_name..."
-            curl -s -X POST -H "X-API-Key: ${{ env.PORTAINER_API_KEY }}" \
-              "${{ env.PORTAINER_URL }}/api/endpoints/3/docker/containers/$container_name/restart"
+            restart_response=$(curl -s -w "%{http_code}" -X POST \
+              -H "X-API-Key: ${{ env.PORTAINER_API_KEY }}" \
+              "${{ env.PORTAINER_URL }}/api/endpoints/3/docker/containers/$container_name/restart")
+
+            restart_http_code="${restart_response: -3}"
+
+            if [ "$restart_http_code" = "204" ] || [ "$restart_http_code" = "200" ]; then
+              echo "✅ Container restart successful: $container_name"
+            else
+              echo "❌ Container restart failed: $container_name (HTTP $restart_http_code)"
+              return 1
+            fi
+
+            # Wait and verify container health
+            echo "⏱️ Waiting for container stabilization..."
+            sleep 10
+
+            # Check if container is running
+            new_status=$(curl -s -H "X-API-Key: ${{ env.PORTAINER_API_KEY }}" \
+              "${{ env.PORTAINER_URL }}/api/endpoints/3/docker/containers/json" | \
+              jq -r ".[] | select(.Names[] | contains(\"$container_name\")) | .State")
+
+            if [ "$new_status" = "running" ]; then
+              echo "✅ Container verified running: $container_name"
+            else
+              echo "⚠️ Container not running after restart: $container_name (Status: $new_status)"
+            fi
           }
 
-          # Update containers with enhanced error handling
-          update_container "safework-app" "${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/app:latest"
+          # Update containers in dependency order with enhanced error handling
+          echo "🗄️ Updating database container first..."
           update_container "safework-postgres" "${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/postgres:latest"
+
+          echo "🔗 Updating cache container..."
           update_container "safework-redis" "${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/redis:latest"
+
+          echo "🚀 Updating application container..."
+          update_container "safework-app" "${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/app:latest"
+
+          # Final verification
+          echo "🔍 Final container verification..."
+          curl -s -H "X-API-Key: ${{ env.PORTAINER_API_KEY }}" \
+            "${{ env.PORTAINER_URL }}/api/endpoints/3/docker/containers/json" | \
+            jq -r '.[] | select(.Names[] | contains("safework")) | "\(.Names[0]) - \(.State) - \(.Status)"' | \
+            while read line; do echo "📊 $line"; done
 
       - name: ⏱️ Wait for Container Stabilization
         run: sleep 60
@@ -287,32 +352,124 @@ jobs:
       - name: 📂 Checkout Repository
         uses: actions/checkout@v4
 
-      - name: 🏥 Enhanced Health Validation
+      - name: 🏥 Advanced Health Validation & Monitoring
         run: |
-          echo "🏥 Running enhanced health validation..."
+          echo "🏥 Running advanced health validation with comprehensive monitoring..."
 
-          # Multiple endpoint health checks
-          endpoints=(
-            "${{ env.PRD_URL }}/health"
-            "${{ env.PRD_URL }}/"
-            "${{ env.PRD_URL }}/survey/001_musculoskeletal_symptom_survey"
-            "${{ env.PRD_URL }}/survey/002_new_employee_health_checkup_form"
-          )
+          # Advanced health check function
+          check_endpoint() {
+            local url="$1"
+            local name="$2"
+            local max_retries=5
+            local retry_count=0
+            local retry_delay=10
 
-          for endpoint in "${endpoints[@]}"; do
-            echo "🔍 Testing endpoint: $endpoint"
-            for i in {1..5}; do
-              if curl -f -s "$endpoint" > /dev/null; then
-                echo "✅ $endpoint: HEALTHY"
-                break
-              elif [[ $i -eq 5 ]]; then
-                echo "⚠️ $endpoint: FAILED after 5 attempts"
+            echo "🔍 Testing $name: $url"
+
+            while [ $retry_count -lt $max_retries ]; do
+              response=$(curl -s -w "%{http_code}|%{time_total}" -o /dev/null "$url" || echo "000|0")
+              http_code=$(echo "$response" | cut -d'|' -f1)
+              response_time=$(echo "$response" | cut -d'|' -f2)
+
+              if [ "$http_code" = "200" ]; then
+                echo "✅ $name: HTTP $http_code (${response_time}s)"
+                return 0
               else
-                echo "⏳ $endpoint: Retry $i/5 in 10s..."
-                sleep 10
+                echo "⚠️ $name: HTTP $http_code (attempt $((retry_count + 1))/$max_retries)"
+                ((retry_count++))
+                if [ $retry_count -lt $max_retries ]; then
+                  echo "⏱️ Waiting ${retry_delay}s before retry..."
+                  sleep $retry_delay
+                fi
               fi
             done
+
+            echo "❌ $name: Failed after $max_retries attempts"
+            return 1
+          }
+
+          # Comprehensive endpoint validation
+          echo "🌐 Testing critical endpoints..."
+
+          check_endpoint "${{ env.PRD_URL }}/health" "Health Check"
+          health_status=$?
+
+          check_endpoint "${{ env.PRD_URL }}/" "Homepage"
+          home_status=$?
+
+          check_endpoint "${{ env.PRD_URL }}/survey/001_musculoskeletal_symptom_survey" "Survey 001"
+          survey1_status=$?
+
+          check_endpoint "${{ env.PRD_URL }}/survey/002_new_employee_health_checkup_form" "Survey 002"
+          survey2_status=$?
+
+          # Database connectivity test
+          echo "🗄️ Testing database connectivity..."
+          db_test_response=$(curl -s "${{ env.PRD_URL }}/health" | jq -r '.database // "unknown"' 2>/dev/null || echo "unknown")
+          if [ "$db_test_response" = "connected" ] || [ "$db_test_response" = "ok" ]; then
+            echo "✅ Database: Connected"
+            db_status=0
+          else
+            echo "⚠️ Database: Status unclear ($db_test_response)"
+            db_status=1
+          fi
+
+          # API functionality test
+          echo "🔌 Testing API functionality..."
+          api_test=$(curl -s -X POST "${{ env.PRD_URL }}/survey/api/submit" \
+            -H "Content-Type: application/json" \
+            -d '{"form_type":"001","name":"Health Check Test","age":30}' \
+            -w "%{http_code}" -o /dev/null 2>/dev/null || echo "000")
+
+          if [ "$api_test" = "200" ] || [ "$api_test" = "201" ]; then
+            echo "✅ API: Functional (HTTP $api_test)"
+            api_status=0
+          else
+            echo "⚠️ API: Issues detected (HTTP $api_test)"
+            api_status=1
+          fi
+
+          # Container health via Portainer API
+          echo "🐳 Verifying container health via Portainer..."
+          container_health=$(curl -s -H "X-API-Key: ${{ env.PORTAINER_API_KEY }}" \
+            "${{ env.PORTAINER_URL }}/api/endpoints/3/docker/containers/json" | \
+            jq -r '.[] | select(.Names[] | contains("safework")) | "\(.Names[0]):\(.State):\(.Status)"')
+
+          echo "📊 Container Status Report:"
+          echo "$container_health" | while read line; do
+            name=$(echo "$line" | cut -d':' -f1)
+            state=$(echo "$line" | cut -d':' -f2)
+            status=$(echo "$line" | cut -d':' -f3)
+
+            if [ "$state" = "running" ]; then
+              echo "✅ $name: $state ($status)"
+            else
+              echo "❌ $name: $state ($status)"
+            fi
           done
+
+          # Overall deployment assessment
+          total_failures=$((health_status + home_status + survey1_status + survey2_status + db_status + api_status))
+
+          echo ""
+          echo "📋 Deployment Assessment Summary:"
+          echo "Health Endpoint: $([ $health_status -eq 0 ] && echo "✅ PASS" || echo "❌ FAIL")"
+          echo "Homepage: $([ $home_status -eq 0 ] && echo "✅ PASS" || echo "❌ FAIL")"
+          echo "Survey Forms: $([ $((survey1_status + survey2_status)) -eq 0 ] && echo "✅ PASS" || echo "❌ FAIL")"
+          echo "Database: $([ $db_status -eq 0 ] && echo "✅ PASS" || echo "❌ FAIL")"
+          echo "API Functions: $([ $api_status -eq 0 ] && echo "✅ PASS" || echo "❌ FAIL")"
+          echo ""
+
+          if [ $total_failures -eq 0 ]; then
+            echo "🎉 DEPLOYMENT SUCCESSFUL: All systems operational"
+            exit 0
+          elif [ $total_failures -le 2 ]; then
+            echo "⚠️ DEPLOYMENT PARTIAL: Some non-critical issues detected"
+            exit 0
+          else
+            echo "❌ DEPLOYMENT FAILED: Critical issues detected"
+            exit 1
+          fi
 
       - name: 📊 Enhanced Performance Monitoring
         run: |
