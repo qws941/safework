@@ -2,19 +2,11 @@ version: '3.8'
 
 networks:
   safework_network:
-    external: true
-    name: e0eae5d37485
 
 volumes:
   safework_postgres_data:
-    external: true
-    name: safework_postgres_data
   safework_redis_data:
-    external: true
-    name: safework_redis_data
   safework_app_uploads:
-    external: true
-    name: safework_app_uploads
 
 services:
   safework-postgres:
