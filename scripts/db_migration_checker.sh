@@ -126,7 +126,7 @@ check_db_connection() {
 
     case "$postgres_status" in
         "running")
-            log_success "PostgreSQL 컨테이너 정상 실행 중"
+            log_success "PostgreSQL 컨테이너 상태정상 실행 중"
             ;;
         "exited"|"dead")
             log_error "PostgreSQL 컨테이너가 중지됨"
@@ -146,10 +146,10 @@ check_db_connection() {
     local connection_test=$(execute_in_container "safework-postgres" "pg_isready -U $DB_USER -d $DB_NAME")
 
     if echo "$connection_test" | grep -q "accepting connections"; then
-        log_success "데이터베이스 연결 성공"
+        log_success "데이터베이스 연결 완료"
         return 0
     else
-        log_error "데이터베이스 연결 실패"
+        log_error "데이터베이스 연결 오류"
         echo "$connection_test"
         return 1
     fi
@@ -182,7 +182,7 @@ check_database_schema() {
             "psql -U $DB_USER -d $DB_NAME -c \"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = '$table');\"")
 
         if echo "$table_exists" | grep -q "t"; then
-            log_success "$table 테이블 존재"
+            log_success "$table 테이블 상태정상"
         else
             log_warn "$table 테이블이 존재하지 않음"
         fi
@@ -201,7 +201,7 @@ check_migration_status() {
         "psql -U $DB_USER -d $DB_NAME -c \"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'alembic_version');\"")
 
     if echo "$migration_table_exists" | grep -q "t"; then
-        log_success "마이그레이션 히스토리 테이블 존재"
+        log_success "마이그레이션 히스토리 테이블 상태정상"
 
         # 현재 마이그레이션 버전 확인
         log_info "현재 마이그레이션 버전 조회"

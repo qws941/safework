@@ -177,13 +177,13 @@ portainer_api_call() {
             echo "$body"
             return 0
         else
-            log_warn "API 호출 실패 (시도 $((retry_count + 1))/$MAX_RETRIES): HTTP $status_code"
+            log_warn "API 호출 오류 (시도 $((retry_count + 1))/$MAX_RETRIES): HTTP $status_code"
 
             # 지능형 에러 처리
             if [ "$INTELLIGENT_RETRY" = true ] && [ $retry_count -lt $((MAX_RETRIES - 1)) ]; then
                 case "$status_code" in
                     "401"|"403")
-                        log_error "인증 실패 - API 키 확인 필요"
+                        log_error "인증 오류 - API 키 확인 필요"
                         return 1
                         ;;
                     "409")
@@ -240,7 +240,7 @@ stop_container() {
             log_success "$container_name 컨테이너 중지 완료"
             return 0
         else
-            log_error "$container_name 컨테이너 중지 실패"
+            log_error "$container_name 컨테이너 중지 오류"
             return 1
         fi
     else
@@ -259,7 +259,7 @@ remove_container() {
             log_success "$container_name 컨테이너 삭제 완료"
             return 0
         else
-            log_error "$container_name 컨테이너 삭제 실패"
+            log_error "$container_name 컨테이너 삭제 오류"
             return 1
         fi
     else
@@ -277,7 +277,7 @@ pull_image() {
         log_success "이미지 풀링 완료: $image"
         return 0
     else
-        log_error "이미지 풀링 실패: $image"
+        log_error "이미지 풀링 오류: $image"
         return 1
     fi
 }
@@ -298,7 +298,7 @@ create_network() {
         log_success "네트워크 생성 완료: $NETWORK_NAME"
         return 0
     else
-        log_error "네트워크 생성 실패: $NETWORK_NAME"
+        log_error "네트워크 생성 오류: $NETWORK_NAME"
         return 1
     fi
 }
