@@ -33,7 +33,6 @@ STACK_CONTENT='version: '\''3.8'\''
 networks:
   safework_network:
     external: true
-    name: watchtower_default
 
 services:
   safework-postgres:
@@ -46,7 +45,14 @@ services:
       - POSTGRES_USER=safework
     networks:
       - safework_network
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U safework -d safework_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   safework-redis:
     image: registry.jclee.me/safework/redis:latest
@@ -55,7 +61,14 @@ services:
       - TZ=Asia/Seoul
     networks:
       - safework_network
+    volumes:
+      - redis_data:/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   safework-app:
     image: registry.jclee.me/safework/app:latest
@@ -67,12 +80,25 @@ services:
       - DB_USER=safework
       - DB_PASSWORD=safework2024
       - REDIS_HOST=safework-redis
+      - FLASK_CONFIG=production
+    ports:
+      - "4545:4545"
     networks:
       - safework_network
     restart: unless-stopped
     depends_on:
       - safework-postgres
-      - safework-redis'
+      - safework-redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4545/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  postgres_data:
+  redis_data:'
 
 # Create JSON payload
 cat > /tmp/stack_payload.json << EOF

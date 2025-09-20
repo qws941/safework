@@ -25,6 +25,31 @@ SafeWork is an industrial health and safety management system built with Flask 3
 
 ## Development Commands
 
+### Essential Daily Workflow (Top Priority)
+```bash
+# 🚀 MOST IMPORTANT: Quick system health check
+make health                                         # System health + container status
+curl https://safework.jclee.me/health              # Production health check
+
+# 🔥 CRITICAL: Deploy to production (GitHub Actions)
+make deploy-github                                  # Trigger GitHub Actions deployment
+make deploy-status                                  # Check deployment status
+
+# 📋 DEBUGGING: View real-time logs
+make logs                                           # Live application logs
+./scripts/safework_ops_unified.sh logs live safework-app 100  # Real-time with 100 lines
+
+# 🗄️ DATABASE: Most common database operations
+make db-status                                      # Check migration status
+docker exec -it safework-app python migrate.py migrate  # Apply pending migrations
+docker exec -it safework-postgres psql -U safework -d safework_db  # Direct database access
+
+# 🧪 TESTING: Critical endpoint verification
+curl -X POST https://safework.jclee.me/survey/api/submit \
+  -H "Content-Type: application/json" \
+  -d '{"form_type":"001","name":"테스트","age":30}'   # Test survey submission
+```
+
 ### Quick Reference (Most Common Commands)
 ```bash
 # 🚀 Deployment & Status (Makefile shortcuts)
@@ -174,8 +199,8 @@ docker run -d --name safework-app --network safework_network -p 4545:4545 \
 ```bash
 # Python code formatting and linting (defined in requirements.txt)
 cd src/app
-black .                                 # Format code
-flake8 .                               # Check code style
+black . --line-length 88              # Format code (matching Makefile config)
+flake8 . --max-line-length=88 --extend-ignore=E203,W503  # Lint with proper config
 python -m py_compile *.py              # Syntax check
 
 # Makefile shortcuts for code quality
@@ -186,6 +211,10 @@ make check                             # Run both format and lint
 # Check for common issues
 grep -r "print(" . --include="*.py"    # Find debug prints
 grep -r "TODO\|FIXME" . --include="*.py"  # Find TODOs
+
+# Security checks
+grep -r "password.*=" . --include="*.py" | grep -v "environ.get\|config" # Check hardcoded passwords
+grep -r "api.*key.*=" . --include="*.py" | grep -v "environ.get\|config" # Check hardcoded API keys
 ```
 
 ### Database Management
@@ -279,6 +308,18 @@ def create_app(config_name=None):
 - Modular blueprint registration in `app.py`
 - Extension initialization with proper app context
 - Runtime database connection handling with retry logic
+
+**Connection Retry & Health Check System:**
+- Database: 60 retries with 3-second delays, pool management with pre-ping
+- Redis: 10 retries with 1-second delays, graceful degradation if unavailable
+- Health endpoints: `/health` (basic) and `/health/detailed` (comprehensive)
+- Container readiness: Built-in connection validation before service startup
+
+**Korean Timezone (KST) Management:**
+- All timestamps use `kst_now()` function for consistency
+- Container-level timezone: `TZ=Asia/Seoul` environment variable
+- Database timezone: Enforced at PostgreSQL container level
+- Application timezone: Handled via `datetime.timezone(timedelta(hours=9))`
 
 **Migration System:**
 - Custom migration manager in `migration_manager.py`
@@ -522,6 +563,27 @@ curl -X POST -H "X-API-Key: ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=" \
 
 ## Error Detection & Resolution
 
+### Quick Problem Resolution (First Steps)
+```bash
+# 🚨 EMERGENCY: If production is down
+./tools/scripts/emergency_recovery_simple.sh       # Auto-fix production issues
+curl https://safework.jclee.me/health             # Verify recovery
+
+# 🔍 DIAGNOSIS: Check what's wrong
+make health                                        # Overall system health
+./scripts/safework_ops_unified.sh deploy status   # Deployment status
+./scripts/safework_ops_unified.sh logs errors all # Find error logs
+
+# 🔄 RESTART: If containers are stuck
+make restart                                       # Restart all containers
+./scripts/portainer_operations_deploy.sh restart  # Portainer-based restart
+
+# 🗄️ DATABASE: If database issues
+docker exec -it safework-postgres psql -U safework -d safework_db -c "SELECT 1;" # Test connection
+docker exec -it safework-app python migrate.py status  # Check migrations
+make db-migrate                                    # Apply pending migrations
+```
+
 ### Common Container Issues & Critical Fixes
 **Database Connection Issues (Most Common):**
 - `FATAL: database "safework" does not exist` → **SOLUTION**: Use `DB_NAME=safework_db` (not `safework`)
@@ -538,6 +600,13 @@ curl -X POST -H "X-API-Key: ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=" \
 - `Worker failed to boot` → Dependencies and environment validation
 - Redis AOF permission errors → **SOLUTION**: Remove and recreate Redis container with clean state
 - Container timezone issues → **SOLUTION**: Add `-e TZ=Asia/Seoul` to all container runs
+
+**Slack Notification Issues:**
+- `invalid_auth` error → **SOLUTION**: Verify SLACK_BOT_TOKEN is valid using auth.test API
+- `missing_scope` error → **SOLUTION**: Ensure bot has `chat:write`, `chat:write.public`, `channels:read` permissions
+- `channel_not_found` error → **SOLUTION**: Invite bot to target channel or use public channel
+- Webhook vs OAuth priority → **PRIORITY**: SLACK_WEBHOOK_URL > SLACK_OAUTH_TOKEN > SLACK_BOT_TOKEN
+- Container notification mismatch → **WORKAROUND**: Current container only supports webhook; use direct API calls for OAuth
 
 ### Troubleshooting Commands
 ```bash
@@ -577,6 +646,19 @@ with app.app_context():
     except Exception as e:
         print(f'❌ Database connection failed: {e}')
 "
+
+# Slack OAuth testing
+./scripts/test_slack_oauth.sh                       # Test Slack OAuth configuration
+docker exec safework-app env | grep SLACK           # Check Slack environment variables
+
+# Slack API testing (direct)
+curl -X POST "https://slack.com/api/auth.test" \
+  -H "Authorization: Bearer $SLACK_BOT_TOKEN"       # Test bot token validity
+
+curl -X POST "https://slack.com/api/chat.postMessage" \
+  -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"channel": "#safework-alerts", "text": "Test message"}' # Test message sending
 
 # UNIFIED TROUBLESHOOTING
 # Use unified operations script for streamlined troubleshooting workflow
@@ -631,6 +713,11 @@ except Exception as e:
 FLASK_CONFIG=production                # Environment mode (development/production/testing)
 SECRET_KEY=safework-production-secret-key-2024
 TZ=Asia/Seoul                         # Korean timezone
+
+# Slack Notifications (OAuth Configuration)
+SLACK_BOT_TOKEN=xoxb-your-bot-token-here      # Slack Bot token for notifications
+SLACK_OAUTH_TOKEN=xoxp-your-oauth-token-here  # Slack OAuth User token (optional)
+SLACK_WEBHOOK_URL=https://hooks.slack.com/... # Webhook URL (alternative method)
 
 # Database connection (PostgreSQL)
 DB_HOST=safework-postgres             # Container name
@@ -716,6 +803,8 @@ MAX_CONTENT_LENGTH=52428800          # 50MB max file size
 3. **Model Updates**: Update `Survey` model if new fields needed (use JSON `responses` field for flexibility)
 4. **Admin Interface**: Add admin management to `src/app/routes/admin.py`
 5. **JavaScript Logic**: Implement conditional logic matching exact HTML IDs
+6. **Testing**: Test form submission via API endpoint with proper JSON structure
+7. **Migration**: Run `python migrate.py create "Add new form type"` if schema changes needed
 
 ### SafeWork Admin Panel Extension
 1. **Model Definition**: Add new models in `src/app/models_safework.py` or `src/app/models_safework_v2.py`
@@ -813,16 +902,26 @@ make validate                          # Project structure validation
 
 ### Single Test Execution (Development)
 ```bash
-# Run single test file (requires virtual environment activation)
-cd src/app && source venv/bin/activate && python -m pytest tests/test_survey.py -v
-cd src/app && source venv/bin/activate && python -m pytest tests/test_auth.py::test_login -v
+# Test database connectivity directly
+docker exec -it safework-app python -c "
+from app import create_app
+from models import Survey, db
+app = create_app()
+with app.app_context():
+    print(f'Survey count: {Survey.query.count()}')
+    print('Database connection: OK')
+"
 
-# Run tests with coverage
-cd src/app && source venv/bin/activate && python -m pytest --cov=app tests/ --cov-report=html
+# Test specific API endpoints
+curl -X POST http://localhost:4545/survey/api/submit \
+  -H "Content-Type: application/json" \
+  -d '{"form_type": "001", "name": "테스트 사용자", "age": 30}'
 
-# Run specific test categories
-cd src/app && source venv/bin/activate && python -m pytest -m "unit" tests/     # Unit tests only
-cd src/app && source venv/bin/activate && python -m pytest -m "integration" tests/  # Integration tests only
+# Code quality checks
+cd src/app
+black . --check                   # Check formatting
+flake8 . --max-line-length=88      # Lint check
+python -m py_compile *.py          # Syntax validation
 ```
 
 ## Critical Development Notes
@@ -832,15 +931,21 @@ The project has scripts in two locations with different purposes:
 - `scripts/` - Main automation and management scripts
 - `tools/scripts/` - Advanced tooling and specialized scripts
 
-**Important**: The Makefile references `./tools/scripts/` paths, but these should be updated to `./scripts/` paths:
-```bash
-# Current Makefile references (need updating)
-./tools/scripts/safework_ops_unified.sh
-./tools/scripts/portainer_advanced.sh
+**Script Path Convention**: The project has both `scripts/` and `tools/scripts/` directories:
+- `scripts/` - Main operational scripts (deployment, monitoring, unified operations)
+- `tools/scripts/` - Advanced tooling and specialized scripts (portainer management, emergency recovery)
 
-# Actual script locations
-./scripts/safework_ops_unified.sh
-./scripts/portainer_advanced.sh
+**Usage Pattern**:
+```bash
+# Main operations (use scripts/)
+./scripts/safework_ops_unified.sh       # Primary operations script
+./scripts/portainer_deployment_stable.sh # Stable deployment
+./scripts/test_runner.sh                 # Comprehensive testing
+
+# Advanced tooling (use tools/scripts/)
+./tools/scripts/portainer_advanced.sh    # Advanced Portainer management
+./tools/scripts/emergency_recovery.sh    # Emergency recovery procedures
+./tools/scripts/safework_monitoring_advanced.sh # Advanced monitoring
 ```
 
 ### Container Network Requirements

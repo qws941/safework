@@ -104,11 +104,11 @@ restart-simple: down up ## 기본 개발 서버 재시작
 
 logs: ## 애플리케이션 로그 확인
 	@echo "$(GREEN)📋 로그 확인 중...$(NC)"
-	./tools/scripts/safework_ops_unified.sh logs live
+	./scripts/safework_ops_unified.sh logs live
 
 logs-errors: ## 에러 로그만 확인
 	@echo "$(GREEN)🚨 에러 로그 확인 중...$(NC)"
-	./tools/scripts/safework_ops_unified.sh logs errors all
+	./scripts/safework_ops_unified.sh logs errors all
 
 ##@ 데이터베이스
 db-migrate: ## 데이터베이스 마이그레이션 실행
@@ -149,7 +149,7 @@ deploy-validate: ## 배포 전 환경 검증
 
 deploy-local: ## 로컬 배포 실행
 	@echo "$(GREEN)🏠 로컬 배포 실행...$(NC)"
-	./tools/scripts/safework_ops_unified.sh deploy local
+	./scripts/safework_ops_unified.sh deploy local
 
 deploy-github: ## GitHub Actions 배포 트리거
 	@echo "$(GREEN)🐙 GitHub Actions 배포 트리거...$(NC)"
@@ -163,17 +163,57 @@ deploy-health: ## 프로덕션 헬스 체크
 	@echo "$(GREEN)🏥 프로덕션 헬스 체크...$(NC)"
 	./scripts/portainer_deployment_stable.sh health
 
+deploy-ops: ## 포테이너 운영 배포 (전체 시스템)
+	@echo "$(GREEN)🚀 포테이너 운영 배포 실행...$(NC)"
+	./scripts/portainer_operations_deploy.sh deploy
+
+deploy-ops-status: ## 포테이너 운영 배포 상태 확인
+	@echo "$(GREEN)📊 운영 배포 상태 확인...$(NC)"
+	./scripts/portainer_operations_deploy.sh status
+
+deploy-ops-restart: ## 포테이너 운영 시스템 재시작
+	@echo "$(GREEN)🔄 운영 시스템 재시작...$(NC)"
+	./scripts/portainer_operations_deploy.sh restart
+
+deploy-ops-stop: ## 포테이너 운영 시스템 중지
+	@echo "$(YELLOW)🛑 운영 시스템 중지...$(NC)"
+	./scripts/portainer_operations_deploy.sh stop
+
+deploy-ops-postgres: ## PostgreSQL만 운영 배포
+	@echo "$(GREEN)🐘 PostgreSQL 운영 배포...$(NC)"
+	./scripts/portainer_operations_deploy.sh postgres
+
+deploy-ops-redis: ## Redis만 운영 배포
+	@echo "$(GREEN)🔴 Redis 운영 배포...$(NC)"
+	./scripts/portainer_operations_deploy.sh redis
+
+deploy-ops-app: ## SafeWork App만 운영 배포
+	@echo "$(GREEN)📱 SafeWork App 운영 배포...$(NC)"
+	./scripts/portainer_operations_deploy.sh app
+
+deploy-ops-monitor: ## 포테이너 운영 시스템 종합 모니터링
+	@echo "$(GREEN)📊 포테이너 운영 시스템 모니터링...$(NC)"
+	./scripts/portainer_operations_deploy.sh monitor
+
+deploy-ops-optimize: ## 포테이너 운영 시스템 최적화
+	@echo "$(GREEN)⚡ 포테이너 운영 시스템 최적화...$(NC)"
+	./scripts/portainer_operations_deploy.sh optimize
+
+deploy-ops-health: ## SafeWork 애플리케이션 헬스 체크
+	@echo "$(GREEN)🏥 SafeWork 애플리케이션 헬스 체크...$(NC)"
+	./scripts/portainer_operations_deploy.sh health
+
 status: ## 시스템 상태 확인
 	@echo "$(GREEN)📊 시스템 상태 확인...$(NC)"
-	./tools/scripts/safework_ops_unified.sh deploy status
+	./scripts/safework_ops_unified.sh deploy status
 
 health: ## 시스템 건강 상태 체크
 	@echo "$(GREEN)🏥 건강 상태 체크...$(NC)"
-	./tools/scripts/safework_ops_unified.sh monitor health
+	./scripts/safework_ops_unified.sh monitor health
 
 monitor: ## 시스템 모니터링
 	@echo "$(GREEN)👀 시스템 모니터링...$(NC)"
-	./tools/scripts/safework_ops_unified.sh monitor overview
+	./scripts/safework_ops_unified.sh monitor overview
 
 ##@ Portainer 고급 관리
 portainer: ## Portainer 고급 관리 도구 실행 (대화형 메뉴)
@@ -275,7 +315,7 @@ routes: ## Flask 라우트 목록 확인
 
 validate: ## 프로젝트 구조 검증
 	@echo "$(GREEN)🔍 프로젝트 구조 검증...$(NC)"
-	./tools/scripts/pipeline_validator.sh
+	./scripts/pipeline_validator.sh
 
 ##@ 청소 & 유지보수
 clean: ## 빌드 아티팩트 및 캐시 정리
@@ -294,7 +334,7 @@ clean-all: clean ## 전체 정리 (이미지 포함)
 
 backup: ## 전체 시스템 백업
 	@echo "$(GREEN)💾 시스템 백업...$(NC)"
-	./tools/scripts/safework_ops_unified.sh utils backup
+	./scripts/safework_ops_unified.sh utils backup
 
 ##@ 정보 표시
 info: ## 프로젝트 정보 표시
