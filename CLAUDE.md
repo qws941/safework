@@ -180,7 +180,7 @@ docker pull registry.jclee.me/safework/redis:latest
 
 # Start PostgreSQL with KST timezone and automated schema migration
 docker run -d --name safework-postgres --network safework_network -p 4546:5432 \
-  -e TZ=Asia/Seoul -e POSTGRES_PASSWORD=safework2024 -e POSTGRES_DB=safework_db -e POSTGRES_USER=safework \
+  -e TZ=Asia/Seoul -e POSTGRES_PASSWORD=${DB_PASSWORD} -e POSTGRES_DB=${DB_NAME:-safework_db} -e POSTGRES_USER=${DB_USER:-safework} \
   registry.jclee.me/safework/postgres:latest
 
 # Start Redis with clean state
@@ -190,8 +190,8 @@ docker run -d --name safework-redis --network safework_network -p 4547:6379 \
 
 # Start application with correct database name (safework_db) and KST timezone
 docker run -d --name safework-app --network safework_network -p 4545:4545 \
-  -e TZ=Asia/Seoul -e DB_HOST=safework-postgres -e DB_NAME=safework_db -e DB_USER=safework \
-  -e DB_PASSWORD=safework2024 -e REDIS_HOST=safework-redis \
+  -e TZ=Asia/Seoul -e DB_HOST=safework-postgres -e DB_NAME=${DB_NAME:-safework_db} -e DB_USER=${DB_USER:-safework} \
+  -e DB_PASSWORD=${DB_PASSWORD} -e REDIS_HOST=safework-redis \
   registry.jclee.me/safework/app:latest
 ```
 
@@ -238,7 +238,7 @@ docker exec -it safework-postgres psql -U safework -d safework_db -c "SELECT id,
 ### API Testing & Debugging
 ```bash
 # Test survey submission API (critical endpoint)
-curl -X POST http://localhost:4545/survey/api/submit \
+curl -X POST ${LOCAL_URL:-http://localhost:4545}/survey/api/submit \
   -H "Content-Type: application/json" \
   -d '{
     "form_type": "001",
@@ -258,7 +258,7 @@ curl -X POST http://localhost:4545/survey/api/submit \
   }'
 
 # Test health endpoints
-curl http://localhost:4545/health              # Application health
+curl ${LOCAL_URL:-http://localhost:4545}/health              # Application health
 curl https://safework.jclee.me/health         # Production health
 
 # Verify database connectivity from container (SQLAlchemy 2.0 compatible)
@@ -274,12 +274,12 @@ with app.app_context():
 
 ### Access Points & Credentials
 **Local Development:**
-- **Main app**: http://localhost:4545
-- **PostgreSQL**: localhost:4546 (safework-postgres container)
-- **Redis**: localhost:4547 (safework-redis container)
-- **Admin panel**: http://localhost:4545/admin (admin/safework2024)
-- **Health check**: http://localhost:4545/health
-- **Migration UI**: http://localhost:4545/migration/status
+- **Main app**: ${LOCAL_URL:-http://localhost:4545}
+- **PostgreSQL**: localhost:${DB_PORT:-4546} (safework-postgres container)
+- **Redis**: localhost:${REDIS_PORT:-4547} (safework-redis container)
+- **Admin panel**: ${LOCAL_URL:-http://localhost:4545}/admin (${ADMIN_USERNAME:-admin}/${ADMIN_PASSWORD})
+- **Health check**: ${LOCAL_URL:-http://localhost:4545}/health
+- **Migration UI**: ${LOCAL_URL:-http://localhost:4545}/migration/status
 
 **Remote Environments:**
 - **Development**: https://safework-dev.jclee.me
@@ -371,7 +371,7 @@ src/app/routes/
 ├── api_safework_v2.py       # RESTful API v2 endpoints for external systems
 ├── api_safework.py          # Legacy API endpoints
 ├── survey.py                # 001/002 form handling with conditional JavaScript
-├── auth.py                  # Flask-Login authentication (admin/safework2024)
+├── auth.py                  # Flask-Login authentication (${ADMIN_USERNAME:-admin}/${ADMIN_PASSWORD})
 ├── health.py                # System health monitoring (/health endpoint)
 ├── document.py              # Public document access (version control)
 ├── document_admin.py        # Admin document management
@@ -724,7 +724,7 @@ DB_HOST=safework-postgres             # Container name
 DB_PORT=5432                          # PostgreSQL port
 DB_NAME=safework_db                   # Database name
 DB_USER=safework                      # Database user
-DB_PASSWORD=safework2024              # Database password
+DB_PASSWORD=${DB_PASSWORD}              # Database password (must be set)
 
 # Database pool settings
 DB_POOL_SIZE=10                       # Connection pool size
@@ -741,7 +741,7 @@ REDIS_DB=0                           # Redis database number
 
 # Admin credentials
 ADMIN_USERNAME=admin                  # Admin username
-ADMIN_PASSWORD=safework2024           # Admin password
+ADMIN_PASSWORD=${ADMIN_PASSWORD}           # Admin password (must be set)
 
 # CSRF Settings (currently disabled)
 WTF_CSRF_ENABLED=false               # CSRF protection (disabled for survey testing)
@@ -874,11 +874,11 @@ make test                               # Run comprehensive test suite
 # Specific test types
 make test-api                          # Test API endpoints specifically
 make test-integration                  # Integration tests
-curl http://localhost:4545/health      # Local health check
+curl ${LOCAL_URL:-http://localhost:4545}/health      # Local health check
 curl https://safework.jclee.me/health  # Production health check
 
 # Manual testing via health endpoints and API calls
-curl -X POST http://localhost:4545/survey/api/submit \
+curl -X POST ${LOCAL_URL:-http://localhost:4545}/survey/api/submit \
   -H "Content-Type: application/json" \
   -d '{"form_type": "001", "name": "테스트"}'  # Test survey API
 
@@ -913,7 +913,7 @@ with app.app_context():
 "
 
 # Test specific API endpoints
-curl -X POST http://localhost:4545/survey/api/submit \
+curl -X POST ${LOCAL_URL:-http://localhost:4545}/survey/api/submit \
   -H "Content-Type: application/json" \
   -d '{"form_type": "001", "name": "테스트 사용자", "age": 30}'
 

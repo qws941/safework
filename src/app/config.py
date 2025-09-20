@@ -112,7 +112,7 @@ class Config:
 
     # Admin
     ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
-    ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "CHANGE_ME_ADMIN_PASSWORD")
+    ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")  # No default - must be set
 
     # PDF Form
     PDF_TEMPLATE_PATH = "/app/forms/근골격계_증상조사표.pdf"
@@ -135,7 +135,7 @@ class DevelopmentConfig(Config):
     DB_HOST = os.environ.get("DB_HOST", "safework-postgres")
     DB_PORT = int(os.environ.get("DB_PORT", 5432))
     DB_USER = os.environ.get("DB_USER", "safework")
-    DB_PASSWORD = os.environ.get("DB_PASSWORD", "safework2024")
+    DB_PASSWORD = os.environ.get("DB_PASSWORD")  # No default - must be set
     DB_NAME = os.environ.get("DB_NAME", "safework_db")
 
     SQLALCHEMY_DATABASE_URI = (
@@ -162,7 +162,7 @@ class ProductionConfig(Config):
     DB_HOST = os.environ.get("DB_HOST", "safework-postgres")
     DB_PORT = int(os.environ.get("DB_PORT", 5432))
     DB_USER = os.environ.get("DB_USER", "safework")
-    DB_PASSWORD = os.environ.get("DB_PASSWORD", "safework2024")
+    DB_PASSWORD = os.environ.get("DB_PASSWORD")  # No default - must be set
     DB_NAME = os.environ.get("DB_NAME", "safework_db")
 
     SQLALCHEMY_DATABASE_URI = (

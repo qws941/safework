@@ -69,14 +69,14 @@ test: ## 전체 테스트 실행
 
 test-integration: ## 통합 테스트 실행
 	@echo "$(GREEN)🔗 통합 테스트 실행...$(NC)"
-	curl -s http://localhost:4545/health || echo "$(RED)❌ 서버가 실행되지 않음$(NC)"
+	curl -s $${LOCAL_URL:-http://localhost:4545}/health || echo "$(RED)❌ 서버가 실행되지 않음$(NC)"
 
 test-api: ## API 엔드포인트 테스트
 	@echo "$(GREEN)🌐 API 테스트 실행...$(NC)"
 	@echo "Production Health Check:"
-	@curl -s https://safework.jclee.me/health | jq '.' || echo "$(RED)Production API 접근 불가$(NC)"
+	@curl -s $${PRD_URL:-https://safework.jclee.me}/health | jq '.' || echo "$(RED)Production API 접근 불가$(NC)"
 	@echo "Local Health Check:"
-	@curl -s http://localhost:4545/health | jq '.' || echo "$(RED)Local API 접근 불가$(NC)"
+	@curl -s $${LOCAL_URL:-http://localhost:4545}/health | jq '.' || echo "$(RED)Local API 접근 불가$(NC)"
 
 ##@ Docker & 컨테이너
 build: ## Docker 이미지 빌드
@@ -89,7 +89,7 @@ build: ## Docker 이미지 빌드
 up: ## 개발 서버 시작 (Docker Compose)
 	@echo "$(GREEN)🚀 개발 서버 시작...$(NC)"
 	cd infrastructure && $(COMPOSE) up -d
-	@echo "$(GREEN)✅ 서버 시작됨 - http://localhost:4545$(NC)"
+	@echo "$(GREEN)✅ 서버 시작됨 - $${LOCAL_URL:-http://localhost:4545}$(NC)"
 
 down: ## 개발 서버 중지
 	@echo "$(YELLOW)🛑 개발 서버 중지...$(NC)"
@@ -346,9 +346,9 @@ info: ## 프로젝트 정보 표시
 	@echo "Docker 버전: $(shell docker --version)"
 	@echo ""
 	@echo "$(GREEN)주요 URL:$(NC)"
-	@echo "  로컬 개발: http://localhost:4545"
-	@echo "  프로덕션: https://safework.jclee.me"
-	@echo "  헬스 체크: https://safework.jclee.me/health"
+	@echo "  로컬 개발: $${LOCAL_URL:-http://localhost:4545}"
+	@echo "  프로덕션: $${PRD_URL:-https://safework.jclee.me}"
+	@echo "  헬스 체크: $${PRD_URL:-https://safework.jclee.me}/health"
 
 ##@ 개발자 도구
 dev-setup: setup ## 개발자를 위한 전체 환경 설정
