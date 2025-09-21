@@ -302,17 +302,11 @@ restart_container() {
 
     log_warning "Attempting to restart container: $container_name"
 
-    # Stop container
-    curl -s -X POST -H "X-API-Key: $PORTAINER_API_KEY" \
-         "$PORTAINER_URL/api/endpoints/$PORTAINER_ENDPOINT_ID/docker/containers/$container_name/stop" || true
-
-    sleep 5
-
-    # Start container
+    # Use Portainer API restart endpoint (compatible with current API version)
     local response=$(curl -s -X POST -H "X-API-Key: $PORTAINER_API_KEY" \
-                    "$PORTAINER_URL/api/endpoints/$PORTAINER_ENDPOINT_ID/docker/containers/$container_name/start")
+                    "$PORTAINER_URL/api/endpoints/$PORTAINER_ENDPOINT_ID/docker/containers/$container_name/restart")
 
-    if [[ -z "$response" ]] || echo "$response" | grep -q '"message".*"deprecated"'; then
+    if [[ -z "$response" ]] || ! echo "$response" | grep -q '"message"'; then
         log_info "Container $container_name restart command sent"
 
         # Wait for container to be healthy
