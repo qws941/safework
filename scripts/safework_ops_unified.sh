@@ -7,22 +7,26 @@
 set -e
 
 # =============================================================================
+# 공통 라이브러리 로드
+# =============================================================================
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/logging.sh"
+source "$SCRIPT_DIR/lib/portainer.sh"
+
+# =============================================================================
 # 전역 설정
 # =============================================================================
 
-# 색상 코드
-readonly RED='\033[0;31m'
-readonly GREEN='\033[0;32m'
-readonly YELLOW='\033[1;33m'
-readonly BLUE='\033[0;34m'
-readonly PURPLE='\033[0;35m'
-readonly CYAN='\033[0;36m'
-readonly NC='\033[0m'
+# Portainer 설정 로드
+load_portainer_config "../config/portainer_config.env" || {
+    log_warning "Using fallback configuration"
+    # 폴백 설정
+    PORTAINER_URL="https://portainer.jclee.me"
+    PORTAINER_TOKEN="ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8="
+    ENDPOINT_PRODUCTION="3"
+}
 
-# API 설정
-readonly PORTAINER_URL="https://portainer.jclee.me"
-readonly PORTAINER_API_TOKEN="ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8="
-readonly ENDPOINT_ID="3"
 readonly REGISTRY_HOST="registry.jclee.me"
 readonly PROJECT_NAME="safework"
 
