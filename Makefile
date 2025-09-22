@@ -86,6 +86,13 @@ build: ## Docker 이미지 빌드
 	$(DOCKER) build -t $(PROJECT_NAME)/redis:latest ./infrastructure/docker/redis
 	@echo "$(GREEN)✅ Docker 이미지 빌드 완료$(NC)"
 
+pull: ## 최신 Docker 이미지 다운로드
+	@echo "$(GREEN)📦 최신 이미지 다운로드...$(NC)"
+	$(DOCKER) pull $(REGISTRY)/$(PROJECT_NAME)/app:latest
+	$(DOCKER) pull $(REGISTRY)/$(PROJECT_NAME)/postgres:latest
+	$(DOCKER) pull $(REGISTRY)/$(PROJECT_NAME)/redis:latest
+	@echo "$(GREEN)✅ 이미지 다운로드 완료$(NC)"
+
 up: ## 개발 서버 시작 (Docker Compose)
 	@echo "$(GREEN)🚀 개발 서버 시작...$(NC)"
 	$(COMPOSE) up -d
@@ -95,6 +102,8 @@ down: ## 개발 서버 중지
 	@echo "$(YELLOW)🛑 개발 서버 중지...$(NC)"
 	$(COMPOSE) down
 	@echo "$(GREEN)✅ 서버 중지 완료$(NC)"
+
+update: pull down up ## 최신 이미지로 서버 업데이트
 
 restart: ## 고도화된 SafeWork 컨테이너 재시작 (건강 상태 모니터링 포함)
 	@echo "$(GREEN)🔄 SafeWork 고도화 재시작...$(NC)"

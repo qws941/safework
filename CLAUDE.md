@@ -246,9 +246,16 @@ make check                                         # Run both format and lint
 
 # 🐳 Container Management
 make build                                         # Build Docker images
+make pull                                          # Pull latest images from registry
 make up                                            # Start development environment
 make down                                          # Stop development environment
+make update                                        # Pull latest images and restart
 make restart                                       # Restart all services
+
+# 📦 Docker Compose (New - Simplified Deployment)
+docker-compose up -d                               # Start all services
+docker-compose down                                # Stop all services
+docker-compose pull && docker-compose up -d       # Manual update workflow
 
 # 📊 Volume Management
 ./scripts/volume_manager.sh status          # Check volume status
