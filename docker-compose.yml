@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+  safework-postgres:
+    image: registry.jclee.me/safework/postgres:latest
+    container_name: safework-postgres
+    environment:
+      - POSTGRES_DB=safework_db
+      - POSTGRES_USER=safework
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-safework2024}
+      - TZ=Asia/Seoul
+    ports:
+      - "4546:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - safework_network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "[safework-postgres-log] {{.Name}}"
+        labels: "service=safework-postgres,env=production,component=database,stack=safework"
+
+  safework-redis:
+    image: registry.jclee.me/safework/redis:latest
+    container_name: safework-redis
+    environment:
+      - TZ=Asia/Seoul
+    ports:
+      - "4547:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - safework_network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "[safework-redis-log] {{.Name}}"
+        labels: "service=safework-redis,env=production,component=cache,stack=safework"
+
+  safework-app:
+    image: registry.jclee.me/safework/app:latest
+    container_name: safework-app
+    environment:
+      - FLASK_CONFIG=${FLASK_CONFIG:-production}
+      - TZ=Asia/Seoul
+      - DB_HOST=safework-postgres
+      - DB_PORT=5432
+      - DB_NAME=safework_db
+      - DB_USER=safework
+      - DB_PASSWORD=${DB_PASSWORD:-safework2024}
+      - REDIS_HOST=safework-redis
+      - REDIS_PORT=6379
+      - SECRET_KEY=${SECRET_KEY:-safework-production-secret-key-2024}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-safework2024}
+    ports:
+      - "4545:4545"
+    depends_on:
+      - safework-postgres
+      - safework-redis
+    networks:
+      - safework_network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "[safework-app-log] {{.Name}}"
+        labels: "service=safework-app,env=production,component=application,stack=safework"
+
+volumes:
+  postgres_data:
+    name: safework_postgres_data
+  redis_data:
+    name: safework_redis_data
+
+networks:
+  safework_network:
+    name: safework_network
+    driver: bridge

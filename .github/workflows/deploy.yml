@@ -1,4 +1,4 @@
-name: SafeWork Docker Build
+name: SafeWork Docker Build & Push
 
 on:
   push:
@@ -8,6 +8,7 @@ on:
       - 'infrastructure/docker/**'
       - 'docker-compose.yml'
       - '.github/workflows/deploy.yml'
+  workflow_dispatch:  # 수동 실행 가능
 
 env:
   REGISTRY_HOST: registry.jclee.me
