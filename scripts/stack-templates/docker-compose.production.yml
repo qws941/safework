@@ -50,8 +50,8 @@ volumes:
 services:
   safework-postgres:
     image: registry.jclee.me/safework/postgres:latest
-    container_name: safework-postgres
-    hostname: safework-postgres
+    container_name: safework-postgres-log
+    hostname: safework-postgres-log
     environment:
       - TZ=Asia/Seoul
       - POSTGRES_PASSWORD=${DB_PASSWORD}
@@ -97,6 +97,8 @@ services:
       options:
         max-size: "50m"
         max-file: "5"
+        labels: "service,environment,container"
+        tag: "safework-postgres-log|{{.Name}}|{{.ImageName}}|{{.ID}}"
     security_opt:
       - no-new-privileges:true
     read_only: false
@@ -106,8 +108,8 @@ services:
 
   safework-redis:
     image: registry.jclee.me/safework/redis:latest
-    container_name: safework-redis
-    hostname: safework-redis
+    container_name: safework-redis-log
+    hostname: safework-redis-log
     environment:
       - TZ=Asia/Seoul
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
@@ -140,6 +142,8 @@ services:
       options:
         max-size: "50m"
         max-file: "5"
+        labels: "service,environment,container"
+        tag: "safework-redis-log|{{.Name}}|{{.ImageName}}|{{.ID}}"
     security_opt:
       - no-new-privileges:true
     read_only: true
@@ -148,15 +152,15 @@ services:
 
   safework-app:
     image: registry.jclee.me/safework/app:latest
-    container_name: safework-app
-    hostname: safework-app
+    container_name: safework-app-log
+    hostname: safework-app-log
     environment:
       - TZ=Asia/Seoul
       - FLASK_CONFIG=${FLASK_CONFIG:-production}
       - DEBUG=${DEBUG:-false}
       
       # Database Configuration
-      - DB_HOST=safework-postgres
+      - DB_HOST=safework-postgres-log
       - DB_PORT=5432
       - DB_NAME=${DB_NAME:-safework_db}
       - DB_USER=${DB_USER:-safework}
@@ -169,7 +173,7 @@ services:
       - DB_POOL_PRE_PING=${DB_POOL_PRE_PING:-true}
       
       # Redis Configuration
-      - REDIS_HOST=safework-redis
+      - REDIS_HOST=safework-redis-log
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
       - REDIS_DB=0
@@ -246,6 +250,8 @@ services:
       options:
         max-size: "100m"
         max-file: "10"
+        labels: "service,environment,container"
+        tag: "safework-app-log|{{.Name}}|{{.ImageName}}|{{.ID}}"
     security_opt:
       - no-new-privileges:true
     read_only: false

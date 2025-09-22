@@ -1,28 +1,28 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+SafeWork 프로젝트 개발 가이드 - Claude Code 전용 설정 문서
 
-## Project Overview
+## 프로젝트 개요
 
-SafeWork is an industrial health and safety management system built with Flask 3.0+ for Korean construction/industrial environments. It manages workplace health surveys, medical records, and comprehensive safety administration with integrated MSDS management and automated monitoring systems.
+SafeWork은 한국 건설/산업 환경을 위한 Flask 3.0+ 기반 산업보건 관리 시스템입니다. 작업장 건강 설문, 의료 기록, 종합 안전 관리와 MSDS 관리 및 자동화된 모니터링 시스템을 제공합니다.
 
-**Core Features:**
-- **Survey System**: 001 Musculoskeletal & 002 New Employee health forms with conditional JavaScript logic
-- **SafeWork Admin**: 13 specialized management panels for workers, health checks, medications, MSDS, safety education, etc.
-- **Document Management**: Version-controlled document system with access logging
-- **Anonymous Access**: Public survey submission with user_id=1 fallback
-- **RESTful API v2**: External system integrations via `/api/safework/v2/*`
+**핵심 기능:**
+- **설문 시스템**: 001 근골격계증상조사표, 002 신규입사자건강진단 양식
+- **SafeWork 관리자**: 13개 전문 관리 패널 (근로자, 건강검진, 의약품, MSDS 등)
+- **문서 관리**: 버전 제어 및 접근 로그 시스템
+- **익명 접근**: user_id=1을 통한 공개 설문 제출
+- **RESTful API v2**: `/api/safework/v2/*` 외부 시스템 연동
 
-**Tech Stack:**
-- Backend: Flask 3.0+, SQLAlchemy 2.0, PostgreSQL 15+, Redis 7.0
-- Frontend: Bootstrap 4.6, jQuery, responsive design with Korean localization
-- Infrastructure: Independent Docker containers, Private Registry (registry.jclee.me), Portainer API
-- Development: Makefile automation, comprehensive tooling, volume persistence
-- Database: PostgreSQL 15+ with automated schema migration and data persistence
-- Security: Flask-Login authentication, environment-based configuration
-- Testing: Automated test runner with health checks and API validation
-- Code Quality: Black formatter, Flake8 linter with pre-commit hooks
-- Deployment: Validated Portainer stack deployment with Git change tracking and safety checks
+**기술 스택:**
+- 백엔드: Flask 3.0+, SQLAlchemy 2.0, PostgreSQL 15+, Redis 7.0
+- 프론트엔드: Bootstrap 4.6, jQuery, 한국어 반응형 디자인
+- 인프라: 독립 Docker 컨테이너, Private Registry (registry.jclee.me), Portainer API
+- 개발: Makefile 자동화, 종합 도구, 볼륨 지속성
+- 데이터베이스: PostgreSQL 15+ 자동 스키마 마이그레이션 및 데이터 지속성
+- 보안: Flask-Login 인증, 환경 기반 구성
+- 테스트: 헬스 체크 및 API 검증을 포함한 자동화된 테스트 러너
+- 코드 품질: Black 포매터, Flake8 린터 및 pre-commit 훅
+- 배포: Git 변경 추적 및 안전 검사를 포함한 검증된 Portainer 스택 배포
 
 ## Architecture Overview (Big Picture)
 

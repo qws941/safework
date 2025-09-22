@@ -33,7 +33,8 @@ class StructuredLogger:
         if not self.logger.handlers:
             handler = logging.StreamHandler()
             formatter = logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+                "[SafeWork-LOG] %(asctime)s | %(levelname)s | %(name)s | PID:%(process)d | %(message)s",
+                datefmt="%Y-%m-%d %H:%M:%S KST"
             )
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
