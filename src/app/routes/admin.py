@@ -1550,6 +1550,65 @@ def safework_certifications():
         "admin/safework_certifications.html", certifications=certifications
     )
 
+@admin_bp.route("/safework/slack-webhooks")
+@admin_required
+def safework_slack_webhooks():
+    """Slack 웹훅 관리 페이지"""
+    track_page_view("safework_slack_webhooks")
+    track_admin_action("VIEW_SLACK_WEBHOOKS")
+    
+    try:
+        # Slack 웹훅 설정 목록 조회
+        from models import SlackWebhookConfigModel, SlackNotificationLogModel
+        
+        webhooks = SlackWebhookConfigModel.query.order_by(SlackWebhookConfigModel.created_at.desc()).all()
+        
+        # 최근 알림 로그 조회
+        recent_logs = SlackNotificationLogModel.query.order_by(
+            SlackNotificationLogModel.sent_at.desc()
+        ).limit(10).all()
+        
+        # 통계 계산
+        total_webhooks = len(webhooks)
+        active_webhooks = sum(1 for w in webhooks if w.is_active)
+        total_notifications_today = SlackNotificationLogModel.query.filter(
+            func.date(SlackNotificationLogModel.sent_at) == datetime.now().date()
+        ).count()
+        
+        # 성공률 계산 (최근 7일)
+        week_ago = datetime.now() - timedelta(days=7)
+        week_logs = SlackNotificationLogModel.query.filter(
+            SlackNotificationLogModel.sent_at >= week_ago
+        ).all()
+        
+        success_rate = 0
+        if week_logs:
+            success_count = sum(1 for log in week_logs if log.status == 'sent')
+            success_rate = round((success_count / len(week_logs)) * 100, 1)
+        
+        return render_template(
+            "admin/safework_slack_webhooks.html",
+            webhooks=webhooks,
+            recent_logs=recent_logs,
+            total_webhooks=total_webhooks,
+            active_webhooks=active_webhooks,
+            total_notifications_today=total_notifications_today,
+            success_rate=success_rate
+        )
+        
+    except Exception as e:
+        app.logger.error(f"Slack 웹훅 페이지 로드 오류: {e}")
+        flash(f"Slack 웹훅 데이터를 가져오는 중 오류가 발생했습니다: {str(e)}", "danger")
+        return render_template(
+            "admin/safework_slack_webhooks.html",
+            webhooks=[],
+            recent_logs=[],
+            total_webhooks=0,
+            active_webhooks=0,
+            total_notifications_today=0,
+            success_rate=0
+        )
+
 
 @admin_bp.route("/safework/departments")
 @admin_required

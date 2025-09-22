@@ -182,6 +182,32 @@ docker ps
 curl http://localhost:4545/health
 ```
 
+### 🐳 **Docker Compose Setup (Recommended)**
+
+**간단한 3개 서비스 구성**
+
+```bash
+# 1. Clone repository
+git clone https://github.com/qws941/safework.git
+cd safework
+
+# 2. Start services
+make up
+# 또는: docker-compose up -d
+
+# 3. Verify
+curl http://localhost:4545/health
+
+# 4. Access
+# App: http://localhost:4545
+# Admin: http://localhost:4545/admin (admin/safework2024)
+```
+
+**포함된 서비스:**
+- ✅ **safework-app**: Flask 애플리케이션 (포트 4545)
+- ✅ **safework-postgres**: PostgreSQL 데이터베이스 (포트 4546)
+- ✅ **safework-redis**: Redis 캐시 (포트 4547)
+
 ### 🛠️ **Development Environment Setup**
 
 ```bash

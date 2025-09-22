@@ -1,10 +1,10 @@
 """SafeWork API 라우트 (v2.0) - 확장된 API 엔드포인트"""
 
 from datetime import datetime, date
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app as app
 from flask_login import login_required, current_user
 from sqlalchemy import text, func
-from models import db
+from models import db, SlackWebhookConfigModel, SlackNotificationLogModel, kst_now
 from models_safework_v2 import (
     SafeworkWorker,
     SafeworkHealthCheck,
@@ -1360,3 +1360,373 @@ def bulk_update_msds_status():
     except Exception as e:
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)}), 500
+
+# =============================================================================
+# Slack 웹훅 관리 API
+# =============================================================================
+
+@api_safework_bp.route('/slack-webhooks', methods=['GET'])
+@login_required
+def get_slack_webhooks():
+    """Slack 웹훅 설정 목록 조회"""
+    try:
+        webhooks = SlackWebhookConfigModel.query.all()
+        return jsonify({
+            'status': 'success',
+            'data': [{
+                'id': webhook.id,
+                'name': webhook.name,
+                'webhook_url': webhook.webhook_url,
+                'channel': webhook.channel,
+                'description': webhook.description,
+                'is_active': webhook.is_active,
+                'notify_survey_submission': webhook.notify_survey_submission,
+                'notify_system_events': webhook.notify_system_events,
+                'notify_errors': webhook.notify_errors,
+                'created_at': webhook.created_at.isoformat() if webhook.created_at else None,
+                'updated_at': webhook.updated_at.isoformat() if webhook.updated_at else None,
+                'last_test_at': webhook.last_test_at.isoformat() if webhook.last_test_at else None,
+                'test_status': webhook.test_status,
+                'test_result_message': webhook.test_result_message
+            } for webhook in webhooks]
+        })
+    except Exception as e:
+        app.logger.error(f"Slack webhook 목록 조회 오류: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': f'Slack webhook 목록 조회 중 오류가 발생했습니다: {str(e)}'
+        }), 500
+
+
+@api_safework_bp.route('/slack-webhooks', methods=['POST'])
+@login_required
+def create_slack_webhook():
+    """새로운 Slack 웹훅 설정 생성"""
+    try:
+        data = request.get_json()
+        
+        # 필수 필드 검증
+        required_fields = ['name', 'webhook_url']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({
+                    'status': 'error',
+                    'message': f'{field} 필드는 필수입니다.'
+                }), 400
+        
+        # Slack 웹훅 URL 형식 검증
+        webhook_url = data['webhook_url']
+        if not webhook_url.startswith('https://hooks.slack.com/'):
+            return jsonify({
+                'status': 'error',
+                'message': '올바른 Slack 웹훅 URL 형식이 아닙니다.'
+            }), 400
+        
+        # 새 웹훅 설정 생성
+        webhook = SlackWebhookConfigModel(
+            name=data['name'],
+            webhook_url=webhook_url,
+            channel=data.get('channel', '#general'),
+            description=data.get('description', ''),
+            is_active=data.get('is_active', True),
+            notify_survey_submission=data.get('notify_survey_submission', True),
+            notify_system_events=data.get('notify_system_events', True),
+            notify_errors=data.get('notify_errors', True),
+            created_by=current_user.username if hasattr(current_user, 'username') else 'admin'
+        )
+        
+        db.session.add(webhook)
+        db.session.commit()
+        
+        app.logger.info(f"새 Slack 웹훅 설정 생성됨: {webhook.name} (ID: {webhook.id})")
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Slack 웹훅 설정이 성공적으로 생성되었습니다.',
+            'data': {
+                'id': webhook.id,
+                'name': webhook.name,
+                'webhook_url': webhook.webhook_url,
+                'channel': webhook.channel,
+                'is_active': webhook.is_active
+            }
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Slack 웹훅 생성 오류: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': f'Slack 웹훅 생성 중 오류가 발생했습니다: {str(e)}'
+        }), 500
+
+
+@api_safework_bp.route('/slack-webhooks/<int:webhook_id>', methods=['PUT'])
+@login_required
+def update_slack_webhook(webhook_id):
+    """Slack 웹훅 설정 수정"""
+    try:
+        webhook = SlackWebhookConfigModel.query.get_or_404(webhook_id)
+        data = request.get_json()
+        
+        # 업데이트 가능한 필드들
+        if 'name' in data:
+            webhook.name = data['name']
+        if 'webhook_url' in data:
+            webhook_url = data['webhook_url']
+            if not webhook_url.startswith('https://hooks.slack.com/'):
+                return jsonify({
+                    'status': 'error',
+                    'message': '올바른 Slack 웹훅 URL 형식이 아닙니다.'
+                }), 400
+            webhook.webhook_url = webhook_url
+        if 'channel' in data:
+            webhook.channel = data['channel']
+        if 'description' in data:
+            webhook.description = data['description']
+        if 'is_active' in data:
+            webhook.is_active = data['is_active']
+        if 'notify_survey_submission' in data:
+            webhook.notify_survey_submission = data['notify_survey_submission']
+        if 'notify_system_events' in data:
+            webhook.notify_system_events = data['notify_system_events']
+        if 'notify_errors' in data:
+            webhook.notify_errors = data['notify_errors']
+        
+        webhook.updated_at = kst_now()
+        webhook.updated_by = current_user.username if hasattr(current_user, 'username') else 'admin'
+        
+        db.session.commit()
+        
+        app.logger.info(f"Slack 웹훅 설정 업데이트됨: {webhook.name} (ID: {webhook.id})")
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Slack 웹훅 설정이 성공적으로 업데이트되었습니다.',
+            'data': {
+                'id': webhook.id,
+                'name': webhook.name,
+                'webhook_url': webhook.webhook_url,
+                'channel': webhook.channel,
+                'is_active': webhook.is_active,
+                'updated_at': webhook.updated_at.isoformat()
+            }
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Slack 웹훅 업데이트 오류: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': f'Slack 웹훅 업데이트 중 오류가 발생했습니다: {str(e)}'
+        }), 500
+
+
+@api_safework_bp.route('/slack-webhooks/<int:webhook_id>', methods=['DELETE'])
+@login_required
+def delete_slack_webhook(webhook_id):
+    """Slack 웹훅 설정 삭제"""
+    try:
+        webhook = SlackWebhookConfigModel.query.get_or_404(webhook_id)
+        webhook_name = webhook.name
+        
+        db.session.delete(webhook)
+        db.session.commit()
+        
+        app.logger.info(f"Slack 웹훅 설정 삭제됨: {webhook_name} (ID: {webhook_id})")
+        
+        return jsonify({
+            'status': 'success',
+            'message': f'Slack 웹훅 설정 "{webhook_name}"이 성공적으로 삭제되었습니다.'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Slack 웹훅 삭제 오류: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': f'Slack 웹훅 삭제 중 오류가 발생했습니다: {str(e)}'
+        }), 500
+
+
+@api_safework_bp.route('/slack-webhooks/<int:webhook_id>/test', methods=['POST'])
+@login_required
+def test_slack_webhook(webhook_id):
+    """Slack 웹훅 테스트"""
+    try:
+        webhook = SlackWebhookConfigModel.query.get_or_404(webhook_id)
+        
+        # 테스트 메시지 발송
+        test_message = {
+            "text": f"SafeWork 시스템 웹훅 테스트",
+            "attachments": [
+                {
+                    "color": "good",
+                    "fields": [
+                        {
+                            "title": "웹훅 이름",
+                            "value": webhook.name,
+                            "short": True
+                        },
+                        {
+                            "title": "채널",
+                            "value": webhook.channel or "기본 채널",
+                            "short": True
+                        },
+                        {
+                            "title": "테스트 시간",
+                            "value": kst_now().strftime("%Y-%m-%d %H:%M:%S KST"),
+                            "short": False
+                        }
+                    ]
+                }
+            ]
+        }
+        
+        import requests
+        response = requests.post(
+            webhook.webhook_url,
+            json=test_message,
+            timeout=10
+        )
+        
+        # 테스트 결과 저장
+        webhook.last_test_at = kst_now()
+        if response.status_code == 200:
+            webhook.test_status = 'success'
+            webhook.test_result_message = '테스트 메시지 전송 성공'
+            
+            # 알림 로그 저장
+            log = SlackNotificationLogModel(
+                webhook_config_id=webhook.id,
+                message_type='test',
+                message_content=test_message['text'],
+                status='sent',
+                sent_at=kst_now(),
+                response_status_code=response.status_code,
+                response_body=response.text[:500]  # 응답 본문 일부 저장
+            )
+            db.session.add(log)
+        else:
+            webhook.test_status = 'failed'
+            webhook.test_result_message = f'테스트 실패: HTTP {response.status_code}'
+            
+            # 실패 로그 저장
+            log = SlackNotificationLogModel(
+                webhook_config_id=webhook.id,
+                message_type='test',
+                message_content=test_message['text'],
+                status='failed',
+                sent_at=kst_now(),
+                response_status_code=response.status_code,
+                response_body=response.text[:500],
+                error_message=f'HTTP {response.status_code}: {response.text[:200]}'
+            )
+            db.session.add(log)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'status': 'success' if response.status_code == 200 else 'error',
+            'message': webhook.test_result_message,
+            'data': {
+                'webhook_id': webhook.id,
+                'test_status': webhook.test_status,
+                'test_time': webhook.last_test_at.isoformat(),
+                'response_status_code': response.status_code
+            }
+        })
+        
+    except requests.exceptions.RequestException as e:
+        # 네트워크 오류 처리
+        webhook.test_status = 'failed'
+        webhook.test_result_message = f'네트워크 오류: {str(e)}'
+        webhook.last_test_at = kst_now()
+        
+        # 오류 로그 저장
+        log = SlackNotificationLogModel(
+            webhook_config_id=webhook.id,
+            message_type='test',
+            message_content='테스트 메시지',
+            status='failed',
+            sent_at=kst_now(),
+            error_message=str(e)[:500]
+        )
+        db.session.add(log)
+        db.session.commit()
+        
+        return jsonify({
+            'status': 'error',
+            'message': f'웹훅 테스트 실패: {str(e)}',
+            'data': {
+                'webhook_id': webhook.id,
+                'test_status': 'failed',
+                'test_time': webhook.last_test_at.isoformat()
+            }
+        }), 500
+        
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Slack 웹훅 테스트 오류: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': f'웹훅 테스트 중 오류가 발생했습니다: {str(e)}'
+        }), 500
+
+
+@api_safework_bp.route('/slack-webhooks/logs', methods=['GET'])
+@login_required
+def get_slack_notification_logs():
+    """Slack 알림 로그 조회"""
+    try:
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 20, type=int)
+        webhook_id = request.args.get('webhook_id', type=int)
+        status = request.args.get('status')
+        message_type = request.args.get('message_type')
+        
+        query = SlackNotificationLogModel.query
+        
+        # 필터링
+        if webhook_id:
+            query = query.filter_by(webhook_config_id=webhook_id)
+        if status:
+            query = query.filter_by(status=status)
+        if message_type:
+            query = query.filter_by(message_type=message_type)
+        
+        # 최신순 정렬 및 페이지네이션
+        logs = query.order_by(SlackNotificationLogModel.sent_at.desc()).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
+        
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'logs': [{
+                    'id': log.id,
+                    'webhook_name': log.webhook_config.name if log.webhook_config else '삭제된 웹훅',
+                    'message_type': log.message_type,
+                    'message_content': log.message_content[:100] + '...' if len(log.message_content) > 100 else log.message_content,
+                    'status': log.status,
+                    'sent_at': log.sent_at.isoformat() if log.sent_at else None,
+                    'response_status_code': log.response_status_code,
+                    'error_message': log.error_message
+                } for log in logs.items],
+                'pagination': {
+                    'page': logs.page,
+                    'pages': logs.pages,
+                    'per_page': logs.per_page,
+                    'total': logs.total,
+                    'has_next': logs.has_next,
+                    'has_prev': logs.has_prev
+                }
+            }
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Slack 알림 로그 조회 오류: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': f'Slack 알림 로그 조회 중 오류가 발생했습니다: {str(e)}'
+        }), 500

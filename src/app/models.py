@@ -368,10 +368,93 @@ class MSDSUsageRecordModel(db.Model):
         return f"<MSDSUsage {self.msds_id} on {self.usage_date}>"
 
 
+# === Slack Webhook Configuration Models ===
+
+
+class SlackWebhookConfigModel(db.Model):
+    """Slack 웹훅 설정 관리 테이블"""
+
+    __tablename__ = "slack_webhook_configs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)  # 설정 이름
+    webhook_url = db.Column(db.String(500), nullable=False)  # 웹훅 URL
+    channel = db.Column(db.String(100))  # 채널명 (#safework-alerts)
+    description = db.Column(db.Text)  # 설정 설명
+
+    # 알림 설정
+    is_active = db.Column(db.Boolean, default=True)  # 활성화 상태
+    notify_survey_submission = db.Column(db.Boolean, default=True)  # 설문 제출 알림
+    notify_system_events = db.Column(db.Boolean, default=True)  # 시스템 이벤트 알림
+    notify_errors = db.Column(db.Boolean, default=True)  # 오류 알림
+
+    # 메타데이터
+    is_default = db.Column(db.Boolean, default=False)  # 기본 설정 여부
+    last_tested_at = db.Column(db.DateTime)  # 마지막 테스트 시간
+    test_status = db.Column(db.String(20))  # 테스트 상태 (success/failed)
+    test_message = db.Column(db.Text)  # 테스트 결과 메시지
+
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+    created_at = db.Column(db.DateTime, default=kst_now)
+    updated_at = db.Column(db.DateTime, default=kst_now, onupdate=kst_now)
+
+    # Relationships
+    creator = db.relationship("User", backref="created_webhook_configs")
+    notification_logs = db.relationship(
+        "SlackNotificationLogModel",
+        backref="webhook_config",
+        lazy="dynamic",
+        cascade="all, delete-orphan",
+    )
+
+    def __repr__(self):
+        return f"<SlackWebhookConfig {self.name}>"
+
+
+class SlackNotificationLogModel(db.Model):
+    """Slack 알림 발송 로그"""
+
+    __tablename__ = "slack_notification_logs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    webhook_config_id = db.Column(
+        db.Integer, db.ForeignKey("slack_webhook_configs.id"), nullable=False
+    )
+
+    # 알림 정보
+    event_type = db.Column(db.String(50), nullable=False)  # survey_submission, system_event, error
+    title = db.Column(db.String(200))  # 알림 제목
+    message = db.Column(db.Text, nullable=False)  # 알림 메시지
+
+    # 전송 결과
+    status = db.Column(db.String(20), nullable=False)  # success, failed
+    response_code = db.Column(db.Integer)  # HTTP 응답 코드
+    response_message = db.Column(db.Text)  # 응답 메시지
+
+    # 연관 데이터
+    survey_id = db.Column(db.Integer, db.ForeignKey("surveys.id"))  # 설문 ID (해당시)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"))  # 사용자 ID
+
+    # 메타데이터
+    sent_at = db.Column(db.DateTime, default=kst_now)
+    retry_count = db.Column(db.Integer, default=0)  # 재시도 횟수
+
+    # Relationships
+    survey = db.relationship("SurveyModel", backref="slack_notifications")
+    user = db.relationship("User", backref="slack_notification_logs")
+
+    def __repr__(self):
+        return f"<SlackNotificationLog {self.event_type} - {self.status}>"
+
+
 # MSDS Model Aliases for import compatibility
 MSDS = MSDSModel
 MSDSComponent = MSDSComponentModel
 MSDSUsageRecord = MSDSUsageRecordModel
+
+# Slack Model Aliases
+SlackWebhookConfig = SlackWebhookConfigModel
+SlackNotificationLog = SlackNotificationLogModel
 
 # Core Model Aliases for backward compatibility
 Survey = SurveyModel

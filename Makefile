@@ -88,12 +88,12 @@ build: ## Docker 이미지 빌드
 
 up: ## 개발 서버 시작 (Docker Compose)
 	@echo "$(GREEN)🚀 개발 서버 시작...$(NC)"
-	cd infrastructure && $(COMPOSE) up -d
+	$(COMPOSE) up -d
 	@echo "$(GREEN)✅ 서버 시작됨 - $${LOCAL_URL:-http://localhost:4545}$(NC)"
 
 down: ## 개발 서버 중지
 	@echo "$(YELLOW)🛑 개발 서버 중지...$(NC)"
-	cd infrastructure && $(COMPOSE) down
+	$(COMPOSE) down
 	@echo "$(GREEN)✅ 서버 중지 완료$(NC)"
 
 restart: ## 고도화된 SafeWork 컨테이너 재시작 (건강 상태 모니터링 포함)
