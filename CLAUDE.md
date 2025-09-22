@@ -6,6 +6,12 @@ SafeWork 프로젝트 개발 가이드 - Claude Code 전용 설정 문서
 
 SafeWork은 한국 건설/산업 환경을 위한 Flask 3.0+ 기반 산업보건 관리 시스템입니다. 작업장 건강 설문, 의료 기록, 종합 안전 관리와 MSDS 관리 및 자동화된 모니터링 시스템을 제공합니다.
 
+**🆕 최신 업데이트 (2025-09-22):**
+- **로그 태깅 시스템 구현**: 모든 컨테이너에 Loki 호환 로그 라벨 적용
+- **Portainer Stack ID 77**: 프로덕션 배포 안정화 및 자동화
+- **중앙집중식 설정**: `scripts/config/master.env`로 모든 환경변수 통합
+- **배포 스크립트 v2.2.0**: 향상된 유효성 검사 및 Git 변경 추적
+
 **핵심 기능:**
 - **설문 시스템**: 001 근골격계증상조사표, 002 신규입사자건강진단 양식
 - **SafeWork 관리자**: 13개 전문 관리 패널 (근로자, 건강검진, 의약품, MSDS 등)
@@ -40,32 +46,11 @@ SafeWork은 한국 건설/산업 환경을 위한 Flask 3.0+ 기반 산업보건
 - Database: `safework_db` (NOT `safework`)
 - Timezone: KST (Asia/Seoul) for all operations
 - Admin: admin/safework2024
-- Scripts: Common libraries in `scripts/lib/`, centralized config in `scripts/config/master.env`
+- Scripts: Comprehensive automation scripts, centralized config in `scripts/config/master.env`
 
-## 📚 Common Libraries & Configuration System
+### 📚 Configuration System & Log Tagging
 
-### **Recent Enhancement (2025-09-21)**: Eliminated code duplication across 16 scripts by creating reusable common libraries and centralized configuration.
-
-#### Core Libraries
-- **scripts/lib/logging.sh**: Standardized logging with color support and multiple log levels
-- **scripts/lib/portainer.sh**: Portainer API operations library with comprehensive error handling
-- **scripts/config/master.env**: Centralized configuration management for all environment variables
-
-#### Usage Pattern in Scripts
-```bash
-# Source common libraries (standard pattern)
-SCRIPT_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_LIB_DIR/lib/logging.sh"
-source "$SCRIPT_LIB_DIR/lib/portainer.sh"
-
-# Load centralized configuration
-source "$SCRIPT_LIB_DIR/config/master.env"
-
-# Example usage
-log_info "Starting deployment process"
-test_portainer_connection
-check_container_status "safework-app"
-```
+### **Production Log Tagging Implementation (2025-09-22)**: Standardized log format for Loki compatibility
 
 #### Master Configuration (scripts/config/master.env)
 **All environment variables consolidated into single master file:**
@@ -91,135 +76,36 @@ POSTGRES_PORT="5432"
 REDIS_PORT="6379"
 ```
 
-#### Benefits of Common Libraries System
-- **Code Reuse**: Eliminated 500+ lines of duplicate code across scripts
-- **Consistency**: Standardized logging and API calls across all operations
-- **Maintainability**: Single point of updates for common functionality
-- **Error Handling**: Centralized error handling patterns with proper logging
-- **Configuration Management**: Single source of truth for all environment variables
+#### Log Tagging Configuration (docker-compose.yml)
+**Implemented comprehensive log tagging for all services:**
+```yaml
+# PostgreSQL Container Logging
+logging:
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+    tag: "[safework-postgres-log] {{.Name}}"
+    labels: "service=safework-postgres,env=production,component=database,stack=safework"
 
-## Development Commands
+# Redis Container Logging  
+logging:
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+    tag: "[safework-redis-log] {{.Name}}"
+    labels: "service=safework-redis,env=production,component=database,stack=safework"
 
-### ⚡ Most Essential Commands (Start Here)
-```bash
-# System Health Check
-make health                                          # Complete system status
-curl https://safework.jclee.me/health              # Production verification
-
-# Deployment Management
-./scripts/portainer_stack_deploy.sh status         # Current deployment status
-./scripts/portainer_stack_deploy.sh deploy         # Deploy to production
-make deploy                                         # Alternative deployment
-
-# Database Operations
-make db-status                                      # Migration status
-make db-migrate                                     # Apply migrations
-make db-shell                                       # PostgreSQL CLI
-
-# Development
-make build                                          # Build containers
-make up                                             # Start development
-make logs                                           # View logs
+# Application Container Logging
+logging:
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+    tag: "[safework-app-log] {{.Name}}"
+    labels: "service=safework-app,env=production,component=application,stack=safework"
 ```
-
-### 🎯 Quick Start for New Claude Instances
-```bash
-# 1. FIRST: Verify system health and connectivity
-make health                                    # Overall system status
-curl https://safework.jclee.me/health        # Production health check
-
-# 2. VALIDATE: Deployment system integrity
-./scripts/portainer_stack_deploy.sh --validate  # Comprehensive validation
-
-# 3. STATUS: Check current deployment
-./scripts/portainer_stack_deploy.sh status    # Current stack status
-./scripts/portainer_stack_deploy.sh health    # Container health check
-
-# 4. LOGS: View application logs when needed
-./scripts/portainer_stack_deploy.sh logs safework-app  # Application logs
-make logs                                      # Alternative log viewing
-
-# 5. DATABASE: Essential database operations
-make db-status                                 # Check migration status
-docker exec -it safework-app python migrate.py migrate  # Apply migrations
-
-# 6. TESTING: Verify core functionality
-curl -X POST https://safework.jclee.me/survey/api/submit \
-  -H "Content-Type: application/json" \
-  -d '{"form_type":"001","name":"테스트","age":30}'   # Test survey submission
-```
-
-### 🚨 Critical Information for New Instances
-- **Primary Deployment**: **GitHub Actions** - git push 자동으로 도커 이미지 빌드/푸시
-- **GitHub Actions**: 활성화됨 (`.github/workflows/deploy.yml`) - 단순화된 파이프라인
-- **Registry**: registry.jclee.me에 자동 이미지 푸시
-- **Production URL**: https://safework.jclee.me
-- **Container Names**: safework-app, safework-postgres, safework-redis
-- **Database Name**: Use `safework_db` (NOT `safework`) for all operations
-- **Admin Credentials**: admin / safework2024 (for /admin access)
-- **Timezone**: All operations use KST (Asia/Seoul) timezone
-
-### Essential Daily Workflow (Top Priority)
-```bash
-# 🚀 MOST IMPORTANT: Quick system health check
-make health                                         # System health + container status
-curl https://safework.jclee.me/health              # Production health check
-
-# 🔥 CRITICAL: Deploy to production (자동화된 파이프라인)
-make deploy                                         # git push로 자동 이미지 빌드/푸시
-make deploy-status                                  # GitHub Actions 상태 확인
-
-# 📋 DEBUGGING: View real-time logs
-make logs                                           # Live application logs
-./scripts/safework_ops_unified.sh logs live safework-app 100  # Real-time with 100 lines
-
-# 🗄️ DATABASE: Most common database operations
-make db-status                                      # Check migration status
-docker exec -it safework-app python migrate.py migrate  # Apply pending migrations
-docker exec -it safework-postgres psql -U safework -d safework_db  # Direct database access
-
-# 🧪 TESTING: Critical endpoint verification
-curl -X POST https://safework.jclee.me/survey/api/submit \
-  -H "Content-Type: application/json" \
-  -d '{"form_type":"001","name":"테스트","age":30}'   # Test survey submission
-```
-
-### Validated Deployment System (Recently Tested ✅)
-```bash
-# 🎯 MAIN DEPLOYMENT SCRIPT (Fully Validated)
-./scripts/portainer_stack_deploy.sh --help          # Show all available commands
-./scripts/portainer_stack_deploy.sh --validate      # Comprehensive validation
-./scripts/portainer_stack_deploy.sh status          # Current stack status
-./scripts/portainer_stack_deploy.sh health          # Health check all containers
-./scripts/portainer_stack_deploy.sh logs safework-app  # View container logs
-
-# 🔧 CONFIGURATION REQUIREMENTS (Critical)
-# All required environment variables configured in scripts/config/portainer_config.env:
-# - ENDPOINT_PRODUCTION="3" ✅
-# - ENDPOINT_DEV="2" ✅  
-# - ENDPOINT_SYNOLOGY="1" ✅ (Recently fixed)
-# - PORTAINER_URL and PORTAINER_TOKEN ✅
-
-# ⚠️ DEPLOYMENT SAFETY FEATURES
-# - Git change tracking prevents unsafe deployments
-# - Automatic validation before any operations
-# - Health checks verify container status
-# - Comprehensive error handling and rollback support
-```
-
-### Quick Reference (Most Common Commands)
-```bash
-# 🚀 Enhanced Deployment & Status (Post-Refactoring)
-make deploy                                         # Trigger GitHub Actions deployment
-make health                                         # System health check
-./scripts/portainer_stack_deploy.sh deploy         # Direct Portainer stack deployment (Recommended)
-./scripts/portainer_stack_deploy.sh status         # Current deployment status
-./scripts/portainer_stack_deploy.sh --validate     # Pre-deployment validation
-
-# 📚 Configuration & Libraries (New System)
-cat scripts/config/master.env | grep -E "(PORTAINER|DB_|ENDPOINT)"  # Check master config
-source scripts/lib/logging.sh && log_info "Library test"           # Test logging library
-source scripts/lib/portainer.sh && test_portainer_connection       # Test Portainer library
 
 # 📋 Monitoring & Logs
 make logs                                           # Live application logs
@@ -607,10 +493,10 @@ def safework_workers():
 ## Deployment & Infrastructure
 
 ### Validated Portainer Stack Deployment (Production-Ready ✅)
-**Primary Deployment Method**: Direct Portainer API v2.x stack management with comprehensive validation
+**Primary Deployment Method**: Direct Portainer API v2.2.0 stack management with Stack ID 77
 
 ```bash
-# 🎯 MAIN DEPLOYMENT SCRIPT (Recently Validated)
+# 🎯 MAIN DEPLOYMENT SCRIPT (Current Version v2.2.0)
 ./scripts/portainer_stack_deploy.sh
 
 # Available Commands:
@@ -619,17 +505,23 @@ status             # Check current stack and container status
 health             # Health check all SafeWork containers
 logs <container>   # View real-time container logs
 list               # List all stacks on all endpoints
-deploy             # Deploy stack with safety checks
-update             # Update existing stack
+deploy             # Deploy stack with safety checks and log tagging
+update             # Update existing stack with new configuration
 rollback           # Rollback to previous version
 
-# 🔧 CRITICAL CONFIGURATION (All Variables Verified)
-# scripts/config/portainer_config.env contains:
-PORTAINER_URL="https://portainer.jclee.me"     # ✅ Tested
-PORTAINER_TOKEN="ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8="  # ✅ Valid
-ENDPOINT_PRODUCTION="3"                        # ✅ Active endpoint
-ENDPOINT_DEV="2"                              # ✅ Available 
-ENDPOINT_SYNOLOGY="1"                         # ✅ Recently fixed
+# 🔧 CRITICAL CONFIGURATION (Production Verified ✅)
+# scripts/config/master.env contains (current production setup):
+PORTAINER_URL="https://portainer.jclee.me"     # ✅ Active production
+PORTAINER_TOKEN="ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8="  # ✅ Valid token
+ENDPOINT_PRODUCTION="3"                        # ✅ Stack ID 77 endpoint
+ENDPOINT_DEV="2"                              # ✅ Development endpoint
+ENDPOINT_SYNOLOGY="1"                         # ✅ Synology NAS endpoint
+
+# 🚀 CURRENT PRODUCTION STATUS (Stack ID 77)
+# Production URL: https://safework.jclee.me ✅ Active
+# Container Status: All 3 containers healthy (app, postgres, redis)
+# Log Format: [safework-*-log] with Loki-compatible labels
+# Last Updated: 2025-09-22 with comprehensive log tagging
 
 # ⚠️ DEPLOYMENT SAFETY FEATURES
 - Git change tracking (prevents deployment with uncommitted changes)
@@ -797,8 +689,8 @@ All required environment variables now properly configured:
 #### Major Refactoring Achievements
 - **Duplicate Code Elimination**: Removed 500+ lines of duplicate code across 16 scripts
 - **Common Libraries Creation**:
-  - `scripts/lib/logging.sh`: Standardized logging across all scripts
-  - `scripts/lib/portainer.sh`: Centralized Portainer API operations
+  - `scripts/portainer_stack_deploy.sh`: Main deployment script v2.2.0 with comprehensive validation
+  - `scripts/config/master.env`: Centralized configuration for all environment variables
 - **Configuration Consolidation**: All environment variables moved to `scripts/config/master.env`
 - **Script Standardization**: Consistent error handling and logging patterns
 
