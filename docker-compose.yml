@@ -89,4 +89,3 @@ volumes:
 networks:
   safework_network:
     external: true
-    name: safework_network
