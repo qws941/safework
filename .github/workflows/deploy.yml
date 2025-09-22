@@ -1,0 +1,129 @@
+name: 🚀 SafeWork Deploy
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'src/app/**'
+      - 'infrastructure/docker/**'
+      - 'docker-compose.yml'
+      - '.github/workflows/deploy.yml'
+
+  workflow_dispatch:
+    inputs:
+      force_rebuild:
+        description: 'Force rebuild all images'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  APP_NAME: safework
+  REGISTRY_HOST: registry.jclee.me
+  REGISTRY_USER: admin
+  REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+
+  # Portainer Configuration
+  PORTAINER_URL: https://portainer.jclee.me
+  PORTAINER_API_KEY: ${{ secrets.PORTAINER_API_KEY }}
+
+  # Database Configuration
+  POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD || 'safework2024' }}
+  POSTGRES_DB: safework_db
+  POSTGRES_USER: safework
+
+  # Application Configuration
+  SECRET_KEY: ${{ secrets.SECRET_KEY || 'safework-production-secret-key-2024' }}
+  ADMIN_USERNAME: admin
+  ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD || 'safework2024' }}
+
+jobs:
+  build-and-push:
+    name: 🏗️ Build and Push Images
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        service:
+          - name: app
+            context: ./src/app
+            dockerfile: ./src/app/Dockerfile
+          - name: postgres
+            context: ./infrastructure/docker/postgres
+            dockerfile: ./infrastructure/docker/postgres/Dockerfile
+          - name: redis
+            context: ./infrastructure/docker/redis
+            dockerfile: ./infrastructure/docker/redis/Dockerfile
+
+    steps:
+      - name: 📂 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔐 Login to Registry
+        run: |
+          echo "${{ env.REGISTRY_PASSWORD }}" | docker login ${{ env.REGISTRY_HOST }} -u ${{ env.REGISTRY_USER }} --password-stdin
+
+      - name: 🏗️ Build ${{ matrix.service.name }}
+        run: |
+          docker build \
+            -t ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/${{ matrix.service.name }}:latest \
+            -t ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/${{ matrix.service.name }}:${{ github.sha }} \
+            -f ${{ matrix.service.dockerfile }} \
+            ${{ matrix.service.context }}
+
+      - name: 📤 Push ${{ matrix.service.name }}
+        run: |
+          docker push ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/${{ matrix.service.name }}:latest
+          docker push ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/${{ matrix.service.name }}:${{ github.sha }}
+
+  deploy:
+    name: 🚀 Deploy to Production
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📂 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🚀 Deploy via Portainer
+        if: env.PORTAINER_API_KEY != ''
+        run: |
+          echo "🚀 Triggering Portainer webhook for stack update..."
+
+          # Update stack via Portainer API
+          curl -X POST "${{ env.PORTAINER_URL }}/api/stacks/webhooks/43" \
+            -H "X-API-Key: ${{ env.PORTAINER_API_KEY }}" \
+            || echo "⚠️ Portainer webhook not configured or failed"
+
+      - name: ⏱️ Wait for Deployment
+        run: sleep 30
+
+      - name: 🏥 Health Check
+        run: |
+          echo "🏥 Checking application health..."
+
+          max_attempts=10
+          attempt=1
+
+          while [ $attempt -le $max_attempts ]; do
+            if curl -f https://safework.jclee.me/health; then
+              echo "✅ Application is healthy!"
+              exit 0
+            fi
+            echo "⏳ Attempt $attempt/$max_attempts failed, waiting..."
+            sleep 10
+            attempt=$((attempt + 1))
+          done
+
+          echo "❌ Health check failed after $max_attempts attempts"
+          exit 1
+
+      - name: 📢 Deployment Status
+        if: always()
+        run: |
+          if [ ${{ job.status }} == 'success' ]; then
+            echo "✅ Deployment successful!"
+            echo "🌐 Application URL: https://safework.jclee.me"
+          else
+            echo "❌ Deployment failed!"
+          fi
