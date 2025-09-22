@@ -2,10 +2,10 @@ version: '3.8'
 
 # SafeWork Production Stack for Portainer
 # 3개 핵심 서비스: app, postgres, redis
-# Network: external safework-prod-network (must exist)
+# Network: external safework-network (must exist)
 
 networks:
-  safework-prod-network:
+  safework-network:
     external: true
 
 volumes:
@@ -32,7 +32,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - safework-prod-network
+      - safework-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U safework -d safework_db"]
@@ -52,7 +52,7 @@ services:
     volumes:
       - redis_data:/data
     networks:
-      - safework-prod-network
+      - safework-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -79,7 +79,7 @@ services:
     volumes:
       - app_uploads:/app/uploads
     networks:
-      - safework-prod-network
+      - safework-network
     depends_on:
       - safework-postgres
       - safework-redis
