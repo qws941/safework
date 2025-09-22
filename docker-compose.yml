@@ -96,5 +96,5 @@ volumes:
 
 networks:
   default:
-    name: safework_network
+    name: safework-network
     driver: bridge
