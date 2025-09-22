@@ -27,6 +27,7 @@ services:
       - POSTGRES_PASSWORD=safework2024
       - POSTGRES_DB=safework_db
       - POSTGRES_USER=safework
+      - PGDATA=/var/lib/postgresql/data/pgdata
     # ports: # Internal network only
       # - "4546:5432"
     volumes:
@@ -74,6 +75,8 @@ services:
       - DB_PASSWORD=safework2024
       - REDIS_HOST=safework-redis
       - SECRET_KEY=${SECRET_KEY:-safework-production-secret-key-2024}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-safework2024}
     ports:
       - "4545:4545"
     volumes:

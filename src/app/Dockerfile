@@ -102,7 +102,8 @@ LABEL safework.deployment.auto="true" \
       safework.service.priority="high" \
       maintainer="SafeWork Team" \
       org.label-schema.name="safework-app" \
-      org.label-schema.description="SafeWork Flask Application - direct deployment"
+      org.label-schema.description="SafeWork Flask Application - direct deployment" \
+      com.centurylinklabs.watchtower.enable="true"
 
 # Expose port
 EXPOSE 4545

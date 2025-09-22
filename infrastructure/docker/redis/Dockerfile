@@ -10,7 +10,8 @@ LABEL safework.deployment.auto="true" \
       safework.service.priority="medium" \
       maintainer="SafeWork Team" \
       org.label-schema.name="safework-redis" \
-      org.label-schema.description="SafeWork Redis Cache with optimized configuration"
+      org.label-schema.description="SafeWork Redis Cache with optimized configuration" \
+      com.centurylinklabs.watchtower.enable="true"
 
 # Environment variables with flexible configuration
 ENV REDIS_REPLICATION_MODE=${REDIS_REPLICATION_MODE:-master}

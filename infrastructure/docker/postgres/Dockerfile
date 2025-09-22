@@ -16,7 +16,7 @@ ENV POSTGRES_USER=${POSTGRES_USER:-safework}
 ENV POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-safework2024}
 
 # Security and performance settings
-ENV POSTGRES_INITDB_ARGS="--encoding=UTF8 --locale=ko_KR.UTF8"
+ENV POSTGRES_INITDB_ARGS="--encoding=UTF8"
 ENV POSTGRES_HOST_AUTH_METHOD=md5
 ENV POSTGRES_SHARED_PRELOAD_LIBRARIES=pg_stat_statements
 ENV POSTGRES_MAX_CONNECTIONS=100
@@ -33,6 +33,7 @@ ENV POSTGRES_LOG_TIMEZONE=Asia/Seoul
 # CRITICAL: Copy complete-schema.sql for full database initialization at image level
 COPY complete-schema.sql /docker-entrypoint-initdb.d/01-complete-schema.sql
 COPY init.sql /docker-entrypoint-initdb.d/02-init.sql
+COPY fix_schema.sql /docker-entrypoint-initdb.d/03-fix-schema.sql
 
 # Note: migrations directory not available during build, handled at runtime if needed
 
@@ -53,4 +54,5 @@ LABEL maintainer="SafeWork Team" \
       service="database" \
       safework.deployment.auto="true" \
       safework.service.type="database" \
-      safework.service.priority="high"
+      safework.service.priority="high" \
+      com.centurylinklabs.watchtower.enable="true"
