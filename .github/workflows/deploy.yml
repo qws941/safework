@@ -85,15 +85,25 @@ jobs:
       - name: 📂 Checkout
         uses: actions/checkout@v4
 
-      - name: 🚀 Deploy via Portainer
+      - name: 🚀 Deploy via Portainer API
         if: env.PORTAINER_API_KEY != ''
         run: |
-          echo "🚀 Triggering Portainer webhook for stack update..."
+          echo "🚀 Updating SafeWork stack via Portainer API..."
 
-          # Update stack via Portainer API
-          curl -X POST "${{ env.PORTAINER_URL }}/api/stacks/webhooks/43" \
+          # Update stack via Portainer API (Stack ID: 43, Endpoint: 3)
+          curl -X PUT "${{ env.PORTAINER_URL }}/api/stacks/43" \
             -H "X-API-Key: ${{ env.PORTAINER_API_KEY }}" \
-            || echo "⚠️ Portainer webhook not configured or failed"
+            -H "Content-Type: application/json" \
+            -d '{
+              "env": [
+                {"name": "POSTGRES_PASSWORD", "value": "${{ env.POSTGRES_PASSWORD }}"},
+                {"name": "SECRET_KEY", "value": "${{ env.SECRET_KEY }}"},
+                {"name": "ADMIN_PASSWORD", "value": "${{ env.ADMIN_PASSWORD }}"}
+              ],
+              "prune": true,
+              "pullImage": true
+            }' \
+            || echo "⚠️ Portainer API update failed"
 
       - name: ⏱️ Wait for Deployment
         run: sleep 30
