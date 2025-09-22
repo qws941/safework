@@ -67,8 +67,8 @@ services:
     hostname: safework-app
     environment:
       - TZ=Asia/Seoul
-      - FLASK_CONFIG=development
-      - DEBUG=true
+      - FLASK_CONFIG=production
+      - DEBUG=false
       - DB_HOST=safework-postgres
       - DB_PORT=5432
       - DB_NAME=safework_db
@@ -78,9 +78,9 @@ services:
       - REDIS_PORT=6379
       - REDIS_PASSWORD=
       - REDIS_DB=0
-      - SECRET_KEY=safework-local-secret-key-2024
+      - SECRET_KEY=safework-production-secret-key-2024
       - ADMIN_USERNAME=admin
-      - ADMIN_PASSWORD=admin123
+      - ADMIN_PASSWORD=safework2024
       - WTF_CSRF_ENABLED=false
       - UPLOAD_FOLDER=/app/uploads
       - MAX_CONTENT_LENGTH=52428800

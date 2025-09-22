@@ -2,20 +2,24 @@
 # SafeWork 공통 로깅 라이브러리
 # Common Logging Library for SafeWork Scripts
 
-# 색상 정의
-declare -r RED='\033[0;31m'
-declare -r GREEN='\033[0;32m'
-declare -r YELLOW='\033[1;33m'
-declare -r BLUE='\033[0;34m'
-declare -r CYAN='\033[0;36m'
-declare -r NC='\033[0m' # No Color
+# 색상 정의 (중복 선언 방지)
+if [[ -z "${RED:-}" ]]; then
+    declare -r RED='\033[0;31m'
+    declare -r GREEN='\033[0;32m'
+    declare -r YELLOW='\033[1;33m'
+    declare -r BLUE='\033[0;34m'
+    declare -r CYAN='\033[0;36m'
+    declare -r NC='\033[0m' # No Color
+fi
 
-# 로그 레벨 정의
-declare -r LOG_LEVEL_DEBUG=0
-declare -r LOG_LEVEL_INFO=1
-declare -r LOG_LEVEL_WARN=2
-declare -r LOG_LEVEL_ERROR=3
-declare -r LOG_LEVEL_CRITICAL=4
+# 로그 레벨 정의 (중복 선언 방지)
+if [[ -z "${LOG_LEVEL_DEBUG:-}" ]]; then
+    declare -r LOG_LEVEL_DEBUG=0
+    declare -r LOG_LEVEL_INFO=1
+    declare -r LOG_LEVEL_WARN=2
+    declare -r LOG_LEVEL_ERROR=3
+    declare -r LOG_LEVEL_CRITICAL=4
+fi
 
 # 기본 로그 레벨 (환경변수로 오버라이드 가능)
 declare -g CURRENT_LOG_LEVEL=${LOG_LEVEL:-$LOG_LEVEL_INFO}
