@@ -2,11 +2,11 @@ version: '3.8'
 
 # SafeWork Production Stack for Portainer
 # 3개 핵심 서비스: app, postgres, redis
-# Network: external safework-network (must exist)
+# Network: safework-network (auto-created by docker-compose)
 
 networks:
   safework-network:
-    external: true
+    driver: bridge
 
 volumes:
   postgres_data:
