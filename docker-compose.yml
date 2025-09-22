@@ -1,5 +1,9 @@
 version: '3.8'
 
+# SafeWork Docker Compose Configuration
+# Network must be created before deployment:
+# docker network create safework_network
+
 services:
   safework-postgres:
     image: registry.jclee.me/safework/postgres:latest
