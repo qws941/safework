@@ -50,6 +50,7 @@ jobs:
   build:
     name: Build & Push Docker Images
     runs-on: ubuntu-latest
+    timeout-minutes: 30  # 타임아웃 추가로 무한 대기 방지
 
     strategy:
       matrix:
@@ -63,6 +64,7 @@ jobs:
           - name: redis
             context: ./infrastructure/docker/redis
             dockerfile: ./infrastructure/docker/redis/Dockerfile
+      fail-fast: false  # 하나의 빌드가 실패해도 다른 빌드 계속 진행
 
     steps:
       - name: Checkout
@@ -87,8 +89,10 @@ jobs:
           tags: |
             ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/${{ matrix.service.name }}:latest
             ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/${{ matrix.service.name }}:${{ github.sha }}
+            ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/${{ matrix.service.name }}:${{ github.run_number }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          platforms: linux/amd64  # 플랫폼 명시적 지정
           build-args: |
             DB_NAME=${{ env.DB_NAME }}
             DB_USER=${{ env.DB_USER }}
