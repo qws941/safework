@@ -1,8 +1,8 @@
 version: '3.8'
 
-# SafeWork Production Stack for Portainer
-# 3개 핵심 서비스: app, postgres, redis
-# Network: safework-network (auto-created by docker-compose)
+# SafeWork Portainer GitOps Stack
+# CI/CD Pipeline: Code → Local Test → Git Push → GitHub Actions (Build+Push) → Portainer GitOps Auto-Deploy
+# GitOps: Portainer monitors this repository and auto-deploys on docker-compose.yml changes
 
 networks:
   safework-network:
@@ -24,9 +24,9 @@ services:
       - "com.centurylinklabs.watchtower.enable=true"
     environment:
       - TZ=Asia/Seoul
-      - POSTGRES_PASSWORD=safework2024
-      - POSTGRES_DB=safework_db
-      - POSTGRES_USER=safework
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-safework2024}
+      - POSTGRES_DB=${POSTGRES_DB:-safework_db}
+      - POSTGRES_USER=${POSTGRES_USER:-safework}
       - PGDATA=/var/lib/postgresql/data/pgdata
     # ports: # Internal network only
       # - "4546:5432"
@@ -68,12 +68,12 @@ services:
       - "com.centurylinklabs.watchtower.enable=true"
     environment:
       - TZ=Asia/Seoul
-      - FLASK_ENV=production
-      - DB_HOST=safework-postgres
-      - DB_NAME=safework_db
-      - DB_USER=safework
-      - DB_PASSWORD=safework2024
-      - REDIS_HOST=safework-redis
+      - FLASK_ENV=${FLASK_ENV:-production}
+      - DB_HOST=${DB_HOST:-safework-postgres}
+      - DB_NAME=${POSTGRES_DB:-safework_db}
+      - DB_USER=${POSTGRES_USER:-safework}
+      - DB_PASSWORD=${POSTGRES_PASSWORD:-safework2024}
+      - REDIS_HOST=${REDIS_HOST:-safework-redis}
       - SECRET_KEY=${SECRET_KEY:-safework-production-secret-key-2024}
       - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-safework2024}
