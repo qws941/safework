@@ -233,3 +233,11 @@ celerybeat.pid
 
 # SageMath parsed files
 *.sage.py
+# SafeWork Environment Files (Security)
+.env.local
+.env.production
+.env.production.secure
+
+# Legacy environment files backup
+*.env.backup.*
+backup_env_*.txt
