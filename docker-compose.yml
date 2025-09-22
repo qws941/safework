@@ -13,8 +13,6 @@ services:
       - POSTGRES_USER=safework
       - POSTGRES_PASSWORD=${DB_PASSWORD:-safework2024}
       - TZ=Asia/Seoul
-    ports:
-      - "4546:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -33,8 +31,6 @@ services:
     container_name: safework-redis
     environment:
       - TZ=Asia/Seoul
-    ports:
-      - "4547:6379"
     volumes:
       - redis_data:/data
     networks:
@@ -88,4 +84,4 @@ volumes:
 
 networks:
   safework_network:
-    external: true
+    driver: bridge
