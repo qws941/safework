@@ -1,4 +1,4 @@
-name: 🏗️ SafeWork Build & Push Images
+name: SafeWork Docker Build
 
 on:
   push:
@@ -9,23 +9,15 @@ on:
       - 'docker-compose.yml'
       - '.github/workflows/deploy.yml'
 
-  workflow_dispatch:
-    inputs:
-      force_rebuild:
-        description: 'Force rebuild all images'
-        required: false
-        default: false
-        type: boolean
-
 env:
-  REGISTRY_HOST: ${{ vars.REGISTRY_HOST || 'registry.jclee.me' }}
-  REGISTRY_USER: ${{ vars.REGISTRY_USER || 'admin' }}
+  REGISTRY_HOST: registry.jclee.me
+  REGISTRY_USER: admin
   REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
-  APP_NAME: ${{ vars.APP_NAME || 'safework' }}
+  APP_NAME: safework
 
 jobs:
-  build-and-push:
-    name: 🏗️ Build and Push Images
+  build:
+    name: Build & Push
     runs-on: ubuntu-latest
 
     strategy:
@@ -42,23 +34,14 @@ jobs:
             dockerfile: ./infrastructure/docker/redis/Dockerfile
 
     steps:
-      - name: 📂 Checkout
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: 🔐 Login to Registry
-        run: |
-          echo "${{ env.REGISTRY_PASSWORD }}" | docker login ${{ env.REGISTRY_HOST }} -u ${{ env.REGISTRY_USER }} --password-stdin
+      - name: Login to Registry
+        run: echo "${{ env.REGISTRY_PASSWORD }}" | docker login ${{ env.REGISTRY_HOST }} -u ${{ env.REGISTRY_USER }} --password-stdin
 
-      - name: 🏗️ Build ${{ matrix.service.name }}
+      - name: Build & Push ${{ matrix.service.name }}
         run: |
-          docker build \
-            -t ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/${{ matrix.service.name }}:latest \
-            -t ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/${{ matrix.service.name }}:${{ github.sha }} \
-            -f ${{ matrix.service.dockerfile }} \
-            ${{ matrix.service.context }}
-
-      - name: 📤 Push ${{ matrix.service.name }}
-        run: |
+          docker build -t ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/${{ matrix.service.name }}:latest -f ${{ matrix.service.dockerfile }} ${{ matrix.service.context }}
           docker push ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/${{ matrix.service.name }}:latest
-          docker push ${{ env.REGISTRY_HOST }}/${{ env.APP_NAME }}/${{ matrix.service.name }}:${{ github.sha }}
 

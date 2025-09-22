@@ -34,7 +34,7 @@ SafeWork은 한국 건설/산업 환경을 위한 Flask 3.0+ 기반 산업보건
 **Deployment Strategy**: Portainer API-based stack deployment (Stack ID: 43, Endpoint 3)
 - Production: https://safework.jclee.me
 - Registry: registry.jclee.me (private)
-- GitHub Actions: Currently disabled, use Portainer deployment
+- GitHub Actions: 활성화됨 - git push로 자동 도커 이미지 빌드/푸시
 
 **Key Configuration**:
 - Database: `safework_db` (NOT `safework`)
@@ -150,10 +150,10 @@ curl -X POST https://safework.jclee.me/survey/api/submit \
 ```
 
 ### 🚨 Critical Information for New Instances
-- **Primary Deployment**: Use Portainer stack deployment (`./scripts/portainer_stack_deploy.sh`) - **NOT GitHub Actions**
-- **GitHub Actions Status**: Currently disabled (moved to `.github/workflows/disabled/`)
-- **Configuration Source**: All environment variables in `scripts/config/master.env` (centralized)
-- **Production URL**: https://safework.jclee.me (Stack ID: 43 on Endpoint 3)
+- **Primary Deployment**: **GitHub Actions** - git push 자동으로 도커 이미지 빌드/푸시
+- **GitHub Actions**: 활성화됨 (`.github/workflows/deploy.yml`) - 단순화된 파이프라인
+- **Registry**: registry.jclee.me에 자동 이미지 푸시
+- **Production URL**: https://safework.jclee.me
 - **Container Names**: safework-app, safework-postgres, safework-redis
 - **Database Name**: Use `safework_db` (NOT `safework`) for all operations
 - **Admin Credentials**: admin / safework2024 (for /admin access)
@@ -165,9 +165,9 @@ curl -X POST https://safework.jclee.me/survey/api/submit \
 make health                                         # System health + container status
 curl https://safework.jclee.me/health              # Production health check
 
-# 🔥 CRITICAL: Deploy to production (GitHub Actions)
-make deploy-github                                  # Trigger GitHub Actions deployment
-make deploy-status                                  # Check deployment status
+# 🔥 CRITICAL: Deploy to production (자동화된 파이프라인)
+make deploy                                         # git push로 자동 이미지 빌드/푸시
+make deploy-status                                  # GitHub Actions 상태 확인
 
 # 📋 DEBUGGING: View real-time logs
 make logs                                           # Live application logs
@@ -266,23 +266,21 @@ make dev-setup                                     # Complete development enviro
 
 **✅ PRODUCTION CONTAINER NAMING**: Verified production uses `safework-*` naming scheme (app, postgres, redis)
 
-**Production Deployment Process:**
-1. **Push to master branch** → Triggers GitHub Actions workflow
-2. **Build & Push Images** → Builds all containers, pushes to registry.jclee.me
-3. **Direct Container Update** → Portainer API pulls latest images and restarts containers
-4. **Health Verification** → Checks all services are running properly
+**단순화된 배포 프로세스:**
+1. **Push to master branch** → GitHub Actions 워크플로우 자동 트리거
+2. **Build & Push Images** → 모든 컨테이너 빌드 후 registry.jclee.me에 푸시
+3. **완료** → 이미지 업데이트 완료 (수동 배포는 별도 진행)
 
 ```bash
-# Trigger deployment (GitHub Actions handles building)
+# 단순화된 배포 트리거 (이미지 업데이트만)
 git add .
-git commit -m "Fix: Update SafeWork with submission_date column"
+git commit -m "Update: SafeWork 코드 변경사항"
 git push origin master
 
-# GitHub Actions will:
-# 1. Build safework/app, safework/postgres, safework/redis images
-# 2. Push to registry.jclee.me with latest tags
-# 3. Pull latest images and restart containers via Portainer API
-# 4. Monitor deployment success via health checks
+# GitHub Actions에서 자동 실행:
+# 1. safework/app, safework/postgres, safework/redis 이미지 빌드
+# 2. registry.jclee.me에 latest 태그로 푸시
+# 3. 완료 - 이미지 업데이트 완료
 
 # Production health verification
 curl -s https://safework.jclee.me/health
@@ -642,12 +640,16 @@ ENDPOINT_SYNOLOGY="1"                         # ✅ Recently fixed
 - ✅ Git change tracking working correctly
 - ✅ Log retrieval and health checks functional
 
-### GitHub Actions CI/CD Pipeline
-**Status**: All workflows currently disabled and moved to `.github/workflows/disabled/` directory
+### GitHub Actions CI/CD Pipeline (단순화됨)
+**Status**: 활성화됨 - 단순화된 도커 이미지 빌드/푸시 파이프라인
 
-**Note**: GitHub Actions workflows have been intentionally disabled to prevent automatic deployments. Manual deployment is now handled via the validated Portainer stack deployment system.
+**워크플로우 기능**:
+- Git push 시 자동 트리거
+- 3개 서비스 병렬 빌드 (app, postgres, redis)
+- registry.jclee.me에 자동 푸시
+- 복잡한 배포 로직 제거됨
 
-**Primary Deployment Method**: Portainer API stack deployment via `./scripts/portainer_stack_deploy.sh`
+**Primary Method**: `make deploy` 또는 직접 git push
 
 ### Infrastructure Components
 - **Registry**: registry.jclee.me (credentials in GitHub secrets)

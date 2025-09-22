@@ -129,79 +129,16 @@ db-backup: ## 데이터베이스 백업
 	$(DOCKER) exec safework-postgres pg_dump -U safework -d safework_db > backup_$(shell date +%Y%m%d_%H%M%S).sql
 	@echo "$(GREEN)✅ 백업 완료$(NC)"
 
-##@ 배포 & 운영 (근본 해결책 적용)
-deploy: ## Production 배포 (환경별 구성 기반, 하드코딩 제거)
-	@echo "$(GREEN)🚀 SafeWork 근본 해결책 배포...$(NC)"
-	@echo "$(YELLOW)📋 환경별 구성 기반 시스템자동 배포$(NC)"
-	cd scripts && python3 safework_root_solution.py deploy --environment production
+##@ 배포 (단순화됨)
+deploy: ## Git push로 도커 이미지 자동 업데이트
+	@echo "$(GREEN)🚀 Docker 이미지 업데이트 트리거...$(NC)"
+	@echo "$(YELLOW)✨ git push가 자동으로 registry.jclee.me에 최신 이미지를 빌드/푸시합니다$(NC)"
+	git add . && git commit -m "Update: Docker image build triggered" && git push origin master
+	@echo "$(GREEN)✅ GitHub Actions에서 이미지 빌드가 시작됩니다$(NC)"
 
-deploy-dev: ## Development 환경 배포
-	@echo "$(GREEN)🏠 Development 환경 배포...$(NC)"
-	cd scripts && python3 safework_root_solution.py deploy --environment development
-
-deploy-force: ## 강제 재생성 배포
-	@echo "$(GREEN)🔄 강제 재생성 배포...$(NC)"
-	cd scripts && python3 safework_root_solution.py deploy --environment production --force
-
-deploy-validate: ## 배포 전 환경 검증
-	@echo "$(GREEN)🔍 배포 환경 검증...$(NC)"
-	cd scripts && python3 safework_root_solution.py validate --environment production
-
-deploy-local: ## 로컬 배포 실행
-	@echo "$(GREEN)🏠 로컬 배포 실행...$(NC)"
-	./scripts/safework_ops_unified.sh deploy local
-
-deploy-github: ## GitHub Actions 배포 트리거
-	@echo "$(GREEN)🐙 GitHub Actions 배포 트리거...$(NC)"
-	git add . && git commit -m "Deploy: Trigger production deployment via GitHub Actions" && git push origin master
-
-deploy-status: ## 배포 상태 확인 (Portainer API)
-	@echo "$(GREEN)📊 배포 상태 확인...$(NC)"
-	./scripts/portainer_deployment_stable.sh status
-
-deploy-health: ## 프로덕션 헬스 체크
-	@echo "$(GREEN)🏥 프로덕션 헬스 체크...$(NC)"
-	./scripts/portainer_deployment_stable.sh health
-
-deploy-ops: ## 포테이너 운영 배포 (전체 시스템)
-	@echo "$(GREEN)🚀 포테이너 운영 배포 실행...$(NC)"
-	./scripts/portainer_operations_deploy.sh deploy
-
-deploy-ops-status: ## 포테이너 운영 배포 상태 확인
-	@echo "$(GREEN)📊 운영 배포 상태 확인...$(NC)"
-	./scripts/portainer_operations_deploy.sh status
-
-deploy-ops-restart: ## 포테이너 운영 시스템 재시작
-	@echo "$(GREEN)🔄 운영 시스템 재시작...$(NC)"
-	./scripts/portainer_operations_deploy.sh restart
-
-deploy-ops-stop: ## 포테이너 운영 시스템 중지
-	@echo "$(YELLOW)🛑 운영 시스템 중지...$(NC)"
-	./scripts/portainer_operations_deploy.sh stop
-
-deploy-ops-postgres: ## PostgreSQL만 운영 배포
-	@echo "$(GREEN)🐘 PostgreSQL 운영 배포...$(NC)"
-	./scripts/portainer_operations_deploy.sh postgres
-
-deploy-ops-redis: ## Redis만 운영 배포
-	@echo "$(GREEN)🔴 Redis 운영 배포...$(NC)"
-	./scripts/portainer_operations_deploy.sh redis
-
-deploy-ops-app: ## SafeWork App만 운영 배포
-	@echo "$(GREEN)📱 SafeWork App 운영 배포...$(NC)"
-	./scripts/portainer_operations_deploy.sh app
-
-deploy-ops-monitor: ## 포테이너 운영 시스템 종합 모니터링
-	@echo "$(GREEN)📊 포테이너 운영 시스템 모니터링...$(NC)"
-	./scripts/portainer_operations_deploy.sh monitor
-
-deploy-ops-optimize: ## 포테이너 운영 시스템 최적화
-	@echo "$(GREEN)⚡ 포테이너 운영 시스템 최적화...$(NC)"
-	./scripts/portainer_operations_deploy.sh optimize
-
-deploy-ops-health: ## SafeWork 애플리케이션 헬스 체크
-	@echo "$(GREEN)🏥 SafeWork 애플리케이션 헬스 체크...$(NC)"
-	./scripts/portainer_operations_deploy.sh health
+deploy-status: ## 도커 이미지 업데이트 상태 확인
+	@echo "$(GREEN)📊 GitHub Actions 상태 확인...$(NC)"
+	@echo "GitHub Actions: https://github.com/jclee/safework/actions"
 
 status: ## 시스템 상태 확인
 	@echo "$(GREEN)📊 시스템 상태 확인...$(NC)"
@@ -215,94 +152,8 @@ monitor: ## 시스템 모니터링
 	@echo "$(GREEN)👀 시스템 모니터링...$(NC)"
 	./scripts/safework_ops_unified.sh monitor overview
 
-##@ Portainer 고급 관리
-portainer: ## Portainer 고급 관리 도구 실행 (대화형 메뉴)
-	@echo "$(GREEN)🐳 Portainer 고급 관리 도구$(NC)"
-	./tools/scripts/portainer_advanced.sh
 
-portainer-status: ## Portainer 컨테이너 상태 확인
-	@echo "$(GREEN)📊 Portainer 컨테이너 상태$(NC)"
-	./tools/scripts/portainer_advanced.sh summary
 
-portainer-logs: ## Portainer 로그 조회 (대화형)
-	@echo "$(GREEN)📋 Portainer 로그 조회$(NC)"
-	./tools/scripts/portainer_advanced.sh logs
-
-portainer-monitor: ## Portainer 리소스 모니터링
-	@echo "$(GREEN)📈 Portainer 리소스 모니터링$(NC)"
-	./tools/scripts/portainer_advanced.sh monitor
-
-portainer-report: ## Portainer 시스템 보고서 생성
-	@echo "$(GREEN)📄 Portainer 시스템 보고서$(NC)"
-	./tools/scripts/portainer_advanced.sh report
-
-portainer-health: ## Portainer 건강 상태 종합 체크
-	@echo "$(GREEN)🏥 Portainer 건강 상태 체크$(NC)"
-	./tools/scripts/portainer_advanced.sh health
-
-portainer-restart: ## SafeWork 컨테이너 재시작 (Portainer API)
-	@echo "$(GREEN)🔄 SafeWork 컨테이너 재시작$(NC)"
-	./tools/scripts/portainer_advanced.sh restart safework-app
-	./tools/scripts/portainer_advanced.sh restart safework-postgres
-	./tools/scripts/portainer_advanced.sh restart safework-redis
-
-##@ 고도화된 재시작 시스템
-restart-app: ## App 컨테이너만 재시작 (건강 상태 모니터링)
-	@echo "$(GREEN)🔄 App 컨테이너 재시작...$(NC)"
-	./tools/scripts/safework_restart_advanced.sh restart-app
-
-restart-db: ## PostgreSQL 컨테이너만 재시작 (건강 상태 모니터링)
-	@echo "$(GREEN)🔄 PostgreSQL 컨테이너 재시작...$(NC)"
-	./tools/scripts/safework_restart_advanced.sh restart-db
-
-restart-redis: ## Redis 컨테이너만 재시작 (건강 상태 모니터링)
-	@echo "$(GREEN)🔄 Redis 컨테이너 재시작...$(NC)"
-	./tools/scripts/safework_restart_advanced.sh restart-redis
-
-restart-emergency: ## 긴급 복구 재시작 (전체 시스템 복구)
-	@echo "$(RED)🚨 긴급 복구 재시작...$(NC)"
-	./tools/scripts/safework_restart_advanced.sh emergency
-
-restart-status: ## 재시작 후 상태 확인
-	@echo "$(GREEN)📊 재시작 상태 확인...$(NC)"
-	./tools/scripts/safework_restart_advanced.sh status
-
-restart-health: ## 재시작 후 상세 건강 상태 체크
-	@echo "$(GREEN)🏥 재시작 건강 상태 체크...$(NC)"
-	./tools/scripts/safework_restart_advanced.sh health
-
-restart-logs: ## 재시작 관련 로그 확인
-	@echo "$(GREEN)📋 재시작 로그 확인...$(NC)"
-	./tools/scripts/safework_restart_advanced.sh logs
-
-##@ 모니터링 시스템
-monitoring: ## 실시간 모니터링 시작 (Portainer 기반)
-	@echo "$(GREEN)👀 SafeWork 실시간 모니터링 시작...$(NC)"
-	./tools/scripts/safework_monitoring_advanced.sh monitor
-
-monitoring-status: ## 현재 시스템 상태 확인
-	@echo "$(GREEN)📊 시스템 상태 확인...$(NC)"
-	./tools/scripts/safework_monitoring_advanced.sh status
-
-monitoring-health: ## 상세 건강 상태 및 성능 점검
-	@echo "$(GREEN)🏥 상세 건강 상태 점검...$(NC)"
-	./tools/scripts/safework_monitoring_advanced.sh health
-
-monitoring-performance: ## 성능 메트릭 확인
-	@echo "$(GREEN)📈 성능 메트릭 확인...$(NC)"
-	./tools/scripts/safework_monitoring_advanced.sh performance
-
-monitoring-logs: ## 컨테이너 로그 분석
-	@echo "$(GREEN)📋 컨테이너 로그 분석...$(NC)"
-	./tools/scripts/safework_monitoring_advanced.sh logs
-
-test-slack: ## 슬랙 알림 테스트
-	@echo "$(GREEN)📱 슬랙 알림 테스트...$(NC)"
-	./tools/scripts/safework_monitoring_advanced.sh test-slack
-
-emergency-alert: ## 긴급 상황 슬랙 알림 발송
-	@echo "$(RED)🚨 긴급 상황 알림 발송...$(NC)"
-	./tools/scripts/safework_monitoring_advanced.sh emergency
 
 ##@ 개발 도구
 shell: ## Flask 애플리케이션 셸 실행
