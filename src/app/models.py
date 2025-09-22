@@ -93,13 +93,21 @@ class SurveyModel(db.Model):
 
     # 메타데이터 (최소한)
     status = db.Column(db.String(20), default="submitted")
-    submission_date = db.Column(db.DateTime, default=kst_now)
-    created_at = db.Column(db.DateTime, default=kst_now)
-    updated_at = db.Column(db.DateTime, default=kst_now, onupdate=kst_now)
 
     # 설문 응답 데이터 (JSON - 모든 추가 데이터 저장)
     responses = db.Column(db.JSON)
     data = db.Column(db.JSON)  # DB에 존재함 - 주석 해제
+    symptoms_data = db.Column(db.JSON)  # DB에 존재함
+
+    # 관계 ID들 (DB에 존재함)
+    company_id = db.Column(db.Integer)
+    process_id = db.Column(db.Integer)
+    role_id = db.Column(db.Integer)
+
+    # 타임스탬프 필드들 (DB 컬럼 순서와 일치)
+    submission_date = db.Column(db.DateTime, default=kst_now)
+    created_at = db.Column(db.DateTime, default=kst_now)
+    updated_at = db.Column(db.DateTime, default=kst_now, onupdate=kst_now)
 
     # 추가 필드들은 임시 주석처리 (DB 스키마 확인 후 점진적 추가)
     # height_cm = db.Column(db.Numeric(5, 1))
@@ -132,11 +140,7 @@ class SurveyModel(db.Model):
     # job_satisfaction_score = db.Column(db.Integer)
     # stress_level = db.Column(db.String(20))
     # workplace_safety_rating = db.Column(db.Integer)
-    # symptoms_data = db.Column(db.JSON)
     # notes = db.Column(db.Text)
-    # company_id = db.Column(db.Integer)
-    # process_id = db.Column(db.Integer)
-    # role_id = db.Column(db.Integer)
 
     def __repr__(self):
         return f"<Survey {self.name or 'Anonymous'} - {self.form_type}>"
