@@ -1,12 +1,12 @@
 version: '3.8'
 
-# SafeWork 개발환경 Docker Compose
+# SafeWork Production Stack for Portainer
 # 3개 핵심 서비스: app, postgres, redis
+# Network: external safework_network (must exist)
 
 networks:
   safework_network:
-    driver: bridge
-    name: safework_network
+    external: true
 
 volumes:
   postgres_data:
@@ -18,17 +18,17 @@ volumes:
 
 services:
   safework-postgres:
-    build:
-      context: ./infrastructure/docker/postgres
-      dockerfile: Dockerfile
+    image: registry.jclee.me/safework/postgres:latest
     container_name: safework-postgres
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
     environment:
       - TZ=Asia/Seoul
       - POSTGRES_PASSWORD=safework2024
       - POSTGRES_DB=safework_db
       - POSTGRES_USER=safework
-    ports:
-      - "4546:5432"
+    # ports: # Internal network only
+      # - "4546:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -41,14 +41,14 @@ services:
       retries: 3
 
   safework-redis:
-    build:
-      context: ./infrastructure/docker/redis
-      dockerfile: Dockerfile
+    image: registry.jclee.me/safework/redis:latest
     container_name: safework-redis
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
     environment:
       - TZ=Asia/Seoul
-    ports:
-      - "4547:6379"
+    # ports: # Internal network only
+      # - "4547:6379"
     volumes:
       - redis_data:/data
     networks:
@@ -61,23 +61,22 @@ services:
       retries: 3
 
   safework-app:
-    build:
-      context: ./src/app
-      dockerfile: Dockerfile
+    image: registry.jclee.me/safework/app:latest
     container_name: safework-app
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
     environment:
       - TZ=Asia/Seoul
-      - FLASK_ENV=development
+      - FLASK_ENV=production
       - DB_HOST=safework-postgres
       - DB_NAME=safework_db
       - DB_USER=safework
       - DB_PASSWORD=safework2024
       - REDIS_HOST=safework-redis
-      - SECRET_KEY=dev-only-key-CHANGE-IN-PRODUCTION
+      - SECRET_KEY=${SECRET_KEY:-safework-production-secret-key-2024}
     ports:
       - "4545:4545"
     volumes:
-      - ./src/app:/app
       - app_uploads:/app/uploads
     networks:
       - safework_network

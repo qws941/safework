@@ -99,6 +99,155 @@ def dashboard():
     track_page_view("admin_dashboard")
     return redirect(url_for("admin.safework_dashboard"))
 
+@admin_bp.route("/users")
+@login_required
+def user_management():
+    """사용자 관리 페이지"""
+    from datetime import date
+    
+    page = request.args.get("page", 1, type=int)
+    per_page = 20
+    
+    # 사용자 목록 조회
+    pagination = User.query.order_by(User.created_at.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    users = pagination.items
+    
+    # 통계 계산
+    total_users = User.query.count()
+    admin_users = User.query.filter_by(is_admin=True).count()
+    regular_users = total_users - admin_users
+    
+    # 오늘 가입한 사용자
+    today = date.today()
+    today_registrations = User.query.filter(
+        db.func.date(User.created_at) == today
+    ).count()
+    
+    return render_template(
+        "admin/user_management.html",
+        users=users,
+        pagination=pagination,
+        total_users=total_users,
+        admin_users=admin_users,
+        regular_users=regular_users,
+        today_registrations=today_registrations
+    )
+
+
+@admin_bp.route("/api/users", methods=["POST"])
+@login_required
+def create_user():
+    """새 사용자 생성 API"""
+    if not current_user.is_admin:
+        return jsonify({"error": "권한이 없습니다"}), 403
+        
+    data = request.json
+    
+    # 중복 체크
+    if User.query.filter_by(username=data.get("username")).first():
+        return jsonify({"error": "이미 사용중인 사용자명입니다"}), 400
+    
+    if User.query.filter_by(email=data.get("email")).first():
+        return jsonify({"error": "이미 등록된 이메일입니다"}), 400
+    
+    # 새 사용자 생성
+    user = User(
+        username=data.get("username"),
+        email=data.get("email"),
+        is_admin=data.get("is_admin", False)
+    )
+    user.set_password(data.get("password"))
+    
+    try:
+        db.session.add(user)
+        db.session.commit()
+        return jsonify({"message": "사용자가 생성되었습니다", "id": user.id}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@admin_bp.route("/api/users/<int:user_id>", methods=["PUT"])
+@login_required
+def update_user(user_id):
+    """사용자 정보 수정 API"""
+    if not current_user.is_admin:
+        return jsonify({"error": "권한이 없습니다"}), 403
+    
+    user = User.query.get_or_404(user_id)
+    data = request.json
+    
+    # 사용자명 중복 체크 (본인 제외)
+    if data.get("username") and data["username"] != user.username:
+        if User.query.filter_by(username=data["username"]).first():
+            return jsonify({"error": "이미 사용중인 사용자명입니다"}), 400
+    
+    # 이메일 중복 체크 (본인 제외)
+    if data.get("email") and data["email"] != user.email:
+        if User.query.filter_by(email=data["email"]).first():
+            return jsonify({"error": "이미 등록된 이메일입니다"}), 400
+    
+    # 업데이트
+    if data.get("username"):
+        user.username = data["username"]
+    if data.get("email"):
+        user.email = data["email"]
+    if "is_admin" in data:
+        user.is_admin = data["is_admin"]
+    if data.get("password"):
+        user.set_password(data["password"])
+    
+    try:
+        db.session.commit()
+        return jsonify({"message": "사용자 정보가 수정되었습니다"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@admin_bp.route("/api/users/<int:user_id>/toggle-status", methods=["POST"])
+@login_required
+def toggle_user_status(user_id):
+    """사용자 활성/비활성 상태 토글 API"""
+    if not current_user.is_admin:
+        return jsonify({"error": "권한이 없습니다"}), 403
+    
+    if user_id == current_user.id:
+        return jsonify({"error": "자기 자신은 비활성화할 수 없습니다"}), 400
+    
+    user = User.query.get_or_404(user_id)
+    user.is_active = not user.is_active
+    
+    try:
+        db.session.commit()
+        return jsonify({"message": "사용자 상태가 변경되었습니다", "is_active": user.is_active}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@admin_bp.route("/api/users/<int:user_id>", methods=["DELETE"])
+@login_required
+def delete_user(user_id):
+    """사용자 삭제 API"""
+    if not current_user.is_admin:
+        return jsonify({"error": "권한이 없습니다"}), 403
+    
+    if user_id == current_user.id:
+        return jsonify({"error": "자기 자신은 삭제할 수 없습니다"}), 400
+    
+    user = User.query.get_or_404(user_id)
+    
+    try:
+        db.session.delete(user)
+        db.session.commit()
+        return jsonify({"message": "사용자가 삭제되었습니다"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
 
 @admin_bp.route("/survey")
 @admin_required

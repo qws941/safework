@@ -5,7 +5,7 @@ from flask_login import current_user, login_required, login_user, logout_user
 from werkzeug.security import generate_password_hash
 
 from forms import LoginForm, RegisterForm
-from models import User, db
+from models import User, db, kst_now
 from utils.activity_tracker import track_login_attempt, track_logout, track_page_view
 
 auth_bp = Blueprint("auth", __name__)
@@ -49,6 +49,10 @@ def login():
                 with open("/tmp/login_debug.log", "a") as f:
                     f.write(f"User found: {user.username}, ID: {user.id}\n")
 
+                # Update last login time
+                user.last_login = kst_now()
+                db.session.commit()
+                
                 login_user(user, remember=False)
 
                 # 로그인 성공 추적
