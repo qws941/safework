@@ -36,6 +36,8 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+        tag: "[safework-postgres-log] {{.Name}}"
+        labels: "service=safework-postgres,env=production,component=database,stack=safework"
 
   safework-redis:
     image: registry.jclee.me/safework/redis:latest
@@ -60,6 +62,8 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+        tag: "[safework-redis-log] {{.Name}}"
+        labels: "service=safework-redis,env=production,component=database,stack=safework"
 
   safework-app:
     image: registry.jclee.me/safework/app:latest
@@ -107,3 +111,5 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+        tag: "[safework-app-log] {{.Name}}"
+        labels: "service=safework-app,env=production,component=application,stack=safework"
