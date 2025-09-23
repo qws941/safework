@@ -3,6 +3,7 @@ import time as time_module
 from datetime import datetime, timezone, timedelta
 
 import redis
+import pytz
 from flask import Flask, flash, redirect, render_template, request, url_for
 from flask_login import (
     LoginManager,
@@ -24,7 +25,12 @@ def create_app(config_name=None):
     """Application factory with robust connection retry logic"""
     app = Flask(__name__)
 
-    # 시스템 시작 시간 저장
+    # KST 시간대 설정 (Asia/Seoul)
+    kst_timezone = pytz.timezone('Asia/Seoul')
+    app.config['TIMEZONE'] = kst_timezone
+    app.config['DEFAULT_TIMEZONE'] = kst_timezone
+    
+    # 시스템 시작 시간 저장 (KST)
     app.start_time = time_module.time()
 
     # Load configuration
@@ -233,7 +239,7 @@ def create_app(config_name=None):
         health_status = {
             "service": "safework",
             "status": "healthy",
-            "timestamp": datetime.now(timezone(timedelta(hours=9))).isoformat(),
+            "timestamp": datetime.now(app.config['TIMEZONE']).isoformat(),
             "components": {
                 "database": check_database_health(),
                 "redis": check_redis_health(),
@@ -256,6 +262,7 @@ def create_app(config_name=None):
     @app.context_processor
     def inject_config():
         config_obj = app.config
+        kst_timezone = app.config['TIMEZONE']
 
         # URL 정보 추가
         url_info = {
@@ -296,7 +303,7 @@ def create_app(config_name=None):
                     timeout=2,
                 )
                 if result.returncode == 0:
-                    timestamp = datetime.now().strftime("%Y%m%d-%H%M")
+                    timestamp = datetime.now(kst_timezone).strftime("%Y%m%d-%H%M")
                     app_version = f"v3.0.{timestamp}-{result.stdout.strip()}"
                     version_info = {
                         "version": app_version,
@@ -332,7 +339,7 @@ def create_app(config_name=None):
             "version_info": version_info,
             "system_uptime": uptime_str,
             "start_time": datetime.fromtimestamp(
-                app.start_time, tz=timezone(timedelta(hours=9))
+                app.start_time, tz=kst_timezone
             ).strftime("%Y-%m-%d %H:%M:%S KST"),
             "url_info": url_info,
         }

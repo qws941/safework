@@ -9,6 +9,7 @@ import json
 from datetime import datetime
 from flask import current_app
 import os
+import pytz
 
 
 class SafeWorkSlackNotifier:
@@ -190,7 +191,7 @@ class SafeWorkSlackNotifier:
         details = {
             "에러 타입": error_type,
             "에러 메시지": error_message,
-            "발생 시간": datetime.now().strftime("%Y-%m-%d %H:%M:%S KST"),
+            "발생 시간": datetime.now(pytz.timezone('Asia/Seoul')).strftime("%Y-%m-%d %H:%M:%S KST"),
             "서버": "SafeWork Production",
         }
 
@@ -212,7 +213,7 @@ class SafeWorkSlackNotifier:
                 "버전": version,
                 "상태": status,
                 "배포 시간": deploy_time
-                or datetime.now().strftime("%Y-%m-%d %H:%M:%S KST"),
+                or datetime.now(pytz.timezone('Asia/Seoul')).strftime("%Y-%m-%d %H:%M:%S KST"),
                 "환경": "Production",
             },
             priority="medium" if status == "완료" else "high",
@@ -238,7 +239,7 @@ class SafeWorkSlackNotifier:
             "설문 유형": survey_title,
             "제출자": survey_data.get('name', '익명'),
             "부서": survey_data.get('department', '미지정'),
-            "제출 시간": datetime.now().strftime("%Y-%m-%d %H:%M:%S KST")
+            "제출 시간": datetime.now(pytz.timezone('Asia/Seoul')).strftime("%Y-%m-%d %H:%M:%S KST")
         }
 
         # 위험 요소 분석

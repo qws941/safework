@@ -1,6 +1,24 @@
 import os
 import os
 from datetime import timedelta
+import pytz
+
+# 전역 시간대 설정 - KST (Asia/Seoul)
+DEFAULT_TIMEZONE = pytz.timezone('Asia/Seoul')
+
+# KST 시간 유틸리티 함수들
+def now_kst():
+    """현재 KST 시간을 반환"""
+    from datetime import datetime
+    return datetime.now(DEFAULT_TIMEZONE)
+
+def today_kst():
+    """현재 KST 날짜를 반환"""
+    return now_kst().date()
+
+def timestamp_kst():
+    """KST 기준 타임스탬프 반환"""
+    return now_kst().timestamp()
 
 
 class Config:

@@ -1,10 +1,10 @@
 """Updated models based on exact PDF form fields"""
 
 from datetime import datetime, timezone, timedelta
+from config import DEFAULT_TIMEZONE
 
-# KST timezone
-KST = timezone(timedelta(hours=9))
-
+# KST timezone using config
+KST = DEFAULT_TIMEZONE
 
 def kst_now():
     """현재 KST 시간 반환"""
