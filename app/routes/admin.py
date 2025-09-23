@@ -73,6 +73,12 @@ def admin_index():
     return redirect(url_for('admin.dashboard'))
 
 
+@admin_bp.route("")
+def admin_index_no_slash():
+    """관리자 메인 페이지 - 슬래시 없는 버전"""
+    return redirect(url_for('admin.dashboard'))
+
+
 @admin_bp.route("/temp-access")
 def temp_admin_access():
     """임시 관리자 접근 - 인증 우회"""

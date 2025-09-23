@@ -1,96 +1,61 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
+# SafeWork Git Rules - Basedir 허용 파일 정책
+#
+# ALLOWED FILES IN BASEDIR:
+# - .git/ (Git 저장소)
+# - .github/ (GitHub Actions)
+# - .serena/ (Serena MCP)
+# - docker-compose.yml (컨테이너 오케스트레이션)
+# - CLAUDE.md (개발 가이드 - 로컬 전용)
+# - README.md (프로젝트 문서)
+#
+# ALL OTHER FILES/FOLDERS ARE IGNORED
 
-# Flask
-instance/
-.webassets-cache
+# Ignore all files and folders by default
+*
 
-# Database
-*.db
-*.sqlite
-*.sqlite3
+# ALLOWED: Essential dot directories
+!.git/
+!.github/
+!.serena/
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
+# ALLOWED: Core project files
+!docker-compose.yml
+!README.md
 
-# Logs
-*.log
-logs/
-
-# Testing
-.coverage
-.pytest_cache/
-htmlcov/
-
-# Virtual Environment
-venv/
-ENV/
-env/
-
-# Docker
-docker-compose.override.yml
-
-# Uploads
-uploads/
-*.pdf
-*.xlsx
-*.xls
-
-# Secrets and Environment Files
-.env
-.env.local
-.env.production
-.env.development
-.env.example
-.env.template
-.env.production.secure
-secrets/
-
-# Temporary files
-tmp/
-temp/
-*.tmp
-cookies.txt
-processing_result.json
-
-# Backup files (STRICTLY PROHIBITED)
-*backup*
-*.bak
-*-v2*
-*-copy*
-*-old*
-
-# Documentation (only CLAUDE.md and README.md allowed in root)
+# IGNORED: Development guide (local only)
 CLAUDE.md
 
-# Legacy build artifacts  
-AUTOMATION_EXECUTION_REPORT.md
-PROJECT_STRUCTURE_OPTIMIZED.md
-PORTAINER_GITOPS.md
-API_TEST_REPORT.md
-CHANGELOG.md
+# IGNORED: All other directories and files
+app/
+postgres/
+redis/
+config/
+scripts/
+docs/
+infrastructure/
+tools/
+src/
+deployment/
+assets/
+feedback/
+
+# IGNORED: All other files
+*.md
+*.yml
+*.yaml
+*.json
+*.env
+*.txt
+*.py
+*.js
+*.html
+*.css
+*.sql
+*.sh
+*.conf
+*.ini
+*.cfg
+*.log
+*.tmp
+*.bak
+*.backup
