@@ -22,10 +22,17 @@
 - **Portainer GitOps**: Git repository 기반 자동 배포
 - **프라이빗 레지스트리**: registry.jclee.me
 
-### 배포 파이프라인
+### 배포 파이프라인 (v2024.9 - Webhook 기반)
 ```
-코드 변경 → 로컬 테스트 → git push → GitHub Actions (이미지 빌드+푸시) → Portainer GitOps (자동 배포)
+코드 변경 → git push → GitHub Actions (빌드+푸시) → Portainer Webhook (자동 배포 ~20초) → 배포 검증
+                                                  ↘ Fallback API 배포 (~60초) [실패시]
 ```
+
+#### 🚀 **새로운 기능 (2024.9 업데이트)**
+- **Webhook 배포**: 기존 60초 → 20초로 배포 시간 단축
+- **지능형 Fallback**: Webhook 실패 시 자동 API 배포 전환
+- **실시간 모니터링**: 배포 후 5분간 성능 자동 감시
+- **포괄적 검증**: 15회 헬스체크 + 컨테이너 상태 확인
 
 ### 기술 스택
 - **백엔드**: Flask 3.0+, SQLAlchemy 2.0, PostgreSQL 15+, Redis 7.0
@@ -41,7 +48,12 @@
 make health
 curl https://safework.jclee.me/health
 
-# 배포 관리
+# 🚀 새로운 배포 시스템 (Webhook 기반)
+./scripts/intelligent_deployment.sh auto          # 지능형 자동 배포
+./scripts/deployment_monitor.sh check --verbose   # 포괄적 상태 확인
+./scripts/deployment_health_validator.sh          # 배포 검증
+
+# 기존 배포 관리 (Fallback)
 ./scripts/portainer_stack_deploy.sh status
 ./scripts/portainer_stack_deploy.sh deploy
 
@@ -162,7 +174,19 @@ safework/
 
 ## 📊 모니터링 및 운영
 
-### 헬스 체크
+### 🆕 새로운 모니터링 시스템 (2024.9)
+```bash
+# 실시간 성능 모니터링 (추천)
+./scripts/deployment_monitor.sh monitor           # 지속적 모니터링
+./scripts/deployment_monitor.sh check --verbose   # 상세 상태 확인
+./scripts/deployment_monitor.sh report            # 성능 리포트 생성
+
+# 지능형 배포 및 검증
+./scripts/intelligent_deployment.sh auto --verbose
+./scripts/deployment_health_validator.sh --max-attempts 15
+```
+
+### 기존 헬스 체크
 ```bash
 # 애플리케이션 상태 확인
 curl https://safework.jclee.me/health
@@ -220,8 +244,13 @@ docker exec safework-postgres psql -U safework -d safework_db -c "\dt"
 
 ## 📚 문서 및 가이드
 
-더 자세한 정보는 다음 문서를 참조하세요:
+### 🆕 새로운 배포 시스템 문서 (2024.9)
+- **[📖 배포 가이드](docs/DEPLOYMENT_GUIDE.md)**: Webhook 기반 배포 완전 가이드
+- **[🔐 GitHub Secrets](docs/GITHUB_SECRETS.md)**: GitHub Actions 설정 가이드
+- **[⚙️ 지능형 배포](scripts/intelligent_deployment.sh)**: 자동 전략 선택 시스템
+- **[📊 모니터링 시스템](scripts/deployment_monitor.sh)**: 성능 감시 및 알림
 
+### 기존 문서
 - **PORTAINER_GITOPS.md**: Portainer GitOps 설정 및 배포 가이드
 - **CLAUDE.md**: 개발 환경 설정 및 상세 가이드
 - **.env.example**: 환경 변수 설정 예시

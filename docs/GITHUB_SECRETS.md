@@ -21,8 +21,12 @@ PostgreSQL 데이터베이스 비밀번호
 ### 3. Portainer API 관련
 ```bash
 PORTAINER_TOKEN=ptr_your-portainer-token-here
+PORTAINER_API_KEY=ptr_your-portainer-api-key-here
+PORTAINER_WEBHOOK_URL=https://portainer.jclee.me/api/stacks/webhooks/6f15dcc8-7336-4e21-b6b2-5afd950d4c64
 ```
-Portainer API 접근 토큰 (스택 자동 배포용)
+- PORTAINER_TOKEN: Portainer API 접근 토큰 (fallback용 API 스크립트)
+- PORTAINER_API_KEY: Portainer API 키 (배포 검증 및 컨테이너 상태 확인용)
+- PORTAINER_WEBHOOK_URL: **[중요]** Portainer 스택 자동 배포용 webhook URL (기본 배포 방식)
 
 ### 4. Admin 관련
 ```bash
@@ -52,6 +56,8 @@ Flask 애플리케이션 시크릿 키
 gh secret set REGISTRY_PASSWORD --body "your-registry-password-here"
 gh secret set DB_PASSWORD --body "your-database-password-here"
 gh secret set PORTAINER_TOKEN --body "ptr_your-portainer-token-here"
+gh secret set PORTAINER_API_KEY --body "ptr_your-portainer-api-key-here"
+gh secret set PORTAINER_WEBHOOK_URL --body "https://portainer.jclee.me/api/stacks/webhooks/6f15dcc8-7336-4e21-b6b2-5afd950d4c64"
 gh secret set ADMIN_USERNAME --body "admin"
 gh secret set ADMIN_PASSWORD --body "your-admin-password-here"
 gh secret set SECRET_KEY --body "your-secret-key-here-minimum-32-characters"
@@ -83,7 +89,9 @@ git push origin master
 |--------------|----------|------|
 | REGISTRY_PASSWORD | REGISTRY_PASSWORD | Docker Registry 인증 |
 | DB_PASSWORD | DB_PASSWORD | PostgreSQL 비밀번호 |
-| PORTAINER_TOKEN | PORTAINER_TOKEN | Portainer API 인증 |
+| PORTAINER_TOKEN | PORTAINER_TOKEN | Portainer API 인증 (fallback) |
+| PORTAINER_API_KEY | PORTAINER_API_KEY | Portainer API 키 (배포 검증) |
+| PORTAINER_WEBHOOK_URL | PORTAINER_WEBHOOK_URL | Portainer Webhook 배포 |
 | ADMIN_USERNAME | ADMIN_USERNAME | 관리자 사용자명 |
 | ADMIN_PASSWORD | ADMIN_PASSWORD | 관리자 비밀번호 |
 | SECRET_KEY | SECRET_KEY | Flask 시크릿 키 |
@@ -94,6 +102,8 @@ git push origin master
 2. **`.env` 파일은 `.gitignore`에 포함되어야 합니다**
 3. **Secrets 값은 정기적으로 갱신하세요**
 4. **Production 환경의 Secrets는 별도로 관리하세요**
+5. **Webhook URL은 외부 노출을 방지하기 위해 반드시 GitHub Secrets로 관리하세요**
+6. **Webhook URL이 유출되면 즉시 Portainer에서 새 webhook을 생성하세요**
 
 ## 🧪 Secrets 검증
 
