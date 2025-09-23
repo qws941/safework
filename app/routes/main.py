@@ -19,10 +19,7 @@ def about():
     return render_template("about.html")
 
 
-@main_bp.route("/admin")
-def admin_redirect():
-    """Admin 페이지로 리다이렉트"""
-    return redirect('/admin/safework')
+# Removed /admin route - handled by admin_bp Blueprint
 
 
 @main_bp.route("/health")
