@@ -4,6 +4,7 @@ version: '3.8'
 # Network must be created before deployment:
 # docker network create safework_network
 # Fixed admin panel 500 error - 2025.09.23
+# GitHub Actions deployment trigger - 18:11 KST
 
 services:
   safework-postgres:
