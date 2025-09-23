@@ -74,6 +74,27 @@ services:
       - "traefik.http.routers.safework.tls.certresolver=letsencrypt"
       - "traefik.http.services.safework.loadbalancer.server.port=4545"
       - "traefik.docker.network=traefik-public"
+      # HTTP to HTTPS redirect
+      - "traefik.http.routers.safework-http.rule=Host(`safework.jclee.me`)"
+      - "traefik.http.routers.safework-http.entrypoints=web"
+      - "traefik.http.routers.safework-http.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      # Security headers
+      - "traefik.http.middlewares.safework-headers.headers.customResponseHeaders.X-Robots-Tag=none,noarchive,nosnippet,notranslate,noimageindex"
+      - "traefik.http.middlewares.safework-headers.headers.sslRedirect=true"
+      - "traefik.http.middlewares.safework-headers.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.safework-headers.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.safework-headers.headers.forceSTSHeader=true"
+      - "traefik.http.middlewares.safework-headers.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.safework-headers.headers.stsPreload=true"
+      - "traefik.http.middlewares.safework-headers.headers.stsSeconds=315360000"
+      - "traefik.http.middlewares.safework-headers.headers.frameDeny=true"
+      - "traefik.http.middlewares.safework-headers.headers.customFrameOptionsValue=SAMEORIGIN"
+      - "traefik.http.routers.safework.middlewares=safework-headers"
+      # Health check configuration
+      - "traefik.http.services.safework.loadbalancer.healthCheck.path=/health"
+      - "traefik.http.services.safework.loadbalancer.healthCheck.interval=30s"
+      - "traefik.http.services.safework.loadbalancer.healthCheck.timeout=10s"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4545/health"]
