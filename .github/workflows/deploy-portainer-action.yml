@@ -1,0 +1,138 @@
+name: Deploy SafeWork via Portainer Action
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'app/**'
+      - 'postgres/**'
+      - 'redis/**'
+      - 'docker-compose.yml'
+      - '.github/workflows/deploy-portainer-action.yml'
+  workflow_dispatch:
+
+env:
+  REGISTRY: registry.jclee.me
+  STACK_NAME: safework
+
+jobs:
+  deploy:
+    name: Deploy to Portainer
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Registry
+        run: |
+          echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login ${{ env.REGISTRY }} -u admin --password-stdin
+
+      - name: Build and Push Images
+        run: |
+          # Build and push app image
+          docker build -t ${{ env.REGISTRY }}/safework/app:latest \
+                       -t ${{ env.REGISTRY }}/safework/app:${{ github.sha }} \
+                       ./app
+          docker push ${{ env.REGISTRY }}/safework/app:latest
+          docker push ${{ env.REGISTRY }}/safework/app:${{ github.sha }}
+
+          # Build and push postgres image
+          docker build -t ${{ env.REGISTRY }}/safework/postgres:latest \
+                       -t ${{ env.REGISTRY }}/safework/postgres:${{ github.sha }} \
+                       ./postgres
+          docker push ${{ env.REGISTRY }}/safework/postgres:latest
+          docker push ${{ env.REGISTRY }}/safework/postgres:${{ github.sha }}
+
+          # Build and push redis image
+          docker build -t ${{ env.REGISTRY }}/safework/redis:latest \
+                       -t ${{ env.REGISTRY }}/safework/redis:${{ github.sha }} \
+                       ./redis
+          docker push ${{ env.REGISTRY }}/safework/redis:latest
+          docker push ${{ env.REGISTRY }}/safework/redis:${{ github.sha }}
+
+      - name: Prepare docker-compose for deployment
+        run: |
+          # Update image tags to use specific version
+          cp docker-compose.yml docker-compose.deploy.yml
+
+          # Replace latest tags with specific SHA
+          sed -i "s|image: ${{ env.REGISTRY }}/safework/app:latest|image: ${{ env.REGISTRY }}/safework/app:${{ github.sha }}|g" docker-compose.deploy.yml
+          sed -i "s|image: ${{ env.REGISTRY }}/safework/postgres:latest|image: ${{ env.REGISTRY }}/safework/postgres:${{ github.sha }}|g" docker-compose.deploy.yml
+          sed -i "s|image: ${{ env.REGISTRY }}/safework/redis:latest|image: ${{ env.REGISTRY }}/safework/redis:${{ github.sha }}|g" docker-compose.deploy.yml
+
+      - name: Deploy to Portainer using Marketplace Action
+        uses: carlrygart/portainer-stack-deploy@v1.4
+        with:
+          portainer-host: https://portainer.jclee.me
+          username: ${{ secrets.PORTAINER_USERNAME || 'admin' }}
+          password: ${{ secrets.PORTAINER_PASSWORD || secrets.REGISTRY_PASSWORD }}
+          stack-name: ${{ env.STACK_NAME }}
+          stack-definition: docker-compose.deploy.yml
+          endpoint-id: 3  # synology endpoint
+          prune: true
+          pull: true
+
+      - name: Trigger Webhook as Backup
+        if: failure()
+        run: |
+          echo "📡 Marketplace action failed, triggering webhook as backup..."
+          response=$(curl -X POST -s -w "\n%{http_code}" \
+            "https://portainer.jclee.me/api/stacks/webhooks/e2abf888-e16d-419b-bdf0-65c206cca913")
+
+          http_code=$(echo "$response" | tail -n 1)
+          if [ "$http_code" = "204" ] || [ "$http_code" = "200" ]; then
+            echo "✅ Webhook triggered successfully"
+          else
+            echo "❌ Webhook trigger failed with HTTP $http_code"
+            exit 1
+          fi
+
+      - name: Verify Deployment Health
+        if: always()
+        run: |
+          echo "🔍 Verifying deployment health..."
+          sleep 30
+
+          max_attempts=5
+          attempt=1
+
+          while [ $attempt -le $max_attempts ]; do
+            response=$(curl -s https://safework.jclee.me/health || echo "{}")
+
+            if echo "$response" | grep -q "healthy"; then
+              echo "✅ Service is healthy!"
+              echo "$response" | jq . 2>/dev/null || echo "$response"
+
+              # Check all critical endpoints
+              for endpoint in "/" "/admin" "/health"; do
+                status=$(curl -s -o /dev/null -w "%{http_code}" "https://safework.jclee.me$endpoint")
+                echo "  Endpoint $endpoint: HTTP $status"
+              done
+
+              exit 0
+            fi
+
+            echo "Attempt $attempt/$max_attempts failed, retrying in 10s..."
+            sleep 10
+            attempt=$((attempt + 1))
+          done
+
+          echo "❌ Health check failed after $max_attempts attempts"
+          exit 1
+
+      - name: Post Deployment Summary
+        if: always()
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ Deployment Successful!"
+            echo "📍 Service: https://safework.jclee.me"
+            echo "🏷️ Version: ${{ github.sha }}"
+            echo "📊 Stack: ${{ env.STACK_NAME }}"
+            echo "⏱️ Time: $(date '+%Y-%m-%d %H:%M:%S')"
+          else
+            echo "❌ Deployment Failed"
+            echo "📝 Check logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          fi
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
