@@ -92,7 +92,7 @@ def survey():
 @admin_required
 def surveys():
     """Legacy route - redirect to consolidated route"""
-    return redirect(url_for("admin.survey"))
+    return redirect(url_for("admin.survey.survey"))
 
 
 @survey_bp.route("/survey/<int:id>")
