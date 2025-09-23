@@ -1,4 +1,5 @@
 # SafeWork Flask Application Dockerfile
+# Build: 2025-09-24 03:20 KST - Admin panel fix deployment
 FROM python:3.11-slim
 
 # Set work directory
