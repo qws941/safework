@@ -18,20 +18,18 @@ env:
   SERVICE_URL: https://safework.jclee.me
 
 jobs:
-  build-and-deploy:
-    name: Build Images → Push Registry → Deploy via Webhook
+  # 병렬 이미지 빌드 Jobs
+  build-app:
+    name: 🔨 Build App Image
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-
+    timeout-minutes: 10
     steps:
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4
 
       - name: 🔑 Login to Docker Registry
         run: |
-          echo "🔐 Logging into ${{ env.REGISTRY }}..."
           echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login ${{ env.REGISTRY }} -u ${{ env.REGISTRY_USER }} --password-stdin
-          echo "✅ Registry login successful"
 
       - name: 🔨 Build and Push App Image
         run: |
@@ -45,6 +43,18 @@ jobs:
           docker push ${{ env.REGISTRY }}/safework-app:${{ github.sha }}
           echo "✅ App image push completed"
 
+  build-postgres:
+    name: 🔨 Build PostgreSQL Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🔑 Login to Docker Registry
+        run: |
+          echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login ${{ env.REGISTRY }} -u ${{ env.REGISTRY_USER }} --password-stdin
+
       - name: 🔨 Build and Push PostgreSQL Image
         run: |
           echo "🔨 Building PostgreSQL image..."
@@ -57,6 +67,18 @@ jobs:
           docker push ${{ env.REGISTRY }}/safework-postgres:${{ github.sha }}
           echo "✅ PostgreSQL image push completed"
 
+  build-redis:
+    name: 🔨 Build Redis Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🔑 Login to Docker Registry
+        run: |
+          echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login ${{ env.REGISTRY }} -u ${{ env.REGISTRY_USER }} --password-stdin
+
       - name: 🔨 Build and Push Redis Image
         run: |
           echo "🔨 Building Redis image..."
@@ -68,6 +90,15 @@ jobs:
           docker push ${{ env.REGISTRY }}/safework-redis:latest
           docker push ${{ env.REGISTRY }}/safework-redis:${{ github.sha }}
           echo "✅ Redis image push completed"
+
+  # 배포 Job (빌드 완료 후 실행)
+  deploy:
+    name: 🚀 Deploy via Webhook
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [build-app, build-postgres, build-redis]
+
+    steps:
 
       - name: 🚀 Deploy via Portainer Webhook
         run: |
