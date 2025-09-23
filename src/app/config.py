@@ -147,8 +147,8 @@ class DevelopmentConfig(Config):
         f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     )
     
-    # Flask URL generation for development
-    SERVER_NAME = os.environ.get("SERVER_NAME", "localhost:4545")
+    # Flask URL generation for development (allow both localhost and domain)
+    SERVER_NAME = None  # Disable SERVER_NAME to fix localhost/domain mismatch
     PREFERRED_URL_SCHEME = "http"
 
     # Inherit SQLALCHEMY_ENGINE_OPTIONS from base Config class
@@ -178,8 +178,8 @@ class ProductionConfig(Config):
         f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     )
     
-    # Flask URL generation for production
-    SERVER_NAME = os.environ.get("SERVER_NAME", "safework.jclee.me")
+    # Flask URL generation for production (allow both localhost and domain)
+    SERVER_NAME = None  # Disable SERVER_NAME to fix localhost/domain mismatch
     PREFERRED_URL_SCHEME = "https"
 
     # Inherit SQLALCHEMY_ENGINE_OPTIONS from base Config class
