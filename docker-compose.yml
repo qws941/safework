@@ -78,8 +78,8 @@ services:
       # HTTP to HTTPS redirect
       - "traefik.http.routers.safework-http.rule=Host(`safework.jclee.me`)"
       - "traefik.http.routers.safework-http.entrypoints=web"
-      - "traefik.http.routers.safework-http.middlewares=redirect-to-https"
-      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      - "traefik.http.routers.safework-http.middlewares=https-redirect@docker"
+      - "traefik.http.middlewares.https-redirect.redirectscheme.scheme=https"
       # Security headers
       - "traefik.http.middlewares.safework-headers.headers.customResponseHeaders.X-Robots-Tag=none,noarchive,nosnippet,notranslate,noimageindex"
       - "traefik.http.middlewares.safework-headers.headers.sslRedirect=true"
