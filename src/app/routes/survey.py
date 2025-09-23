@@ -100,7 +100,7 @@ def survey_002():
 @survey_bp.route("/statistics")
 def statistics():
     """설문 통계 페이지 (임시로 관리자 대시보드 사용)"""
-    return redirect(url_for("admin.dashboard"))
+    return redirect(url_for("admin.safework_dashboard"))
 
 
 def get_or_create_company(name):

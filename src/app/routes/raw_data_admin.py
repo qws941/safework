@@ -103,7 +103,7 @@ def dashboard():
     except Exception as e:
         current_app.logger.error(f"Raw data dashboard error: {e}")
         flash(f"대시보드 로드 중 오류가 발생했습니다: {str(e)}", "error")
-        return redirect(url_for("admin.dashboard"))
+        return redirect(url_for("admin.safework_dashboard"))
 
 
 @raw_data_bp.route("/api/raw-data/stats")

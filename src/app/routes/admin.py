@@ -77,7 +77,7 @@ def temp_admin_access():
     if user:
         login_user(user, remember=False)
         flash("임시 관리자 로그인 완료", "success")
-        return redirect(url_for("admin.dashboard"))
+        return redirect(url_for("admin.safework_dashboard"))
     else:
         flash("관리자 사용자를 찾을 수 없습니다.", "danger")
         return "Admin user not found"

@@ -33,7 +33,7 @@ def migration_status():
         )
     except Exception as e:
         flash(f"마이그레이션 상태 조회 중 오류 발생: {str(e)}", "error")
-        return redirect(url_for("admin.dashboard"))
+        return redirect(url_for("admin.safework_dashboard"))
 
 
 @migration_bp.route("/api/migrations/status")
