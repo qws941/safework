@@ -13,7 +13,7 @@ LOG_FILE="/tmp/safework_deployment_$(date +%Y%m%d_%H%M%S).log"
 # Environment Variables
 PORTAINER_URL="https://portainer.jclee.me"
 PORTAINER_API_KEY="${PORTAINER_API_KEY:-}"
-PORTAINER_WEBHOOK_URL="https://portainer.jclee.me/api/stacks/webhooks/6f15dcc8-7336-4e21-b6b2-5afd950d4c64"
+PORTAINER_WEBHOOK_URL="${PORTAINER_WEBHOOK_URL:-https://portainer.jclee.me/api/stacks/webhooks/fa6ed6f0-a783-4acb-b9a8-971ac1c694f8}"
 PORTAINER_ENDPOINT_ID="3"
 SERVICE_URL="https://safework.jclee.me"
 REGISTRY_URL="registry.jclee.me"

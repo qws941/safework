@@ -44,6 +44,7 @@ env:
   PORTAINER_URL: https://portainer.jclee.me
   PORTAINER_API_KEY: ${{ secrets.PORTAINER_API_KEY }}
   PORTAINER_WEBHOOK_URL: ${{ secrets.PORTAINER_WEBHOOK_URL }}
+  PORTAINER_WEBHOOK_FALLBACK: https://portainer.jclee.me/api/stacks/webhooks/fa6ed6f0-a783-4acb-b9a8-971ac1c694f8
   PORTAINER_ENDPOINT: 3
 
   # Admin 설정
@@ -147,13 +148,21 @@ jobs:
 
       - name: Deploy via Enhanced Webhook System
         env:
-          PORTAINER_WEBHOOK_URL: ${{ env.PORTAINER_WEBHOOK_URL }}
+          PORTAINER_WEBHOOK_URL: ${{ env.PORTAINER_WEBHOOK_URL || env.PORTAINER_WEBHOOK_FALLBACK }}
           PORTAINER_API_KEY: ${{ env.PORTAINER_API_KEY }}
           PORTAINER_URL: ${{ env.PORTAINER_URL }}
           SERVICE_URL: https://safework.jclee.me
         run: |
           echo "🚀 Enhanced Webhook 배포 시작..."
-          
+
+          # Use fallback if PORTAINER_WEBHOOK_URL is not set in secrets
+          if [ -z "$PORTAINER_WEBHOOK_URL" ] || [ "$PORTAINER_WEBHOOK_URL" == "" ]; then
+            echo "⚠️ Using fallback webhook URL"
+            export PORTAINER_WEBHOOK_URL="${{ env.PORTAINER_WEBHOOK_FALLBACK }}"
+          fi
+
+          echo "📌 Webhook URL: ${PORTAINER_WEBHOOK_URL}"
+
           # Execute enhanced deployment
           if ./scripts/enhanced_deployment_system.sh webhook-only; then
             echo "✅ Webhook 배포 성공!"
