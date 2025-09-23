@@ -67,6 +67,15 @@ services:
       - safework-redis
     networks:
       - safework_network
+      - traefik-public
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.safework.rule=Host(`safework.jclee.me`)"
+      - "traefik.http.routers.safework.entrypoints=websecure"
+      - "traefik.http.routers.safework.tls=true"
+      - "traefik.http.routers.safework.tls.certresolver=letsencrypt"
+      - "traefik.http.services.safework.loadbalancer.server.port=4545"
+      - "traefik.docker.network=traefik-public"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4545/health"]
@@ -91,3 +100,5 @@ volumes:
 networks:
   safework_network:
     driver: bridge
+  traefik-public:
+    external: true
