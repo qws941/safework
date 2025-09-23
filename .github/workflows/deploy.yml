@@ -1,23 +1,29 @@
-name: SafeWork Docker Build & Deploy
+name: SafeWork Enhanced Deployment Pipeline
 
 on:
   push:
     branches: [master]
     paths:
       - 'src/app/**'
-      - 'infrastructure/docker/**'
+      - 'infrastructure/docker/**' 
+      - 'scripts/**'
       - 'docker-compose.yml'
       - '.github/workflows/deploy.yml'
-  workflow_dispatch:  # 수동 실행 가능
+  workflow_dispatch:
     inputs:
       deploy_to_production:
         description: 'Deploy to production after build'
         required: false
-        default: 'false'
+        default: 'true'
         type: choice
         options:
           - 'true'
           - 'false'
+      force_rebuild:
+        description: 'Force rebuild all containers'
+        required: false
+        default: 'false'
+        type: boolean
 
 env:
   # Registry 설정
@@ -34,9 +40,9 @@ env:
   DB_USER: safework
   DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
 
-  # Portainer 설정
+  # Portainer 설정 (Enhanced)
   PORTAINER_URL: https://portainer.jclee.me
-  PORTAINER_TOKEN: ${{ secrets.PORTAINER_TOKEN }}
+  PORTAINER_API_KEY: ${{ secrets.PORTAINER_API_KEY }}
   PORTAINER_WEBHOOK_URL: ${{ secrets.PORTAINER_WEBHOOK_URL }}
   PORTAINER_ENDPOINT: 3
 
@@ -46,6 +52,11 @@ env:
 
   # Security 설정
   SECRET_KEY: ${{ secrets.SECRET_KEY }}
+
+  # Deployment 설정
+  DEPLOYMENT_TIMEOUT: 600
+  HEALTH_CHECK_RETRIES: 15
+  PERFORMANCE_MONITORING_DURATION: 300
 
 jobs:
   build:
@@ -100,183 +111,139 @@ jobs:
             DB_PASSWORD=${{ env.DB_PASSWORD }}
 
   deploy:
-    name: Deploy to Production via Portainer Webhook
+    name: Enhanced Deployment via Portainer Webhook
     needs: build
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_to_production == 'true')
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Deploy via Portainer Webhook
+      - name: Setup Enhanced Deployment Environment
+        run: |
+          echo "🔧 Enhanced Deployment System v2.0 준비 중..."
+          
+          # Make deployment script executable
+          chmod +x ./scripts/enhanced_deployment_system.sh
+          
+          # Verify required environment variables
+          required_vars=("PORTAINER_WEBHOOK_URL" "PORTAINER_API_KEY")
+          missing_vars=()
+          
+          for var in "${required_vars[@]}"; do
+            if [ -z "${!var:-}" ]; then
+              missing_vars+=("$var")
+            fi
+          done
+          
+          if [ ${#missing_vars[@]} -gt 0 ]; then
+            echo "❌ Missing required environment variables: ${missing_vars[*]}"
+            exit 1
+          fi
+          
+          echo "✅ 환경 변수 검증 완료"
+
+      - name: Deploy via Enhanced Webhook System
         env:
           PORTAINER_WEBHOOK_URL: ${{ env.PORTAINER_WEBHOOK_URL }}
+          PORTAINER_API_KEY: ${{ env.PORTAINER_API_KEY }}
+          PORTAINER_URL: ${{ env.PORTAINER_URL }}
+          SERVICE_URL: https://safework.jclee.me
         run: |
-          echo "🚀 Portainer Webhook 배포 시작..."
+          echo "🚀 Enhanced Webhook 배포 시작..."
           
-          # 환경변수 검증
-          if [ -z "$PORTAINER_WEBHOOK_URL" ]; then
-            echo "❌ PORTAINER_WEBHOOK_URL 환경변수가 설정되지 않았습니다."
-            exit 1
-          fi
-          
-          echo "Webhook URL 검증 완료"
-          
-          # Webhook 호출
-          response=$(curl -s -w "
-%{http_code}" -X POST "$PORTAINER_WEBHOOK_URL")
-          
-          http_code=$(echo "$response" | tail -n1)
-          response_body=$(echo "$response" | head -n -1)
-          
-          echo "Webhook 응답 코드: $http_code"
-          
-          if [ "$http_code" = "200" ] || [ "$http_code" = "204" ]; then
-            echo "✅ Webhook 호출 성공!"
-            echo "Portainer 스택 업데이트가 시작되었습니다."
+          # Execute enhanced deployment
+          if ./scripts/enhanced_deployment_system.sh webhook-only; then
+            echo "✅ Webhook 배포 성공!"
           else
-            echo "❌ Webhook 호출 실패: HTTP $http_code"
-            echo "응답 내용: $response_body"
+            echo "❌ Webhook 배포 실패"
             exit 1
           fi
 
-      - name: Verify Deployment Health
+      - name: Comprehensive Health Verification
+        env:
+          PORTAINER_API_KEY: ${{ env.PORTAINER_API_KEY }}
+          PORTAINER_URL: ${{ env.PORTAINER_URL }}
         run: |
-          echo "🔍 배포 검증 중..."
-          echo "Webhook 처리 대기 중 (20초)..."
+          echo "🔍 포괄적인 헬스체크 시작..."
+          
+          # Wait for deployment propagation
+          echo "배포 전파 대기 중 (20초)..."
           sleep 20
           
-          max_attempts=15
-          attempt=1
-          last_error=""
-          
-          # 배포 검증 로직
-          while [ $attempt -le $max_attempts ]; do
-            echo "헬스체크 시도 $attempt/$max_attempts..."
+          # Execute health check
+          if ./scripts/enhanced_deployment_system.sh health-check; then
+            echo "✅ 헬스체크 성공!"
+          else
+            echo "❌ 헬스체크 실패"
             
-            # 컨테이너 상태 검증 (Portainer API)
-            echo "컨테이너 상태 확인 중..."
-            container_status=$(curl -s -m 10 \
-              -H "X-API-Key: ${{ secrets.PORTAINER_API_KEY }}" \
-              "https://portainer.jclee.me/api/endpoints/3/docker/containers/json?filters=%7B%22name%22%3A%5B%22safework%22%5D%7D" \
-              | jq -r '.[].State // "unknown"' 2>/dev/null || echo "unknown")
+            # Collect debug information
+            echo "🔍 디버그 정보 수집 중..."
             
-            echo "컨테이너 상태: $container_status"
-            
-            # 애플리케이션 헬스체크
-            echo "애플리케이션 헬스체크 중..."
-            response=$(curl -s -m 10 -w "
-%{http_code}" https://safework.jclee.me/health 2>/dev/null || echo "")
-            
-            if [ -n "$response" ]; then
-              http_code=$(echo "$response" | tail -n1)
-              body=$(echo "$response" | head -n -1)
-              
-              echo "HTTP Status: $http_code"
-              
-              if [ "$http_code" = "200" ]; then
-                # JSON 파싱 및 상태 검증
-                status=$(echo "$body" | jq -r '.status // "unknown"' 2>/dev/null || echo "unknown")
-                database_status=$(echo "$body" | jq -r '.database // "unknown"' 2>/dev/null || echo "unknown")
-                redis_status=$(echo "$body" | jq -r '.redis // "unknown"' 2>/dev/null || echo "unknown")
-                
-                echo "Application Status: $status"
-                echo "Database Status: $database_status"
-                echo "Redis Status: $redis_status"
-                
-                # 모든 컴포넌트가 정상인지 확인
-                if [ "$status" = "healthy" ] && [ "$database_status" = "connected" ] && [ "$redis_status" = "connected" ]; then
-                  echo "✅ 모든 컴포넌트 헬스체크 성공!"
-                  echo "📊 헬스체크 상세 정보:"
-                  echo "$body" | jq . 2>/dev/null || echo "$body"
-                  
-                  # 추가 엔드포인트 검증
-                  echo "🔍 주요 엔드포인트 검증 중..."
-                  admin_response=$(curl -s -m 5 -w "
-%{http_code}" https://safework.jclee.me/admin/login 2>/dev/null || echo "")
-                  admin_code=$(echo "$admin_response" | tail -n1)
-                  
-                  survey_response=$(curl -s -m 5 -w "
-%{http_code}" https://safework.jclee.me/survey 2>/dev/null || echo "")
-                  survey_code=$(echo "$survey_response" | tail -n1)
-                  
-                  echo "Admin 로그인 페이지: HTTP $admin_code"
-                  echo "Survey 페이지: HTTP $survey_code"
-                  
-                  if [ "$admin_code" = "200" ] && [ "$survey_code" = "200" ]; then
-                    echo "✅ 모든 엔드포인트 검증 완료!"
-                    exit 0
-                  else
-                    echo "⚠️ 일부 엔드포인트에서 문제가 감지되었지만 헬스체크는 성공"
-                    exit 0
-                  fi
-                else
-                  last_error="컴포넌트 상태 이상 - App: $status, DB: $database_status, Redis: $redis_status"
-                fi
-              else
-                last_error="HTTP $http_code - $body"
-              fi
-            else
-              last_error="서버 응답 없음 또는 타임아웃"
-            fi
-            
-            echo "❌ 헬스체크 실패: $last_error"
-            
-            if [ $attempt -eq $max_attempts ]; then
-              echo "❌ 배포 검증 실패 (최대 시도 횟수 초과)"
-              echo "최종 오류: $last_error"
-              
-              # 실패 시 디버그 정보 수집
-              echo "🔍 디버그 정보 수집 중..."
+            # Stack status
+            if [ -n "$PORTAINER_API_KEY" ]; then
               echo "Portainer 스택 상태:"
-              curl -s -m 10 \
-                -H "X-API-Key: ${{ secrets.PORTAINER_API_KEY }}" \
-                "https://portainer.jclee.me/api/stacks" \
-                | jq '.[] | select(.Name | contains("safework")) | {Name, Status, CreationDate}' 2>/dev/null || echo "스택 정보 조회 실패"
+              curl -s -H "X-API-Key: $PORTAINER_API_KEY" \
+                "$PORTAINER_URL/api/stacks" | \
+                jq '.[] | select(.Name | contains("safework")) | {Name, Status, CreationDate}' 2>/dev/null || echo "스택 정보 조회 실패"
               
-              exit 1
+              echo "컨테이너 상태:"
+              curl -s -H "X-API-Key: $PORTAINER_API_KEY" \
+                "$PORTAINER_URL/api/endpoints/3/docker/containers/json" | \
+                jq '.[] | select(.Names[] | contains("safework")) | {Names: .Names[0], State, Status}' 2>/dev/null || echo "컨테이너 정보 조회 실패"
             fi
             
-            attempt=$((attempt + 1))
-            echo "8초 후 재시도..."
-            sleep 8
-          done
-
-      - name: Fallback Deployment (API Script)
-        if: failure()
-        env:
-          PORTAINER_TOKEN: ${{ env.PORTAINER_TOKEN }}
-          PORTAINER_URL: ${{ env.PORTAINER_URL }}
-          ENDPOINT_ID: ${{ env.PORTAINER_ENDPOINT }}
-        run: |
-          echo "🔄 Webhook 배포 실패 - Fallback API 배포 시작..."
-          
-          # Portainer API 토큰 검증
-          if [ -z "$PORTAINER_TOKEN" ]; then
-            echo "❌ PORTAINER_TOKEN 환경변수가 설정되지 않았습니다."
             exit 1
           fi
+
+      - name: Performance Monitoring
+        if: success()
+        env:
+          PORTAINER_API_KEY: ${{ env.PORTAINER_API_KEY }}
+        run: |
+          echo "📊 성능 모니터링 시작..."
           
-          # Fallback 스크립트 실행
-          chmod +x ./scripts/backup/portainer_api_deploy_v2.0.0.sh
+          # Short performance check for CI/CD (2 minutes instead of 5)
+          timeout 120 ./scripts/enhanced_deployment_system.sh monitor || {
+            echo "⚠️ 성능 모니터링 타임아웃 (정상적인 CI/CD 동작)"
+            
+            # Quick health check instead
+            response=$(curl -s -m 10 https://safework.jclee.me/health || echo "")
+            if [ -n "$response" ]; then
+              echo "최종 헬스체크 결과:"
+              echo "$response" | jq . 2>/dev/null || echo "$response"
+            fi
+          }
+
+      - name: Advanced Fallback Deployment
+        if: failure()
+        env:
+          PORTAINER_API_KEY: ${{ env.PORTAINER_API_KEY }}
+          PORTAINER_URL: ${{ env.PORTAINER_URL }}
+          PORTAINER_ENDPOINT: ${{ env.PORTAINER_ENDPOINT }}
+        run: |
+          echo "🔄 고급 Fallback 배포 시작..."
           
-          if ./scripts/backup/portainer_api_deploy_v2.0.0.sh deploy; then
-            echo "✅ Fallback 배포 성공!"
+          # Check if fallback script exists
+          if [ -f "./scripts/backup/portainer_api_deploy_v2.0.0.sh" ]; then
+            chmod +x ./scripts/backup/portainer_api_deploy_v2.0.0.sh
             
-            # Fallback 성공 후 헬스체크
-            echo "🔍 Fallback 배포 헬스체크..."
-            sleep 15
-            
-            ./scripts/deployment_health_validator.sh --skip-container --max-attempts 10
-            
-            if [ $? -eq 0 ]; then
-              echo "✅ Fallback 배포 및 헬스체크 완료!"
+            echo "Portainer API 직접 배포 시도..."
+            if ./scripts/backup/portainer_api_deploy_v2.0.0.sh deploy; then
+              echo "✅ Fallback 배포 성공!"
+              
+              # Fallback health check
+              sleep 15
+              ./scripts/enhanced_deployment_system.sh health-check
             else
-              echo "⚠️ Fallback 배포는 성공했으나 헬스체크에서 문제 감지"
+              echo "❌ Fallback 배포도 실패"
+              exit 1
             fi
           else
-            echo "❌ Fallback 배포도 실패했습니다."
+            echo "⚠️ Fallback 스크립트 없음 - 수동 복구 필요"
+            echo "Portainer 대시보드: $PORTAINER_URL"
             exit 1
           fi
 
