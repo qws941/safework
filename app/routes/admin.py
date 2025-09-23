@@ -70,13 +70,13 @@ def track_page_view(page_name):
 @admin_bp.route("/")
 def admin_index():
     """관리자 메인 페이지 - 대시보드로 리다이렉트"""
-    return redirect(url_for('admin.safework_dashboard'))
+    return redirect('/admin/safework')
 
 
 @admin_bp.route("")
 def admin_index_no_slash():
     """관리자 메인 페이지 - 슬래시 없는 버전"""
-    return redirect(url_for('admin.safework_dashboard'))
+    return redirect('/admin/safework')
 
 
 @admin_bp.route("/temp-access")
@@ -89,7 +89,7 @@ def temp_admin_access():
     if user:
         login_user(user, remember=False)
         flash("임시 관리자 로그인 완료", "success")
-        return redirect(url_for("admin.safework_dashboard"))
+        return redirect('/admin/safework')
     else:
         flash("관리자 사용자를 찾을 수 없습니다.", "danger")
         return "Admin user not found"
