@@ -85,6 +85,17 @@ def index():
 </body>
 </html>"""
 
+@survey_bp.route("/001", methods=["GET", "POST"])
+def survey_001():
+    """근골격계증상조사표 (001) - 단축 URL"""
+    return redirect("/survey/001_musculoskeletal_symptom_survey")
+
+
+@survey_bp.route("/002", methods=["GET", "POST"])
+def survey_002():
+    """신규입사자건강진단 (002) - 단축 URL"""  
+    return redirect("/survey/002_new_employee_health_survey")
+
 
 @survey_bp.route("/statistics")
 def statistics():
@@ -408,6 +419,60 @@ def musculoskeletal_symptom_survey():
     return render_template(
         "survey/001_musculoskeletal_symptom_survey.html", kiosk_mode=kiosk_mode
     )
+
+@survey_bp.route("/002_new_employee_health_survey", methods=["GET", "POST"])
+def new_employee_health_survey():
+    """신규입사자건강진단 (002) - 로그인 불필요"""
+    try:
+        from flask import g
+        g._csrf_disabled = True
+    except:
+        pass
+    
+    if request.method == "POST":
+        try:
+            # 폼 데이터 수집
+            form_data = {
+                "name": request.form.get("name", ""),
+                "employee_number": request.form.get("employee_number", ""),
+                "department": request.form.get("department", ""),
+                "age": request.form.get("age", ""),
+                "gender": request.form.get("gender", ""),
+                "height": request.form.get("height", ""),
+                "weight": request.form.get("weight", ""),
+                "blood_pressure": request.form.get("blood_pressure", ""),
+                "medical_history": request.form.get("medical_history", ""),
+                "allergies": request.form.get("allergies", ""),
+                "medications": request.form.get("medications", ""),
+                "smoking": request.form.get("smoking", ""),
+                "alcohol": request.form.get("alcohol", ""),
+                "exercise": request.form.get("exercise", ""),
+            }
+            
+            # 데이터베이스 저장
+            survey = Survey(
+                form_type="002",
+                user_id=1,  # 익명 사용자
+                responses=form_data
+            )
+            db.session.add(survey)
+            db.session.commit()
+            
+            # 성공 응답
+            return jsonify({
+                "status": "success",
+                "message": "신규입사자건강진단이 성공적으로 제출되었습니다."
+            }), 201
+            
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({
+                "status": "error", 
+                "message": f"제출 중 오류가 발생했습니다: {str(e)}"
+            }), 500
+    
+    # GET 요청 - 폼 템플릿 반환
+    return render_template("survey/002_new_employee_health.html")
 
 
 @survey_bp.route("/002_new_employee_health_checkup_form", methods=["GET", "POST"])
