@@ -71,6 +71,11 @@ class Config:
     # Application
     APP_NAME = "SafeWork 안전보건 관리시스템"
     ITEMS_PER_PAGE = 20
+    
+    # Flask URL generation
+    SERVER_NAME = os.environ.get("SERVER_NAME", None)
+    APPLICATION_ROOT = os.environ.get("APPLICATION_ROOT", "/")
+    PREFERRED_URL_SCHEME = os.environ.get("PREFERRED_URL_SCHEME", "https")
 
     # Environment URLs
     DEV_URL = os.environ.get("DEV_URL", "https://safework-dev.jclee.me")
@@ -141,6 +146,10 @@ class DevelopmentConfig(Config):
     SQLALCHEMY_DATABASE_URI = (
         f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     )
+    
+    # Flask URL generation for development
+    SERVER_NAME = os.environ.get("SERVER_NAME", "localhost:4545")
+    PREFERRED_URL_SCHEME = "http"
 
     # Inherit SQLALCHEMY_ENGINE_OPTIONS from base Config class
     # This includes DB_POOL_SIZE and other pool settings
@@ -168,6 +177,10 @@ class ProductionConfig(Config):
     SQLALCHEMY_DATABASE_URI = (
         f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     )
+    
+    # Flask URL generation for production
+    SERVER_NAME = os.environ.get("SERVER_NAME", "safework.jclee.me")
+    PREFERRED_URL_SCHEME = "https"
 
     # Inherit SQLALCHEMY_ENGINE_OPTIONS from base Config class
     # This includes DB_POOL_SIZE and other pool settings
