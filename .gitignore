@@ -24,7 +24,6 @@ MANIFEST
 # Flask
 instance/
 .webassets-cache
-.env
 
 # Database
 *.db
@@ -62,10 +61,14 @@ uploads/
 *.xlsx
 *.xls
 
-# Secrets
+# Secrets and Environment Files
 .env
 .env.local
 .env.production
+.env.development
+.env.example
+.env.template
+.env.production.secure
 secrets/
 
 # Temporary files
@@ -75,15 +78,6 @@ temp/
 cookies.txt
 processing_result.json
 
-# MCP and automation files
-.playwright-mcp/
-.serena/
-
-# Development artifacts
-AUTOMATION_EXECUTION_REPORT.md
-
-# ==== SafeWork Independent Container Architecture ====
-# Root Directory Protection (ONLY ALLOWED: CLAUDE.md, README.md, .gitignore)
 # Backup files (STRICTLY PROHIBITED)
 *backup*
 *.bak
@@ -91,153 +85,12 @@ AUTOMATION_EXECUTION_REPORT.md
 *-copy*
 *-old*
 
-# Prohibited root documentation (use docs/ instead)
-/*.txt
-/CHANGELOG.md
-/CHANGES.md
-/HISTORY.md
-/NOTES.md
-/TODO.md
-/INSTALL.md
-/DEPLOY.md
-/CONFIG.md
+# Documentation (only CLAUDE.md and README.md allowed in root)
+CLAUDE.md
 
-# Prohibited root configuration files (use config/ or service directories)
-/Dockerfile
-/.env.example
-# /docker-compose*.yml  # Temporarily allow docker-compose.yml in root for production deployment
-/*.conf
-/*.ini
-/*.cfg
-
-# Docker build contexts (each service has its own)
-# These patterns protect individual service build contexts
-/app/.env
-/mysql/.env
-/redis/.env
-
-# Container runtime files
-/app/logs/
-/mysql/logs/
-/redis/logs/
-docker-volumes/
-containers/
-
-# ==== Modern Python Project Structure (2024) ====
-# Python cache and build artifacts
-*.pyc
-*.pyo
-*.pyd
-__pycache__/
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# Virtual environments (multiple patterns)
-venv/
-env/
-ENV/
-.venv/
-.env/
-env.bak/
-venv.bak/
-
-# IDE and editor files
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
-*.sublime-project
-*.sublime-workspace
-
-# Testing and coverage
-.coverage
-.pytest_cache/
-htmlcov/
-.tox/
-.nox/
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-
-# Documentation build
-docs/_build/
-.sphinx/
-site/
-
-# Project-specific ignores
-.mypy_cache/
-.dmypy.json
-dmypy.json
-.pyre/
-
-# Security (sensitive files)
-.env
-.env.local
-.env.production
-.env.staging
-secrets/
-*.key
-*.pem
-*.p12
-*.pfx
-id_rsa*
-id_dsa*
-id_ecdsa*
-id_ed25519*
-
-# Databases
-*.db
-*.sqlite
-*.sqlite3
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# IPython
-profile_default/
-ipython_config.py
-
-# pyenv
-.python-version
-
-# pipenv
-Pipfile.lock
-
-# PEP 582
-__pypackages__/
-
-# Celery
-celerybeat-schedule
-celerybeat.pid
-
-# SageMath parsed files
-*.sage.py
-# SafeWork Environment Files (Security)
-.env.local
-.env.production
-.env.production.secure
-
-# Legacy environment files backup
-*.env.backup.*
-backup_env_*.txt
+# Legacy build artifacts  
+AUTOMATION_EXECUTION_REPORT.md
+PROJECT_STRUCTURE_OPTIMIZED.md
+PORTAINER_GITOPS.md
+API_TEST_REPORT.md
+CHANGELOG.md
