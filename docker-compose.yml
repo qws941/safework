@@ -45,7 +45,7 @@ services:
         labels: "service=safework-redis,env=production,component=cache,stack=safework"
 
   safework-app:
-    image: registry.jclee.me/safework/app:latest
+    image: registry.jclee.me/safework-app:latest
     container_name: safework-app
     environment:
       - FLASK_CONFIG=${FLASK_CONFIG:-production}
