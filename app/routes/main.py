@@ -22,7 +22,7 @@ def about():
 @main_bp.route("/admin")
 def admin_redirect():
     """Admin 페이지로 리다이렉트"""
-    return redirect(url_for('admin.admin_index'))
+    return redirect('/admin/safework')
 
 
 @main_bp.route("/health")
