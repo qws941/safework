@@ -54,9 +54,9 @@ def create_app(config_name=None):
         app.extensions = getattr(app, "extensions", {})
         app.extensions.pop("csrf", None)
 
-    # Database connection with retry logic
+    # Enhanced database connection with retry and transaction handling
     def init_database_with_retry():
-        """데이터베이스 연결 재시도 로직"""
+        """데이터베이스 연결 재시도 로직 및 트랜잭션 안정성 강화"""
         max_retries = int(os.environ.get("DB_CONNECTION_RETRIES", 60))
         retry_delay = int(os.environ.get("DB_CONNECTION_DELAY", 3))
 
@@ -64,13 +64,39 @@ def create_app(config_name=None):
         db.init_app(app)
         migrate = Migrate(app, db)
 
+        # Enhanced SQLAlchemy pool configuration for transaction stability
+        app.config["SQLALCHEMY_ENGINE_OPTIONS"].update({
+            "pool_size": int(os.environ.get("DB_POOL_SIZE", 20)),  # Increased from 10
+            "max_overflow": int(os.environ.get("DB_MAX_OVERFLOW", 30)),  # Add overflow
+            "pool_timeout": int(os.environ.get("DB_POOL_TIMEOUT", 30)),
+            "pool_recycle": int(os.environ.get("DB_POOL_RECYCLE", 1800)),  # 30 min recycle
+            "pool_pre_ping": True,  # Always enable pre-ping
+            "connect_args": {
+                "connect_timeout": 10,
+                "application_name": "safework_app",
+                "options": "-c default_transaction_isolation=read_committed"
+            }
+        })
+
         for attempt in range(max_retries):
             try:
-                # Test connection
+                # Test connection with transaction handling
                 with app.app_context():
-                    db.engine.connect()
+                    connection = db.engine.connect()
+                    # Test transaction capability
+                    transaction = connection.begin()
+                    try:
+                        connection.execute(db.text("SELECT 1"))
+                        transaction.commit()
+                    except Exception as tx_error:
+                        transaction.rollback()
+                        app.logger.warning(f"Transaction test failed: {tx_error}")
+                        raise
+                    finally:
+                        connection.close()
+
                     app.logger.info(
-                        f"✅ Database connected 상태정상 on attempt {attempt + 1}"
+                        f"✅ Database connected with transaction support on attempt {attempt + 1}"
                     )
                     return True
 
@@ -219,18 +245,52 @@ def create_app(config_name=None):
     except ImportError as e:
         app.logger.warning(f"⚠️ SafeWork API v2.0 not loaded: {e}")
 
-    # Error handlers with connection retry
+    # Enhanced error handlers with PostgreSQL transaction recovery
     @app.errorhandler(404)
     def not_found_error(error):
         return render_template("errors/404.html"), 404
 
     @app.errorhandler(500)
     def internal_error(error):
+        """Enhanced 500 error handler with PostgreSQL transaction recovery"""
         try:
-            db.session.rollback()
-        except Exception:
-            app.logger.warning("Cannot rollback database session")
+            # Check for PostgreSQL transaction errors
+            error_msg = str(error) if error else ""
+            if "InFailedSqlTransaction" in error_msg or "current transaction is aborted" in error_msg:
+                app.logger.warning("PostgreSQL transaction error detected - performing recovery")
+                # Force rollback and close connection
+                try:
+                    db.session.rollback()
+                    db.session.close()
+                    # Remove session to force new connection
+                    db.session.remove()
+                    app.logger.info("PostgreSQL transaction recovery completed")
+                except Exception as recovery_error:
+                    app.logger.error(f"Transaction recovery failed: {recovery_error}")
+            else:
+                # Standard rollback for other errors
+                db.session.rollback()
+        except Exception as rollback_error:
+            app.logger.warning(f"Cannot rollback database session: {rollback_error}")
+
         return render_template("errors/500.html"), 500
+
+    # Add database error handling middleware
+    @app.before_request
+    def handle_database_recovery():
+        """Pre-request PostgreSQL connection health check"""
+        try:
+            # Check if we have a healthy database session
+            if hasattr(db.session, 'is_active') and not db.session.is_active:
+                db.session.close()
+                db.session.remove()
+        except Exception as e:
+            app.logger.warning(f"Database health check warning: {e}")
+            try:
+                db.session.rollback()
+                db.session.remove()
+            except Exception:
+                pass
 
     # Enhanced health endpoint
     @app.route("/health/detailed")
