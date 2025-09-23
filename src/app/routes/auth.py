@@ -25,7 +25,7 @@ def login():
     if current_user.is_authenticated:
         with open("/tmp/login_debug.log", "a") as f:
             f.write("Already authenticated - redirecting to dashboard\n")
-        return redirect(url_for("admin.dashboard.dashboard"))
+        return redirect("/admin/safework")
 
     if request.method == "POST":
         username = request.form.get("username", "").strip()
@@ -64,7 +64,7 @@ def login():
                     )
                     f.write("Redirecting to admin dashboard\n")
 
-                return redirect(url_for("admin.dashboard.dashboard"))
+                return redirect("/admin/safework")
             else:
                 with open("/tmp/login_debug.log", "a") as f:
                     f.write("Admin user not found in database\n")
@@ -97,7 +97,7 @@ def bypass_admin():
     user = User.query.filter_by(username=admin_username).first()
     if user:
         login_user(user, remember=False)
-        return redirect(url_for("admin.dashboard.dashboard"))
+        return redirect("/admin/safework")
     else:
         flash("관리자 사용자를 찾을 수 없습니다.", "danger")
         return redirect(url_for("auth.login"))
@@ -163,7 +163,7 @@ def admin_access():
         login_user(user, remember=False)
         current_app.logger.error("ADMIN ACCESS: login_user called, redirecting")
         flash("관리자로 로그인되었습니다.", "success")
-        return redirect(url_for("admin.dashboard.dashboard"))
+        return redirect("/admin/safework")
     else:
         current_app.logger.error("ADMIN ACCESS: Admin user not found")
         flash("관리자 계정을 찾을 수 없습니다.", "danger")
