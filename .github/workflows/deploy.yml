@@ -1,8 +1,8 @@
-name: SafeWork Enhanced Deployment Pipeline
+name: SafeWork Enhanced Deployment Pipeline (Legacy)
 
+# Temporarily disabled while testing marketplace action
 on:
-  push:
-    branches: [master]
+  workflow_dispatch:
     paths:
       - 'src/app/**'
       - 'infrastructure/docker/**' 
