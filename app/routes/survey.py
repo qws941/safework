@@ -1083,7 +1083,7 @@ def my_surveys():
 @login_required
 def admin_dashboard():
     """관리자 대시보드 - 통합된 관리자 페이지로 리디렉션"""
-    return redirect(url_for("admin.surveys"))
+    return redirect(url_for("admin.survey.surveys"))
 
 
 @survey_bp.route("/admin/001_musculoskeletal")

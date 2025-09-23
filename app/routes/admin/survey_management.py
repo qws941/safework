@@ -171,7 +171,7 @@ def review_survey(id):
 
     except Exception as e:
         flash(f"설문 조회 중 오류가 발생했습니다: {str(e)}", "error")
-        return redirect(url_for("admin.surveys"))
+        return redirect(url_for("admin.survey.surveys"))
 
 
 @survey_bp.route("/export/excel")
