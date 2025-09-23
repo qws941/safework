@@ -3,12 +3,11 @@ version: '3.8'
 # SafeWork Docker Compose Configuration
 # Network must be created before deployment:
 # docker network create safework_network
-# Fixed admin panel 500 error - 2025.09.23
-# GitHub Actions deployment trigger - 18:11 KST
+# Unified Pipeline: git push(auto) → build → registry → webhook → deploy
 
 services:
   safework-postgres:
-    image: registry.jclee.me/safework/postgres:latest
+    image: registry.jclee.me/safework-postgres:latest
     container_name: safework-postgres
     environment:
       - POSTGRES_DB=safework_db
@@ -29,7 +28,7 @@ services:
         labels: "service=safework-postgres,env=production,component=database,stack=safework"
 
   safework-redis:
-    image: registry.jclee.me/safework/redis:latest
+    image: registry.jclee.me/safework-redis:latest
     container_name: safework-redis
     environment:
       - TZ=Asia/Seoul
