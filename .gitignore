@@ -1,61 +1,97 @@
-# SafeWork Git Rules - Basedir 허용 파일 정책
-#
-# ALLOWED FILES IN BASEDIR:
-# - .git/ (Git 저장소)
-# - .github/ (GitHub Actions)
-# - .serena/ (Serena MCP)
-# - docker-compose.yml (컨테이너 오케스트레이션)
-# - CLAUDE.md (개발 가이드 - 로컬 전용)
-# - README.md (프로젝트 문서)
-#
-# ALL OTHER FILES/FOLDERS ARE IGNORED
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Ignore all files and folders by default
-*
+# Flask
+instance/
+.webassets-cache
 
-# ALLOWED: Essential dot directories
-!.git/
-!.github/
-!.serena/
+# Database
+*.db
+*.sqlite
+*.sqlite3
 
-# ALLOWED: Core project files
-!docker-compose.yml
-!README.md
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
 
-# IGNORED: Development guide (local only)
+# Logs
+*.log
+logs/
+
+# Testing
+.coverage
+.pytest_cache/
+htmlcov/
+
+# Virtual Environment
+venv/
+ENV/
+env/
+
+# Docker
+docker-compose.override.yml
+
+# Uploads
+uploads/
+*.pdf
+*.xlsx
+*.xls
+
+# Secrets and Environment Files
+.env
+.env.local
+.env.production
+.env.development
+.env.example
+.env.template
+.env.production.secure
+secrets/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+cookies.txt
+processing_result.json
+
+# Backup files
+*backup*
+*.bak
+*-v2*
+*-copy*
+*-old*
+
+# Development guide (local only)
 CLAUDE.md
 
-# IGNORED: All other directories and files
-app/
-postgres/
-redis/
-config/
-scripts/
-docs/
-infrastructure/
-tools/
-src/
-deployment/
-assets/
-feedback/
+# Cache
+cache/
+__pycache__/
+*.pyc
 
-# IGNORED: All other files
-*.md
-*.yml
-*.yaml
-*.json
-*.env
-*.txt
-*.py
-*.js
-*.html
-*.css
-*.sql
-*.sh
-*.conf
-*.ini
-*.cfg
-*.log
-*.tmp
-*.bak
-*.backup
+# Serena MCP memory
+.serena/
