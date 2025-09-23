@@ -44,7 +44,7 @@ env:
   PORTAINER_URL: https://portainer.jclee.me
   PORTAINER_API_KEY: ${{ secrets.PORTAINER_API_KEY }}
   PORTAINER_WEBHOOK_URL: ${{ secrets.PORTAINER_WEBHOOK_URL }}
-  PORTAINER_WEBHOOK_FALLBACK: https://portainer.jclee.me/api/stacks/webhooks/fa6ed6f0-a783-4acb-b9a8-971ac1c694f8
+  PORTAINER_WEBHOOK_FALLBACK: https://portainer.jclee.me/api/stacks/webhooks/e2abf888-e16d-419b-bdf0-65c206cca913
   PORTAINER_ENDPOINT: 3
 
   # Admin 설정
