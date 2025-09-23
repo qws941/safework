@@ -70,13 +70,13 @@ def track_page_view(page_name):
 @admin_bp.route("/")
 def admin_index():
     """관리자 메인 페이지 - 대시보드로 리다이렉트"""
-    return redirect(url_for('admin.dashboard'))
+    return redirect(url_for('admin.safework_dashboard'))
 
 
 @admin_bp.route("")
 def admin_index_no_slash():
     """관리자 메인 페이지 - 슬래시 없는 버전"""
-    return redirect(url_for('admin.dashboard'))
+    return redirect(url_for('admin.safework_dashboard'))
 
 
 @admin_bp.route("/temp-access")
