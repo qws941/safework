@@ -62,7 +62,7 @@ pip install -r requirements.txt
 export FLASK_CONFIG=development
 export DB_NAME=safework_db
 export DB_USER=safework
-export DB_PASSWORD=safework2024
+export DB_PASSWORD=${DB_PASSWORD:-your-database-password}
 
 # 데이터베이스 마이그레이션
 python migrate.py migrate
@@ -99,7 +99,7 @@ make health
 
 ### 관리자 계정
 - **사용자명**: `admin`
-- **비밀번호**: `safework2024`
+- **비밀번호**: `${ADMIN_PASSWORD:-your-admin-password}`
 - **접속 URL**: `http://localhost:4545/admin`
 
 ### 주요 테이블

@@ -8,7 +8,7 @@
 CLAUDE_CODE_OAUTH_TOKEN=<your-claude-code-oauth-token>
 
 # Portainer API Integration
-PORTAINER_API_TOKEN=ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8=
+PORTAINER_API_TOKEN=ptr_your-portainer-api-token-here
 
 # Container Registry
 REGISTRY_PASSWORD=<registry-password>

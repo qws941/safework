@@ -82,5 +82,5 @@ fi
 
 log_success "🎉 GitHub Secrets 자동 설정이 완료되었습니다!"
 log_info "이제 다음 명령어로 배포를 테스트할 수 있습니다:"
-log_info "  ./scripts/github-deploy.sh"
+log_info "  ./scripts/github_actions_deploy_trigger.sh"
 log_info "  또는 GitHub Actions 탭에서 수동으로 실행하세요"

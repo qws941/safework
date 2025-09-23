@@ -19,12 +19,15 @@ from models import AuditLog
 
 monitoring_bp = Blueprint("monitoring", __name__, url_prefix="/admin/monitoring")
 
-# Portainer API 설정
+# Portainer API 설정 - 환경 변수에서만 로드 (보안)
 PORTAINER_URL = os.environ.get("PORTAINER_URL", "https://portainer.jclee.me")
-PORTAINER_API_KEY = os.environ.get(
-    "PORTAINER_API_KEY", "ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8="
-)
+PORTAINER_API_KEY = os.environ.get("PORTAINER_API_KEY")  # 필수 환경 변수
 ENDPOINT_ID = os.environ.get("PORTAINER_ENDPOINT_ID", "3")
+
+# 보안 검증: API 키가 설정되지 않은 경우 경고
+if not PORTAINER_API_KEY:
+    print("WARNING: PORTAINER_API_KEY 환경 변수가 설정되지 않았습니다. 모니터링 기능이 제한됩니다.")
+    PORTAINER_API_KEY = None
 
 # Redis 연결
 try:
@@ -39,6 +42,8 @@ except:
 
 def get_portainer_headers():
     """Portainer API 헤더"""
+    if not PORTAINER_API_KEY:
+        raise ValueError("PORTAINER_API_KEY 환경 변수가 설정되지 않았습니다")
     return {"X-API-Key": PORTAINER_API_KEY, "Content-Type": "application/json"}
 
 

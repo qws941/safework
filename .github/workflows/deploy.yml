@@ -99,209 +99,43 @@ jobs:
             DB_PASSWORD=${{ env.DB_PASSWORD }}
 
   deploy:
-    name: Deploy to Production via Portainer
+    name: Deploy to Production via Portainer API
     needs: build
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_to_production == 'true'
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_to_production == 'true')
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Pre-deployment Validation
+      - name: Deploy via Portainer API
+        env:
+          PORTAINER_URL: ${{ env.PORTAINER_URL }}
+          PORTAINER_TOKEN: ${{ env.PORTAINER_TOKEN }}
+          ENDPOINT_ID: ${{ env.PORTAINER_ENDPOINT }}
+          STACK_NAME: ${{ env.APP_NAME }}
+          REGISTRY_URL: ${{ env.REGISTRY_HOST }}
         run: |
-          echo "🔍 Pre-deployment validation starting..."
+          echo "🚀 Portainer API 배포 시작..."
 
-          # Portainer API 연결 테스트
-          if ! curl -s -f -H "X-API-Key: ${{ env.PORTAINER_TOKEN }}" \
-               "${{ env.PORTAINER_URL }}/api/status" > /dev/null; then
-            echo "❌ Portainer API 연결 실패"
+          # 스크립트 실행 권한 설정
+          chmod +x ./scripts/portainer_api_deploy.sh
+
+          # 배포 실행
+          ./scripts/portainer_api_deploy.sh deploy
+
+          if [ $? -eq 0 ]; then
+            echo "✅ 배포 성공!"
+          else
+            echo "❌ 배포 실패"
             exit 1
           fi
-          echo "✅ Portainer API 연결 성공"
 
-          # 필수 환경변수 확인
-          for var in PORTAINER_TOKEN DB_PASSWORD SECRET_KEY ADMIN_PASSWORD; do
-            if [ -z "${!var}" ]; then
-              echo "❌ 필수 환경변수 누락: $var"
-              exit 1
-            fi
-          done
-          echo "✅ 환경변수 검증 완료"
-
-      - name: Check Stack Status
-        id: check_stack
+      - name: Verify Deployment Health
         run: |
-          echo "🔍 스택 상태 확인 중..."
-
-          STACKS_RESPONSE=$(curl -s -H "X-API-Key: ${{ env.PORTAINER_TOKEN }}" \
-            "${{ env.PORTAINER_URL }}/api/stacks")
-
-          STACK_INFO=$(echo "$STACKS_RESPONSE" | jq -r '.[] | select(.Name == "${{ env.APP_NAME }}")')
-
-          if [ -n "$STACK_INFO" ] && [ "$STACK_INFO" != "null" ]; then
-            STACK_ID=$(echo "$STACK_INFO" | jq -r '.Id')
-            STACK_STATUS=$(echo "$STACK_INFO" | jq -r '.Status')
-            echo "stack_exists=true" >> $GITHUB_OUTPUT
-            echo "stack_id=$STACK_ID" >> $GITHUB_OUTPUT
-            echo "stack_status=$STACK_STATUS" >> $GITHUB_OUTPUT
-            echo "✅ 기존 스택 발견: ID=$STACK_ID, Status=$STACK_STATUS"
-          else
-            echo "stack_exists=false" >> $GITHUB_OUTPUT
-            echo "⚠️ 기존 스택을 찾을 수 없습니다. 새 스택을 생성합니다."
-          fi
-
-      - name: Prepare Docker Compose
-        run: |
-          # docker-compose.yml을 환경변수로 치환
-          cat docker-compose.yml | \
-            sed "s/\${DB_PASSWORD:-safework2024}/${{ env.DB_PASSWORD }}/g" | \
-            sed "s/\${SECRET_KEY:-safework-production-secret-key-2024}/${{ env.SECRET_KEY }}/g" | \
-            sed "s/\${ADMIN_USERNAME:-admin}/${{ env.ADMIN_USERNAME }}/g" | \
-            sed "s/\${ADMIN_PASSWORD:-safework2024}/${{ env.ADMIN_PASSWORD }}/g" | \
-            sed "s/\${FLASK_CONFIG:-production}/production/g" \
-            > /tmp/docker-compose-prod.yml
-
-      - name: Update Existing Stack
-        if: steps.check_stack.outputs.stack_exists == 'true'
-        run: |
-          echo "🔄 기존 스택 업데이트 중..."
-
-          COMPOSE_CONTENT=$(cat /tmp/docker-compose-prod.yml | jq -Rs .)
-
-          UPDATE_RESPONSE=$(curl -s -w "\n%{http_code}" -X PUT \
-            -H "X-API-Key: ${{ env.PORTAINER_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            "${{ env.PORTAINER_URL }}/api/stacks/${{ steps.check_stack.outputs.stack_id }}?endpointId=${{ env.PORTAINER_ENDPOINT }}" \
-            -d "{
-              \"StackFileContent\": $COMPOSE_CONTENT,
-              \"Prune\": false,
-              \"PullImage\": true
-            }")
-
-          HTTP_CODE=$(echo "$UPDATE_RESPONSE" | tail -n1)
-          RESPONSE_BODY=$(echo "$UPDATE_RESPONSE" | head -n -1)
-
-          if [ "$HTTP_CODE" = "200" ]; then
-            echo "✅ 스택 업데이트 성공"
-          else
-            echo "❌ 스택 업데이트 실패 (HTTP: $HTTP_CODE)"
-            echo "Response: $RESPONSE_BODY"
-
-            # Fallback: Docker 직접 명령어 사용
-            echo "🔄 Docker 직접 명령어로 대체 시도..."
-
-            # 컨테이너 업데이트를 위한 Portainer API 호출
-            CONTAINERS_RESPONSE=$(curl -s \
-              -H "X-API-Key: ${{ env.PORTAINER_TOKEN }}" \
-              "${{ env.PORTAINER_URL }}/api/endpoints/${{ env.PORTAINER_ENDPOINT }}/docker/containers/json")
-
-            echo "$CONTAINERS_RESPONSE" | jq -r '.[] | select(.Names[] | contains("safework")) | .Names[0]' | while read container_name; do
-              if [ -n "$container_name" ]; then
-                container_name=$(echo "$container_name" | sed 's|^/||')
-                echo "Updating container: $container_name"
-
-                # 컨테이너 재시작
-                curl -s -X POST \
-                  -H "X-API-Key: ${{ env.PORTAINER_TOKEN }}" \
-                  "${{ env.PORTAINER_URL }}/api/endpoints/${{ env.PORTAINER_ENDPOINT }}/docker/containers/$container_name/restart"
-              fi
-            done
-
-            echo "✅ Docker 직접 업데이트 완료"
-          fi
-
-      - name: Create New Stack
-        if: steps.check_stack.outputs.stack_exists == 'false'
-        run: |
-          COMPOSE_CONTENT=$(cat /tmp/docker-compose-prod.yml | jq -Rs .)
-
-          curl -X POST \
-            -H "X-API-Key: ${{ env.PORTAINER_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            "${{ env.PORTAINER_URL }}/api/stacks/create/standalone/string?endpointId=${{ env.PORTAINER_ENDPOINT }}" \
-            -d "{
-              \"name\": \"${{ env.APP_NAME }}\",
-              \"stackFileContent\": $COMPOSE_CONTENT
-            }"
-
-          echo "Stack created successfully"
-
-      - name: Post-deployment Container Status Check
-        run: |
-          echo "📊 배포 후 컨테이너 상태 확인..."
-          sleep 15  # 컨테이너 시작 대기
-
-          CONTAINERS_RESPONSE=$(curl -s \
-            -H "X-API-Key: ${{ env.PORTAINER_TOKEN }}" \
-            "${{ env.PORTAINER_URL }}/api/endpoints/${{ env.PORTAINER_ENDPOINT }}/docker/containers/json")
-
-          echo "SafeWork 컨테이너 상태:"
-          echo "$CONTAINERS_RESPONSE" | jq -r '.[] | select(.Names[] | contains("safework")) | "  " + .Names[0] + " - " + .State + " (" + .Status + ")"'
-
-          # 모든 safework 컨테이너가 실행 중인지 확인
-          RUNNING_COUNT=$(echo "$CONTAINERS_RESPONSE" | jq -r '.[] | select(.Names[] | contains("safework")) | select(.State == "running") | .Names[0]' | wc -l)
-
-          if [ "$RUNNING_COUNT" -ge 3 ]; then
-            echo "✅ 모든 SafeWork 컨테이너가 정상 실행 중입니다."
-          else
-            echo "⚠️ 일부 컨테이너가 실행되지 않고 있습니다. (실행 중: $RUNNING_COUNT/3)"
-          fi
-
-      - name: Verify Deployment
-        run: |
-          echo "🔍 서비스 배포 검증 시작..."
-
-          # 다단계 헬스 체크
-          MAX_ATTEMPTS=15
-          ATTEMPT=1
-
-          while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
-            echo "헬스 체크 시도 $ATTEMPT/$MAX_ATTEMPTS"
-
-            HEALTH_RESPONSE=$(curl -s -w "\n%{http_code}" https://safework.jclee.me/health 2>/dev/null)
-            HTTP_CODE=$(echo "$HEALTH_RESPONSE" | tail -n1)
-            RESPONSE_BODY=$(echo "$HEALTH_RESPONSE" | head -n -1)
-
-            if [ "$HTTP_CODE" = "200" ]; then
-              STATUS=$(echo "$RESPONSE_BODY" | jq -r '.status // "unknown"' 2>/dev/null)
-              if [ "$STATUS" = "healthy" ]; then
-                echo "✅ 서비스 헬스 체크 성공!"
-                echo "$RESPONSE_BODY" | jq '.' 2>/dev/null
-                break
-              fi
-            fi
-
-            if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
-              echo "❌ 헬스 체크 최대 시도 횟수 초과"
-
-              # 실패 시 상세 디버깅 정보
-              echo "🔍 디버깅 정보:"
-              echo "HTTP Code: $HTTP_CODE"
-              echo "Response: $RESPONSE_BODY"
-
-              # 컨테이너 로그 확인
-              echo "🔍 컨테이너 로그 (최근 20줄):"
-              curl -s -H "X-API-Key: ${{ env.PORTAINER_TOKEN }}" \
-                "${{ env.PORTAINER_URL }}/api/endpoints/${{ env.PORTAINER_ENDPOINT }}/docker/containers/safework-app/logs?stdout=true&stderr=true&tail=20" \
-                2>/dev/null || echo "로그 조회 실패"
-
-              exit 1
-            fi
-
-            echo "⏳ 대기 중... (5초 후 재시도)"
-            sleep 5
-            ATTEMPT=$((ATTEMPT + 1))
-          done
-
-          echo "🔍 추가 검증 테스트..."
-
-          # API 엔드포인트 테스트
-          if curl -s https://safework.jclee.me/ | grep -q "SafeWork"; then
-            echo "✅ 메인 페이지 응답 정상"
-          else
-            echo "⚠️ 메인 페이지 응답 문제"
-          fi
+          echo "🔍 배포 검증 중..."
+          sleep 10
+          ./scripts/portainer_api_deploy.sh health
 
       - name: Notification
         if: always()

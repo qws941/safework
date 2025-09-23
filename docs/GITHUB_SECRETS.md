@@ -8,32 +8,32 @@ GitHub 저장소의 Settings → Secrets and variables → Actions에서 설정�
 
 ### 1. Registry 관련
 ```bash
-REGISTRY_PASSWORD=bingogo1
+REGISTRY_PASSWORD=your-registry-password-here
 ```
 Docker Registry (registry.jclee.me) 접근용 비밀번호
 
 ### 2. Database 관련
 ```bash
-DB_PASSWORD=safework2024
+DB_PASSWORD=your-database-password-here
 ```
 PostgreSQL 데이터베이스 비밀번호
 
 ### 3. Portainer API 관련
 ```bash
-PORTAINER_TOKEN=ptr_zdHC0mAdjC7hk7pZ8r2+pJZO+bLxBD/TaB3iPuQwx9Q=
+PORTAINER_TOKEN=ptr_your-portainer-token-here
 ```
 Portainer API 접근 토큰 (스택 자동 배포용)
 
 ### 4. Admin 관련
 ```bash
 ADMIN_USERNAME=admin
-ADMIN_PASSWORD=safework2024
+ADMIN_PASSWORD=your-admin-password-here
 ```
 SafeWork 관리자 계정 정보
 
 ### 5. Security 관련
 ```bash
-SECRET_KEY=safework-production-secret-key-2024
+SECRET_KEY=your-secret-key-here-minimum-32-characters
 ```
 Flask 애플리케이션 시크릿 키
 
@@ -49,12 +49,12 @@ Flask 애플리케이션 시크릿 키
 ### 방법 2: GitHub CLI를 통한 설정
 ```bash
 # GitHub CLI 설치 필요 (gh)
-gh secret set REGISTRY_PASSWORD --body "bingogo1"
-gh secret set DB_PASSWORD --body "safework2024"
-gh secret set PORTAINER_TOKEN --body "ptr_zdHC0mAdjC7hk7pZ8r2+pJZO+bLxBD/TaB3iPuQwx9Q="
+gh secret set REGISTRY_PASSWORD --body "your-registry-password-here"
+gh secret set DB_PASSWORD --body "your-database-password-here"
+gh secret set PORTAINER_TOKEN --body "ptr_your-portainer-token-here"
 gh secret set ADMIN_USERNAME --body "admin"
-gh secret set ADMIN_PASSWORD --body "safework2024"
-gh secret set SECRET_KEY --body "safework-production-secret-key-2024"
+gh secret set ADMIN_PASSWORD --body "your-admin-password-here"
+gh secret set SECRET_KEY --body "your-secret-key-here-minimum-32-characters"
 ```
 
 ## 🚀 GitHub Actions 워크플로우

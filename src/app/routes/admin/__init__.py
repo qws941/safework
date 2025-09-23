@@ -77,7 +77,7 @@ def temp_admin_access():
     if user:
         login_user(user, remember=False)
         flash("임시 관리자 로그인 성공", "success")
-        return redirect(url_for("admin.dashboard"))
+        return redirect("/admin/dashboard")
     else:
         flash("관리자 사용자를 찾을 수 없습니다.", "danger")
         return "Admin user not found"
@@ -91,7 +91,7 @@ def admin_required(f):
     def decorated_function(*args, **kwargs):
         if not current_user.is_admin:
             flash("관리자 권한이 필요합니다.", "danger")
-            return redirect(url_for("main.index"))
+            return redirect("/")
         return f(*args, **kwargs)
 
     return decorated_function

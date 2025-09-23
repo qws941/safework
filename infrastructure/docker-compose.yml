@@ -11,7 +11,7 @@ services:
     container_name: safework-postgres
     environment:
       - TZ=Asia/Seoul
-      - POSTGRES_PASSWORD=safework2024
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-safework2024}
       - POSTGRES_DB=safework_db
       - POSTGRES_USER=safework
     ports:
@@ -58,9 +58,9 @@ services:
       - DB_HOST=safework-postgres
       - DB_NAME=safework_db
       - DB_USER=safework
-      - DB_PASSWORD=safework2024
+      - DB_PASSWORD=${DB_PASSWORD:-safework2024}
       - REDIS_HOST=safework-redis
-      - SECRET_KEY=dev-only-key-CHANGE-IN-PRODUCTION
+      - SECRET_KEY=${SECRET_KEY:-dev-only-key-CHANGE-IN-PRODUCTION}
     ports:
       - "4545:4545"
     volumes:

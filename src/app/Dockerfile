@@ -66,6 +66,13 @@ ENV DEV_URL=https://safework-dev.jclee.me
 ENV PRD_URL=https://safework.jclee.me
 ENV LOCAL_URL=http://localhost:4545
 
+# Gunicorn production server settings
+ENV GUNICORN_WORKERS=${GUNICORN_WORKERS:-3}
+ENV GUNICORN_TIMEOUT=${GUNICORN_TIMEOUT:-120}
+ENV GUNICORN_KEEPALIVE=${GUNICORN_KEEPALIVE:-2}
+ENV GUNICORN_MAX_REQUESTS=${GUNICORN_MAX_REQUESTS:-1000}
+ENV GUNICORN_MAX_REQUESTS_JITTER=${GUNICORN_MAX_REQUESTS_JITTER:-100}
+
 # Install system dependencies
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -108,5 +115,5 @@ LABEL safework.deployment.auto="true" \
 # Expose port
 EXPOSE 4545
 
-# Run the application with connection retry logic
-CMD ["python", "app.py"]
+# Production WSGI server (Gunicorn) with fallback to development server
+CMD ["sh", "-c", "if [ \"$FLASK_CONFIG\" = 'production' ]; then gunicorn --config gunicorn.conf.py app:app; else python app.py; fi"]

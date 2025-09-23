@@ -339,7 +339,7 @@ SHOW effective_cache_size;"
 ```bash
 # 1. 고급 로그 분석기 설정
 cp scripts/log_analyzer_config.json /etc/safework/
-export PORTAINER_API_KEY="ptr_lejbr5d8IuYiEQCNpg2VdjFLZqRIEfQiJ7t0adnYQi8="
+export PORTAINER_API_KEY="ptr_your-portainer-api-key-here"
 
 # 2. 모니터링 시작
 python3 scripts/enhanced_log_analyzer.py --config /etc/safework/log_analyzer_config.json --monitor

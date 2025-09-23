@@ -97,7 +97,7 @@ def admin_required(f):
 def dashboard():
     """관리자 대시보드 - SafeWork 대시보드로 리다이렉트"""
     track_page_view("admin_dashboard")
-    return redirect(url_for("admin.safework_dashboard"))
+    return redirect("/admin/safework")
 
 @admin_bp.route("/users")
 @login_required
