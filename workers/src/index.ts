@@ -9,11 +9,12 @@ import { healthRoutes } from './routes/health';
 import { workerRoutes } from './routes/worker';
 
 export interface Env {
-  SAFEWORK_DB: D1Database;
-  SAFEWORK_KV: KVNamespace;
+  SAFEWORK_KV?: KVNamespace;
   JWT_SECRET: string;
   ADMIN_USERNAME: string;
-  ADMIN_PASSWORD: string;
+  BACKEND_URL: string;
+  DEBUG: string;
+  ENVIRONMENT: string;
 }
 
 const app = new Hono<{ Bindings: Env }>();
@@ -33,7 +34,7 @@ app.route('/api/survey', surveyRoutes);
 // Protected routes (require JWT)
 app.use('/api/admin/*', async (c, next) => {
   const jwtMiddleware = jwt({
-    secret: c.env.JWT_SECRET,
+    secret: c.env?.JWT_SECRET || 'fallback-secret',
   });
   return jwtMiddleware(c, next);
 });
