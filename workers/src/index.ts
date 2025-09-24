@@ -453,10 +453,13 @@ app.get('/admin', (c) => {
   return c.html(adminHtml);
 });
 
-// Survey form route
+// Survey form route - restored to original format
 app.get('/survey/:surveyType', (c) => {
   const surveyType = c.req.param('surveyType');
-  const surveyTitles = {
+  const surveyTitles: { [key: string]: string } = {
+    '001_musculoskeletal_symptom_survey': '근골격계 증상조사표',
+    '002_new_employee_health_checkup': '신규 입사자 건강검진',
+    '003_musculoskeletal_program': '근골격계부담작업 유해요인조사',
     'musculoskeletal': '근골격계 증상조사',
     'safety': '안전의식 조사', 
     'environment': '작업환경 조사'
@@ -470,18 +473,82 @@ app.get('/survey/:surveyType', (c) => {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${title} - SafeWork</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --sw-primary: #6366f1;
+            --sw-primary-light: #a5b4fc;
+            --sw-primary-dark: #4f46e5;
+            --sw-secondary: #64748b;
+            --sw-success: #10b981;
+            --sw-warning: #f59e0b;
+            --sw-danger: #ef4444;
+        }
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+        .survey-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .section-card {
+            background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+            border-radius: 16px;
+            padding: 28px;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.08);
+            border: 1px solid rgba(99, 102, 241, 0.1);
+        }
+        .section-title {
+            color: var(--sw-primary);
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--sw-primary-light);
+        }
+        .form-label {
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 8px;
+        }
+        .form-control, .form-select {
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 12px;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--sw-primary);
+            box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            border: none;
+            border-radius: 10px;
+            padding: 12px 30px;
+            font-weight: 600;
+        }
+        .question-group {
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+    </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
-    <div class="container mx-auto px-4 py-8">
-        <div class="max-w-2xl mx-auto">
-            <div class="bg-white rounded-lg shadow-lg p-8">
-                <div class="text-center mb-8">
-                    <i class="fas fa-clipboard-list text-4xl text-blue-600 mb-4"></i>
-                    <h1 class="text-3xl font-bold text-gray-800">${title}</h1>
-                    <p class="text-gray-600 mt-2">안전한 작업환경을 위한 설문에 참여해주세요</p>
-                </div>
+<body>
+    <div class="survey-container">
+        <div class="section-card">
+            <div class="text-center mb-5">
+                <i class="bi bi-clipboard-pulse" style="font-size: 3rem; color: var(--sw-primary);"></i>
+                <h1 class="mt-3" style="color: var(--sw-primary);">${title}</h1>
+                <p class="text-muted">귀하의 건강한 작업환경을 위해 성실히 작성해 주시기 바랍니다</p>
+            </div>
                 
                 <form id="survey-form" class="space-y-6">
                     <div>
