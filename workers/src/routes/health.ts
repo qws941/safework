@@ -12,9 +12,13 @@ healthRoutes.get('/', async (c) => {
   };
   
   try {
-    // Check D1 database
-    const dbCheck = await c.env.SAFEWORK_DB.prepare('SELECT 1 as ok').first();
-    checks.database = dbCheck?.ok === 1 ? 'healthy' : 'unhealthy';
+    // Check D1 database - fallback if not configured
+    if (c.env.SAFEWORK_DB) {
+      const dbCheck = await c.env.SAFEWORK_DB.prepare('SELECT 1 as ok').first();
+      checks.database = dbCheck?.ok === 1 ? 'healthy' : 'unhealthy';
+    } else {
+      checks.database = 'not_configured';
+    }
   } catch (error) {
     checks.database = 'unhealthy';
   }

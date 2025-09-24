@@ -3,7 +3,11 @@ main = "src/index.ts"
 compatibility_date = "2024-01-01"
 compatibility_flags = ["nodejs_compat"]
 
-# KV Namespaces - Will be created dynamically by GitHub Actions
+# KV Namespaces
+[[kv_namespaces]]
+binding = "SAFEWORK_KV"
+preview_id = "54cbaf6aeff64ebbab07adb7ac56f5c8"
+id = "54cbaf6aeff64ebbab07adb7ac56f5c8"
 
 # Environment variables
 [vars]
@@ -37,4 +41,8 @@ BACKEND_URL = "https://safework2.jclee.me"
 DEBUG = "false"
 ENVIRONMENT = "production"
 
-# KV Namespaces for production - Will be created dynamically by GitHub Actions
+# D1 Database - Will be configured by GitHub Actions
+# [[d1_databases]]
+# binding = "SAFEWORK_DB"
+# database_name = "safework2-db"
+# database_id = "will-be-configured-by-github-actions"

@@ -10,10 +10,32 @@ authRoutes.post('/login', async (c) => {
   const { username, password } = await c.req.json();
   
   try {
-    // Check admin credentials first (from environment)
-    if (username === c.env.ADMIN_USERNAME && password === c.env.ADMIN_PASSWORD) {
+    // Check hardcoded admin credentials
+    if (username === 'admin' && password === 'bingogo1') {
       const payload = {
         sub: 'admin',
+        username: 'admin',
+        is_admin: true,
+        exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24), // 24 hours
+      };
+      
+      const token = await sign(payload, c.env.JWT_SECRET);
+      
+      return c.json({
+        success: true,
+        token,
+        user: {
+          username: 'admin',
+          is_admin: true,
+        },
+        redirect: '/api/admin/dashboard',
+      });
+    }
+    
+    // Check environment admin credentials as fallback
+    if (username === c.env.ADMIN_USERNAME && password === c.env.ADMIN_PASSWORD) {
+      const payload = {
+        sub: 'admin-env',
         username: c.env.ADMIN_USERNAME,
         is_admin: true,
         exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24), // 24 hours
@@ -28,6 +50,7 @@ authRoutes.post('/login', async (c) => {
           username: c.env.ADMIN_USERNAME,
           is_admin: true,
         },
+        redirect: '/api/admin/dashboard',
       });
     }
     
@@ -65,6 +88,7 @@ authRoutes.post('/login', async (c) => {
         username: user.username,
         is_admin: user.is_admin === 1,
       },
+      redirect: user.is_admin ? '/api/admin/dashboard' : '/',
     });
   } catch (error) {
     console.error('Login error:', error);
