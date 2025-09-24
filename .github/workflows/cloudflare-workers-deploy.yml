@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 env:
-  NODE_VERSION: '18'
+  NODE_VERSION: '20'
   WORKER_NAME: safework2
   CUSTOM_DOMAIN: safework2.jclee.me
 
@@ -27,7 +27,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          cache-dependency-path: 'workers/package-lock.json'
+          cache-dependency-path: 'workers/package.json'
           
       # Stage 2: Install Dependencies
       - name: Install Wrangler and Dependencies
