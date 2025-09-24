@@ -1,0 +1,48 @@
+name = "safework2"
+main = "src/worker.ts"
+compatibility_date = "2024-01-15"
+compatibility_flags = ["nodejs_compat"]
+
+# Custom domain configuration
+routes = [
+  { pattern = "safework2.jclee.me/*", custom_domain = true }
+]
+
+# Environment variables
+[vars]
+BACKEND_URL = "https://safework.jclee.me"
+ENVIRONMENT = "production"
+DEBUG = false
+
+# KV namespace for caching
+[[kv_namespaces]]
+binding = "SAFEWORK_CACHE"
+id = "safework_cache_prod"
+preview_id = "safework_cache_preview"
+
+# Rate limiting configuration
+[limits]
+cpu_ms = 50
+
+# Build configuration
+[build]
+command = "npm run build"
+cwd = "workers"
+
+# Development configuration
+[env.development]
+name = "safework2-dev"
+route = "safework2-dev.jclee.workers.dev/*"
+
+[env.development.vars]
+BACKEND_URL = "http://localhost:4545"
+DEBUG = true
+
+# Production configuration  
+[env.production]
+name = "safework2"
+route = "safework2.jclee.me/*"
+
+[env.production.vars]
+BACKEND_URL = "https://safework.jclee.me"
+DEBUG = false

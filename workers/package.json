@@ -1,0 +1,40 @@
+{
+  "name": "safework2-workers",
+  "version": "1.0.0",
+  "description": "SafeWork Cloudflare Workers Edge Proxy",
+  "main": "src/worker.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "build": "wrangler deploy --dry-run",
+    "deploy": "wrangler deploy",
+    "deploy:prod": "wrangler deploy --env production",
+    "deploy:dev": "wrangler deploy --env development",
+    "tail": "wrangler tail",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": [
+    "cloudflare-workers",
+    "edge-computing",
+    "safework",
+    "proxy",
+    "cache"
+  ],
+  "author": "SafeWork Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240117.0",
+    "@typescript-eslint/eslint-plugin": "^6.19.0",
+    "@typescript-eslint/parser": "^6.19.0",
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.0",
+    "wrangler": "^3.25.0"
+  },
+  "dependencies": {
+    "hono": "^3.12.0"
+  }
+}

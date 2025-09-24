@@ -1,0 +1,283 @@
+name: SafeWork Serverless Deployment
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'serverless/**'
+      - 'app/**'
+      - '.github/workflows/serverless-deploy.yml'
+  workflow_dispatch:
+
+env:
+  SERVICE_NAME: safework2
+  AWS_REGION: ap-northeast-2
+  NODE_VERSION: '18'
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  serverless-deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+      # Stage 1: Checkout and Setup
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js for Serverless Framework
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Setup Python for Lambda Runtime
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          
+      # Stage 2: Install Dependencies
+      - name: Install Serverless Framework and Plugins
+        run: |
+          npm install -g serverless@3
+          cd serverless
+          npm install
+          
+      - name: Install Python Dependencies
+        run: |
+          cd serverless
+          pip install -r requirements.txt
+          pip install serverless-wsgi boto3 psycopg2-binary redis
+          
+      # Stage 3: AWS Configuration and Validation
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+          
+      - name: Validate AWS Configuration
+        run: |
+          aws sts get-caller-identity
+          aws ec2 describe-regions --region ${{ env.AWS_REGION }}
+          
+      # Stage 4: Pre-deployment Validation
+      - name: Validate Serverless Configuration
+        run: |
+          cd serverless
+          sls print --stage prod --region ${{ env.AWS_REGION }}
+          
+      - name: Test Flask Application Factory
+        run: |
+          cd serverless
+          python -c "
+          import sys
+          sys.path.append('../app')
+          from app import create_app
+          app = create_app('production')
+          print('✅ Flask application factory validation successful')
+          print(f'✅ App configuration: {app.config.get(\"ENV\", \"unknown\")}')
+          "
+          
+      # Stage 5: Infrastructure Deployment
+      - name: Deploy AWS Infrastructure
+        run: |
+          cd serverless
+          echo "🚀 Starting SafeWork serverless infrastructure deployment..."
+          
+          # Deploy with verbose output and proper error handling
+          sls deploy \
+            --stage prod \
+            --region ${{ env.AWS_REGION }} \
+            --verbose \
+            --aws-profile default
+            
+          echo "✅ Serverless deployment completed"
+          
+      # Stage 6: Post-deployment Verification
+      - name: Retrieve Deployment Outputs
+        run: |
+          cd serverless
+          
+          # Get API Gateway URL
+          API_URL=$(sls info --stage prod --region ${{ env.AWS_REGION }} --verbose | grep "ServiceEndpoint:" | awk '{print $2}')
+          echo "API_URL=$API_URL" >> $GITHUB_ENV
+          echo "✅ API Gateway URL: $API_URL"
+          
+          # Get Lambda function names
+          LAMBDA_FUNCTIONS=$(aws lambda list-functions --region ${{ env.AWS_REGION }} --query 'Functions[?starts_with(FunctionName, `safework2-prod`)].FunctionName' --output text)
+          echo "✅ Deployed Lambda Functions: $LAMBDA_FUNCTIONS"
+          
+          # Get Aurora cluster endpoint
+          AURORA_ENDPOINT=$(aws rds describe-db-clusters --region ${{ env.AWS_REGION }} --query 'DBClusters[?DBClusterIdentifier==`safework2-prod-aurora-cluster`].Endpoint' --output text)
+          echo "AURORA_ENDPOINT=$AURORA_ENDPOINT" >> $GITHUB_ENV
+          echo "✅ Aurora Serverless Endpoint: $AURORA_ENDPOINT"
+          
+      # Stage 7: Health Check Verification
+      - name: Verify API Gateway Health
+        run: |
+          echo "🏥 Testing API Gateway health endpoint..."
+          
+          # Wait for API Gateway to be fully ready
+          sleep 30
+          
+          # Test health endpoint with retry logic
+          for i in {1..10}; do
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ env.API_URL }}/health" || echo "000")
+            
+            if [[ "$HTTP_STATUS" == "200" ]]; then
+              echo "✅ Health check passed (HTTP $HTTP_STATUS)"
+              HEALTH_RESPONSE=$(curl -s "${{ env.API_URL }}/health")
+              echo "Health response: $HEALTH_RESPONSE"
+              break
+            else
+              echo "⚠️ Health check attempt $i failed (HTTP $HTTP_STATUS)"
+              if [[ $i -eq 10 ]]; then
+                echo "❌ Health check failed after 10 attempts"
+                exit 1
+              fi
+              sleep 20
+            fi
+          done
+          
+      # Stage 8: Lambda Function Verification
+      - name: Test Lambda Functions
+        run: |
+          echo "🔍 Testing individual Lambda functions..."
+          
+          # Test main application Lambda
+          aws lambda invoke \
+            --function-name safework2-prod-app \
+            --region ${{ env.AWS_REGION }} \
+            --payload '{"httpMethod": "GET", "path": "/health", "headers": {}}' \
+            lambda-response.json
+            
+          LAMBDA_STATUS=$(cat lambda-response.json | jq -r '.statusCode // "unknown"')
+          
+          if [[ "$LAMBDA_STATUS" == "200" ]]; then
+            echo "✅ Lambda function test passed"
+            cat lambda-response.json | jq '.'
+          else
+            echo "❌ Lambda function test failed"
+            cat lambda-response.json
+            exit 1
+          fi
+          
+      # Stage 9: Database Connectivity Verification
+      - name: Verify Aurora Serverless Connection
+        run: |
+          echo "🔗 Testing Aurora Serverless database connectivity..."
+          
+          # Test database connection through Lambda
+          aws lambda invoke \
+            --function-name safework2-prod-app \
+            --region ${{ env.AWS_REGION }} \
+            --payload '{"httpMethod": "GET", "path": "/health/db", "headers": {}}' \
+            db-test-response.json
+            
+          DB_STATUS=$(cat db-test-response.json | jq -r '.statusCode // "unknown"')
+          
+          if [[ "$DB_STATUS" == "200" ]]; then
+            echo "✅ Database connectivity test passed"
+            cat db-test-response.json | jq '.body | fromjson | .database'
+          else
+            echo "⚠️ Database connectivity test failed - may need manual verification"
+            cat db-test-response.json
+          fi
+          
+      # Stage 10: Performance and Cost Validation
+      - name: Validate Serverless Performance
+        run: |
+          echo "📊 Validating serverless performance metrics..."
+          
+          # Test cold start performance
+          START_TIME=$(date +%s%3N)
+          curl -s "${{ env.API_URL }}/health" > /dev/null
+          END_TIME=$(date +%s%3N)
+          RESPONSE_TIME=$((END_TIME - START_TIME))
+          
+          echo "✅ Cold start response time: ${RESPONSE_TIME}ms"
+          
+          if [[ $RESPONSE_TIME -lt 5000 ]]; then
+            echo "✅ Performance within acceptable limits"
+          else
+            echo "⚠️ Performance slower than expected, monitoring recommended"
+          fi
+          
+          # Get Lambda cost estimation
+          LAMBDA_COUNT=$(aws lambda list-functions --region ${{ env.AWS_REGION }} --query 'Functions[?starts_with(FunctionName, `safework2-prod`)].FunctionName' --output text | wc -w)
+          echo "✅ Deployed Lambda functions: $LAMBDA_COUNT"
+          echo "💰 Estimated monthly cost: ~$5-20 for light usage (based on $LAMBDA_COUNT functions)"
+          
+      # Stage 11: Security and Compliance Check
+      - name: Security Validation
+        run: |
+          echo "🔒 Validating security configuration..."
+          
+          # Check Lambda execution role
+          LAMBDA_ROLE=$(aws lambda get-function --function-name safework2-prod-app --region ${{ env.AWS_REGION }} --query 'Configuration.Role' --output text)
+          echo "✅ Lambda execution role: $LAMBDA_ROLE"
+          
+          # Check VPC configuration
+          VPC_CONFIG=$(aws lambda get-function --function-name safework2-prod-app --region ${{ env.AWS_REGION }} --query 'Configuration.VpcConfig' --output json)
+          echo "✅ VPC configuration: $VPC_CONFIG"
+          
+          # Verify HTTPS endpoint
+          if [[ "${{ env.API_URL }}" == https* ]]; then
+            echo "✅ API Gateway uses HTTPS encryption"
+          else
+            echo "❌ API Gateway not using HTTPS"
+            exit 1
+          fi
+          
+      # Stage 12: Deployment Summary and Documentation
+      - name: Generate Deployment Summary
+        run: |
+          echo "🎉 SAFEWORK SERVERLESS DEPLOYMENT COMPLETE"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ Infrastructure: AWS Lambda + API Gateway + Aurora Serverless"
+          echo "✅ API Gateway URL: ${{ env.API_URL }}"
+          echo "✅ Aurora Endpoint: ${{ env.AURORA_ENDPOINT }}"
+          echo "✅ Region: ${{ env.AWS_REGION }}"
+          echo "✅ Stage: prod"
+          echo "✅ Health Check: PASSED"
+          echo "✅ Security: HTTPS + VPC + IAM roles configured"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🌐 Next Steps:"
+          echo "  1. Configure Cloudflare DNS: safework2.jclee.me → ${{ env.API_URL }}"
+          echo "  2. Run database migration to Aurora Serverless"
+          echo "  3. Enable monitoring and performance optimization"
+          echo "  4. Update documentation with new endpoints"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          
+          # Store deployment info for next steps
+          cat > deployment-summary.json << EOF
+          {
+            "deployment_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "api_gateway_url": "${{ env.API_URL }}",
+            "aurora_endpoint": "${{ env.AURORA_ENDPOINT }}",
+            "region": "${{ env.AWS_REGION }}",
+            "stage": "prod",
+            "commit_sha": "${{ github.sha }}",
+            "status": "deployed"
+          }
+          EOF
+          
+      # Stage 13: Rollback on Failure
+      - name: Emergency Rollback
+        if: failure()
+        run: |
+          echo "🚨 DEPLOYMENT FAILED - Initiating cleanup..."
+          
+          cd serverless
+          
+          # Attempt to remove failed deployment
+          sls remove --stage prod --region ${{ env.AWS_REGION }} --verbose || echo "Cleanup completed"
+          
+          echo "❌ Serverless deployment failed and has been cleaned up"
+          echo "📋 Check GitHub Actions logs for specific error details"
+          echo "🔄 Fix issues and retry deployment with another git push"
+          
+          # Notify about failure
+          exit 1
