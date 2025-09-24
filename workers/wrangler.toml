@@ -1,48 +1,40 @@
 name = "safework2"
-main = "src/worker.ts"
-compatibility_date = "2024-01-15"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
 compatibility_flags = ["nodejs_compat"]
 
-# Custom domain configuration
-routes = [
-  { pattern = "safework2.jclee.me/*", custom_domain = true }
-]
+# KV Namespaces - Will be created dynamically by GitHub Actions
 
 # Environment variables
 [vars]
-BACKEND_URL = "https://safework.jclee.me"
+JWT_SECRET = "safework-jwt-secret-2024-production"
+ADMIN_USERNAME = "admin"
+BACKEND_URL = "https://safework2.jclee.me"
 ENVIRONMENT = "production"
-DEBUG = false
 
-# KV namespace for caching
-[[kv_namespaces]]
-binding = "SAFEWORK_CACHE"
-id = "safework_cache_prod"
-preview_id = "safework_cache_preview"
+# Routes
+[[routes]]
+pattern = "safework2.jclee.me/*"
+zone_name = "jclee.me"
 
-# Rate limiting configuration
-[limits]
-cpu_ms = 50
+# Rate limiting removed for Free plan
 
-# Build configuration
-[build]
-command = "npm run build"
-cwd = "workers"
+# Build configuration removed to prevent infinite loop
 
-# Development configuration
+# Development environment
 [env.development]
 name = "safework2-dev"
-route = "safework2-dev.jclee.workers.dev/*"
+vars = { BACKEND_URL = "http://localhost:4545", DEBUG = "true", ENVIRONMENT = "development" }
 
-[env.development.vars]
-BACKEND_URL = "http://localhost:4545"
-DEBUG = true
-
-# Production configuration  
+# Production environment
 [env.production]
-name = "safework2"
-route = "safework2.jclee.me/*"
+name = "safework2-prod"
 
 [env.production.vars]
-BACKEND_URL = "https://safework.jclee.me"
-DEBUG = false
+JWT_SECRET = "safework-jwt-secret-2024-production"
+ADMIN_USERNAME = "admin"
+BACKEND_URL = "https://safework2.jclee.me"
+DEBUG = "false"
+ENVIRONMENT = "production"
+
+# KV Namespaces for production - Will be created dynamically by GitHub Actions

@@ -2,10 +2,10 @@
   "name": "safework2-workers",
   "version": "1.0.0",
   "description": "SafeWork Cloudflare Workers Edge Proxy",
-  "main": "src/worker.ts",
+  "main": "src/index.ts",
   "scripts": {
     "dev": "wrangler dev",
-    "build": "wrangler deploy --dry-run",
+    "build": "tsc",
     "deploy": "wrangler deploy",
     "deploy:prod": "wrangler deploy --env production",
     "deploy:dev": "wrangler deploy --env development",
@@ -35,6 +35,7 @@
     "wrangler": "^3.25.0"
   },
   "dependencies": {
-    "hono": "^3.12.0"
+    "hono": "^3.12.0",
+    "bcryptjs": "^2.4.3"
   }
 }
