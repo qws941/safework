@@ -143,19 +143,34 @@ adminRoutes.get('/dashboard', async (c) => {
 // Department management
 adminRoutes.get('/departments', async (c) => {
   try {
-    const departments = await c.env.SAFEWORK_DB.prepare(`
-      SELECT 
-        d.*,
-        (SELECT COUNT(*) FROM workers WHERE department_id = d.id AND is_active = 1) as worker_count
-      FROM departments d
-      WHERE d.is_active = 1
-      ORDER BY d.name ASC
-    `).all();
-    
-    return c.json({
-      departments: departments.results,
-      total: departments.results.length,
-    });
+    if (c.env.SAFEWORK_DB) {
+      const departments = await c.env.SAFEWORK_DB.prepare(`
+        SELECT 
+          d.*,
+          (SELECT COUNT(*) FROM workers WHERE department_id = d.id AND is_active = 1) as worker_count
+        FROM departments d
+        WHERE d.is_active = 1
+        ORDER BY d.name ASC
+      `).all();
+      
+      return c.json({
+        departments: departments.results,
+        total: departments.results.length,
+      });
+    } else {
+      // Fallback: Return mock departments
+      const mockDepartments = [
+        { id: 1, name: '생산부', code: 'PROD', worker_count: 45 },
+        { id: 2, name: '품질관리부', code: 'QA', worker_count: 12 },
+        { id: 3, name: '안전관리부', code: 'SAFETY', worker_count: 8 },
+      ];
+      
+      return c.json({
+        departments: mockDepartments,
+        total: mockDepartments.length,
+        message: 'Using fallback data - database not configured',
+      });
+    }
   } catch (error) {
     return c.json({ error: 'Failed to fetch departments' }, 500);
   }

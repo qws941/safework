@@ -69,35 +69,60 @@ surveyRoutes.post('/submit', async (c) => {
     const ip_address = c.req.header('CF-Connecting-IP') || 'unknown';
     const user_agent = c.req.header('User-Agent') || 'unknown';
     
-    // Insert into D1 database
-    const result = await c.env.SAFEWORK_DB.prepare(`
-      INSERT INTO surveys (
-        form_type, 
-        user_id,
-        worker_id, 
-        department_id, 
-        response_data, 
-        is_anonymous, 
-        ip_address, 
+    if (c.env.SAFEWORK_DB) {
+      // Insert into D1 database
+      const result = await c.env.SAFEWORK_DB.prepare(`
+        INSERT INTO surveys (
+          form_type, 
+          user_id,
+          worker_id, 
+          department_id, 
+          response_data, 
+          is_anonymous, 
+          ip_address, 
+          user_agent,
+          submitted_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+      `).bind(
+        form_type,
+        is_anonymous ? 1 : null, // anonymous user_id = 1
+        worker_id || null,
+        department_id || null,
+        JSON.stringify(response_data),
+        is_anonymous ? 1 : 0,
+        ip_address,
+        user_agent
+      ).run();
+      
+      return c.json({
+        success: true,
+        message: '설문이 성공적으로 제출되었습니다',
+        survey_id: result.meta.last_row_id,
+      });
+    } else {
+      // Fallback: Store in KV temporarily
+      const surveyId = `survey_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const surveyData = {
+        form_type,
+        response_data,
+        worker_id,
+        department_id,
+        is_anonymous,
+        ip_address,
         user_agent,
-        submitted_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-    `).bind(
-      form_type,
-      is_anonymous ? 1 : null, // anonymous user_id = 1
-      worker_id || null,
-      department_id || null,
-      JSON.stringify(response_data),
-      is_anonymous ? 1 : 0,
-      ip_address,
-      user_agent
-    ).run();
-    
-    return c.json({
-      success: true,
-      message: '설문이 성공적으로 제출되었습니다',
-      survey_id: result.meta.last_row_id,
-    });
+        submitted_at: new Date().toISOString()
+      };
+      
+      await c.env.SAFEWORK_KV.put(surveyId, JSON.stringify(surveyData), {
+        expirationTtl: 86400 * 30, // 30 days
+      });
+      
+      return c.json({
+        success: true,
+        message: '설문이 성공적으로 제출되었습니다 (임시 저장)',
+        survey_id: surveyId,
+      });
+    }
   } catch (error) {
     console.error('Survey submission error:', error);
     return c.json({ error: 'Failed to submit survey' }, 500);
@@ -111,27 +136,38 @@ surveyRoutes.get('/responses/:formType', async (c) => {
   const offset = parseInt(c.req.query('offset') || '0');
   
   try {
-    const result = await c.env.SAFEWORK_DB.prepare(`
-      SELECT 
-        id, 
-        form_type, 
-        worker_id, 
-        department_id, 
-        is_anonymous,
-        submitted_at,
-        created_at
-      FROM surveys 
-      WHERE form_type = ?
-      ORDER BY submitted_at DESC
-      LIMIT ? OFFSET ?
-    `).bind(formType, limit, offset).all();
-    
-    return c.json({
-      responses: result.results,
-      total: result.results.length,
-      limit,
-      offset,
-    });
+    if (c.env.SAFEWORK_DB) {
+      const result = await c.env.SAFEWORK_DB.prepare(`
+        SELECT 
+          id, 
+          form_type, 
+          worker_id, 
+          department_id, 
+          is_anonymous,
+          submitted_at,
+          created_at
+        FROM surveys 
+        WHERE form_type = ?
+        ORDER BY submitted_at DESC
+        LIMIT ? OFFSET ?
+      `).bind(formType, limit, offset).all();
+      
+      return c.json({
+        responses: result.results,
+        total: result.results.length,
+        limit,
+        offset,
+      });
+    } else {
+      // Fallback: Return mock data or KV stored data
+      return c.json({
+        responses: [],
+        total: 0,
+        limit,
+        offset,
+        message: 'Database not configured - using fallback mode',
+      });
+    }
   } catch (error) {
     console.error('Failed to fetch responses:', error);
     return c.json({ error: 'Failed to fetch responses' }, 500);
