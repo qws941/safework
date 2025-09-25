@@ -226,11 +226,13 @@ def create_app(config_name=None):
     from routes.main import main_bp
     from routes.migration import migration_bp
     from routes.survey import survey_bp
+    from routes.pdf_export import pdf_export_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(survey_bp, url_prefix="/survey")
     app.register_blueprint(admin_bp, url_prefix="/admin")
+    app.register_blueprint(pdf_export_bp)
     app.register_blueprint(migration_bp, url_prefix="/admin")
     app.register_blueprint(health_bp)
     app.register_blueprint(document_bp, url_prefix="/documents")
