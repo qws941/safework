@@ -76,7 +76,8 @@ def index():
 <p>산업안전보건관리시스템 - 건강조사 설문</p>
 <ul>
 <li><a href="/survey/001_musculoskeletal_symptom_survey">📋 근골격계 증상조사표 (Form 001)</a></li>
-<li><a href="/survey/002_new_employee_health_checkup_form">🩺 신규 입사자 건강검진표 (Form 002)</a></li>
+<li><a href="/survey/002_musculoskeletal_symptom_program">📊 근골격계부담작업 유해요인조사 (Form 002)</a></li>
+<li><a href="/survey/002_new_employee_health_checkup_form">🩺 신규 입사자 건강검진표</a></li>
 <li><a href="/survey/003_musculoskeletal_program">📊 근골격계질환 예방관리 프로그램 조사표 (Form 003) <span class="new-badge">기본</span></a></li>
 <li><a href="/survey/003_musculoskeletal_program_enhanced">🔬 근골격계질환 예방관리 프로그램 조사표 - 완전판 (Form 003 Enhanced) <span class="enhanced-badge">60+ 필드</span></a></li>
 </ul>
@@ -93,8 +94,8 @@ def survey_001():
 
 @survey_bp.route("/002", methods=["GET", "POST"])
 def survey_002():
-    """신규입사자건강진단 (002) - 단축 URL"""  
-    return redirect("/survey/002_new_employee_health_survey")
+    """근골격계부담작업 유해요인조사 (002) - 단축 URL"""  
+    return redirect("/survey/002_musculoskeletal_symptom_program")
 
 
 @survey_bp.route("/statistics")
@@ -474,6 +475,95 @@ def new_employee_health_survey():
     # GET 요청 - 폼 템플릿 반환
     return render_template("survey/002_new_employee_health.html")
 
+
+@survey_bp.route("/002_musculoskeletal_symptom_program", methods=["GET", "POST"])
+def musculoskeletal_symptom_program():
+    """근골격계부담작업 유해요인조사 (002) - 로그인 불필요"""
+    try:
+        from flask import g
+        g._csrf_disabled = True
+    except:
+        pass
+    
+    kiosk_mode = (
+        request.args.get("kiosk") == "1"
+        or request.referrer is None
+        or "survey" not in (request.referrer or "")
+    )
+    
+    if request.method == "POST":
+        # 기본적으로 익명 사용자 ID 1을 사용
+        user_id = 1  # 익명 사용자
+        if current_user.is_authenticated:
+            user_id = current_user.id
+        
+        # 모든 폼 데이터를 수집
+        all_form_data = {}
+        for key, value in request.form.items():
+            if key.endswith("[]"):
+                # 리스트 형태 데이터 처리
+                all_form_data[key] = request.form.getlist(key)
+            else:
+                all_form_data[key] = value
+        
+        # 데이터베이스에 저장
+        survey = Survey(
+            user_id=user_id,
+            form_type="002",
+            # 실제 DB 필드 사용
+            name=request.form.get("investigator_name") or "조사자",
+            department=request.form.get("department"),
+            position=request.form.get("investigator_position"),
+            # 모든 설문 응답 데이터를 JSON으로 저장
+            responses=all_form_data,
+        )
+        
+        try:
+            db.session.add(survey)
+            db.session.commit()
+            
+            # Raw data 저장 시도
+            try:
+                from utils.raw_data_exporter import export_survey_raw_data
+                exported_files = export_survey_raw_data(
+                    survey_data=all_form_data,
+                    survey_id=survey.id,
+                    form_type="002",
+                    format_types=["json", "csv"],
+                )
+                current_app.logger.info(f"✅ Raw data files created for survey {survey.id}: {exported_files}")
+            except Exception as export_error:
+                current_app.logger.warning(f"⚠️ Raw data export failed for survey {survey.id}: {str(export_error)}")
+            
+            # Slack 알림 전송
+            try:
+                from utils.slack_notifier import send_survey_slack_notification
+                survey_data = {
+                    'id': survey.id,
+                    'form_type': survey.form_type,
+                    'name': survey.name,
+                    'department': survey.department,
+                    'position': survey.position,
+                    'responses': all_form_data
+                }
+                send_survey_slack_notification(survey_data)
+                current_app.logger.info(f"✅ 슬랙 알림 전송 완료: 설문 ID {survey.id}")
+            except Exception as slack_error:
+                current_app.logger.warning(f"⚠️ 슬랙 알림 전송 오류: {str(slack_error)}")
+            
+            flash("근골격계부담작업 유해요인조사가 성공적으로 제출되었습니다.", "success")
+            if kiosk_mode:
+                return redirect(url_for("survey.complete", id=survey.id, kiosk=1))
+            return redirect(url_for("survey.complete", id=survey.id))
+            
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Survey submission error: {str(e)}")
+            flash(f"설문 제출 중 오류가 발생했습니다: {str(e)}", "error")
+            return redirect(url_for("survey.musculoskeletal_symptom_program"))
+    
+    # GET 요청
+    return render_template("survey/002_musculoskeletal_symptom_program.html", kiosk_mode=kiosk_mode)
 
 @survey_bp.route("/002_new_employee_health_checkup_form", methods=["GET", "POST"])
 def new_employee_health_checkup_form():
