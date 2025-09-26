@@ -4,6 +4,66 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
+    // Access Control List (ACL) Configuration
+    const PUBLIC_PATHS = [
+      '/survey/001_musculoskeletal_symptom_survey',  // 근로자용 설문지 - 공개
+      '/health',
+      '/api/health'
+    ];
+
+    const ALLOWED_IPS = [
+      '203.245.108.0/24',  // 허용된 IP 대역
+      '127.0.0.1',
+      '::1'
+    ];
+
+    // Authorized users for Basic Authentication
+    const AUTHORIZED_USERS = {
+      'admin': 'safework2024',
+      'manager': 'safework2024'
+    };
+
+    // Check if path is public
+    const isPublicPath = PUBLIC_PATHS.some(publicPath => path.startsWith(publicPath));
+
+    // If not public path, check authentication
+    if (!isPublicPath && path !== '/') {
+      const clientIP = request.headers.get('CF-Connecting-IP') ||
+                      request.headers.get('X-Forwarded-For') ||
+                      request.headers.get('X-Real-IP');
+
+      // Check Basic Authentication
+      const authorization = request.headers.get('Authorization');
+
+      if (!authorization) {
+        return new Response('Authentication required', {
+          status: 401,
+          headers: {
+            'WWW-Authenticate': 'Basic realm="SafeWork Protected Area"',
+            'Content-Type': 'text/plain'
+          }
+        });
+      }
+
+      const [scheme, credentials] = authorization.split(' ');
+
+      if (scheme !== 'Basic') {
+        return new Response('Invalid authentication', { status: 401 });
+      }
+
+      const decodedCredentials = atob(credentials);
+      const [username, password] = decodedCredentials.split(':');
+
+      if (!AUTHORIZED_USERS[username] || AUTHORIZED_USERS[username] !== password) {
+        return new Response('Invalid username or password', {
+          status: 401,
+          headers: {
+            'WWW-Authenticate': 'Basic realm="SafeWork Protected Area"'
+          }
+        });
+      }
+    }
+
     // CORS headers
     const corsHeaders = {
       'Access-Control-Allow-Origin': '*',
@@ -47,6 +107,11 @@ export default {
         return new Response(JSON.stringify(health, null, 2), {
           headers: corsHeaders
         });
+      }
+
+      // Survey routes - return static forms or proxy to API
+      if (path === '/survey/' || path === '/survey') {
+        return Response.redirect(url.origin + '/survey/index', 302);
       }
 
       // Survey API endpoints
@@ -2045,91 +2110,305 @@ export default {
           <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>SafeWork - 산업안전보건 관리 시스템</title>
+            <title>SafeWork - 산업안전보건 통합 관리 시스템</title>
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
             <style>
               * { margin: 0; padding: 0; box-sizing: border-box; }
+
+              :root {
+                --primary: #2563eb;
+                --primary-dark: #1e40af;
+                --secondary: #7c3aed;
+                --success: #10b981;
+                --danger: #ef4444;
+                --warning: #f59e0b;
+                --dark: #1f2937;
+                --light: #f3f4f6;
+              }
+
               body {
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 min-height: 100vh;
+                padding: 20px;
+                background-attachment: fixed;
+              }
+
+              .main-container {
+                max-width: 1200px;
+                margin: 0 auto;
+                animation: fadeIn 0.6s ease-out;
+              }
+
+              @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(20px); }
+                to { opacity: 1; transform: translateY(0); }
+              }
+
+              /* Header Section */
+              .header {
+                background: white;
+                border-radius: 20px;
+                padding: 40px;
+                margin-bottom: 30px;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+                text-align: center;
+              }
+
+              .logo {
+                font-size: 3.5em;
+                font-weight: 800;
+                background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                margin-bottom: 10px;
+                letter-spacing: -2px;
+              }
+
+              .subtitle {
+                color: #64748b;
+                font-size: 1.3em;
+                font-weight: 500;
+                margin-bottom: 20px;
+              }
+
+              .status-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 10px 20px;
+                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                color: white;
+                border-radius: 50px;
+                font-weight: 600;
+                animation: pulse 2s infinite;
+              }
+
+              @keyframes pulse {
+                0%, 100% { transform: scale(1); }
+                50% { transform: scale(1.05); }
+              }
+
+              /* Navigation Cards */
+              .nav-section {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 25px;
+                margin-bottom: 30px;
+              }
+
+              .nav-card {
+                background: white;
+                border-radius: 16px;
+                padding: 30px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+                text-decoration: none;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                border: 2px solid transparent;
+                position: relative;
+                overflow: hidden;
+              }
+
+              .nav-card::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 4px;
+                background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+                transform: scaleX(0);
+                transition: transform 0.3s;
+              }
+
+              .nav-card:hover {
+                transform: translateY(-8px);
+                box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+                border-color: var(--primary);
+              }
+
+              .nav-card:hover::before {
+                transform: scaleX(1);
+              }
+
+              .card-icon {
+                width: 60px;
+                height: 60px;
+                background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+                border-radius: 16px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                padding: 20px;
+                color: white;
+                font-size: 28px;
+                margin-bottom: 20px;
               }
-              .container {
-                background: white;
-                border-radius: 20px;
-                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-                padding: 40px;
-                max-width: 600px;
-                width: 100%;
-              }
-              h1 {
-                color: #333;
+
+              .nav-card.admin .card-icon { background: linear-gradient(135deg, #f59e0b 0%, #dc2626 100%); }
+              .nav-card.survey .card-icon { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+
+              .card-title {
+                font-size: 1.5em;
+                font-weight: 700;
+                color: var(--dark);
                 margin-bottom: 10px;
-                font-size: 2.5em;
               }
-              .subtitle {
-                color: #666;
+
+              .card-desc {
+                color: #64748b;
+                line-height: 1.6;
+                margin-bottom: 15px;
+              }
+
+              .card-badge {
+                display: inline-block;
+                padding: 6px 12px;
+                background: var(--light);
+                color: var(--primary);
+                border-radius: 20px;
+                font-size: 0.85em;
+                font-weight: 600;
+              }
+
+              /* Quick Actions */
+              .quick-actions {
+                background: white;
+                border-radius: 16px;
+                padding: 25px;
                 margin-bottom: 30px;
-                font-size: 1.2em;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.1);
               }
-              .links {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                gap: 15px;
-                margin-top: 30px;
+
+              .quick-actions h3 {
+                color: var(--dark);
+                margin-bottom: 20px;
+                font-size: 1.3em;
+                font-weight: 700;
               }
-              .link-card {
-                background: #f8f9fa;
-                padding: 20px;
+
+              .action-buttons {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 12px;
+              }
+
+              .action-btn {
+                padding: 12px 24px;
+                background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+                color: white;
                 border-radius: 10px;
                 text-decoration: none;
-                color: #333;
-                transition: transform 0.3s;
-                border: 2px solid transparent;
+                font-weight: 600;
+                transition: all 0.3s;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
               }
-              .link-card:hover {
-                transform: translateY(-5px);
-                border-color: #667eea;
+
+              .action-btn:hover {
+                transform: scale(1.05);
+                box-shadow: 0 10px 20px rgba(37, 99, 235, 0.3);
               }
-              .link-card h3 {
-                margin-bottom: 10px;
-                color: #667eea;
+
+              .action-btn.secondary {
+                background: white;
+                color: var(--primary);
+                border: 2px solid var(--primary);
               }
-              .status {
-                margin-top: 30px;
-                padding: 15px;
-                background: #e8f5e9;
-                border-radius: 10px;
+
+              /* Footer */
+              .footer {
                 text-align: center;
-                color: #2e7d32;
+                color: white;
+                padding: 20px;
+                font-size: 0.9em;
+                opacity: 0.9;
+              }
+
+              /* Responsive */
+              @media (max-width: 768px) {
+                .nav-section {
+                  grid-template-columns: 1fr;
+                }
+
+                .logo {
+                  font-size: 2.5em;
+                }
+
+                .header {
+                  padding: 30px 20px;
+                }
               }
             </style>
           </head>
           <body>
-            <div class="container">
-              <h1>SafeWork</h1>
-              <p class="subtitle">산업안전보건 관리 시스템</p>
-
-              <div class="status">
-                ✅ 시스템 정상 작동중 | Cloudflare Workers
+            <div class="main-container">
+              <!-- Header -->
+              <div class="header">
+                <h1 class="logo">SafeWork</h1>
+                <p class="subtitle">산업안전보건 통합 관리 시스템</p>
+                <span class="status-badge">
+                  <i class="bi bi-check-circle-fill"></i>
+                  시스템 정상 운영중
+                </span>
               </div>
 
-              <div class="links">
-                <a href="/admin" class="link-card">
-                  <h3>관리자 패널</h3>
-                  <p>시스템 관리</p>
+              <!-- Main Navigation -->
+              <div class="nav-section">
+                <!-- Worker Survey -->
+                <a href="/survey/001_musculoskeletal_symptom_survey" class="nav-card survey">
+                  <div class="card-icon">
+                    <i class="bi bi-clipboard2-pulse"></i>
+                  </div>
+                  <h2 class="card-title">근골격계 증상조사</h2>
+                  <p class="card-desc">근로자 자가진단 설문조사<br>통증 및 불편함을 체계적으로 평가</p>
+                  <span class="card-badge">근로자용</span>
                 </a>
-                <a href="/survey/001_musculoskeletal_symptom_survey" class="link-card">
-                  <h3>근골격계 증상 조사</h3>
-                  <p>작업자 건강 평가</p>
+
+                <!-- Admin Program -->
+                <a href="/survey/002_musculoskeletal_symptom_program" class="nav-card admin">
+                  <div class="card-icon">
+                    <i class="bi bi-shield-check"></i>
+                  </div>
+                  <h2 class="card-title">유해요인 조사</h2>
+                  <p class="card-desc">작업장 위험도 평가 프로그램<br>안전관리자 전용 분석 도구</p>
+                  <span class="card-badge">관리자용</span>
                 </a>
-                <a href="/api/health" class="link-card">
-                  <h3>API 상태</h3>
-                  <p>시스템 헬스체크</p>
+
+                <!-- Admin Panel -->
+                <a href="/admin/survey" class="nav-card admin">
+                  <div class="card-icon">
+                    <i class="bi bi-gear-wide-connected"></i>
+                  </div>
+                  <h2 class="card-title">관리자 대시보드</h2>
+                  <p class="card-desc">설문 데이터 관리 및 분석<br>통계 및 리포트 생성</p>
+                  <span class="card-badge">인증 필요</span>
                 </a>
+              </div>
+
+              <!-- Quick Actions -->
+              <div class="quick-actions">
+                <h3><i class="bi bi-lightning-charge"></i> 빠른 실행</h3>
+                <div class="action-buttons">
+                  <a href="/survey/" class="action-btn">
+                    <i class="bi bi-list-check"></i>
+                    전체 설문 목록
+                  </a>
+                  <a href="/api/health" class="action-btn secondary">
+                    <i class="bi bi-activity"></i>
+                    시스템 상태
+                  </a>
+                  <a href="/admin/login" class="action-btn secondary">
+                    <i class="bi bi-box-arrow-in-right"></i>
+                    관리자 로그인
+                  </a>
+                </div>
+              </div>
+
+              <!-- Footer -->
+              <div class="footer">
+                <p>© 2025 SafeWork - 산업안전보건공단 인증 시스템</p>
+                <p>Powered by Cloudflare Workers & PostgreSQL</p>
               </div>
             </div>
           </body>
