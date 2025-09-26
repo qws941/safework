@@ -25,4 +25,5 @@ id = "42e4c9d21d2042cb8ea471a64f5adca6"
 [vars]
 ENVIRONMENT = "production"
 API_VERSION = "v1"
+BACKEND_URL = "https://safework.jclee.me"
 # SLACK_WEBHOOK_URL = "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"

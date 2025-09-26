@@ -477,8 +477,9 @@ def new_employee_health_survey():
 
 
 @survey_bp.route("/002_musculoskeletal_symptom_program", methods=["GET", "POST"])
+@login_required  # 관리자 인증 필요
 def musculoskeletal_symptom_program():
-    """근골격계부담작업 유해요인조사 (002) - 로그인 불필요"""
+    """근골격계부담작업 유해요인조사 (002) - 관리자 전용"""
     try:
         from flask import g
         g._csrf_disabled = True
