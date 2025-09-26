@@ -109,9 +109,112 @@ export default {
         });
       }
 
-      // Survey routes - return static forms or proxy to API
+      // Survey routes
       if (path === '/survey/' || path === '/survey') {
         return Response.redirect(url.origin + '/survey/index', 302);
+      }
+
+      // Handle Form 002 - Admin Program (Protected)
+      if (path === '/survey/002_musculoskeletal_symptom_program') {
+        // This route requires authentication (already checked above)
+        // Return a simple message since Flask backend isn't accessible from CF Workers
+        return new Response(`
+          <!DOCTYPE html>
+          <html lang="ko">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>근골격계부담작업 유해요인조사 - SafeWork</title>
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+            <style>
+              body {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              }
+              .container {
+                background: white;
+                border-radius: 20px;
+                padding: 40px;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                max-width: 800px;
+              }
+              h1 { color: #333; margin-bottom: 30px; }
+              .alert-info { background: #e8f4fd; border: 1px solid #2196F3; color: #1976D2; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>🔒 근골격계부담작업 유해요인조사</h1>
+              <div class="alert alert-info">
+                <h4>관리자 전용 프로그램</h4>
+                <p>이 양식은 안전관리자가 작업장 위험도를 평가하는 프로그램입니다.</p>
+                <hr>
+                <p><strong>접근 권한:</strong> 인증된 관리자만 접근 가능</p>
+                <p><strong>현재 상태:</strong> Flask 백엔드 서버에서 실행됩니다.</p>
+              </div>
+              <div class="mt-4">
+                <a href="/" class="btn btn-primary">메인으로 돌아가기</a>
+                <a href="/survey/001_musculoskeletal_symptom_survey" class="btn btn-success">근로자용 설문지</a>
+              </div>
+            </div>
+          </body>
+          </html>
+        `, {
+          headers: {
+            'Content-Type': 'text/html;charset=UTF-8'
+          }
+        });
+      }
+
+      // Handle admin routes
+      if (path.startsWith('/admin')) {
+        return new Response(`
+          <!DOCTYPE html>
+          <html lang="ko">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>관리자 대시보드 - SafeWork</title>
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+            <style>
+              body {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              }
+              .container {
+                background: white;
+                border-radius: 20px;
+                padding: 40px;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                max-width: 600px;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>🔐 관리자 대시보드</h1>
+              <p>인증된 관리자 전용 페이지입니다.</p>
+              <hr>
+              <ul>
+                <li>설문 데이터 관리</li>
+                <li>통계 분석</li>
+                <li>리포트 생성</li>
+              </ul>
+              <a href="/" class="btn btn-primary mt-3">메인으로 돌아가기</a>
+            </div>
+          </body>
+          </html>
+        `, {
+          headers: {
+            'Content-Type': 'text/html;charset=UTF-8'
+          }
+        });
       }
 
       // Survey API endpoints
