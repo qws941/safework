@@ -227,6 +227,7 @@ def create_app(config_name=None):
     from routes.migration import migration_bp
     from routes.survey import survey_bp
     from routes.pdf_export import pdf_export_bp
+    from routes.mobile_auth import mobile_auth_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix="/auth")
@@ -234,6 +235,7 @@ def create_app(config_name=None):
     app.register_blueprint(admin_bp, url_prefix="/admin")
     app.register_blueprint(pdf_export_bp)
     app.register_blueprint(migration_bp, url_prefix="/admin")
+    app.register_blueprint(mobile_auth_bp, url_prefix="/mobile")
     app.register_blueprint(health_bp)
     app.register_blueprint(document_bp, url_prefix="/documents")
     app.register_blueprint(document_admin_bp, url_prefix="/admin/documents")

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>모바일 토큰 인증 - SafeWork</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .token-container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        .logo {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        h1 {
+            color: #333;
+            font-size: 1.8rem;
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+        
+        .token-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 1.2rem;
+            text-align: center;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .token-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+        }
+        
+        .submit-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+        
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .info-box {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        
+        .info-box h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        
+        .info-box p {
+            color: #666;
+            line-height: 1.5;
+            margin-bottom: 8px;
+        }
+        
+        .back-link {
+            color: #666;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        
+        .back-link:hover {
+            color: #667eea;
+        }
+        
+        .error-message {
+            color: #e74c3c;
+            background: #ffeaa7;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .alternative-methods {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        
+        .alternative-methods h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+        
+        .method-link {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #f8f9fa;
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 20px;
+            margin: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .method-link:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="token-container">
+        <div class="logo">🏭</div>
+        <h1>SafeWork 토큰 인증</h1>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="error-message">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <form method="POST" id="tokenForm">
+            <input type="text" 
+                   class="token-input" 
+                   name="token" 
+                   placeholder="토큰을 입력하세요"
+                   maxlength="10"
+                   autocomplete="off"
+                   required>
+            
+            <button type="submit" class="submit-btn" id="submitBtn">
+                🔓 인증하기
+            </button>
+        </form>
+        
+        <div class="info-box">
+            <h3>📱 토큰 인증 방법</h3>
+            <p>• QR 코드를 스캔하여 자동으로 토큰을 받으세요</p>
+            <p>• 데스크톱에서 생성된 8자리 토큰을 입력하세요</p>
+            <p>• 토큰은 30분 동안 유효합니다</p>
+        </div>
+        
+        <div class="alternative-methods">
+            <h3>🔑 다른 인증 방법</h3>
+            <a href="/mobile/quick-pin" class="method-link">
+                📍 PIN 코드 인증
+            </a>
+            <a href="/admin" class="method-link">
+                🔐 일반 로그인
+            </a>
+        </div>
+        
+        <a href="/" class="back-link">← 홈으로 돌아가기</a>
+    </div>
+    
+    <script>
+        const tokenInput = document.querySelector('.token-input');
+        const submitBtn = document.getElementById('submitBtn');
+        
+        // 토큰 입력 시 대문자 변환
+        tokenInput.addEventListener('input', function() {
+            this.value = this.value.toUpperCase();
+        });
+        
+        // 폼 제출 시 로딩 상태
+        document.getElementById('tokenForm').addEventListener('submit', function() {
+            submitBtn.innerHTML = '🔄 인증 중...';
+            submitBtn.disabled = true;
+        });
+        
+        // URL에서 토큰 파라미터가 있으면 자동 입력
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        if (token) {
+            tokenInput.value = token.toUpperCase();
+            // 자동으로 폼 제출
+            setTimeout(() => {
+                document.getElementById('tokenForm').submit();
+            }, 500);
+        } else {
+            tokenInput.focus();
+        }
+    </script>
+</body>
+</html>
