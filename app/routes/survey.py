@@ -77,7 +77,7 @@ def index():
 <ul>
 <li><a href="/survey/001_musculoskeletal_symptom_survey">📋 근골격계 증상조사표 (Form 001)</a></li>
 <li><a href="/survey/002_musculoskeletal_symptom_program">📊 근골격계부담작업 유해요인조사 (Form 002)</a></li>
-<li><a href="/survey/002_new_employee_health_checkup_form">🩺 신규 입사자 건강검진표</a></li>
+
 <li><a href="/survey/003_musculoskeletal_program">📊 근골격계질환 예방관리 프로그램 조사표 (Form 003) <span class="new-badge">기본</span></a></li>
 <li><a href="/survey/003_musculoskeletal_program_enhanced">🔬 근골격계질환 예방관리 프로그램 조사표 - 완전판 (Form 003 Enhanced) <span class="enhanced-badge">60+ 필드</span></a></li>
 </ul>
@@ -566,117 +566,7 @@ def musculoskeletal_symptom_program():
     # GET 요청
     return render_template("survey/002_musculoskeletal_symptom_program.html", kiosk_mode=kiosk_mode)
 
-@survey_bp.route("/002_new_employee_health_checkup_form", methods=["GET", "POST"])
-def new_employee_health_checkup_form():
-    """신규 입사자 건강검진 양식 (002) - 로그인 불필요"""
-    # Check if accessed via direct URL (kiosk mode)
-    kiosk_mode = (
-        request.args.get("kiosk") == "1"
-        or request.referrer is None
-        or "survey" not in (request.referrer or "")
-    )
 
-    if request.method == "GET":
-        # track_page_view("002_new_employee_health_checkup_form")
-        pass
-
-    if request.method == "POST":
-        # 기본적으로 익명 사용자 ID 1을 사용
-        user_id = 1  # 익명 사용자
-        if current_user.is_authenticated:
-            user_id = current_user.id
-
-        # 모든 폼 데이터를 수집하여 responses JSON 필드에 저장
-        all_form_data = {}
-        for key, value in request.form.items():
-            if key.endswith("[]"):
-                # 리스트 형태 데이터 처리
-                all_form_data[key] = request.form.getlist(key)
-            else:
-                all_form_data[key] = value
-
-        survey = Survey(
-            user_id=user_id,
-            form_type="002",  # 양식 타입 구분
-            employee_number=request.form.get("employee_number"),
-            name=request.form.get("name"),
-            department=request.form.get("department"),
-            position=request.form.get("position"),
-            age=request.form.get("age", type=int),
-            gender=request.form.get("gender"),
-            work_years=request.form.get("work_years", type=int),
-            work_months=request.form.get("work_months", type=int),
-            # 기본 건강 정보
-            height_cm=request.form.get("height_cm", type=float),
-            weight_kg=request.form.get("weight_kg", type=float),
-            blood_type=request.form.get("blood_type"),
-            # 기존 질병 이력
-            existing_conditions=request.form.get("existing_conditions"),
-            medication_history=request.form.get("medication_history"),
-            allergy_history=request.form.get("allergy_history"),
-            # 모든 설문 응답 데이터를 JSON으로 저장
-            responses=all_form_data,
-        )
-
-        try:
-            db.session.add(survey)
-            db.session.commit()
-
-            # 🚀 RAW DATA 파일 생성 - 설문 제출마다 개별 파일 저장
-            try:
-                from utils.raw_data_exporter import export_survey_raw_data
-
-                # JSON과 CSV 형태로 모두 저장
-                exported_files = export_survey_raw_data(
-                    survey_data=all_form_data,
-                    survey_id=survey.id,
-                    form_type="002",
-                    format_types=["json", "csv"],
-                )
-
-                current_app.logger.info(
-                    f"✅ Raw data files created for survey {survey.id}: {exported_files}"
-                )
-
-            except Exception as export_error:
-                # Raw data 저장 오류해도 설문 제출은 완료로 처리
-                current_app.logger.warning(
-                    f"⚠️ Raw data export failed for survey {survey.id}: {str(export_error)}"
-                )
-
-            # 설문 제출 추적
-            # track_survey_submission(form_type="002", survey_id=survey.id, form_data=all_form_data)
-
-            # 슬랙 알림 전송 (002 설문 제출 완료)
-            try:
-                survey_data = {
-                    'id': survey.id,
-                    'form_type': survey.form_type,
-                    'name': survey.name,
-                    'department': survey.department,
-                    'position': survey.position,
-                    'age': survey.age,
-                    'responses': all_form_data
-                }
-                send_survey_slack_notification(survey_data)
-                current_app.logger.info(f"✅ 슬랙 알림 전송 완료: 설문 ID {survey.id}")
-            except Exception as slack_error:
-                current_app.logger.warning(f"⚠️ 슬랙 알림 전송 오류: {str(slack_error)}")
-
-            flash("신규 입사자 건강검진 양식이 완료되었습니다 제출되었습니다.", "success")
-            if kiosk_mode:
-                return redirect(url_for("survey.complete", id=survey.id, kiosk=1))
-            return redirect(url_for("survey.complete", id=survey.id))
-
-        except Exception as e:
-            db.session.rollback()
-            current_app.logger.error(f"Survey 002 submission error: {str(e)}")
-            flash(f"설문 제출 중 오류가 발생했습니다: {str(e)}", "error")
-            return redirect(url_for("survey.new_employee_health_checkup_form"))
-
-    return render_template(
-        "survey/002_new_employee_health_checkup_form.html", kiosk_mode=kiosk_mode
-    )
 
 
 @survey_bp.route("/003_musculoskeletal_program", methods=["GET", "POST"])
