@@ -23,7 +23,7 @@ const app = new Hono<{ Bindings: Env }>();
 // Middleware
 app.use('*', logger());
 app.use('/api/*', cors({
-  origin: ['https://safework2.jclee.me', 'http://localhost:3000'],
+  origin: ['https://safework.jclee.me', 'http://localhost:3000'],
   credentials: true,
 }));
 

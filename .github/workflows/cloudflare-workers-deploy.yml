@@ -9,8 +9,8 @@ on:
 
 env:
   NODE_VERSION: '20'
-  WORKER_NAME: safework2
-  CUSTOM_DOMAIN: safework2.jclee.me
+  WORKER_NAME: safework
+  CUSTOM_DOMAIN: safework.jclee.me
 
 jobs:
   cloudflare-workers-deploy:

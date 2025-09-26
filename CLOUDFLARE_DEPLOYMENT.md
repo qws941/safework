@@ -10,7 +10,7 @@ SafeWork 프로젝트는 **듀얼 배포 전략**을 사용하여 완전한 자�
 - **파일**: `.github/workflows/portainer-deployment.yml`
 
 ### 2. Cloudflare Workers (Edge Computing)
-- **URL**: https://safework2.jclee.me
+- **URL**: https://safework.jclee.me (Workers 우선 라우팅)
 - **배포 방식**: GitHub Actions → Cloudflare Workers
 - **파일**: `.github/workflows/cloudflare-workers-deploy.yml`
 
@@ -30,7 +30,7 @@ SafeWork 프로젝트는 **듀얼 배포 전략**을 사용하여 완전한 자�
 ### 2. Wrangler 설정
 ```toml
 # workers/wrangler.toml
-name = "safework2"
+name = "safework"
 main = "src/index.ts"
 compatibility_date = "2024-01-01"
 
@@ -41,7 +41,7 @@ id = "54cbaf6aeff64ebbab07adb7ac56f5c8"
 
 # 커스텀 도메인
 [[routes]]
-pattern = "safework2.jclee.me/*"
+pattern = "safework.jclee.me/*"
 zone_name = "jclee.me"
 ```
 
@@ -73,7 +73,7 @@ zone_name = "jclee.me"
 
 ## 🔄 자동 배포 프로세스
 
-### Cloudflare Workers 배포 (safework2.jclee.me)
+### Cloudflare Workers 배포 (safework.jclee.me)
 1. **코드 변경**: `workers/**` 또는 워크플로우 파일 수정
 2. **git push**: master 브랜치로 푸시
 3. **GitHub Actions 실행**:
@@ -102,7 +102,7 @@ zone_name = "jclee.me"
 ### 헬스체크 엔드포인트
 ```bash
 # Cloudflare Workers
-curl https://safework2.jclee.me/api/health
+curl https://safework.jclee.me/api/health
 
 # 메인 애플리케이션
 curl https://safework.jclee.me/health

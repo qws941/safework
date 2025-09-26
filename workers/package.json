@@ -1,5 +1,5 @@
 {
-  "name": "safework2-workers",
+  "name": "safework-workers",
   "version": "1.0.0",
   "description": "SafeWork Cloudflare Workers Edge Proxy",
   "main": "src/index.ts",

@@ -29,7 +29,7 @@ const app = new Hono<{ Bindings: Env }>();
 app.use('*', logger());
 app.use('*', secureHeaders());
 app.use('*', cors({
-  origin: ['https://safework2.jclee.me', 'https://safework.jclee.me'],
+  origin: ['https://safework.jclee.me'],
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   credentials: true

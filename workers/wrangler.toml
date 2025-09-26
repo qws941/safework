@@ -1,4 +1,4 @@
-name = "safework2"
+name = "safework"
 main = "src/index.ts"
 compatibility_date = "2024-01-01"
 compatibility_flags = ["nodejs_compat"]
@@ -13,12 +13,12 @@ id = "54cbaf6aeff64ebbab07adb7ac56f5c8"
 [vars]
 JWT_SECRET = "safework-jwt-secret-2024-production"
 ADMIN_USERNAME = "admin"
-BACKEND_URL = "https://safework2.jclee.me"
+BACKEND_URL = "https://safework.jclee.me"
 ENVIRONMENT = "production"
 
 # Routes
 [[routes]]
-pattern = "safework2.jclee.me/*"
+pattern = "safework.jclee.me/*"
 zone_name = "jclee.me"
 
 # Rate limiting removed for Free plan
@@ -27,22 +27,22 @@ zone_name = "jclee.me"
 
 # Development environment
 [env.development]
-name = "safework2-dev"
+name = "safework-dev"
 vars = { BACKEND_URL = "http://localhost:4545", DEBUG = "true", ENVIRONMENT = "development" }
 
 # Production environment
 [env.production]
-name = "safework2-prod"
+name = "safework-prod"
 
 [env.production.vars]
 JWT_SECRET = "safework-jwt-secret-2024-production"
 ADMIN_USERNAME = "admin"
-BACKEND_URL = "https://safework2.jclee.me"
+BACKEND_URL = "https://safework.jclee.me"
 DEBUG = "false"
 ENVIRONMENT = "production"
 
 # D1 Database - Will be configured by GitHub Actions
 # [[d1_databases]]
 # binding = "SAFEWORK_DB"
-# database_name = "safework2-db"
+# database_name = "safework-db"
 # database_id = "will-be-configured-by-github-actions"
