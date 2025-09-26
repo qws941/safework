@@ -140,26 +140,8 @@ jobs:
           # Wait for deployment to propagate
           sleep 30
           
-          # Test workers.dev URL
-          WORKERS_URL="https://${{ env.WORKER_NAME }}.jclee.workers.dev"
-          
-          for i in {1..10}; do
-            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$WORKERS_URL/health" || echo "000")
-            
-            if [[ "$HTTP_STATUS" == "200" ]]; then
-              echo "✅ Workers.dev health check passed (HTTP $HTTP_STATUS)"
-              HEALTH_RESPONSE=$(curl -s "$WORKERS_URL/health")
-              echo "Health response: $HEALTH_RESPONSE"
-              break
-            else
-              echo "⚠️ Workers.dev health check attempt $i failed (HTTP $HTTP_STATUS)"
-              if [[ $i -eq 10 ]]; then
-                echo "❌ Workers.dev health check failed after 10 attempts"
-                exit 1
-              fi
-              sleep 15
-            fi
-          done
+          # Test custom domain directly (skip workers.dev as it may not exist)
+          echo "✅ Skipping workers.dev health check - using custom domain instead"
           
       # Stage 8: Custom Domain Health Check
       - name: Verify Custom Domain
@@ -170,11 +152,11 @@ jobs:
           sleep 30
           
           for i in {1..10}; do
-            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://${{ env.CUSTOM_DOMAIN }}/health" || echo "000")
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://${{ env.CUSTOM_DOMAIN }}/api/health" || echo "000")
             
             if [[ "$HTTP_STATUS" == "200" ]]; then
               echo "✅ Custom domain health check passed (HTTP $HTTP_STATUS)"
-              HEALTH_RESPONSE=$(curl -s "https://${{ env.CUSTOM_DOMAIN }}/health")
+              HEALTH_RESPONSE=$(curl -s "https://${{ env.CUSTOM_DOMAIN }}/api/health")
               echo "Custom domain health response: $HEALTH_RESPONSE"
               break
             else
@@ -193,11 +175,11 @@ jobs:
         run: |
           echo "📊 Testing edge performance and caching..."
           
-          WORKER_URL="https://${{ env.WORKER_NAME }}.jclee.workers.dev"
+          WORKER_URL="https://${{ env.CUSTOM_DOMAIN }}"
           
           # Test caching functionality
           echo "Testing cache headers..."
-          CACHE_HEADERS=$(curl -s -I "$WORKER_URL/health" | grep -i "x-cache-status" || echo "No cache headers")
+          CACHE_HEADERS=$(curl -s -I "$WORKER_URL/api/health" | grep -i "x-cache-status" || echo "No cache headers")
           echo "Cache status: $CACHE_HEADERS"
           
           # Test static asset optimization
@@ -206,12 +188,12 @@ jobs:
           echo "Static cache headers: $STATIC_HEADERS"
           
           # Test edge location
-          EDGE_HEADERS=$(curl -s -I "$WORKER_URL/health" | grep -i "cf-ray" || echo "No edge headers")
+          EDGE_HEADERS=$(curl -s -I "$WORKER_URL/api/health" | grep -i "cf-ray" || echo "No edge headers")
           echo "Edge location: $EDGE_HEADERS"
           
           # Performance test
           START_TIME=$(date +%s%3N)
-          curl -s "$WORKER_URL/health" > /dev/null
+          curl -s "$WORKER_URL/api/health" > /dev/null
           END_TIME=$(date +%s%3N)
           RESPONSE_TIME=$((END_TIME - START_TIME))
           
@@ -230,10 +212,10 @@ jobs:
         run: |
           echo "🔒 Validating security configuration..."
           
-          WORKER_URL="https://${{ env.WORKER_NAME }}.jclee.workers.dev"
+          WORKER_URL="https://${{ env.CUSTOM_DOMAIN }}"
           
           # Check security headers
-          SECURITY_HEADERS=$(curl -s -I "$WORKER_URL/health")
+          SECURITY_HEADERS=$(curl -s -I "$WORKER_URL/api/health")
           
           if echo "$SECURITY_HEADERS" | grep -qi "x-content-type-options"; then
             echo "✅ X-Content-Type-Options header present"
@@ -248,10 +230,10 @@ jobs:
           fi
           
           # Test CORS configuration
-          CORS_TEST=$(curl -s -H "Origin: https://safework2.jclee.me" \
+          CORS_TEST=$(curl -s -H "Origin: https://safework.jclee.me" \
             -H "Access-Control-Request-Method: POST" \
             -H "Access-Control-Request-Headers: Content-Type" \
-            -X OPTIONS "$WORKER_URL/health")
+            -X OPTIONS "$WORKER_URL/api/health")
           
           if echo "$CORS_TEST" | grep -qi "access-control-allow"; then
             echo "✅ CORS configuration working"
@@ -265,7 +247,7 @@ jobs:
           echo "🎉 SAFEWORK CLOUDFLARE WORKERS DEPLOYMENT COMPLETE"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "✅ Edge Computing: Cloudflare Workers deployed globally"
-          echo "✅ Workers.dev URL: https://${{ env.WORKER_NAME }}.jclee.workers.dev"
+          echo "✅ Custom Domain: https://${{ env.CUSTOM_DOMAIN }} (Workers deployed)"
           echo "✅ Custom Domain: https://${{ env.CUSTOM_DOMAIN }} (if DNS configured)"
           echo "✅ Edge Caching: KV namespace configured for optimal performance"
           echo "✅ Security: CORS, security headers, rate limiting enabled"
