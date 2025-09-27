@@ -468,7 +468,7 @@ app.get('/survey/:surveyType', async (c) => {
   }
 
   if (surveyType === '002_musculoskeletal_symptom_program') {
-    console.log('✅ 002 PREMIUM ADMIN DASHBOARD LOADED - MANAGEMENT INTERFACE ACTIVE! - FORCE DEPLOY');
+    console.log('✅ 002 PREMIUM ADMIN DASHBOARD LOADED - MANAGEMENT INTERFACE ACTIVE! - FORCE DEPLOY V3');
     return c.html(form002Template);
   }
   
