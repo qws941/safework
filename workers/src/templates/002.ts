@@ -3,296 +3,475 @@ export const form002Template = `<!DOCTYPE html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>근골격계 증상 분석 결과 (002) - SafeWork</title>
+    <title>관리자 대시보드 (002) - SafeWork</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
         body { background-color: #f8f9fa; font-family: 'Malgun Gothic', sans-serif; }
-        .analysis-container { max-width: 1000px; margin: 0 auto; padding: 20px; }
-        .analysis-header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; text-align: center; }
-        .analysis-section { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 20px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .admin-container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .admin-header { background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; text-align: center; }
+        .admin-section { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 20px rgba(0,0,0,0.1); margin-bottom: 20px; }
         .section-title { color: #495057; font-weight: bold; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #e9ecef; }
-        .risk-badge { padding: 8px 15px; border-radius: 20px; font-weight: bold; color: white; }
-        .risk-low { background-color: #10b981; }
-        .risk-medium { background-color: #f59e0b; }
-        .risk-high { background-color: #ef4444; }
-        .risk-critical { background-color: #dc2626; }
-        .program-card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-bottom: 15px; }
-        .program-urgent { border-color: #ef4444; background-color: #fef2f2; }
-        .program-recommended { border-color: #f59e0b; background-color: #fffbeb; }
-        .program-preventive { border-color: #10b981; background-color: #f0fdf4; }
-        .progress-bar { height: 25px; border-radius: 12px; }
+        .stat-card { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 20px; border-radius: 8px; text-align: center; }
+        .stat-card.danger { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+        .stat-card.success { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+        .stat-card.primary { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
+        .survey-table { font-size: 0.9rem; }
+        .risk-badge { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; }
+        .risk-low { background-color: #10b981; color: white; }
+        .risk-medium { background-color: #f59e0b; color: white; }
+        .risk-high { background-color: #ef4444; color: white; }
+        .risk-critical { background-color: #dc2626; color: white; }
+        .btn-group-sm .btn { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
+        .filter-section { background: #f1f5f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
     </style>
 </head>
 <body>
-    <div class="analysis-container">
-        <div class="analysis-header">
-            <h1><i class="bi bi-graph-up"></i> 근골격계 증상 분석 결과</h1>
-            <p class="mb-0">Musculoskeletal Symptom Analysis Results (002)</p>
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1><i class="bi bi-speedometer2"></i> SafeWork 관리자 대시보드</h1>
+            <p class="mb-0">Administrator Dashboard (002) - 근골격계 증상조사 관리</p>
         </div>
 
-        <!-- Personal Info Summary -->
-        <div class="analysis-section">
-            <h3 class="section-title"><i class="bi bi-person-badge"></i> 조사 대상자 정보</h3>
-            <div class="row" id="personalInfo">
-                <div class="col-md-3">
-                    <strong>성명:</strong> <span id="userName">-</span>
+        <!-- Statistics Overview -->
+        <div class="admin-section">
+            <h3 class="section-title"><i class="bi bi-graph-up"></i> 조사 현황 통계</h3>
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <div class="stat-card primary">
+                        <h3 id="totalSurveys">-</h3>
+                        <p class="mb-0">총 조사 건수</p>
+                    </div>
                 </div>
-                <div class="col-md-3">
-                    <strong>부서:</strong> <span id="userDept">-</span>
+                <div class="col-md-3 mb-3">
+                    <div class="stat-card danger">
+                        <h3 id="highRiskCount">-</h3>
+                        <p class="mb-0">고위험 대상자</p>
+                    </div>
                 </div>
-                <div class="col-md-3">
-                    <strong>경력:</strong> <span id="userExp">-</span>년
+                <div class="col-md-3 mb-3">
+                    <div class="stat-card">
+                        <h3 id="mediumRiskCount">-</h3>
+                        <p class="mb-0">중위험 대상자</p>
+                    </div>
                 </div>
-                <div class="col-md-3">
-                    <strong>분석일시:</strong> <span id="analysisDate"></span>
+                <div class="col-md-3 mb-3">
+                    <div class="stat-card success">
+                        <h3 id="lowRiskCount">-</h3>
+                        <p class="mb-0">저위험/정상</p>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Overall Risk Assessment -->
-        <div class="analysis-section">
-            <h3 class="section-title"><i class="bi bi-exclamation-triangle"></i> 종합 위험도 평가</h3>
-            <div class="row text-center">
-                <div class="col-md-12 mb-4">
-                    <div class="card bg-light">
-                        <div class="card-body">
-                            <h2 id="overallRisk" class="risk-badge risk-medium">중위험</h2>
-                            <p class="mt-3 mb-0" id="riskDescription">일부 신체 부위에서 위험 요인이 발견되었습니다. 예방 조치가 필요합니다.</p>
+        <!-- Department Analysis -->
+        <div class="admin-section">
+            <h3 class="section-title"><i class="bi bi-building"></i> 부서별 위험도 분석</h3>
+            <div class="row">
+                <div class="col-md-6">
+                    <canvas id="departmentChart" width="400" height="200"></canvas>
+                </div>
+                <div class="col-md-6">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>부서</th>
+                                    <th>조사자 수</th>
+                                    <th>평균 위험도</th>
+                                    <th>고위험자</th>
+                                </tr>
+                            </thead>
+                            <tbody id="departmentStats">
+                                <!-- Department statistics will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Survey Results Management -->
+        <div class="admin-section">
+            <h3 class="section-title"><i class="bi bi-table"></i> 조사 결과 관리</h3>
+
+            <!-- Filters -->
+            <div class="filter-section">
+                <div class="row">
+                    <div class="col-md-3">
+                        <label class="form-label">부서 필터</label>
+                        <select class="form-select form-select-sm" id="deptFilter">
+                            <option value="">전체 부서</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">위험도 필터</label>
+                        <select class="form-select form-select-sm" id="riskFilter">
+                            <option value="">전체 위험도</option>
+                            <option value="critical">고위험</option>
+                            <option value="high">중위험</option>
+                            <option value="medium">저위험</option>
+                            <option value="low">정상</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">조사일 범위</label>
+                        <input type="date" class="form-control form-control-sm" id="dateFilter">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">&nbsp;</label>
+                        <div>
+                            <button class="btn btn-primary btn-sm" onclick="applyFilters()">
+                                <i class="bi bi-search"></i> 필터 적용
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm" onclick="resetFilters()">
+                                <i class="bi bi-arrow-clockwise"></i> 초기화
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="row">
-                <div class="col-md-6">
-                    <h5>위험 점수 분포</h5>
-                    <div class="mb-2">목/어깨: <div class="progress"><div id="neckProgress" class="progress-bar bg-warning" style="width: 60%">60점</div></div></div>
-                    <div class="mb-2">팔/팔꿈치: <div class="progress"><div id="armProgress" class="progress-bar bg-success" style="width: 20%">20점</div></div></div>
-                    <div class="mb-2">손목/손: <div class="progress"><div id="wristProgress" class="progress-bar bg-success" style="width: 30%">30점</div></div></div>
-                    <div class="mb-2">허리: <div class="progress"><div id="backProgress" class="progress-bar bg-danger" style="width: 80%">80점</div></div></div>
-                    <div class="mb-2">다리/무릎: <div class="progress"><div id="legProgress" class="progress-bar bg-warning" style="width: 40%">40점</div></div></div>
-                </div>
-                <div class="col-md-6">
-                    <h5>위험 요인 분석</h5>
-                    <ul id="riskFactors">
-                        <li>장시간 동일 자세 유지</li>
-                        <li>반복적인 동작 수행</li>
-                        <li>부적절한 작업 환경</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <!-- Customized Improvement Programs -->
-        <div class="analysis-section">
-            <h3 class="section-title"><i class="bi bi-heart-pulse"></i> 맞춤형 개선 프로그램</h3>
-
-            <div id="urgentPrograms">
-                <h5 class="text-danger">즉시 실행 필요</h5>
-                <div class="program-card program-urgent">
-                    <h6><i class="bi bi-exclamation-circle text-danger"></i> 허리 부위 집중 관리</h6>
-                    <p>허리 통증 지수가 높게 측정되었습니다. 즉시 작업 자세 개선이 필요합니다.</p>
-                    <ul>
-                        <li>작업대 높이 조절 (권장: 팔꿈치 90도 각도)</li>
-                        <li>1시간마다 5분씩 스트레칭</li>
-                        <li>허리 지지대 착용 검토</li>
-                        <li>무거운 물건 들기 시 올바른 자세 교육</li>
-                    </ul>
-                </div>
+            <!-- Survey Results Table -->
+            <div class="table-responsive">
+                <table class="table table-striped survey-table">
+                    <thead>
+                        <tr>
+                            <th>번호</th>
+                            <th>성명</th>
+                            <th>부서</th>
+                            <th>조사일</th>
+                            <th>종합위험도</th>
+                            <th>목/어깨</th>
+                            <th>팔/팔꿈치</th>
+                            <th>손목/손</th>
+                            <th>허리</th>
+                            <th>다리/무릎</th>
+                            <th>의료상담</th>
+                            <th>관리</th>
+                        </tr>
+                    </thead>
+                    <tbody id="surveyResults">
+                        <!-- Survey results will be populated here -->
+                    </tbody>
+                </table>
             </div>
 
-            <div id="recommendedPrograms">
-                <h5 class="text-warning">권장 프로그램</h5>
-                <div class="program-card program-recommended">
-                    <h6><i class="bi bi-clock text-warning"></i> 목/어깨 예방 프로그램</h6>
-                    <p>목과 어깨 부위의 피로도가 증가하고 있습니다. 예방적 조치를 권장합니다.</p>
-                    <ul>
-                        <li>목과 어깨 스트레칭 (하루 3회, 10분씩)</li>
-                        <li>모니터 높이 조절 (시선과 수평)</li>
-                        <li>키보드, 마우스 위치 최적화</li>
-                    </ul>
-                </div>
-            </div>
-
-            <div id="preventivePrograms">
-                <h5 class="text-success">예방 프로그램</h5>
-                <div class="program-card program-preventive">
-                    <h6><i class="bi bi-shield-check text-success"></i> 전신 건강 관리 프로그램</h6>
-                    <p>현재 상태를 유지하고 향후 위험을 예방하기 위한 종합 관리 프로그램입니다.</p>
-                    <ul>
-                        <li>주 3회 이상 근력 강화 운동</li>
-                        <li>유산소 운동 (주 150분 이상)</li>
-                        <li>작업 전후 워밍업/쿨다운</li>
-                        <li>정기적인 건강검진 (6개월마다)</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <!-- Medical Consultation Recommendation -->
-        <div class="analysis-section" id="medicalConsultation" style="display: none;">
-            <h3 class="section-title text-danger"><i class="bi bi-hospital"></i> 의료진 상담 권고</h3>
-            <div class="alert alert-danger">
-                <h5>즉시 전문의 상담을 받으시기 바랍니다</h5>
-                <p>현재 증상의 정도가 심각한 수준입니다. 다음과 같은 전문의 상담을 권장합니다:</p>
-                <ul id="medicalRecommendations">
-                    <li>정형외과 - 허리, 목, 어깨 관련 증상</li>
-                    <li>신경외과 - 신경 압박 증상</li>
-                    <li>재활의학과 - 물리치료 및 재활 프로그램</li>
+            <!-- Pagination -->
+            <nav aria-label="조사 결과 페이지네이션">
+                <ul class="pagination justify-content-center" id="pagination">
+                    <!-- Pagination will be populated here -->
                 </ul>
-            </div>
+            </nav>
         </div>
 
-        <!-- Action Buttons -->
-        <div class="text-center">
-            <button onclick="printResults()" class="btn btn-primary me-3">
-                <i class="bi bi-printer"></i> 결과 인쇄
-            </button>
-            <button onclick="downloadPDF()" class="btn btn-secondary me-3">
-                <i class="bi bi-file-earmark-pdf"></i> PDF 다운로드
-            </button>
-            <a href="/survey/001_musculoskeletal_symptom_survey" class="btn btn-outline-primary">
-                <i class="bi bi-arrow-clockwise"></i> 재조사 실시
-            </a>
+        <!-- Quick Actions -->
+        <div class="admin-section">
+            <h3 class="section-title"><i class="bi bi-tools"></i> 관리 작업</h3>
+            <div class="row">
+                <div class="col-md-4">
+                    <button class="btn btn-success w-100 mb-2" onclick="exportToExcel()">
+                        <i class="bi bi-file-earmark-excel"></i> Excel 내보내기
+                    </button>
+                </div>
+                <div class="col-md-4">
+                    <button class="btn btn-primary w-100 mb-2" onclick="generateReport()">
+                        <i class="bi bi-file-earmark-text"></i> 종합 리포트 생성
+                    </button>
+                </div>
+                <div class="col-md-4">
+                    <button class="btn btn-warning w-100 mb-2" onclick="sendAlerts()">
+                        <i class="bi bi-bell"></i> 고위험자 알림 발송
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
-        console.log('002 Analysis Page Loaded - ENG LOG');
+        console.log('002 Admin Dashboard Loaded - ENG LOG');
 
-        // Extract 001 survey data from URL
-        function getAnalysisData() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const dataParam = urlParams.get('data');
-
-            if (dataParam) {
-                try {
-                    const parsedData = JSON.parse(decodeURIComponent(dataParam));
-                    console.log('Parsed 001 survey data:', parsedData);
-                    return parsedData;
-                } catch (e) {
-                    console.error('Failed to parse survey data:', e);
-                }
-            }
-
-            // Default demo data
-            console.log('Using demo data - no 001 survey data found');
-            return {
+        // Demo data for testing
+        const demoSurveyData = [
+            {
+                id: 1,
+                name: '김철수',
+                department: '생산팀',
+                date: '2024-09-28',
+                overallRisk: 'high',
+                scores: { neck: 70, arm: 30, wrist: 40, back: 85, leg: 50 },
+                medicalConsultation: 'needed'
+            },
+            {
+                id: 2,
+                name: '이영희',
+                department: '품질관리팀',
+                date: '2024-09-27',
+                overallRisk: 'medium',
+                scores: { neck: 45, arm: 20, wrist: 35, back: 55, leg: 30 },
+                medicalConsultation: 'not_needed'
+            },
+            {
+                id: 3,
+                name: '박민수',
+                department: '생산팀',
+                date: '2024-09-26',
+                overallRisk: 'critical',
+                scores: { neck: 80, arm: 70, wrist: 75, back: 90, leg: 65 },
+                medicalConsultation: 'urgent'
+            },
+            {
+                id: 4,
+                name: '정소영',
+                department: '안전관리팀',
+                date: '2024-09-25',
+                overallRisk: 'low',
+                scores: { neck: 20, arm: 15, wrist: 25, back: 30, leg: 20 },
+                medicalConsultation: 'not_needed'
+            },
+            {
+                id: 5,
                 name: '홍길동',
                 department: '생산팀',
-                work_experience: '5',
-                age: '35',
-                gender: 'male',
-                neck_shoulder_pain: 'moderate',
-                neck_shoulder_intensity: '6',
-                arm_elbow_pain: 'mild',
-                arm_elbow_intensity: '2',
-                wrist_hand_pain: 'mild',
-                wrist_hand_intensity: '3',
-                back_pain: 'severe',
-                back_intensity: '8',
-                leg_knee_pain: 'moderate',
-                leg_knee_intensity: '4',
-                medical_consultation: 'needed'
-            };
+                date: '2024-09-24',
+                overallRisk: 'medium',
+                scores: { neck: 60, arm: 25, wrist: 35, back: 75, leg: 45 },
+                medicalConsultation: 'needed'
+            }
+        ];
+
+        let currentData = [...demoSurveyData];
+        let currentPage = 1;
+        const itemsPerPage = 10;
+
+        // Initialize dashboard
+        function initializeDashboard() {
+            console.log('Initializing admin dashboard');
+            updateStatistics();
+            updateDepartmentAnalysis();
+            renderSurveyTable();
+            populateFilters();
         }
 
-        // Calculate risk score
-        function calculateRiskScore(painLevel, intensity) {
-            const painScores = { none: 0, mild: 25, moderate: 50, severe: 75 };
-            const intensityScore = parseInt(intensity) * 10;
-            const score = Math.min(100, (painScores[painLevel] || 0) + intensityScore);
-            console.log('Risk calculation:', { painLevel, intensity, score });
-            return score;
+        // Update statistics
+        function updateStatistics() {
+            const stats = calculateStatistics(currentData);
+            document.getElementById('totalSurveys').textContent = stats.total;
+            document.getElementById('highRiskCount').textContent = stats.critical + stats.high;
+            document.getElementById('mediumRiskCount').textContent = stats.medium;
+            document.getElementById('lowRiskCount').textContent = stats.low;
         }
 
-        // Assess overall risk
-        function assessOverallRisk(scores) {
-            const maxScore = Math.max(...Object.values(scores));
-            const avgScore = Object.values(scores).reduce((a, b) => a + b, 0) / Object.values(scores).length;
-
-            console.log('Overall risk assessment:', { maxScore, avgScore, scores });
-
-            if (maxScore >= 80 || avgScore >= 60) return { level: 'critical', label: '고위험', class: 'risk-critical' };
-            if (maxScore >= 60 || avgScore >= 40) return { level: 'high', label: '중위험', class: 'risk-high' };
-            if (maxScore >= 40 || avgScore >= 25) return { level: 'medium', label: '저위험', class: 'risk-medium' };
-            return { level: 'low', label: '정상', class: 'risk-low' };
+        // Calculate statistics
+        function calculateStatistics(data) {
+            const stats = { total: 0, critical: 0, high: 0, medium: 0, low: 0 };
+            data.forEach(item => {
+                stats.total++;
+                stats[item.overallRisk]++;
+            });
+            return stats;
         }
 
-        // Render analysis results
-        function renderAnalysis() {
-            console.log('Starting analysis rendering');
-            const data = getAnalysisData();
-
-            // Display personal info
-            document.getElementById('userName').textContent = data.name || '미입력';
-            document.getElementById('userDept').textContent = data.department || '미입력';
-            document.getElementById('userExp').textContent = data.work_experience || '0';
-            document.getElementById('analysisDate').textContent = new Date().toLocaleDateString('ko-KR');
-
-            // Calculate risk scores
-            const scores = {
-                neck: calculateRiskScore(data.neck_shoulder_pain, data.neck_shoulder_intensity),
-                arm: calculateRiskScore(data.arm_elbow_pain, data.arm_elbow_intensity),
-                wrist: calculateRiskScore(data.wrist_hand_pain, data.wrist_hand_intensity),
-                back: calculateRiskScore(data.back_pain, data.back_intensity),
-                leg: calculateRiskScore(data.leg_knee_pain, data.leg_knee_intensity)
-            };
-
-            // Update progress bars
-            const progressBars = [
-                { id: 'neckProgress', score: scores.neck },
-                { id: 'armProgress', score: scores.arm },
-                { id: 'wristProgress', score: scores.wrist },
-                { id: 'backProgress', score: scores.back },
-                { id: 'legProgress', score: scores.leg }
-            ];
-
-            progressBars.forEach(bar => {
-                const element = document.getElementById(bar.id);
-                element.style.width = bar.score + '%';
-                element.textContent = bar.score + '점';
-
-                // Update color based on score
-                element.className = 'progress-bar';
-                if (bar.score >= 70) element.classList.add('bg-danger');
-                else if (bar.score >= 40) element.classList.add('bg-warning');
-                else element.classList.add('bg-success');
+        // Update department analysis
+        function updateDepartmentAnalysis() {
+            const deptStats = {};
+            currentData.forEach(item => {
+                if (!deptStats[item.department]) {
+                    deptStats[item.department] = { count: 0, risks: [], highRisk: 0 };
+                }
+                deptStats[item.department].count++;
+                deptStats[item.department].risks.push(item.overallRisk);
+                if (item.overallRisk === 'critical' || item.overallRisk === 'high') {
+                    deptStats[item.department].highRisk++;
+                }
             });
 
-            // Overall risk assessment
-            const overallRisk = assessOverallRisk(scores);
-            const riskElement = document.getElementById('overallRisk');
-            riskElement.textContent = overallRisk.label;
-            riskElement.className = 'risk-badge ' + overallRisk.class;
+            const tbody = document.getElementById('departmentStats');
+            tbody.innerHTML = '';
+            Object.keys(deptStats).forEach(dept => {
+                const stat = deptStats[dept];
+                const avgRisk = calculateAverageRisk(stat.risks);
+                const row = \`
+                    <tr>
+                        <td>\${dept}</td>
+                        <td>\${stat.count}</td>
+                        <td><span class="risk-badge risk-\${avgRisk.level}">\${avgRisk.label}</span></td>
+                        <td>\${stat.highRisk}</td>
+                    </tr>
+                \`;
+                tbody.innerHTML += row;
+            });
+        }
 
-            // Show medical consultation if needed
-            if (data.medical_consultation === 'needed' || data.medical_consultation === 'urgent' || overallRisk.level === 'critical') {
-                document.getElementById('medicalConsultation').style.display = 'block';
-                console.log('Medical consultation recommended');
+        // Calculate average risk
+        function calculateAverageRisk(risks) {
+            const riskValues = { low: 1, medium: 2, high: 3, critical: 4 };
+            const avg = risks.reduce((sum, risk) => sum + riskValues[risk], 0) / risks.length;
+
+            if (avg >= 3.5) return { level: 'critical', label: '고위험' };
+            if (avg >= 2.5) return { level: 'high', label: '중위험' };
+            if (avg >= 1.5) return { level: 'medium', label: '저위험' };
+            return { level: 'low', label: '정상' };
+        }
+
+        // Render survey table
+        function renderSurveyTable() {
+            const tbody = document.getElementById('surveyResults');
+            tbody.innerHTML = '';
+
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const pageData = currentData.slice(startIndex, endIndex);
+
+            pageData.forEach((item, index) => {
+                const riskBadge = getRiskBadge(item.overallRisk);
+                const medicalIcon = item.medicalConsultation === 'urgent' ? 'bi-exclamation-triangle text-danger' :
+                                   item.medicalConsultation === 'needed' ? 'bi-clock text-warning' : 'bi-check-circle text-success';
+
+                const row = \`
+                    <tr>
+                        <td>\${startIndex + index + 1}</td>
+                        <td>\${item.name}</td>
+                        <td>\${item.department}</td>
+                        <td>\${item.date}</td>
+                        <td><span class="risk-badge risk-\${item.overallRisk}">\${riskBadge}</span></td>
+                        <td>\${item.scores.neck}점</td>
+                        <td>\${item.scores.arm}점</td>
+                        <td>\${item.scores.wrist}점</td>
+                        <td>\${item.scores.back}점</td>
+                        <td>\${item.scores.leg}점</td>
+                        <td><i class="bi \${medicalIcon}"></i></td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary" onclick="viewDetails(\${item.id})">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                                <button class="btn btn-outline-success" onclick="generatePersonalReport(\${item.id})">
+                                    <i class="bi bi-file-text"></i>
+                                </button>
+                                <button class="btn btn-outline-warning" onclick="sendNotification(\${item.id})">
+                                    <i class="bi bi-bell"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                \`;
+                tbody.innerHTML += row;
+            });
+
+            updatePagination();
+        }
+
+        // Get risk badge text
+        function getRiskBadge(risk) {
+            const badges = { low: '정상', medium: '저위험', high: '중위험', critical: '고위험' };
+            return badges[risk] || '미분류';
+        }
+
+        // Update pagination
+        function updatePagination() {
+            const totalPages = Math.ceil(currentData.length / itemsPerPage);
+            const pagination = document.getElementById('pagination');
+            pagination.innerHTML = '';
+
+            for (let i = 1; i <= totalPages; i++) {
+                const li = document.createElement('li');
+                li.className = \`page-item \${i === currentPage ? 'active' : ''}\`;
+                li.innerHTML = \`<a class="page-link" href="#" onclick="changePage(\${i})">\${i}</a>\`;
+                pagination.appendChild(li);
             }
-
-            console.log('Analysis rendering completed');
         }
 
-        // Print results
-        function printResults() {
-            console.log('Print results requested');
-            window.print();
+        // Change page
+        function changePage(page) {
+            currentPage = page;
+            renderSurveyTable();
         }
 
-        // Download PDF (using browser print function)
-        function downloadPDF() {
-            console.log('PDF download requested');
-            alert('PDF 다운로드 기능은 브라우저의 인쇄 기능을 이용해 주세요.\\n인쇄 → 대상을 PDF로 저장');
-            window.print();
+        // Populate filters
+        function populateFilters() {
+            const departments = [...new Set(demoSurveyData.map(item => item.department))];
+            const deptFilter = document.getElementById('deptFilter');
+            departments.forEach(dept => {
+                const option = document.createElement('option');
+                option.value = dept;
+                option.textContent = dept;
+                deptFilter.appendChild(option);
+            });
         }
 
-        // Execute analysis on page load
+        // Apply filters
+        function applyFilters() {
+            console.log('Applying filters');
+            const deptFilter = document.getElementById('deptFilter').value;
+            const riskFilter = document.getElementById('riskFilter').value;
+            const dateFilter = document.getElementById('dateFilter').value;
+
+            currentData = demoSurveyData.filter(item => {
+                if (deptFilter && item.department !== deptFilter) return false;
+                if (riskFilter && item.overallRisk !== riskFilter) return false;
+                if (dateFilter && item.date !== dateFilter) return false;
+                return true;
+            });
+
+            currentPage = 1;
+            updateStatistics();
+            updateDepartmentAnalysis();
+            renderSurveyTable();
+        }
+
+        // Reset filters
+        function resetFilters() {
+            document.getElementById('deptFilter').value = '';
+            document.getElementById('riskFilter').value = '';
+            document.getElementById('dateFilter').value = '';
+            currentData = [...demoSurveyData];
+            currentPage = 1;
+            updateStatistics();
+            updateDepartmentAnalysis();
+            renderSurveyTable();
+        }
+
+        // View details
+        function viewDetails(id) {
+            console.log(\`Viewing details for survey ID: \${id}\`);
+            alert(\`개별 상세 보기 (ID: \${id})\\n개인별 분석 결과 페이지로 이동합니다.\`);
+        }
+
+        // Generate personal report
+        function generatePersonalReport(id) {
+            console.log(\`Generating personal report for ID: \${id}\`);
+            alert(\`개인 리포트 생성 (ID: \${id})\\nPDF 리포트가 생성됩니다.\`);
+        }
+
+        // Send notification
+        function sendNotification(id) {
+            console.log(\`Sending notification for ID: \${id}\`);
+            alert(\`알림 발송 (ID: \${id})\\n해당 직원에게 알림이 발송됩니다.\`);
+        }
+
+        // Export to Excel
+        function exportToExcel() {
+            console.log('Exporting to Excel');
+            alert('Excel 내보내기\\n조사 결과가 Excel 파일로 다운로드됩니다.');
+        }
+
+        // Generate report
+        function generateReport() {
+            console.log('Generating comprehensive report');
+            alert('종합 리포트 생성\\n전체 조사 결과 종합 리포트가 생성됩니다.');
+        }
+
+        // Send alerts
+        function sendAlerts() {
+            console.log('Sending alerts to high-risk individuals');
+            alert('고위험자 알림 발송\\n고위험 대상자들에게 알림이 발송됩니다.');
+        }
+
+        // Initialize dashboard on page load
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('Page loaded, executing analysis');
-            renderAnalysis();
+            console.log('Admin dashboard page loaded, initializing');
+            initializeDashboard();
         });
     </script>
 </body>
