@@ -7,6 +7,8 @@ import { adminRoutes } from './routes/admin';
 import { authRoutes } from './routes/auth';
 import { healthRoutes } from './routes/health';
 import { workerRoutes } from './routes/worker';
+import { excelProcessorRoutes } from './routes/excel-processor';
+import { form002Template } from './templates/002';
 
 export interface Env {
   SAFEWORK_KV: KVNamespace;
@@ -31,6 +33,7 @@ app.use('/api/*', cors({
 app.route('/api/auth', authRoutes);
 app.route('/api/health', healthRoutes);
 app.route('/api/survey', surveyRoutes);
+app.route('/api/excel', excelProcessorRoutes);
 
 // Protected routes (require JWT)
 app.use('/api/admin/*', async (c, next) => {
@@ -453,21 +456,51 @@ app.get('/admin', (c) => {
   return c.html(adminHtml);
 });
 
-// Survey form route - restored to original format
-app.get('/survey/:surveyType', (c) => {
+// Survey form route - using actual form templates
+app.get('/survey/:surveyType', async (c) => {
   const surveyType = c.req.param('surveyType');
-  const surveyTitles: { [key: string]: string } = {
-    '001_musculoskeletal_symptom_survey': '근골격계 증상조사표',
-    '002_new_employee_health_checkup': '신규 입사자 건강검진',
-    '003_musculoskeletal_program': '근골격계부담작업 유해요인조사',
-    'musculoskeletal': '근골격계 증상조사',
-    'safety': '안전의식 조사', 
-    'environment': '작업환경 조사'
+  
+  // Map survey types to template keys
+  const formTemplates = {
+    '001_musculoskeletal_symptom_survey': '001',
+    '002_musculoskeletal_symptom_program': '002',
+    '003_cardiovascular_risk_assessment': '003',
+    '004_industrial_accident_survey': '004',
+    '005_basic_hazard_factor_survey': '005',
+    '006_elderly_worker_approval_form': '006'
   };
   
-  const title = surveyTitles[surveyType] || '설문조사';
+  const templateKey = formTemplates[surveyType];
+  if (!templateKey) {
+    return c.text('Form not found', 404);
+  }
   
-  const surveyHtml = `<!DOCTYPE html>
+  try {
+    // Use embedded template for form 002
+    if (surveyType === '002_musculoskeletal_symptom_program' || templateKey === '002') {
+      console.log('Using embedded 002 template for:', surveyType);
+      return c.html(form002Template);
+    }
+    
+    // Try to get the actual form template from KV store for other forms
+    const template = await c.env.SAFEWORK_KV.get(`${templateKey}_form.html`);
+    if (template) {
+      return c.html(template);
+    }
+    
+    // Fallback: Generate basic form if template not found
+    const surveyTitles = {
+      '001_musculoskeletal_symptom_survey': '근골격계 증상조사표',
+      '002_musculoskeletal_symptom_program': '근골격계부담작업 유해요인조사', 
+      '003_cardiovascular_risk_assessment': '심뇌혈관질환 위험도평가',
+      '004_industrial_accident_survey': '산업재해 실태조사표',
+      '005_basic_hazard_factor_survey': '유해요인 기본조사표',
+      '006_elderly_worker_approval_form': '고령근로자 작업투입 승인요청서'
+    };
+    
+    const title = surveyTitles[surveyType] || '설문조사';
+    
+    const fallbackHtml = `<!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
@@ -475,17 +508,7 @@ app.get('/survey/:surveyType', (c) => {
     <title>${title} - SafeWork</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root {
-            --sw-primary: #6366f1;
-            --sw-primary-light: #a5b4fc;
-            --sw-primary-dark: #4f46e5;
-            --sw-secondary: #64748b;
-            --sw-success: #10b981;
-            --sw-warning: #f59e0b;
-            --sw-danger: #ef4444;
-        }
         body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
@@ -495,207 +518,37 @@ app.get('/survey/:surveyType', (c) => {
             max-width: 900px;
             margin: 0 auto;
             padding: 20px;
-        }
-        .section-card {
-            background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
-            border-radius: 16px;
-            padding: 28px;
-            margin-bottom: 24px;
-            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.08);
-            border: 1px solid rgba(99, 102, 241, 0.1);
-        }
-        .section-title {
-            color: var(--sw-primary);
-            font-size: 1.4rem;
-            font-weight: 700;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid var(--sw-primary-light);
-        }
-        .form-label {
-            font-weight: 600;
-            color: #475569;
-            margin-bottom: 8px;
-        }
-        .form-control, .form-select {
-            border: 2px solid #e2e8f0;
-            border-radius: 10px;
-            padding: 12px;
-        }
-        .form-control:focus, .form-select:focus {
-            border-color: var(--sw-primary);
-            box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25);
-        }
-        .btn-primary {
-            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-            border: none;
-            border-radius: 10px;
-            padding: 12px 30px;
-            font-weight: 600;
-        }
-        .question-group {
-            background: #f8fafc;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 15px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
         }
     </style>
 </head>
 <body>
     <div class="survey-container">
-        <div class="section-card">
-            <div class="text-center mb-5">
-                <i class="bi bi-clipboard-pulse" style="font-size: 3rem; color: var(--sw-primary);"></i>
-                <h1 class="mt-3" style="color: var(--sw-primary);">${title}</h1>
-                <p class="text-muted">귀하의 건강한 작업환경을 위해 성실히 작성해 주시기 바랍니다</p>
-            </div>
-                
-                <form id="survey-form" class="space-y-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">성명</label>
-                        <input type="text" name="name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="이름을 입력하세요">
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">소속 부서</label>
-                        <select name="department" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="">부서를 선택하세요</option>
-                            <option value="production">생산부</option>
-                            <option value="quality">품질관리부</option>
-                            <option value="maintenance">정비부</option>
-                            <option value="safety">안전관리부</option>
-                            <option value="office">사무직</option>
-                        </select>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">근무 경력</label>
-                        <select name="experience" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="">경력을 선택하세요</option>
-                            <option value="less-1">1년 미만</option>
-                            <option value="1-3">1-3년</option>
-                            <option value="3-5">3-5년</option>
-                            <option value="5-10">5-10년</option>
-                            <option value="over-10">10년 이상</option>
-                        </select>
-                    </div>
-                    
-                    <div class="survey-questions" id="survey-questions">
-                        <!-- Dynamic questions will be loaded here -->
-                    </div>
-                    
-                    <div class="flex space-x-4">
-                        <button type="submit" class="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition duration-200">
-                            <i class="fas fa-paper-plane mr-2"></i>설문 제출
-                        </button>
-                        <a href="/" class="flex-1 bg-gray-500 text-white py-3 px-6 rounded-lg hover:bg-gray-600 transition duration-200 text-center">
-                            <i class="fas fa-home mr-2"></i>메인으로
-                        </a>
-                    </div>
-                </form>
-            </div>
+        <div class="text-center mb-5">
+            <h1 class="display-5">${title}</h1>
+            <p class="text-muted">템플릿을 로드하는 중입니다...</p>
+            <div class="spinner-border text-primary" role="status"></div>
+        </div>
+        <div class="alert alert-info">
+            <strong>알림:</strong> 실제 ${title} 양식이 준비되지 않았습니다. 관리자에게 문의해주세요.
+        </div>
+        <div class="text-center">
+            <a href="/" class="btn btn-primary btn-lg">
+                <i class="bi bi-house"></i> 메인으로 돌아가기
+            </a>
         </div>
     </div>
-
-    <script>
-        const surveyQuestions = {
-            'musculoskeletal': [
-                {
-                    question: '목, 어깨 부위에 통증이나 불편함을 느끼신 적이 있습니까?',
-                    type: 'radio',
-                    options: ['전혀 없음', '가끔 있음', '자주 있음', '항상 있음']
-                },
-                {
-                    question: '허리 부위에 통증이나 불편함을 느끼신 적이 있습니까?',
-                    type: 'radio', 
-                    options: ['전혀 없음', '가끔 있음', '자주 있음', '항상 있음']
-                },
-                {
-                    question: '손목이나 손가락 부위에 통증이나 불편함을 느끼신 적이 있습니까?',
-                    type: 'radio',
-                    options: ['전혀 없음', '가끔 있음', '자주 있음', '항상 있음']
-                }
-            ],
-            'safety': [
-                {
-                    question: '작업장의 안전 수칙을 잘 준수하고 있다고 생각하십니까?',
-                    type: 'radio',
-                    options: ['매우 그렇다', '그렇다', '보통이다', '그렇지 않다', '매우 그렇지 않다']
-                },
-                {
-                    question: '안전 교육이 충분히 이루어지고 있다고 생각하십니까?',
-                    type: 'radio',
-                    options: ['매우 충분', '충분', '보통', '부족', '매우 부족']
-                },
-                {
-                    question: '위험한 상황을 목격했을 때 즉시 신고하십니까?',
-                    type: 'radio',
-                    options: ['항상 신고', '대부분 신고', '가끔 신고', '거의 신고하지 않음', '전혀 신고하지 않음']
-                }
-            ],
-            'environment': [
-                {
-                    question: '작업 공간의 조명이 적절하다고 생각하십니까?',
-                    type: 'radio',
-                    options: ['매우 적절', '적절', '보통', '부적절', '매우 부적절']
-                },
-                {
-                    question: '작업장의 소음 수준은 어떻습니까?',
-                    type: 'radio',
-                    options: ['매우 조용', '조용', '보통', '시끄러움', '매우 시끄러움']
-                },
-                {
-                    question: '작업장의 온도와 습도는 적절합니까?',
-                    type: 'radio',
-                    options: ['매우 적절', '적절', '보통', '부적절', '매우 부적절']
-                }
-            ]
-        };
-        
-        const currentSurvey = '${surveyType}';
-        const questions = surveyQuestions[currentSurvey] || [];
-        
-        function loadQuestions() {
-            const questionsContainer = document.getElementById('survey-questions');
-            questionsContainer.innerHTML = questions.map((q, index) => \`
-                <div class="mb-6">
-                    <label class="block text-sm font-medium text-gray-700 mb-3">\${index + 1}. \${q.question}</label>
-                    <div class="space-y-2">
-                        \${q.options.map((option, optIndex) => \`
-                            <label class="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer">
-                                <input type="radio" name="question_\${index}" value="\${option}" class="text-blue-600">
-                                <span class="text-gray-700">\${option}</span>
-                            </label>
-                        \`).join('')}
-                    </div>
-                </div>
-            \`).join('');
-        }
-        
-        document.getElementById('survey-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(e.target);
-            const responses = Object.fromEntries(formData);
-            
-            console.log('Survey responses:', responses);
-            
-            // Simulate API submission
-            alert('설문이 성공적으로 제출되었습니다. 참여해 주셔서 감사합니다!');
-            
-            // Redirect to main page
-            setTimeout(() => {
-                window.location.href = '/';
-            }, 1000);
-        });
-        
-        // Load questions on page load
-        loadQuestions();
-    </script>
 </body>
 </html>`;
-  
-  return c.html(surveyHtml);
+    
+    return c.html(fallbackHtml);
+    
+  } catch (error) {
+    console.error('Template loading error:', error);
+    return c.text('Failed to load form template', 500);
+  }
 });
 
 // 404 handler

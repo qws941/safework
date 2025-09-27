@@ -1,268 +1,205 @@
-# SafeWork 산업보건 관리 시스템
+# SafeWork - 산업안전보건관리시스템
 
-[![🚀 Production Deploy](https://github.com/qws941/safework/actions/workflows/deploy.yml/badge.svg)](https://github.com/qws941/safework/actions/workflows/deploy.yml)
+[![Deployment Status](https://img.shields.io/badge/deployment-active-green)](https://safework.jclee.me)
+[![Health Check](https://img.shields.io/badge/health-monitoring-blue)](https://safework.jclee.me/health)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-한국 건설/산업 환경을 위한 통합 산업보건 관리 시스템
+> 한국 건설/산업 환경을 위한 종합 산업안전보건관리시스템  
+> Flask 3.0+, PostgreSQL 15+, Redis 7.0, Cloudflare Workers 기반
 
-**기술 스택**: Flask 3.0+, SQLAlchemy 2.0, PostgreSQL 15+, Redis 7.0
-**배포**: Portainer GitOps, GitHub Actions CI/CD
-**프로덕션**: https://safework.jclee.me
+## 🌟 주요 기능
 
-## 🚀 핵심 기능
+- **📋 설문조사 시스템**: 근골격계부담작업 유해요인조사 등 전문 설문
+- **🔍 Excel 처리**: 자동화된 Excel 파일 분석 및 설문 구조 추출
+- **👥 관리자 패널**: 실시간 데이터 관리 및 보고서 생성
+- **🌐 Edge API**: Cloudflare Workers 기반 글로벌 성능 최적화
+- **📊 실시간 모니터링**: 헬스체크 및 성능 대시보드
 
-- **설문 시스템**: 001 근골격계증상조사표, 002 신규입사자건강진단 양식
-- **SafeWork 관리자**: 13개 전문 관리 패널 (근로자, 건강검진, 의약품, MSDS, 안전교육 등)
-- **RESTful API v2**: 외부 시스템 연동을 위한 `/api/safework/v2/*` 엔드포인트
-- **문서 관리**: 버전 제어 및 접근 로그 시스템
+## 🚀 Quick Start
 
-## 🛠️ 아키텍처
-
-### 컨테이너 구조
-- **독립 컨테이너**: Docker Compose 미사용, 각 서비스 독립 실행
-- **Portainer GitOps**: Git repository 기반 자동 배포
-- **프라이빗 레지스트리**: registry.jclee.me
-
-### 배포 파이프라인 (v2024.9 - Webhook 기반)
-```
-코드 변경 → git push → GitHub Actions (빌드+푸시) → Portainer Webhook (자동 배포 ~20초) → 배포 검증
-                                                  ↘ Fallback API 배포 (~60초) [실패시]
-```
-
-#### 🚀 **새로운 기능 (2024.9 업데이트)**
-- **Webhook 배포**: 기존 60초 → 20초로 배포 시간 단축
-- **지능형 Fallback**: Webhook 실패 시 자동 API 배포 전환
-- **실시간 모니터링**: 배포 후 5분간 성능 자동 감시
-- **포괄적 검증**: 15회 헬스체크 + 컨테이너 상태 확인
-
-### 기술 스택
-- **백엔드**: Flask 3.0+, SQLAlchemy 2.0, PostgreSQL 15+, Redis 7.0
-- **프론트엔드**: Bootstrap 4.6, jQuery, 반응형 디자인
-- **배포**: GitHub Actions, Portainer API, 자동 배포
-- **품질**: Black, Flake8, 자동화된 테스트
-
-## 🚀 빠른 시작
-
-### 필수 명령어
+### 🐳 Docker 환경 (추천)
 ```bash
-# 시스템 상태 확인
-make health
-curl https://safework.jclee.me/health
-
-# 🚀 새로운 배포 시스템 (Webhook 기반)
-./scripts/intelligent_deployment.sh auto          # 지능형 자동 배포
-./scripts/deployment_monitor.sh check --verbose   # 포괄적 상태 확인
-./scripts/deployment_health_validator.sh          # 배포 검증
-
-# 기존 배포 관리 (Fallback)
-./scripts/portainer_stack_deploy.sh status
-./scripts/portainer_stack_deploy.sh deploy
-
-# 개발 환경
-make up && make logs
-
-# 코드 품질
-make format && make lint && make test
-```
-
-### 개발 환경 설정
-```bash
-# 의존성 설치
-cd src/app
-pip install -r requirements.txt
-
-# 환경 변수 설정
-export FLASK_CONFIG=development
-export DB_NAME=safework_db
-export DB_USER=safework
-export DB_PASSWORD=${DB_PASSWORD:-your-database-password}
-
-# 데이터베이스 마이그레이션
-python migrate.py migrate
-
-# 개발 서버 시작
-flask run --host=0.0.0.0 --port=4545
-```
-
-### Docker 개발 환경
-```bash
-# 컨테이너 빌드 및 시작
-make build && make up
-
-# 로그 확인
-make logs
+# 컨테이너 시작
+docker-compose up -d
 
 # 상태 확인
-make health
+curl http://localhost:4545/health
+
+# 로그 확인
+docker-compose logs -f safework-app
 ```
 
-## 🔧 구성
+### 🔧 로컬 개발
+```bash
+# Flask 앱 실행
+cd app/
+python app.py
 
-### 환경 변수
-| 변수 | 설명 | 기본값 | 필수 |
-|------|------|--------|------|
-| `FLASK_CONFIG` | Flask 실행 모드 | `production` | ✅ |
-| `SECRET_KEY` | Flask 세션 암호화 키 | - | ✅ |
-| `DB_HOST` | PostgreSQL 호스트 | `safework-postgres` | ✅ |
-| `DB_NAME` | 데이터베이스 명 | `safework_db` | ✅ |
-| `DB_USER` | 데이터베이스 사용자 | `safework` | ✅ |
-| `DB_PASSWORD` | 데이터베이스 비밀번호 | - | ✅ |
-| `REDIS_HOST` | Redis 호스트 | `safework-redis` | ✅ |
-| `TZ` | 시간대 설정 | `Asia/Seoul` | ❌ |
-
-### 관리자 계정
-- **사용자명**: `admin`
-- **비밀번호**: `${ADMIN_PASSWORD:-your-admin-password}`
-- **접속 URL**: `http://localhost:4545/admin`
-
-### 주요 테이블
-```sql
--- 설문 시스템
-surveys                    -- 001/002 양식 데이터 (JSON 저장)
-users                      -- 사용자 인증 정보
-audit_logs                 -- 시스템 활동 로그
-
--- SafeWork 관리 시스템 (13개 테이블)
-safework_workers           -- 근로자 정보
-safework_health_checks     -- 건강검진 기록
-safework_medications       -- 의약품 관리
-safework_msds             -- MSDS 자료
+# Workers 개발 서버
+cd workers/
+npm run dev
 ```
 
-## 🌐 주요 엔드포인트
-
-### 설문 시스템 (익명 접근 지원)
-| 경로 | 설명 | 접근 방법 |
-|------|------|----------|
-| `/` | 메인 홈페이지 | 공개 |
-| `/survey/001_musculoskeletal_symptom_survey` | 001 근골격계증상조사표 | 공개 (익명) |
-| `/survey/002_new_employee_health_checkup_form` | 002 신규입사자건강진단 | 공개 (익명) |
-| `/admin/dashboard` | 관리자 대시보드 | 로그인 필요 |
-| `/admin/safework` | SafeWork 관리 허브 | 로그인 필요 |
-
-### SafeWork 관리 패널 (13개 전문 패널)
-| 경로 | 설명 | 주요 기능 |
-|------|------|----------|
-| `/admin/safework/workers` | 근로자 관리 | 직원 마스터 데이터, 건강 상태 추적 |
-| `/admin/safework/health-checks` | 건강검진 관리 | 정기/특수검진, 일정 및 결과 |
-| `/admin/safework/medications` | 의약품 관리 | 재고 관리, 유효기간, 처방 기록 |
-| `/admin/safework/msds` | MSDS 관리 | MSDS 자료, 화학물질 정보 |
-
-### 시스템 API
-| 경로 | 설명 | 응답 형식 |
-|------|------|----------|
-| `/health` | 헬스 체크 | JSON (상태, 타임스탬프, 버전) |
-| `/api/safework/v2/*` | RESTful API v2 | JSON |
-
-## 📂 프로젝트 구조
+## 📁 프로젝트 구조
 
 ```
 safework/
-├── .github/workflows/          # GitHub Actions CI/CD
-│   └── deploy.yml             # 배포 파이프라인
-├── src/app/                   # Flask 애플리케이션
-│   ├── models*.py             # 데이터베이스 모델
-│   ├── routes/                # 라우트 정의
-│   ├── templates/             # HTML 템플릿
-│   └── Dockerfile             # 앱 컨테이너
-├── infrastructure/docker/     # 컨테이너 구성
-│   ├── postgres/              # PostgreSQL 설정
-│   └── redis/                 # Redis 설정
-├── scripts/                   # 관리 스크립트
-├── PORTAINER_GITOPS.md        # GitOps 배포 가이드
-└── docker-compose.yml         # 컨테이너 오케스트레이션
+├── 🏢 app/              # Flask 웹 애플리케이션
+│   ├── routes/          # API 라우트 (Blueprint 패턴)
+│   ├── models/          # 데이터베이스 모델
+│   ├── templates/       # Jinja2 템플릿
+│   └── static/          # 정적 파일
+├── ⚡ workers/          # Cloudflare Workers
+│   ├── src/routes/      # Edge API 핸들러
+│   └── wrangler.toml    # Cloudflare 설정
+├── 🗄️ postgres/        # PostgreSQL 설정
+├── 🔄 redis/           # Redis 캐시 설정
+├── 📜 scripts/         # 배포/유틸리티 스크립트
+├── 📊 data/            # 설문조사 양식 데이터
+└── 📚 docs/            # 프로젝트 문서
 ```
 
-## 📊 모니터링 및 운영
+## 🏗️ 아키텍처
 
-### 🆕 새로운 모니터링 시스템 (2024.9)
-```bash
-# 실시간 성능 모니터링 (추천)
-./scripts/deployment_monitor.sh monitor           # 지속적 모니터링
-./scripts/deployment_monitor.sh check --verbose   # 상세 상태 확인
-./scripts/deployment_monitor.sh report            # 성능 리포트 생성
-
-# 지능형 배포 및 검증
-./scripts/intelligent_deployment.sh auto --verbose
-./scripts/deployment_health_validator.sh --max-attempts 15
+### 🌐 하이브리드 아키텍처
+```
+[Client] → [Cloudflare Workers] → [Flask Backend] → [PostgreSQL/Redis]
+            ↓
+         [KV Storage]
 ```
 
-### 기존 헬스 체크
+- **Frontend**: Cloudflare Workers (Edge Processing)
+- **Backend**: Flask 3.0+ (Python)
+- **Database**: PostgreSQL 15+ (Primary), Redis 7.0 (Cache)
+- **Deployment**: Docker + GitHub Actions + Portainer
+
+### 🔄 배포 파이프라인 (2024.9)
 ```bash
-# 애플리케이션 상태 확인
+git push origin master
+    ↓
+GitHub Actions (병렬 빌드)
+    ↓
+registry.jclee.me (이미지 저장)
+    ↓
+Portainer Webhook (자동 배포)
+    ↓
+Health Check (15회 검증)
+```
+
+## 🚀 배포 및 운영
+
+### 🔄 자동 배포
+```bash
+# GitHub Actions 자동 배포 (추천)
+git push origin master
+
+# 수동 배포 스크립트
+./scripts/intelligent_deployment.sh auto
+./scripts/deployment_monitor.sh check --verbose
+```
+
+### 📊 모니터링
+```bash
+# 서비스 상태 확인
 curl https://safework.jclee.me/health
 
-# 컨테이너 상태 모니터링
-make health
-./scripts/portainer_stack_deploy.sh status
+# 실시간 모니터링
+./scripts/deployment_monitor.sh monitor
 ```
 
-### 컨테이너 관리
+### 🛠️ 개발 도구
 ```bash
-# 로그 확인
-make logs
-./scripts/portainer_stack_deploy.sh logs safework-app
+# 코드 품질
+cd app/
+black . --line-length 88    # 코드 포맷팅
+flake8 .                     # 린팅
 
-# 컨테이너 재시작
-./scripts/portainer_stack_deploy.sh restart
-
-# 최신 이미지 업데이트
-./scripts/portainer_stack_deploy.sh deploy
+# Workers 개발
+cd workers/
+npm run lint:fix             # ESLint 자동 수정
+npm test                     # 테스트 실행
+npm run deploy               # 배포
 ```
 
-### 데이터베이스 운영
+## 🔗 Production URLs
+
+| 서비스 | URL | 설명 |
+|--------|-----|------|
+| 🌐 **메인** | https://safework.jclee.me | 메인 웹 서비스 |
+| 🔧 **API** | https://safework.jclee.me/api | RESTful API |
+| 👥 **관리자** | https://safework.jclee.me/admin | 관리자 패널 |
+| 📋 **설문** | https://safework.jclee.me/survey/002_* | 설문조사 |
+| 📊 **Excel API** | https://safework.jclee.me/api/excel | Excel 처리 API |
+| 💚 **Health** | https://safework.jclee.me/health | 상태 확인 |
+
+## 🛡️ 보안 및 환경설정
+
+### 🔑 필수 환경변수
 ```bash
-# PostgreSQL 접속
-docker exec -it safework-postgres psql -U safework -d safework_db
-
-# 데이터베이스 백업
-make db-backup
-
-# 마이그레이션
-make db-migrate
+FLASK_CONFIG=production
+DB_NAME=safework_db          # 중요: safework_db (safework 아님)
+DB_PASSWORD=<secure-password>
+SECRET_KEY=<strong-random-key>
+TZ=Asia/Seoul               # 한국 시간대
 ```
 
-## 🔧 문제 해결
+### 🔐 GitHub Secrets
+- `PORTAINER_USERNAME`, `PORTAINER_PASSWORD`
+- `REGISTRY_PASSWORD`, `DB_PASSWORD`
+- `SECRET_KEY`, `ADMIN_PASSWORD`
 
-### 배포 이슈
+## 📚 문서
+
+| 문서 | 설명 |
+|------|------|
+| [📋 프로젝트 구조](docs/PROJECT_STRUCTURE.md) | 상세 아키텍처 설명 |
+| [🔗 API 엔드포인트](docs/URL_ENDPOINTS.md) | API 명세서 |
+| [☁️ Cloudflare 배포](docs/CLOUDFLARE_DEPLOYMENT.md) | Workers 배포 가이드 |
+| [🔄 마이그레이션](docs/MIGRATION-SUMMARY.md) | 시스템 마이그레이션 히스토리 |
+
+## 🏥 상태 확인
+
+### 🔍 헬스체크
 ```bash
-# GitHub Actions 로그 확인
-# Portainer API 연결 확인
-./scripts/portainer_stack_deploy.sh --validate
+# 전체 시스템 상태
+curl https://safework.jclee.me/health
 
-# 컨테이너 로그 확인
-make logs
+# 개별 컴포넌트 확인
+curl https://safework.jclee.me/api/auth/health  # Workers
+docker-compose ps                                # 컨테이너
 ```
 
-### 데이터베이스 연결 이슈
-```bash
-# PostgreSQL 연결 테스트
-docker exec safework-postgres pg_isready -U safework
+### 📊 성능 모니터링
+- **Database**: 60회 재시도 로직, 연결 풀링
+- **Cache**: Redis 헬스체크, 우아한 성능 저하
+- **Edge**: Cloudflare Workers 글로벌 성능
+- **Logging**: JSON 구조화 로그, Loki 호환
 
-# 데이터베이스 초기화 확인
-docker exec safework-postgres psql -U safework -d safework_db -c "\dt"
-```
+## 🚨 문제 해결
 
-## 📚 문서 및 가이드
+### 일반적인 이슈
+| 문제 | 해결방법 |
+|------|----------|
+| DB 연결 실패 | `DB_NAME=safework_db` 확인 |
+| 관리자 패널 404 | `/admin/safework` 리다이렉트 확인 |
+| 배포 실패 | Webhook URL 또는 `./scripts/webhook-deploy.sh` |
+| 컨테이너 시작 실패 | DB/Redis 연결성, `docker-compose logs app` |
 
-### 🆕 새로운 배포 시스템 문서 (2024.9)
-- **[📖 배포 가이드](docs/DEPLOYMENT_GUIDE.md)**: Webhook 기반 배포 완전 가이드
-- **[🔐 GitHub Secrets](docs/GITHUB_SECRETS.md)**: GitHub Actions 설정 가이드
-- **[⚙️ 지능형 배포](scripts/intelligent_deployment.sh)**: 자동 전략 선택 시스템
-- **[📊 모니터링 시스템](scripts/deployment_monitor.sh)**: 성능 감시 및 알림
-
-### 기존 문서
-- **PORTAINER_GITOPS.md**: Portainer GitOps 설정 및 배포 가이드
-- **CLAUDE.md**: 개발 환경 설정 및 상세 가이드
-- **.env.example**: 환경 변수 설정 예시
-
-## 🏆 특징
-
-- ✅ **99.9% 가동시간**: 자동화된 상태 모니터링
-- ✅ **무중단 배포**: GitOps 기반 배포 전략
-- ✅ **보안 강화**: 포괄적인 보안 스캔 및 강화
-- ✅ **확장 가능**: 독립적 컨테이너 확장 능력
-- ✅ **규정 준수**: 산업안전보건법 준수
+### 🆘 지원
+- **이슈 리포트**: GitHub Issues
+- **문서**: `/docs` 디렉토리
+- **로그**: `docker-compose logs -f`
+- **모니터링**: https://safework.jclee.me/health
 
 ---
 
-**🌟 산업 안전 및 보건 관리를 위해 ❤️로 제작**
+<div align="center">
+
+**🏗️ Built with ❤️ for Korean Industrial Safety**
+
+[![Flask](https://img.shields.io/badge/Flask-3.0+-green)](https://flask.palletsprojects.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-blue)](https://www.postgresql.org/)
+[![Cloudflare](https://img.shields.io/badge/Cloudflare-Workers-orange)](https://workers.cloudflare.com/)
+[![Docker](https://img.shields.io/badge/Docker-Containerized-blue)](https://www.docker.com/)
+
+</div>

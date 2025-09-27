@@ -477,9 +477,8 @@ def new_employee_health_survey():
 
 
 @survey_bp.route("/002_musculoskeletal_symptom_program", methods=["GET", "POST"])
-@login_required  # 관리자 인증 필요
 def musculoskeletal_symptom_program():
-    """근골격계부담작업 유해요인조사 (002) - 관리자 전용"""
+    """근골격계부담작업 유해요인조사 (002) - 로그인 불필요"""
     try:
         from flask import g
         g._csrf_disabled = True
@@ -493,11 +492,15 @@ def musculoskeletal_symptom_program():
     )
     
     if request.method == "POST":
-        # 기본적으로 익명 사용자 ID 1을 사용
+        # 기본적으로 익명 사용자 ID 1을 사용 (로그인 불필요)
         user_id = 1  # 익명 사용자
-        if current_user.is_authenticated:
-            user_id = current_user.id
-        
+        try:
+            if current_user.is_authenticated:
+                user_id = current_user.id
+        except:
+            # current_user 접근 불가능한 경우 (익명 사용자)
+            pass
+
         # 모든 폼 데이터를 수집
         all_form_data = {}
         for key, value in request.form.items():
@@ -565,6 +568,220 @@ def musculoskeletal_symptom_program():
     
     # GET 요청
     return render_template("survey/002_musculoskeletal_symptom_program.html", kiosk_mode=kiosk_mode)
+
+@survey_bp.route("/004_industrial_accident_survey", methods=["GET", "POST"])
+def industrial_accident_survey():
+    """산업재해 실태조사표 (004) - 로그인 불필요"""
+    try:
+        from flask import g
+        g._csrf_disabled = True
+    except:
+        pass
+    
+    if request.method == "POST":
+        # 기본적으로 익명 사용자 ID 1을 사용 (로그인 불필요)
+        user_id = 1  # 익명 사용자
+        try:
+            if current_user.is_authenticated:
+                user_id = current_user.id
+        except:
+            # current_user 접근 불가능한 경우 (익명 사용자)
+            pass
+
+        # 모든 폼 데이터를 수집
+        all_form_data = {}
+        for key, value in request.form.items():
+            if key.endswith("[]"):
+                # 리스트 형태 데이터 처리
+                all_form_data[key] = request.form.getlist(key)
+            else:
+                all_form_data[key] = value
+        
+        # 데이터베이스에 저장
+        survey = Survey(
+            user_id=user_id,
+            form_type="004",
+            # 실제 DB 필드 사용
+            name=request.form.get("victim_name") or "피재자",
+            department=request.form.get("department"),
+            # 모든 설문 응답 데이터를 JSON으로 저장
+            responses=all_form_data,
+        )
+        
+        try:
+            db.session.add(survey)
+            db.session.commit()
+            
+            # 성공 응답
+            return jsonify({
+                "success": True, 
+                "message": "산업재해 실태조사표가 성공적으로 제출되었습니다.",
+                "survey_id": survey.id
+            })
+            
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"004 form submission error: {str(e)}")
+            return jsonify({
+                "success": False, 
+                "message": f"제출 중 오류가 발생했습니다: {str(e)}"
+            }), 500
+    
+    # GET 요청 - 폼 템플릿 반환
+    return render_template("survey/004_industrial_accident_survey.html")
+
+
+@survey_bp.route("/005_basic_hazard_factor_survey", methods=["GET", "POST"])
+def basic_hazard_factor_survey():
+    """유해요인 기본조사표 (005) - 로그인 불필요"""
+    try:
+        from flask import g
+        g._csrf_disabled = True
+    except:
+        pass
+    
+    if request.method == "POST":
+        # 기본적으로 익명 사용자 ID 1을 사용 (로그인 불필요)
+        user_id = 1  # 익명 사용자
+        try:
+            if current_user.is_authenticated:
+                user_id = current_user.id
+        except:
+            # current_user 접근 불가능한 경우 (익명 사용자)
+            pass
+
+        # 모든 폼 데이터를 수집
+        all_form_data = {}
+        for key, value in request.form.items():
+            if key.endswith("[]"):
+                # 리스트 형태 데이터 처리
+                all_form_data[key] = request.form.getlist(key)
+            else:
+                all_form_data[key] = value
+        
+        # 위험성 평가 계산
+        hazard_severity = request.form.get("hazard_severity")
+        exposure_probability = request.form.get("exposure_probability")
+        risk_level = calculate_risk_level(hazard_severity, exposure_probability)
+        all_form_data["calculated_risk_level"] = risk_level
+        
+        # 데이터베이스에 저장
+        survey = Survey(
+            user_id=user_id,
+            form_type="005",
+            # 실제 DB 필드 사용
+            name=request.form.get("investigator_name") or "조사자",
+            department=request.form.get("department"),
+            # 모든 설문 응답 데이터를 JSON으로 저장
+            responses=all_form_data,
+        )
+        
+        try:
+            db.session.add(survey)
+            db.session.commit()
+            
+            # 성공 응답
+            return jsonify({
+                "success": True, 
+                "message": "유해요인 기본조사표가 성공적으로 제출되었습니다.",
+                "survey_id": survey.id,
+                "risk_level": risk_level
+            })
+            
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"005 form submission error: {str(e)}")
+            return jsonify({
+                "success": False, 
+                "message": f"제출 중 오류가 발생했습니다: {str(e)}"
+            }), 500
+    
+    # GET 요청 - 폼 템플릿 반환
+    return render_template("survey/005_basic_hazard_factor_survey.html")
+
+
+@survey_bp.route("/006_elderly_worker_approval_form", methods=["GET", "POST"])
+def elderly_worker_approval_form():
+    """고령근로자 작업투입 승인요청서 (006) - 로그인 불필요"""
+    try:
+        from flask import g
+        g._csrf_disabled = True
+    except:
+        pass
+    
+    if request.method == "POST":
+        # 기본적으로 익명 사용자 ID 1을 사용 (로그인 불필요)
+        user_id = 1  # 익명 사용자
+        try:
+            if current_user.is_authenticated:
+                user_id = current_user.id
+        except:
+            # current_user 접근 불가능한 경우 (익명 사용자)
+            pass
+
+        # 모든 폼 데이터를 수집
+        all_form_data = {}
+        for key, value in request.form.items():
+            if key.endswith("[]"):
+                # 리스트 형태 데이터 처리
+                all_form_data[key] = request.form.getlist(key)
+            else:
+                all_form_data[key] = value
+        
+        # 데이터베이스에 저장
+        survey = Survey(
+            user_id=user_id,
+            form_type="006",
+            # 실제 DB 필드 사용
+            name=request.form.get("worker_name") or "근로자",
+            department=request.form.get("department"),
+            # 모든 설문 응답 데이터를 JSON으로 저장
+            responses=all_form_data,
+        )
+        
+        try:
+            db.session.add(survey)
+            db.session.commit()
+            
+            # 성공 응답
+            return jsonify({
+                "success": True, 
+                "message": "고령근로자 작업투입 승인요청서가 성공적으로 제출되었습니다.",
+                "survey_id": survey.id
+            })
+            
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"006 form submission error: {str(e)}")
+            return jsonify({
+                "success": False, 
+                "message": f"제출 중 오류가 발생했습니다: {str(e)}"
+            }), 500
+    
+    # GET 요청 - 폼 템플릿 반환
+    return render_template("survey/006_elderly_worker_approval_form.html")
+
+
+def calculate_risk_level(hazard_severity, exposure_probability):
+    """위험성 평가 계산 함수"""
+    severity_scores = {"경미": 1, "보통": 2, "중대": 3, "치명적": 4}
+    probability_scores = {"낮음": 1, "보통": 2, "높음": 3, "매우높음": 4}
+    
+    severity_score = severity_scores.get(hazard_severity, 2)
+    probability_score = probability_scores.get(exposure_probability, 2)
+    
+    risk_score = severity_score * probability_score
+    
+    if risk_score <= 2:
+        return "허용가능"
+    elif risk_score <= 4:
+        return "관심"
+    elif risk_score <= 8:
+        return "주의"
+    elif risk_score <= 12:
+        return "경고"
+    else:
+        return "위험"
 
 
 

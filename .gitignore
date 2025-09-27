@@ -114,3 +114,7 @@ package-lock.json
 *.sqlite-wal
 deploy_timestamp.txt
 *dns_backup*.json
+
+# Data directories (contain sensitive or large files)
+raw_data/
+data/

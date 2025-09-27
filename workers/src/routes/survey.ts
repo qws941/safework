@@ -8,33 +8,39 @@ surveyRoutes.get('/forms', async (c) => {
   const forms = [
     {
       id: '001_musculoskeletal_symptom_survey',
-      name: '근골격계 증상 설문',
+      name: '근골격계 증상조사표',
       description: '근골격계 질환 예방을 위한 증상 설문조사',
       fields: 40,
     },
     {
-      id: '002_hearing_conservation_survey',
-      name: '청력보존프로그램 설문',
-      description: '소음 노출 근로자 청력보호 설문조사',
+      id: '002_musculoskeletal_symptom_program',
+      name: '근골격계부담작업 유해요인조사',
+      description: '근골격계 부담작업 유해요인 조사 및 평가',
+      fields: 25,
+    },
+    {
+      id: '003_cardiovascular_risk_assessment',
+      name: '심뇌혈관질환 위험도평가',
+      description: '심뇌혈관질환 발병 위험도 평가 설문',
+      fields: 27,
+    },
+    {
+      id: '004_industrial_accident_survey',
+      name: '산업재해 실태조사표',
+      description: '산업재해 발생 현황 및 예방을 위한 실태조사',
+      fields: 33,
+    },
+    {
+      id: '005_basic_hazard_factor_survey',
+      name: '유해요인 기본조사표',
+      description: '작업환경 유해요인 기본조사 및 위험성 평가',
       fields: 35,
     },
     {
-      id: '003_respiratory_protection_survey',
-      name: '호흡기보호프로그램 설문',
-      description: '호흡기 보호구 착용 근로자 설문조사',
-      fields: 30,
-    },
-    {
-      id: '004_work_stress_survey',
-      name: '직무스트레스 설문',
-      description: '한국형 직무스트레스 측정도구',
-      fields: 43,
-    },
-    {
-      id: '005_workplace_mental_health',
-      name: '직장 정신건강 설문',
-      description: '정신건강 증진을 위한 평가 설문',
-      fields: 25,
+      id: '006_elderly_worker_approval_form',
+      name: '고령근로자 작업투입 승인요청서',
+      description: '고령근로자의 안전한 작업투입을 위한 승인 요청 및 관리',
+      fields: 26,
     },
   ];
 
@@ -56,6 +62,38 @@ surveyRoutes.get('/form/:formId', async (c) => {
     return c.json(formStructure);
   } catch (error) {
     return c.json({ error: 'Failed to fetch form' }, 500);
+  }
+});
+
+// Render survey form HTML
+surveyRoutes.get('/:formId', async (c) => {
+  const formId = c.req.param('formId');
+  
+  // Define form templates mapping
+  const formTemplates = {
+    '001_musculoskeletal_symptom_survey': '001',
+    '002_musculoskeletal_symptom_program': '002',
+    '003_cardiovascular_risk_assessment': '003',
+    '004_industrial_accident_survey': '004',
+    '005_basic_hazard_factor_survey': '005',
+    '006_elderly_worker_approval_form': '006'
+  };
+  
+  const templateKey = formTemplates[formId];
+  if (!templateKey) {
+    return c.text('Form not found', 404);
+  }
+  
+  try {
+    const template = await c.env.FORM_TEMPLATES.get(`${templateKey}_form.html`);
+    if (!template) {
+      return c.text('Template not found', 404);
+    }
+    
+    return c.html(template);
+  } catch (error) {
+    console.error('Template error:', error);
+    return c.text('Failed to load form template', 500);
   }
 });
 

@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>산업재해 실태조사표 - SafeWork</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --sw-primary: #dc3545;
+            --sw-primary-light: #f8d7da;
+            --sw-primary-dark: #c82333;
+            --sw-secondary: #6c757d;
+            --sw-success: #28a745;
+            --sw-warning: #ffc107;
+            --sw-danger: #dc3545;
+        }
+        body {
+            background: linear-gradient(135deg, #dc3545 0%, #6c757d 100%);
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+        .survey-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .section-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            overflow: hidden;
+            border-left: 5px solid var(--sw-primary);
+        }
+        .section-header {
+            background: linear-gradient(135deg, var(--sw-primary) 0%, var(--sw-primary-dark) 100%);
+            color: white;
+            padding: 20px;
+            margin: 0;
+            font-weight: 600;
+        }
+        .section-body {
+            padding: 30px;
+        }
+        .form-label {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+        .required {
+            color: var(--sw-danger);
+        }
+        .form-control, .form-select {
+            border-radius: 8px;
+            border: 2px solid #e9ecef;
+            padding: 12px 15px;
+            transition: all 0.3s ease;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--sw-primary);
+            box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--sw-primary) 0%, var(--sw-primary-dark) 100%);
+            border: none;
+            padding: 15px 40px;
+            border-radius: 8px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(220, 53, 69, 0.3);
+        }
+        .alert-info {
+            background: var(--sw-primary-light);
+            border: 1px solid var(--sw-primary);
+            color: var(--sw-primary-dark);
+            border-radius: 8px;
+        }
+        .section-icon {
+            margin-right: 10px;
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+<body>
+    <div class="survey-container">
+        <div class="text-center mb-4">
+            <h1 class="text-white mb-3">
+                <i class="bi bi-exclamation-triangle-fill me-3"></i>
+                산업재해 실태조사표
+            </h1>
+            <p class="text-white-50 fs-5">산업재해 발생 현황 및 예방을 위한 실태조사</p>
+        </div>
+
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle-fill me-2"></i>
+            <strong>중요:</strong> 정확한 재해 분석을 위해 모든 항목을 빠짐없이 작성해 주시기 바랍니다.
+        </div>
+
+        <form id="accidentSurveyForm" method="POST" action="/survey/004_industrial_accident_survey">
+
+            <!-- 기본 정보 -->
+            <div class="section-card">
+                <h2 class="section-header">
+                    <i class="bi bi-building section-icon"></i>기본 정보
+                </h2>
+                <div class="section-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="company_name" class="form-label">회사명 <span class="required">*</span></label>
+                            <input type="text" class="form-control" id="company_name" name="company_name" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="department" class="form-label">부서명 <span class="required">*</span></label>
+                            <input type="text" class="form-control" id="department" name="department" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="investigator_name" class="form-label">조사자명 <span class="required">*</span></label>
+                            <input type="text" class="form-control" id="investigator_name" name="investigator_name" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="investigation_date" class="form-label">조사일자 <span class="required">*</span></label>
+                            <input type="date" class="form-control" id="investigation_date" name="investigation_date" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="accident_date" class="form-label">재해발생일자 <span class="required">*</span></label>
+                            <input type="date" class="form-control" id="accident_date" name="accident_date" required>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 피재자 정보 -->
+            <div class="section-card">
+                <h2 class="section-header">
+                    <i class="bi bi-person section-icon"></i>피재자 정보
+                </h2>
+                <div class="section-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="victim_name" class="form-label">피재자명 <span class="required">*</span></label>
+                            <input type="text" class="form-control" id="victim_name" name="victim_name" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="victim_age" class="form-label">연령 <span class="required">*</span></label>
+                            <input type="number" class="form-control" id="victim_age" name="victim_age" min="18" max="80" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="victim_gender" class="form-label">성별 <span class="required">*</span></label>
+                            <select class="form-select" id="victim_gender" name="victim_gender" required>
+                                <option value="">선택하세요</option>
+                                <option value="남">남</option>
+                                <option value="여">여</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="employment_type" class="form-label">고용형태 <span class="required">*</span></label>
+                            <select class="form-select" id="employment_type" name="employment_type" required>
+                                <option value="">선택하세요</option>
+                                <option value="정규직">정규직</option>
+                                <option value="계약직">계약직</option>
+                                <option value="일용직">일용직</option>
+                                <option value="파견근로자">파견근로자</option>
+                                <option value="하청업체">하청업체</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="work_experience" class="form-label">근무경력(개월) <span class="required">*</span></label>
+                            <input type="number" class="form-control" id="work_experience" name="work_experience" min="0" required>
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <label for="training_status" class="form-label">안전교육이수 <span class="required">*</span></label>
+                            <select class="form-select" id="training_status" name="training_status" required>
+                                <option value="">선택하세요</option>
+                                <option value="완료">완료</option>
+                                <option value="부분완료">부분완료</option>
+                                <option value="미이수">미이수</option>
+                                <option value="해당없음">해당없음</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 재해 발생 정보 -->
+            <div class="section-card">
+                <h2 class="section-header">
+                    <i class="bi bi-exclamation-circle section-icon"></i>재해 발생 정보
+                </h2>
+                <div class="section-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="accident_type" class="form-label">재해형태 <span class="required">*</span></label>
+                            <select class="form-select" id="accident_type" name="accident_type" required>
+                                <option value="">선택하세요</option>
+                                <option value="추락">추락</option>
+                                <option value="전도">전도</option>
+                                <option value="충돌">충돌</option>
+                                <option value="낙하비래">낙하비래</option>
+                                <option value="붕괴도괴">붕괴도괴</option>
+                                <option value="끼임">끼임</option>
+                                <option value="절단베임">절단베임</option>
+                                <option value="화재폭발">화재폭발</option>
+                                <option value="중독질식">중독질식</option>
+                                <option value="감전">감전</option>
+                                <option value="온도관련">온도관련</option>
+                                <option value="기타">기타</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="injury_type" class="form-label">상해종류 <span class="required">*</span></label>
+                            <select class="form-select" id="injury_type" name="injury_type" required>
+                                <option value="">선택하세요</option>
+                                <option value="골절">골절</option>
+                                <option value="타박상">타박상</option>
+                                <option value="열상">열상</option>
+                                <option value="화상">화상</option>
+                                <option value="중독">중독</option>
+                                <option value="질식">질식</option>
+                                <option value="감전상">감전상</option>
+                                <option value="동상">동상</option>
+                                <option value="열사병">열사병</option>
+                                <option value="기타">기타</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="body_part" class="form-label">부상부위 <span class="required">*</span></label>
+                            <select class="form-select" id="body_part" name="body_part" required>
+                                <option value="">선택하세요</option>
+                                <option value="머리">머리</option>
+                                <option value="목">목</option>
+                                <option value="가슴">가슴</option>
+                                <option value="복부">복부</option>
+                                <option value="등허리">등허리</option>
+                                <option value="팔">팔</option>
+                                <option value="손">손</option>
+                                <option value="다리">다리</option>
+                                <option value="발">발</option>
+                                <option value="전신">전신</option>
+                                <option value="기타">기타</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="accident_location" class="form-label">재해발생장소 <span class="required">*</span></label>
+                            <input type="text" class="form-control" id="accident_location" name="accident_location" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="work_process" class="form-label">작업공정 <span class="required">*</span></label>
+                            <input type="text" class="form-control" id="work_process" name="work_process" required>
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <label for="accident_cause" class="form-label">재해원인 <span class="required">*</span></label>
+                            <textarea class="form-control" id="accident_cause" name="accident_cause" rows="4" required placeholder="재해가 발생한 구체적인 원인을 상세히 기술해 주세요"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 작업환경 -->
+            <div class="section-card">
+                <h2 class="section-header">
+                    <i class="bi bi-gear section-icon"></i>작업환경
+                </h2>
+                <div class="section-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="weather_conditions" class="form-label">기상상태</label>
+                            <select class="form-select" id="weather_conditions" name="weather_conditions">
+                                <option value="">선택하세요</option>
+                                <option value="맑음">맑음</option>
+                                <option value="흐림">흐림</option>
+                                <option value="비">비</option>
+                                <option value="눈">눈</option>
+                                <option value="바람">바람</option>
+                                <option value="기타">기타</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="lighting_conditions" class="form-label">조명상태</label>
+                            <select class="form-select" id="lighting_conditions" name="lighting_conditions">
+                                <option value="">선택하세요</option>
+                                <option value="양호">양호</option>
+                                <option value="보통">보통</option>
+                                <option value="불량">불량</option>
+                                <option value="야간작업">야간작업</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="safety_equipment" class="form-label">안전설비상태 <span class="required">*</span></label>
+                            <select class="form-select" id="safety_equipment" name="safety_equipment" required>
+                                <option value="">선택하세요</option>
+                                <option value="정상">정상</option>
+                                <option value="불량">불량</option>
+                                <option value="미설치">미설치</option>
+                                <option value="해당없음">해당없음</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="protective_equipment_used" class="form-label">보호구착용 <span class="required">*</span></label>
+                            <select class="form-select" id="protective_equipment_used" name="protective_equipment_used" required>
+                                <option value="">선택하세요</option>
+                                <option value="완전착용">완전착용</option>
+                                <option value="부분착용">부분착용</option>
+                                <option value="미착용">미착용</option>
+                                <option value="해당없음">해당없음</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="safety_procedures" class="form-label">안전절차준수 <span class="required">*</span></label>
+                            <select class="form-select" id="safety_procedures" name="safety_procedures" required>
+                                <option value="">선택하세요</option>
+                                <option value="완전준수">완전준수</option>
+                                <option value="부분준수">부분준수</option>
+                                <option value="미준수">미준수</option>
+                                <option value="절차없음">절차없음</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 원인 분석 -->
+            <div class="section-card">
+                <h2 class="section-header">
+                    <i class="bi bi-search section-icon"></i>원인 분석
+                </h2>
+                <div class="section-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="immediate_cause" class="form-label">직접원인 <span class="required">*</span></label>
+                            <textarea class="form-control" id="immediate_cause" name="immediate_cause" rows="4" required placeholder="재해의 직접적인 원인"></textarea>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="basic_cause" class="form-label">기본원인 <span class="required">*</span></label>
+                            <textarea class="form-control" id="basic_cause" name="basic_cause" rows="4" required placeholder="재해의 근본적인 원인"></textarea>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="management_cause" class="form-label">관리적원인</label>
+                            <textarea class="form-control" id="management_cause" name="management_cause" rows="3" placeholder="관리 시스템의 문제점"></textarea>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="human_factors" class="form-label">인적요인</label>
+                            <textarea class="form-control" id="human_factors" name="human_factors" rows="3" placeholder="인적 요인으로 인한 원인"></textarea>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="equipment_factors" class="form-label">물적요인</label>
+                            <textarea class="form-control" id="equipment_factors" name="equipment_factors" rows="3" placeholder="장비, 시설 관련 요인"></textarea>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="environmental_factors" class="form-label">환경적요인</label>
+                            <textarea class="form-control" id="environmental_factors" name="environmental_factors" rows="3" placeholder="작업환경 관련 요인"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 예방대책 -->
+            <div class="section-card">
+                <h2 class="section-header">
+                    <i class="bi bi-shield-check section-icon"></i>예방대책
+                </h2>
+                <div class="section-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="immediate_measures" class="form-label">즉시조치사항 <span class="required">*</span></label>
+                            <textarea class="form-control" id="immediate_measures" name="immediate_measures" rows="4" required placeholder="즉시 실행해야 할 조치사항"></textarea>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="short_term_measures" class="form-label">단기대책 <span class="required">*</span></label>
+                            <textarea class="form-control" id="short_term_measures" name="short_term_measures" rows="4" required placeholder="단기간 내 실행할 대책"></textarea>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="long_term_measures" class="form-label">중장기대책</label>
+                            <textarea class="form-control" id="long_term_measures" name="long_term_measures" rows="4" placeholder="중장기적으로 실행할 대책"></textarea>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="education_measures" class="form-label">교육대책</label>
+                            <textarea class="form-control" id="education_measures" name="education_measures" rows="4" placeholder="안전교육 관련 대책"></textarea>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="equipment_improvements" class="form-label">설비개선사항</label>
+                            <textarea class="form-control" id="equipment_improvements" name="equipment_improvements" rows="4" placeholder="설비 및 장비 개선사항"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-4">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-check-circle me-2"></i>조사표 제출
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 폼 제출 시 확인
+        document.getElementById('accidentSurveyForm').addEventListener('submit', function(e) {
+            if (!confirm('산업재해 실태조사표를 제출하시겠습니까?')) {
+                e.preventDefault();
+            }
+        });
+
+        // 날짜 유효성 검사
+        document.getElementById('accident_date').addEventListener('change', function() {
+            const accidentDate = new Date(this.value);
+            const investigationDate = new Date(document.getElementById('investigation_date').value);
+
+            if (investigationDate && accidentDate > investigationDate) {
+                alert('재해발생일자는 조사일자보다 이전이어야 합니다.');
+                this.value = '';
+            }
+        });
+    </script>
+</body>
+</html>

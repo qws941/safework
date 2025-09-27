@@ -1,0 +1,712 @@
+{% extends "base.html" %}
+
+{% block title %}고령근로자 작업투입 승인요청서 (006){% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --sw-primary: #6f42c1;
+        --sw-primary-dark: #5a2d91;
+        --sw-secondary: #6c757d;
+        --sw-success: #28a745;
+        --sw-warning: #ffc107;
+        --sw-danger: #dc3545;
+        --sw-light: #f8f9fa;
+        --sw-border: #dee2e6;
+    }
+
+    .survey-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 20px;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .survey-header {
+        background: linear-gradient(135deg, var(--sw-primary), var(--sw-primary-dark));
+        color: white;
+        padding: 30px;
+        border-radius: 10px 10px 0 0;
+        margin: -20px -20px 30px -20px;
+        text-align: center;
+    }
+
+    .survey-header h1 {
+        margin: 0;
+        font-size: 28px;
+        font-weight: 700;
+    }
+
+    .survey-header .subtitle {
+        margin-top: 10px;
+        opacity: 0.9;
+        font-size: 16px;
+    }
+
+    .section-header {
+        background: var(--sw-light);
+        border-left: 5px solid var(--sw-primary);
+        padding: 15px 20px;
+        margin: 30px 0 20px 0;
+        border-radius: 5px;
+    }
+
+    .section-header h3 {
+        margin: 0;
+        color: var(--sw-primary);
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+    }
+
+    .section-header i {
+        margin-right: 10px;
+        font-size: 20px;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 8px;
+        display: block;
+    }
+
+    .form-control, .form-select {
+        border: 2px solid var(--sw-border);
+        border-radius: 6px;
+        padding: 12px 15px;
+        font-size: 14px;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: var(--sw-primary);
+        box-shadow: 0 0 0 0.2rem rgba(111, 66, 193, 0.25);
+        outline: none;
+    }
+
+    .form-control.is-invalid, .form-select.is-invalid {
+        border-color: var(--sw-danger);
+    }
+
+    .invalid-feedback {
+        display: block;
+        color: var(--sw-danger);
+        font-size: 12px;
+        margin-top: 5px;
+    }
+
+    .required-field::after {
+        content: " *";
+        color: var(--sw-danger);
+        font-weight: bold;
+    }
+
+    .btn-submit {
+        background: linear-gradient(135deg, var(--sw-primary), var(--sw-primary-dark));
+        border: none;
+        color: white;
+        padding: 15px 40px;
+        font-size: 16px;
+        font-weight: 600;
+        border-radius: 50px;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(111, 66, 193, 0.3);
+    }
+
+    .btn-submit:disabled {
+        background: var(--sw-secondary);
+        transform: none;
+        box-shadow: none;
+    }
+
+    .row {
+        margin-bottom: 15px;
+    }
+
+    .health-status-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin-top: 15px;
+    }
+
+    .safety-measures-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+    }
+
+    .approval-status {
+        background: var(--sw-light);
+        border: 2px dashed var(--sw-border);
+        border-radius: 8px;
+        padding: 20px;
+        text-align: center;
+    }
+
+    .approval-status.approved {
+        background: rgba(40, 167, 69, 0.1);
+        border-color: var(--sw-success);
+        color: var(--sw-success);
+    }
+
+    .approval-status.rejected {
+        background: rgba(220, 53, 69, 0.1);
+        border-color: var(--sw-danger);
+        color: var(--sw-danger);
+    }
+
+    .approval-status.pending {
+        background: rgba(255, 193, 7, 0.1);
+        border-color: var(--sw-warning);
+        color: var(--sw-warning);
+    }
+
+    @media (max-width: 768px) {
+        .survey-container {
+            margin: 10px;
+            padding: 15px;
+        }
+        
+        .survey-header {
+            padding: 20px;
+            margin: -15px -15px 20px -15px;
+        }
+        
+        .survey-header h1 {
+            font-size: 24px;
+        }
+        
+        .health-status-grid,
+        .safety-measures-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="survey-container">
+    <div class="survey-header">
+        <h1><i class="bi bi-person-check-fill"></i> 고령근로자 작업투입 승인요청서</h1>
+        <div class="subtitle">Elderly Worker Assignment Approval Request Form (006)</div>
+    </div>
+
+    <form id="elderlyWorkerForm" method="POST">
+        {{ csrf_token() }}
+        
+        <!-- 기본 정보 섹션 -->
+        <div class="section-header">
+            <h3><i class="bi bi-info-circle-fill"></i> 기본 정보</h3>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="request_date" class="form-label required-field">요청일자</label>
+                    <input type="date" class="form-control" id="request_date" name="request_date" required>
+                    <div class="invalid-feedback">요청일자를 입력해주세요.</div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="company_name" class="form-label required-field">회사명</label>
+                    <input type="text" class="form-control" id="company_name" name="company_name" required>
+                    <div class="invalid-feedback">회사명을 입력해주세요.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="department" class="form-label required-field">부서명</label>
+                    <input type="text" class="form-control" id="department" name="department" required>
+                    <div class="invalid-feedback">부서명을 입력해주세요.</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="manager_name" class="form-label required-field">담당관리자</label>
+                    <input type="text" class="form-control" id="manager_name" name="manager_name" required>
+                    <div class="invalid-feedback">담당관리자명을 입력해주세요.</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="contact_number" class="form-label required-field">연락처</label>
+                    <input type="tel" class="form-control" id="contact_number" name="contact_number" required>
+                    <div class="invalid-feedback">연락처를 입력해주세요.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 근로자 정보 섹션 -->
+        <div class="section-header">
+            <h3><i class="bi bi-person-fill"></i> 근로자 정보</h3>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="worker_name" class="form-label required-field">근로자명</label>
+                    <input type="text" class="form-control" id="worker_name" name="worker_name" required>
+                    <div class="invalid-feedback">근로자명을 입력해주세요.</div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="form-group">
+                    <label for="worker_age" class="form-label required-field">연령</label>
+                    <input type="number" class="form-control" id="worker_age" name="worker_age" min="50" max="100" required>
+                    <div class="invalid-feedback">연령을 입력해주세요 (50세 이상).</div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="form-group">
+                    <label for="worker_gender" class="form-label required-field">성별</label>
+                    <select class="form-select" id="worker_gender" name="worker_gender" required>
+                        <option value="">선택</option>
+                        <option value="남">남</option>
+                        <option value="여">여</option>
+                    </select>
+                    <div class="invalid-feedback">성별을 선택해주세요.</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="employment_type" class="form-label required-field">고용형태</label>
+                    <select class="form-select" id="employment_type" name="employment_type" required>
+                        <option value="">선택</option>
+                        <option value="정규직">정규직</option>
+                        <option value="계약직">계약직</option>
+                        <option value="일용직">일용직</option>
+                        <option value="파견근로자">파견근로자</option>
+                    </select>
+                    <div class="invalid-feedback">고용형태를 선택해주세요.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="start_date" class="form-label required-field">작업시작예정일</label>
+                    <input type="date" class="form-control" id="start_date" name="start_date" required>
+                    <div class="invalid-feedback">작업시작예정일을 입력해주세요.</div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="previous_experience" class="form-label">이전근무경력</label>
+                    <textarea class="form-control" id="previous_experience" name="previous_experience" rows="3" placeholder="이전 근무 경력 및 관련 경험을 입력해주세요"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- 건강상태 섹션 -->
+        <div class="section-header">
+            <h3><i class="bi bi-heart-pulse-fill"></i> 건강상태</h3>
+        </div>
+
+        <div class="health-status-grid">
+            <div class="form-group">
+                <label for="health_checkup_date" class="form-label required-field">건강검진일자</label>
+                <input type="date" class="form-control" id="health_checkup_date" name="health_checkup_date" required>
+                <div class="invalid-feedback">건강검진일자를 입력해주세요.</div>
+            </div>
+            <div class="form-group">
+                <label for="health_status" class="form-label required-field">건강상태</label>
+                <select class="form-select" id="health_status" name="health_status" required>
+                    <option value="">선택</option>
+                    <option value="양호">양호</option>
+                    <option value="보통">보통</option>
+                    <option value="주의">주의</option>
+                    <option value="부적합">부적합</option>
+                </select>
+                <div class="invalid-feedback">건강상태를 선택해주세요.</div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="chronic_diseases" class="form-label">만성질환</label>
+                    <textarea class="form-control" id="chronic_diseases" name="chronic_diseases" rows="3" placeholder="당뇨, 고혈압, 관절염 등 만성질환이 있다면 입력해주세요"></textarea>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="medication_status" class="form-label">복용약물</label>
+                    <textarea class="form-control" id="medication_status" name="medication_status" rows="3" placeholder="현재 복용 중인 약물이 있다면 입력해주세요"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="physical_limitations" class="form-label">신체적제한사항</label>
+                    <textarea class="form-control" id="physical_limitations" name="physical_limitations" rows="3" placeholder="시력, 청력, 관절 등 신체적 제한사항이 있다면 입력해주세요"></textarea>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="doctor_opinion" class="form-label">의사소견</label>
+                    <textarea class="form-control" id="doctor_opinion" name="doctor_opinion" rows="3" placeholder="건강검진 시 의사 소견을 입력해주세요"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- 작업배정 섹션 -->
+        <div class="section-header">
+            <h3><i class="bi bi-briefcase-fill"></i> 작업배정</h3>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="assigned_work" class="form-label required-field">배정작업</label>
+                    <textarea class="form-control" id="assigned_work" name="assigned_work" rows="3" required placeholder="배정할 구체적인 작업 내용을 입력해주세요"></textarea>
+                    <div class="invalid-feedback">배정작업을 입력해주세요.</div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="work_location" class="form-label required-field">작업장소</label>
+                    <input type="text" class="form-control" id="work_location" name="work_location" required>
+                    <div class="invalid-feedback">작업장소를 입력해주세요.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="work_schedule" class="form-label required-field">근무일정</label>
+                    <select class="form-select" id="work_schedule" name="work_schedule" required>
+                        <option value="">선택</option>
+                        <option value="주간">주간</option>
+                        <option value="야간">야간</option>
+                        <option value="교대">교대</option>
+                        <option value="단시간">단시간</option>
+                    </select>
+                    <div class="invalid-feedback">근무일정을 선택해주세요.</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="physical_demands" class="form-label required-field">육체적부담</label>
+                    <select class="form-select" id="physical_demands" name="physical_demands" required>
+                        <option value="">선택</option>
+                        <option value="가벼움">가벼움</option>
+                        <option value="보통">보통</option>
+                        <option value="무거움">무거움</option>
+                        <option value="적응필요">적응필요</option>
+                    </select>
+                    <div class="invalid-feedback">육체적부담 정도를 선택해주세요.</div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="hazard_factors" class="form-label required-field">위험요인</label>
+                    <textarea class="form-control" id="hazard_factors" name="hazard_factors" rows="2" required placeholder="작업 관련 위험요인을 입력해주세요"></textarea>
+                    <div class="invalid-feedback">위험요인을 입력해주세요.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="safety_measures" class="form-label required-field">안전조치사항</label>
+            <textarea class="form-control" id="safety_measures" name="safety_measures" rows="3" required placeholder="안전조치 및 예방사항을 입력해주세요"></textarea>
+            <div class="invalid-feedback">안전조치사항을 입력해주세요.</div>
+        </div>
+
+        <!-- 안전관리 섹션 -->
+        <div class="section-header">
+            <h3><i class="bi bi-shield-fill-check"></i> 안전관리</h3>
+        </div>
+
+        <div class="safety-measures-grid">
+            <div class="form-group">
+                <label for="safety_education" class="form-label required-field">안전교육</label>
+                <select class="form-select" id="safety_education" name="safety_education" required>
+                    <option value="">선택</option>
+                    <option value="완료">완료</option>
+                    <option value="계획">계획</option>
+                    <option value="진행중">진행중</option>
+                    <option value="미실시">미실시</option>
+                </select>
+                <div class="invalid-feedback">안전교육 상태를 선택해주세요.</div>
+            </div>
+            <div class="form-group">
+                <label for="supervisor_assignment" class="form-label required-field">지정감독자</label>
+                <input type="text" class="form-control" id="supervisor_assignment" name="supervisor_assignment" required>
+                <div class="invalid-feedback">지정감독자를 입력해주세요.</div>
+            </div>
+            <div class="form-group">
+                <label for="regular_monitoring" class="form-label required-field">정기모니터링</label>
+                <select class="form-select" id="regular_monitoring" name="regular_monitoring" required>
+                    <option value="">선택</option>
+                    <option value="일일">일일</option>
+                    <option value="주간">주간</option>
+                    <option value="월간">월간</option>
+                    <option value="분기">분기</option>
+                </select>
+                <div class="invalid-feedback">정기모니터링 주기를 선택해주세요.</div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="protective_equipment" class="form-label required-field">보호구지급</label>
+                    <textarea class="form-control" id="protective_equipment" name="protective_equipment" rows="3" required placeholder="지급할 보호구 목록을 입력해주세요"></textarea>
+                    <div class="invalid-feedback">보호구지급 내용을 입력해주세요.</div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="emergency_procedures" class="form-label required-field">비상시절차</label>
+                    <textarea class="form-control" id="emergency_procedures" name="emergency_procedures" rows="3" required placeholder="응급상황 시 절차를 입력해주세요"></textarea>
+                    <div class="invalid-feedback">비상시절차를 입력해주세요.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 승인 섹션 -->
+        <div class="section-header">
+            <h3><i class="bi bi-check-circle-fill"></i> 승인</h3>
+        </div>
+
+        <div class="approval-status" id="approvalStatusSection">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="approval_status" class="form-label">승인상태</label>
+                        <select class="form-select" id="approval_status" name="approval_status">
+                            <option value="">검토중</option>
+                            <option value="승인">승인</option>
+                            <option value="조건부승인">조건부승인</option>
+                            <option value="반려">반려</option>
+                            <option value="검토중">검토중</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="review_period" class="form-label">재검토주기</label>
+                        <select class="form-select" id="review_period" name="review_period">
+                            <option value="">선택</option>
+                            <option value="1개월">1개월</option>
+                            <option value="3개월">3개월</option>
+                            <option value="6개월">6개월</option>
+                            <option value="1년">1년</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="approved_by" class="form-label">승인자</label>
+                        <input type="text" class="form-control" id="approved_by" name="approved_by">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="approval_date" class="form-label">승인일자</label>
+                        <input type="date" class="form-control" id="approval_date" name="approval_date">
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="approval_conditions" class="form-label">승인조건</label>
+                        <textarea class="form-control" id="approval_conditions" name="approval_conditions" rows="3" placeholder="승인 시 필요한 조건을 입력해주세요"></textarea>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="comments" class="form-label">특이사항</label>
+                        <textarea class="form-control" id="comments" name="comments" rows="3" placeholder="특이사항이나 추가 의견을 입력해주세요"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-4">
+            <button type="submit" class="btn btn-submit">
+                <i class="bi bi-check-lg"></i> 승인요청서 제출
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('elderlyWorkerForm');
+    const approvalStatusSection = document.getElementById('approvalStatusSection');
+    const approvalStatusSelect = document.getElementById('approval_status');
+    
+    // 오늘 날짜를 기본값으로 설정
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('request_date').value = today;
+    
+    // 승인상태에 따른 스타일 변경
+    function updateApprovalStatusStyle() {
+        const status = approvalStatusSelect.value;
+        approvalStatusSection.className = 'approval-status';
+        
+        if (status === '승인') {
+            approvalStatusSection.classList.add('approved');
+        } else if (status === '반려') {
+            approvalStatusSection.classList.add('rejected');
+        } else if (status === '검토중' || status === '') {
+            approvalStatusSection.classList.add('pending');
+        }
+    }
+    
+    // 승인상태 변경 시 스타일 업데이트
+    approvalStatusSelect.addEventListener('change', updateApprovalStatusStyle);
+    
+    // 초기 스타일 설정
+    updateApprovalStatusStyle();
+    
+    // 연령 검증 (50세 이상만 허용)
+    document.getElementById('worker_age').addEventListener('change', function() {
+        const age = parseInt(this.value);
+        if (age && age < 50) {
+            this.setCustomValidity('고령근로자는 50세 이상이어야 합니다.');
+            this.classList.add('is-invalid');
+        } else {
+            this.setCustomValidity('');
+            this.classList.remove('is-invalid');
+        }
+    });
+    
+    // 건강검진일자 검증 (2년 이내)
+    document.getElementById('health_checkup_date').addEventListener('change', function() {
+        const checkupDate = new Date(this.value);
+        const today = new Date();
+        const twoYearsAgo = new Date(today.getFullYear() - 2, today.getMonth(), today.getDate());
+        
+        if (checkupDate < twoYearsAgo) {
+            this.setCustomValidity('건강검진일자는 2년 이내여야 합니다.');
+            this.classList.add('is-invalid');
+        } else if (checkupDate > today) {
+            this.setCustomValidity('건강검진일자는 미래일 수 없습니다.');
+            this.classList.add('is-invalid');
+        } else {
+            this.setCustomValidity('');
+            this.classList.remove('is-invalid');
+        }
+    });
+    
+    // 작업시작예정일 검증 (오늘 이후)
+    document.getElementById('start_date').addEventListener('change', function() {
+        const startDate = new Date(this.value);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        if (startDate < today) {
+            this.setCustomValidity('작업시작예정일은 오늘 이후여야 합니다.');
+            this.classList.add('is-invalid');
+        } else {
+            this.setCustomValidity('');
+            this.classList.remove('is-invalid');
+        }
+    });
+    
+    // 폼 제출 처리
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // 필수 필드 검증
+        const requiredFields = form.querySelectorAll('[required]');
+        let isValid = true;
+        
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                field.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                field.classList.remove('is-invalid');
+            }
+        });
+        
+        if (!isValid) {
+            alert('필수 항목을 모두 입력해주세요.');
+            return;
+        }
+        
+        // 폼 데이터 수집
+        const formData = new FormData(form);
+        const submitBtn = form.querySelector('.btn-submit');
+        
+        // 제출 버튼 비활성화
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> 제출 중...';
+        
+        // 서버로 데이터 전송
+        fetch(window.location.pathname, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('고령근로자 작업투입 승인요청서가 성공적으로 제출되었습니다.');
+                form.reset();
+                document.getElementById('request_date').value = today;
+                updateApprovalStatusStyle();
+            } else {
+                alert('제출 중 오류가 발생했습니다: ' + (data.message || '알 수 없는 오류'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('제출 중 오류가 발생했습니다. 다시 시도해주세요.');
+        })
+        .finally(() => {
+            // 제출 버튼 재활성화
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="bi bi-check-lg"></i> 승인요청서 제출';
+        });
+    });
+    
+    // 실시간 폼 검증
+    const inputs = form.querySelectorAll('input, select, textarea');
+    inputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            if (this.hasAttribute('required') && !this.value.trim()) {
+                this.classList.add('is-invalid');
+            } else {
+                this.classList.remove('is-invalid');
+            }
+        });
+        
+        input.addEventListener('input', function() {
+            if (this.classList.contains('is-invalid') && this.value.trim()) {
+                this.classList.remove('is-invalid');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
