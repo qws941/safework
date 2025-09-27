@@ -59,16 +59,47 @@ surveyRoutes.get('/form/:formId', async (c) => {
   }
 });
 
-// Submit survey response
+// Submit survey response (enhanced for 001 form)
 surveyRoutes.post('/submit', async (c) => {
   const body = await c.req.json();
-  const { form_type, response_data, worker_id, department_id, is_anonymous } = body;
+  const { id, form_type, timestamp, data, response_data, worker_id, department_id, is_anonymous } = body;
   
   try {
     // Get client info
     const ip_address = c.req.header('CF-Connecting-IP') || 'unknown';
     const user_agent = c.req.header('User-Agent') || 'unknown';
-    
+
+    // Handle 001 form specifically with KV storage
+    if (form_type === '001_musculoskeletal' && id && data) {
+      // Store in KV for 001 form
+      if (c.env.SAFEWORK_KV) {
+        await c.env.SAFEWORK_KV.put(
+          id,
+          JSON.stringify({
+            form_type,
+            timestamp: timestamp || new Date().toISOString(),
+            data,
+            submitted_at: new Date().toISOString(),
+            ip_address,
+            user_agent
+          }),
+          {
+            metadata: {
+              form_type,
+              name: data.basic_info?.name || 'Anonymous'
+            }
+          }
+        );
+
+        return c.json({
+          success: true,
+          id,
+          message: '근골격계 증상조사표가 성공적으로 저장되었습니다'
+        });
+      }
+    }
+
+    // Original D1 database logic for other forms
     if (c.env.SAFEWORK_DB) {
       // Insert into D1 database
       const result = await c.env.SAFEWORK_DB.prepare(`

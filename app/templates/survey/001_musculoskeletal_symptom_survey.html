@@ -2055,6 +2055,85 @@ function getPartEnglishName(partName) {
     return partMap[partName] || partName;
 }
 
+// API에서 업체/공정 데이터 로드
+async function loadCompaniesAndProcesses() {
+    try {
+        // 업체 데이터 로드
+        const companiesResponse = await fetch('/api/safework/v2/companies');
+        if (companiesResponse.ok) {
+            const companiesData = await companiesResponse.json();
+            if (companiesData.success) {
+                populateCompanySelect(companiesData.data);
+            }
+        }
+
+        // 공정 데이터 로드
+        const processesResponse = await fetch('/api/safework/v2/processes');
+        if (processesResponse.ok) {
+            const processesData = await processesResponse.json();
+            if (processesData.success) {
+                populateProcessSelect(processesData.data);
+            }
+        }
+    } catch (error) {
+        console.error('업체/공정 데이터 로드 실패:', error);
+        // 오류 발생 시 기존 하드코딩된 옵션 유지
+    }
+}
+
+// 업체 선택박스 채우기
+function populateCompanySelect(companies) {
+    const companySelect = document.getElementById('company_select');
+    if (!companySelect) return;
+    
+    // 기존 옵션들 제거 (첫 번째 기본 옵션 제외)
+    while (companySelect.children.length > 1) {
+        companySelect.removeChild(companySelect.lastChild);
+    }
+    
+    // API에서 가져온 업체들 추가
+    companies.forEach(company => {
+        const option = document.createElement('option');
+        option.value = company.name;
+        option.textContent = company.name;
+        companySelect.appendChild(option);
+    });
+    
+    // 직접입력 옵션 추가
+    const customOption = document.createElement('option');
+    customOption.value = '__custom__';
+    customOption.textContent = '+ 직접입력';
+    companySelect.appendChild(customOption);
+}
+
+// 공정 선택박스 채우기
+function populateProcessSelect(processes) {
+    const processSelect = document.getElementById('process_select');
+    if (!processSelect) return;
+    
+    // 기존 옵션들 제거 (첫 번째 기본 옵션 제외)
+    while (processSelect.children.length > 1) {
+        processSelect.removeChild(processSelect.lastChild);
+    }
+    
+    // API에서 가져온 공정들 추가
+    processes.forEach(process => {
+        const option = document.createElement('option');
+        option.value = process.name;
+        option.textContent = process.name;
+        if (process.description) {
+            option.title = process.description; // 툴팁으로 설명 표시
+        }
+        processSelect.appendChild(option);
+    });
+    
+    // 직접입력 옵션 추가
+    const customOption = document.createElement('option');
+    customOption.value = '__custom__';
+    customOption.textContent = '+ 직접입력';
+    processSelect.appendChild(customOption);
+}
+
 // 직접입력 기능 구현
 function setupCustomInput() {
     const customFields = [
@@ -2157,6 +2236,9 @@ function hideError(errorId) {
 
 // 초기 상태 설정 및 모든 이벤트 리스너 초기화
 document.addEventListener('DOMContentLoaded', function() {
+    // API에서 업체/공정 데이터 로드
+    loadCompaniesAndProcesses();
+    
     // 직접입력 기능 초기화
     setupCustomInput();
     // 증상 유무에 따른 상세 정보 표시/숨김

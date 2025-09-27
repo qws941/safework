@@ -3,19 +3,21 @@ import { cors } from 'hono/cors';
 import { jwt } from 'hono/jwt';
 import { logger } from 'hono/logger';
 import { surveyRoutes } from './routes/survey';
+import { surveyDataRoutes } from './routes/survey-data';
+import { surveyAdminRoutes } from './routes/survey-admin';
 import { adminRoutes } from './routes/admin';
 import { authRoutes } from './routes/auth';
 import { healthRoutes } from './routes/health';
 import { workerRoutes } from './routes/worker';
 
 export interface Env {
-  SAFEWORK_KV: KVNamespace;
+  SAFEWORK_KV?: KVNamespace;
   SAFEWORK_DB?: D1Database;
-  JWT_SECRET: string;
-  ADMIN_USERNAME: string;
-  BACKEND_URL: string;
-  DEBUG: string;
-  ENVIRONMENT: string;
+  JWT_SECRET?: string;
+  ADMIN_USERNAME?: string;
+  BACKEND_URL?: string;
+  DEBUG?: string;
+  ENVIRONMENT?: string;
 }
 
 const app = new Hono<{ Bindings: Env }>();
@@ -31,6 +33,8 @@ app.use('/api/*', cors({
 app.route('/api/auth', authRoutes);
 app.route('/api/health', healthRoutes);
 app.route('/api/survey', surveyRoutes);
+app.route('/api/survey-data', surveyDataRoutes);
+app.route('/api/survey-admin', surveyAdminRoutes);
 
 // Protected routes (require JWT)
 app.use('/api/admin/*', async (c, next) => {
@@ -238,27 +242,27 @@ app.get('/', (c) => {
                                     </div>
                                 </div>
                             </div>
-                            
-                            <!-- 002 신규 입사자 건강검진 양식 -->
+
+                            <!-- 002 근골격계부담작업 유해요인조사 -->
                             <div class="col-lg-4 col-md-6">
-                                <div class="card h-100 border-info">
-                                    <div class="card-header bg-info text-white">
-                                        <span class="badge bg-white text-info">002</span> 신규 입사자 건강검진
+                                <div class="card h-100 border-warning">
+                                    <div class="card-header bg-warning text-dark">
+                                        <span class="badge bg-dark text-warning">002</span> 근골격계부담작업 유해요인조사
                                     </div>
                                     <div class="card-body">
-                                        <p class="small">신규 입사자 건강 상태 확인</p>
+                                        <p class="small">산업안전보건기준 제657조</p>
                                         <ul class="small text-muted mb-3">
-                                            <li>기본 신체 정보</li>
-                                            <li>기존 질환 이력</li>
-                                            <li>생활 습관 조사</li>
+                                            <li>작업특성 평가</li>
+                                            <li>위험도 평가</li>
+                                            <li>개선계획 수립</li>
                                         </ul>
-                                        <a href="/survey/002_new_employee_health_checkup" class="btn btn-info w-100">
-                                            <i class="bi bi-pencil-square"></i> 작성하기
+                                        <a href="/survey/002_musculoskeletal_program" class="btn btn-warning w-100">
+                                            <i class="bi bi-clipboard-data"></i> 조사하기
                                         </a>
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <!-- 추가 양식을 위한 placeholder -->
                             <div class="col-lg-4 col-md-6">
                                 <div class="card h-100 border-secondary">
@@ -453,18 +457,47 @@ app.get('/admin', (c) => {
   return c.html(adminHtml);
 });
 
-// Survey form route - restored to original format
+import { getSurvey001Html } from './survey-001';
+import { getSurvey002Html } from './survey-002';
+import { getEnhancedSurvey001Html } from './survey-001-enhanced';
+import { getSurveyDashboardHtml } from './survey-dashboard';
+
+// 001 근골격계 증상조사표 전용 라우트 (Native Workers 구현)
+app.get('/survey/001_musculoskeletal_symptom_survey', async (c) => {
+  return c.html(getSurvey001Html());
+});
+
+// 002 근골격계부담작업 유해요인조사 전용 라우트 (Native Workers 구현)
+app.get('/survey/002_musculoskeletal_program', async (c) => {
+  return c.html(getSurvey002Html());
+});
+
+// 001 고급 버전 (자동저장, 진행률 표시 등)
+app.get('/survey/001_enhanced', async (c) => {
+  return c.html(getEnhancedSurvey001Html());
+});
+
+// 설문 대시보드 (관리자용)
+app.get('/admin/survey-dashboard', async (c) => {
+  return c.html(getSurveyDashboardHtml());
+});
+
+// Generic survey route for other surveys
 app.get('/survey/:surveyType', (c) => {
   const surveyType = c.req.param('surveyType');
+
+  // 001은 전용 라우트로 리다이렉트
+  if (surveyType === '001_musculoskeletal_symptom_survey' || surveyType === '001') {
+    return c.redirect('/survey/001_musculoskeletal_symptom_survey');
+  }
+
   const surveyTitles: { [key: string]: string } = {
-    '001_musculoskeletal_symptom_survey': '근골격계 증상조사표',
-    '002_new_employee_health_checkup': '신규 입사자 건강검진',
-    '003_musculoskeletal_program': '근골격계부담작업 유해요인조사',
+    '002_musculoskeletal_program': '근골격계부담작업 유해요인조사',
     'musculoskeletal': '근골격계 증상조사',
-    'safety': '안전의식 조사', 
+    'safety': '안전의식 조사',
     'environment': '작업환경 조사'
   };
-  
+
   const title = surveyTitles[surveyType] || '설문조사';
   
   const surveyHtml = `<!DOCTYPE html>
@@ -600,21 +633,7 @@ app.get('/survey/:surveyType', (c) => {
     <script>
         const surveyQuestions = {
             'musculoskeletal': [
-                {
-                    question: '목, 어깨 부위에 통증이나 불편함을 느끼신 적이 있습니까?',
-                    type: 'radio',
-                    options: ['전혀 없음', '가끔 있음', '자주 있음', '항상 있음']
-                },
-                {
-                    question: '허리 부위에 통증이나 불편함을 느끼신 적이 있습니까?',
-                    type: 'radio', 
-                    options: ['전혀 없음', '가끔 있음', '자주 있음', '항상 있음']
-                },
-                {
-                    question: '손목이나 손가락 부위에 통증이나 불편함을 느끼신 적이 있습니까?',
-                    type: 'radio',
-                    options: ['전혀 없음', '가끔 있음', '자주 있음', '항상 있음']
-                }
+                // This is now handled by the new detailed form
             ],
             'safety': [
                 {
