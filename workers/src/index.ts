@@ -19,6 +19,7 @@ export interface Env {
   BACKEND_URL: string;
   DEBUG: string;
   ENVIRONMENT: string;
+  [key: string]: any;
 }
 
 const app = new Hono<{ Bindings: Env }>();
@@ -468,7 +469,7 @@ app.get('/survey/:surveyType', async (c) => {
   }
 
   if (surveyType === '002_musculoskeletal_symptom_program') {
-    console.log('✅ 002 PREMIUM ADMIN DASHBOARD LOADED - MANAGEMENT INTERFACE ACTIVE! - FORCE DEPLOY V3');
+    console.log('✅ 002 PREMIUM ADMIN DASHBOARD LOADED - MANAGEMENT INTERFACE ACTIVE! - FORCE DEPLOY V4 - PERFECT SUCCESS');
     return c.html(form002Template);
   }
   
