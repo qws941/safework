@@ -463,12 +463,12 @@ app.get('/survey/:surveyType', async (c) => {
   
   // FORCE embedded templates first
   if (surveyType === '001_musculoskeletal_symptom_survey') {
-    console.log('✅ 001 TEMPLATE LOADED - 근골격계 증상조사표');
+    console.log('✅ 001 PREMIUM UI LOADED - 근골격계 증상조사표');
     return c.html(form001Template);
   }
 
   if (surveyType === '002_musculoskeletal_symptom_program') {
-    console.log('✅ 002 ADMIN DASHBOARD LOADED - MANAGEMENT INTERFACE ACTIVE!');
+    console.log('✅ 002 PREMIUM ADMIN DASHBOARD LOADED - MANAGEMENT INTERFACE ACTIVE!');
     return c.html(form002Template);
   }
   
