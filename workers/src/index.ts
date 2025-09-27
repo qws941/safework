@@ -462,7 +462,7 @@ app.get('/survey/:surveyType', async (c) => {
   
   // FORCE 002 template first
   if (surveyType === '002_musculoskeletal_symptom_program') {
-    console.log('FORCE USING 002 TEMPLATE - AUTO DEPLOY TEST');
+    console.log('✅ 002 TEMPLATE LOADED - AUTOMATION WORKS!');
     return c.html(form002Template);
   }
   
