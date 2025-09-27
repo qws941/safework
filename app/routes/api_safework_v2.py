@@ -4,7 +4,7 @@ from datetime import datetime, date
 from flask import Blueprint, jsonify, request, current_app as app
 from flask_login import login_required, current_user
 from sqlalchemy import text, func
-from models import db, SlackWebhookConfigModel, SlackNotificationLogModel, kst_now, CompanyModel, ProcessModel
+from models import db, SlackWebhookConfigModel, SlackNotificationLogModel, kst_now
 from models_safework_v2 import (
     SafeworkWorker,
     SafeworkHealthCheck,
@@ -16,60 +16,6 @@ from models_safework_v2 import (
 from models_safework import SafeworkMsds
 
 api_safework_bp = Blueprint("api_safework", __name__)
-
-
-# 마스터 데이터 API (설문조사용)
-@api_safework_bp.route("/companies", methods=["GET"])
-def get_companies():
-    """업체 목록 조회 (인증 불필요 - 설문조사용)"""
-    try:
-        companies = CompanyModel.query.filter_by(is_active=True).order_by(CompanyModel.display_order, CompanyModel.name).all()
-
-        return jsonify({
-            "success": True,
-            "data": [
-                {
-                    "id": company.id,
-                    "name": company.name,
-                    "display_order": company.display_order
-                }
-                for company in companies
-            ]
-        })
-
-    except Exception as e:
-        app.logger.error(f"업체 목록 조회 오류: {e}")
-        return jsonify({
-            "success": False,
-            "error": "업체 목록을 조회할 수 없습니다."
-        }), 500
-
-
-@api_safework_bp.route("/processes", methods=["GET"])
-def get_processes():
-    """공정 목록 조회 (인증 불필요 - 설문조사용)"""
-    try:
-        processes = ProcessModel.query.filter_by(is_active=True).order_by(ProcessModel.display_order, ProcessModel.name).all()
-
-        return jsonify({
-            "success": True,
-            "data": [
-                {
-                    "id": process.id,
-                    "name": process.name,
-                    "description": process.description,
-                    "display_order": process.display_order
-                }
-                for process in processes
-            ]
-        })
-
-    except Exception as e:
-        app.logger.error(f"공정 목록 조회 오류: {e}")
-        return jsonify({
-            "success": False,
-            "error": "공정 목록을 조회할 수 없습니다."
-        }), 500
 
 
 # 근로자 관리 API
