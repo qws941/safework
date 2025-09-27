@@ -7,23 +7,357 @@ export const form002Template = `<!DOCTYPE html>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
-        body { background-color: #f8f9fa; font-family: 'Malgun Gothic', sans-serif; }
-        .admin-container { max-width: 1400px; margin: 0 auto; padding: 20px; }
-        .admin-header { background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; text-align: center; }
-        .admin-section { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 20px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        .section-title { color: #495057; font-weight: bold; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #e9ecef; }
-        .stat-card { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 20px; border-radius: 8px; text-align: center; }
-        .stat-card.danger { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
-        .stat-card.success { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
-        .stat-card.primary { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
-        .survey-table { font-size: 0.9rem; }
-        .risk-badge { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; }
-        .risk-low { background-color: #10b981; color: white; }
-        .risk-medium { background-color: #f59e0b; color: white; }
-        .risk-high { background-color: #ef4444; color: white; }
-        .risk-critical { background-color: #dc2626; color: white; }
-        .btn-group-sm .btn { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
-        .filter-section { background: #f1f5f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        :root {
+            --admin-primary: #1e40af;
+            --admin-primary-dark: #1e3a8a;
+            --admin-secondary: #0f172a;
+            --success-color: #059669;
+            --warning-color: #d97706;
+            --danger-color: #dc2626;
+            --info-color: #0ea5e9;
+            --admin-bg: #f8fafc;
+            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --card-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --glass-bg: rgba(255, 255, 255, 0.95);
+            --glass-border: rgba(255, 255, 255, 0.2);
+        }
+
+        body {
+            background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 25%, #0f172a 100%);
+            min-height: 100vh;
+            font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+            color: #1f2937;
+        }
+
+        .admin-container {
+            max-width: 1500px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .admin-header {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            color: var(--admin-primary);
+            padding: 40px;
+            border-radius: 24px;
+            margin-bottom: 30px;
+            text-align: center;
+            box-shadow: var(--card-shadow-lg);
+            border: 1px solid var(--glass-border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .admin-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--admin-primary), var(--info-color), var(--success-color));
+        }
+
+        .admin-header h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, var(--admin-primary), var(--admin-primary-dark));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .admin-header p {
+            font-size: 1.2rem;
+            opacity: 0.8;
+            font-weight: 500;
+        }
+
+        .admin-section {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            padding: 35px;
+            border-radius: 20px;
+            box-shadow: var(--card-shadow-lg);
+            margin-bottom: 25px;
+            border: 1px solid var(--glass-border);
+            transition: all 0.3s ease;
+        }
+
+        .admin-section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        .section-title {
+            color: var(--admin-primary);
+            font-weight: 700;
+            font-size: 1.5rem;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #e2e8f0;
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -3px;
+            left: 0;
+            width: 80px;
+            height: 3px;
+            background: linear-gradient(135deg, var(--admin-primary), var(--admin-primary-dark));
+            border-radius: 2px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, var(--warning-color), #ea580c);
+            color: white;
+            padding: 25px;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: var(--card-shadow);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-card.danger {
+            background: linear-gradient(135deg, var(--danger-color), #b91c1c);
+        }
+
+        .stat-card.success {
+            background: linear-gradient(135deg, var(--success-color), #047857);
+        }
+
+        .stat-card.primary {
+            background: linear-gradient(135deg, var(--admin-primary), var(--admin-primary-dark));
+        }
+
+        .stat-card h3 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-card p {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin: 0;
+            opacity: 0.95;
+        }
+
+        .filter-section {
+            background: #f1f5f9;
+            background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+            padding: 25px;
+            border-radius: 16px;
+            margin-bottom: 25px;
+            border: 2px solid #e2e8f0;
+            box-shadow: var(--card-shadow);
+        }
+
+        .survey-table {
+            font-size: 0.9rem;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--card-shadow);
+        }
+
+        .survey-table thead th {
+            background: linear-gradient(135deg, var(--admin-primary), var(--admin-primary-dark));
+            color: white;
+            font-weight: 600;
+            padding: 15px 12px;
+            border: none;
+            font-size: 0.85rem;
+        }
+
+        .survey-table tbody tr {
+            transition: all 0.2s ease;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .survey-table tbody tr:hover {
+            background: rgba(30, 64, 175, 0.05);
+            transform: scale(1.002);
+        }
+
+        .survey-table td {
+            padding: 12px;
+            vertical-align: middle;
+        }
+
+        .risk-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .risk-low {
+            background: linear-gradient(135deg, var(--success-color), #047857);
+            color: white;
+        }
+
+        .risk-medium {
+            background: linear-gradient(135deg, var(--warning-color), #ea580c);
+            color: white;
+        }
+
+        .risk-high {
+            background: linear-gradient(135deg, var(--danger-color), #b91c1c);
+            color: white;
+        }
+
+        .risk-critical {
+            background: linear-gradient(135deg, #dc2626, #991b1b);
+            color: white;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .btn-group-sm .btn {
+            padding: 8px 12px;
+            font-size: 0.8rem;
+            border-radius: 8px;
+            margin: 0 2px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-group-sm .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .form-control, .form-select {
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 10px 14px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--admin-primary);
+            box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+        }
+
+        .btn {
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: var(--card-shadow);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--admin-primary), var(--admin-primary-dark));
+            border: none;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success-color), #047857);
+            border: none;
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, var(--warning-color), #ea580c);
+            border: none;
+        }
+
+        .pagination .page-link {
+            border-radius: 8px;
+            margin: 0 2px;
+            border: 1px solid #e5e7eb;
+            color: var(--admin-primary);
+            transition: all 0.2s ease;
+        }
+
+        .pagination .page-link:hover {
+            background: var(--admin-primary);
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        .pagination .page-item.active .page-link {
+            background: linear-gradient(135deg, var(--admin-primary), var(--admin-primary-dark));
+            border-color: var(--admin-primary);
+        }
+
+        @media (max-width: 1200px) {
+            .admin-container { padding: 15px; }
+            .admin-section { padding: 25px 20px; }
+            .admin-header h1 { font-size: 2rem; }
+        }
+
+        @media (max-width: 768px) {
+            .admin-header { padding: 25px 20px; }
+            .admin-header h1 { font-size: 1.7rem; }
+            .stat-card h3 { font-size: 1.8rem; }
+            .survey-table { font-size: 0.8rem; }
+            .btn-group-sm .btn { padding: 6px 8px; font-size: 0.7rem; }
+        }
+
+        /* Loading animation */
+        .loading {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        /* Smooth transitions for all elements */
+        * {
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
     </style>
 </head>
 <body>
