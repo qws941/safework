@@ -95,3 +95,22 @@ __pycache__/
 
 # Serena MCP memory
 .serena/
+
+# Cloudflare Workers
+.wrangler/
+wrangler.toml.bak
+workers/.wrangler/
+cloudflare-workers/.wrangler/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# Additional temporary files
+*.sqlite-shm
+*.sqlite-wal
+deploy_timestamp.txt
+*dns_backup*.json
