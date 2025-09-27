@@ -9,6 +9,7 @@ import { healthRoutes } from './routes/health';
 import { workerRoutes } from './routes/worker';
 import { excelProcessorRoutes } from './routes/excel-processor';
 import { form002Template } from './templates/002';
+import { form001Template } from './templates/001';
 
 export interface Env {
   SAFEWORK_KV: KVNamespace;
@@ -460,7 +461,12 @@ app.get('/admin', (c) => {
 app.get('/survey/:surveyType', async (c) => {
   const surveyType = c.req.param('surveyType');
   
-  // FORCE 002 template first
+  // FORCE embedded templates first
+  if (surveyType === '001_musculoskeletal_symptom_survey') {
+    console.log('✅ 001 TEMPLATE LOADED - 근골격계 증상조사표');
+    return c.html(form001Template);
+  }
+
   if (surveyType === '002_musculoskeletal_symptom_program') {
     console.log('✅ 002 TEMPLATE LOADED - AUTOMATION WORKS!');
     return c.html(form002Template);

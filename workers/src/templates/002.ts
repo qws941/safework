@@ -3,470 +3,297 @@ export const form002Template = `<!DOCTYPE html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>근골격계부담작업 유해요인조사 (002) - SafeWork</title>
+    <title>근골격계 증상 분석 결과 (002) - SafeWork</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
-        :root {
-            --sw-primary: #2563eb;
-            --sw-primary-dark: #1d4ed8;
-            --sw-secondary: #64748b;
-            --sw-success: #10b981;
-            --sw-warning: #f59e0b;
-            --sw-danger: #ef4444;
-            --sw-light: #f8f9fa;
-            --sw-border: #dee2e6;
-        }
-
-        .survey-container {
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 20px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        .survey-header {
-            background: linear-gradient(135deg, var(--sw-primary), var(--sw-primary-dark));
-            color: white;
-            padding: 30px;
-            border-radius: 10px 10px 0 0;
-            margin: -20px -20px 30px -20px;
-            text-align: center;
-        }
-
-        .survey-header h1 {
-            margin: 0;
-            font-size: 28px;
-            font-weight: 700;
-        }
-
-        .survey-header .subtitle {
-            margin-top: 10px;
-            opacity: 0.9;
-            font-size: 16px;
-        }
-
-        .section-header {
-            background: var(--sw-light);
-            border-left: 5px solid var(--sw-primary);
-            padding: 15px 20px;
-            margin: 30px 0 20px 0;
-            border-radius: 5px;
-        }
-
-        .section-header h3 {
-            margin: 0;
-            color: var(--sw-primary);
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-        }
-
-        .section-header i {
-            margin-right: 10px;
-            font-size: 20px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-label {
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 8px;
-            display: block;
-        }
-
-        .form-control, .form-select {
-            border: 2px solid var(--sw-border);
-            border-radius: 6px;
-            padding: 12px 15px;
-            font-size: 14px;
-            transition: all 0.3s ease;
-        }
-
-        .form-control:focus, .form-select:focus {
-            border-color: var(--sw-primary);
-            box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25);
-            outline: none;
-        }
-
-        .required-field::after {
-            content: " *";
-            color: var(--sw-danger);
-            font-weight: bold;
-        }
-
-        .btn-submit {
-            background: linear-gradient(135deg, var(--sw-primary), var(--sw-primary-dark));
-            border: none;
-            color: white;
-            padding: 15px 40px;
-            font-size: 16px;
-            font-weight: 600;
-            border-radius: 50px;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .btn-submit:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(37, 99, 235, 0.3);
-        }
-
-        .row {
-            margin-bottom: 15px;
-        }
-
-        @media (max-width: 768px) {
-            .survey-container {
-                margin: 10px;
-                padding: 15px;
-            }
-            
-            .survey-header {
-                padding: 20px;
-                margin: -15px -15px 20px -15px;
-            }
-            
-            .survey-header h1 {
-                font-size: 24px;
-            }
-        }
+        body { background-color: #f8f9fa; font-family: 'Malgun Gothic', sans-serif; }
+        .analysis-container { max-width: 1000px; margin: 0 auto; padding: 20px; }
+        .analysis-header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; text-align: center; }
+        .analysis-section { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 20px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .section-title { color: #495057; font-weight: bold; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #e9ecef; }
+        .risk-badge { padding: 8px 15px; border-radius: 20px; font-weight: bold; color: white; }
+        .risk-low { background-color: #10b981; }
+        .risk-medium { background-color: #f59e0b; }
+        .risk-high { background-color: #ef4444; }
+        .risk-critical { background-color: #dc2626; }
+        .program-card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-bottom: 15px; }
+        .program-urgent { border-color: #ef4444; background-color: #fef2f2; }
+        .program-recommended { border-color: #f59e0b; background-color: #fffbeb; }
+        .program-preventive { border-color: #10b981; background-color: #f0fdf4; }
+        .progress-bar { height: 25px; border-radius: 12px; }
     </style>
 </head>
-<body style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px 0;">
-    <div class="survey-container">
-        <div class="survey-header">
-            <h1><i class="bi bi-clipboard-data-fill"></i> 근골격계부담작업 유해요인조사</h1>
-            <div class="subtitle">Musculoskeletal Disorder Risk Assessment (002)</div>
+<body>
+    <div class="analysis-container">
+        <div class="analysis-header">
+            <h1><i class="bi bi-graph-up"></i> 근골격계 증상 분석 결과</h1>
+            <p class="mb-0">Musculoskeletal Symptom Analysis Results (002)</p>
         </div>
 
-        <form id="musculoskeletalForm" method="POST">
-            <!-- 기본 정보 섹션 -->
-            <div class="section-header">
-                <h3><i class="bi bi-info-circle-fill"></i> 기본 정보</h3>
-            </div>
-            
-            <div class="row">
-                <div class="col-md-2">
-                    <div class="form-group">
-                        <label for="sequence_number" class="form-label">번호</label>
-                        <input type="text" class="form-control" id="sequence_number" name="sequence_number" placeholder="#">
-                    </div>
+        <!-- Personal Info Summary -->
+        <div class="analysis-section">
+            <h3 class="section-title"><i class="bi bi-person-badge"></i> 조사 대상자 정보</h3>
+            <div class="row" id="personalInfo">
+                <div class="col-md-3">
+                    <strong>성명:</strong> <span id="userName">-</span>
                 </div>
                 <div class="col-md-3">
-                    <div class="form-group">
-                        <label for="name" class="form-label required-field">성명</label>
-                        <input type="text" class="form-control" id="name" name="name" required>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="form-group">
-                        <label for="age" class="form-label required-field">연령</label>
-                        <input type="number" class="form-control" id="age" name="age" min="18" max="70" required>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="form-group">
-                        <label for="gender" class="form-label required-field">성별</label>
-                        <select class="form-select" id="gender" name="gender" required>
-                            <option value="">선택</option>
-                            <option value="남">남</option>
-                            <option value="여">여</option>
-                        </select>
-                    </div>
+                    <strong>부서:</strong> <span id="userDept">-</span>
                 </div>
                 <div class="col-md-3">
-                    <div class="form-group">
-                        <label for="work_experience" class="form-label required-field">현 직장 경력(년)</label>
-                        <input type="number" class="form-control" id="work_experience" name="work_experience" min="0" max="50" required>
-                    </div>
+                    <strong>경력:</strong> <span id="userExp">-</span>년
+                </div>
+                <div class="col-md-3">
+                    <strong>분석일시:</strong> <span id="analysisDate"></span>
                 </div>
             </div>
+        </div>
 
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="form-group">
-                        <label for="department" class="form-label required-field">부서</label>
-                        <input type="text" class="form-control" id="department" name="department" required>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 작업환경 평가 섹션 -->
-            <div class="section-header">
-                <h3><i class="bi bi-gear-fill"></i> 작업환경 평가</h3>
-            </div>
-
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="work_posture" class="form-label required-field">작업자세 평가</label>
-                        <select class="form-select" id="work_posture" name="work_posture" required>
-                            <option value="">선택</option>
-                            <option value="양호">양호</option>
-                            <option value="보통">보통</option>
-                            <option value="위험">위험</option>
-                            <option value="매우위험">매우위험</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="repetitive_motion" class="form-label required-field">반복동작 평가</label>
-                        <select class="form-select" id="repetitive_motion" name="repetitive_motion" required>
-                            <option value="">선택</option>
-                            <option value="낮음">낮음</option>
-                            <option value="보통">보통</option>
-                            <option value="높음">높음</option>
-                            <option value="매우높음">매우높음</option>
-                        </select>
+        <!-- Overall Risk Assessment -->
+        <div class="analysis-section">
+            <h3 class="section-title"><i class="bi bi-exclamation-triangle"></i> 종합 위험도 평가</h3>
+            <div class="row text-center">
+                <div class="col-md-12 mb-4">
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h2 id="overallRisk" class="risk-badge risk-medium">중위험</h2>
+                            <p class="mt-3 mb-0" id="riskDescription">일부 신체 부위에서 위험 요인이 발견되었습니다. 예방 조치가 필요합니다.</p>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div class="row">
                 <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="force_exertion" class="form-label required-field">힘의 사용 정도</label>
-                        <select class="form-select" id="force_exertion" name="force_exertion" required>
-                            <option value="">선택</option>
-                            <option value="가벼움">가벼움</option>
-                            <option value="보통">보통</option>
-                            <option value="무거움">무거움</option>
-                            <option value="매우무거움">매우무거움</option>
-                        </select>
-                    </div>
+                    <h5>위험 점수 분포</h5>
+                    <div class="mb-2">목/어깨: <div class="progress"><div id="neckProgress" class="progress-bar bg-warning" style="width: 60%">60점</div></div></div>
+                    <div class="mb-2">팔/팔꿈치: <div class="progress"><div id="armProgress" class="progress-bar bg-success" style="width: 20%">20점</div></div></div>
+                    <div class="mb-2">손목/손: <div class="progress"><div id="wristProgress" class="progress-bar bg-success" style="width: 30%">30점</div></div></div>
+                    <div class="mb-2">허리: <div class="progress"><div id="backProgress" class="progress-bar bg-danger" style="width: 80%">80점</div></div></div>
+                    <div class="mb-2">다리/무릎: <div class="progress"><div id="legProgress" class="progress-bar bg-warning" style="width: 40%">40점</div></div></div>
                 </div>
                 <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="vibration_exposure" class="form-label required-field">진동노출</label>
-                        <select class="form-select" id="vibration_exposure" name="vibration_exposure" required>
-                            <option value="">선택</option>
-                            <option value="없음">없음</option>
-                            <option value="약간">약간</option>
-                            <option value="보통">보통</option>
-                            <option value="심함">심함</option>
-                        </select>
-                    </div>
+                    <h5>위험 요인 분석</h5>
+                    <ul id="riskFactors">
+                        <li>장시간 동일 자세 유지</li>
+                        <li>반복적인 동작 수행</li>
+                        <li>부적절한 작업 환경</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Customized Improvement Programs -->
+        <div class="analysis-section">
+            <h3 class="section-title"><i class="bi bi-heart-pulse"></i> 맞춤형 개선 프로그램</h3>
+
+            <div id="urgentPrograms">
+                <h5 class="text-danger">즉시 실행 필요</h5>
+                <div class="program-card program-urgent">
+                    <h6><i class="bi bi-exclamation-circle text-danger"></i> 허리 부위 집중 관리</h6>
+                    <p>허리 통증 지수가 높게 측정되었습니다. 즉시 작업 자세 개선이 필요합니다.</p>
+                    <ul>
+                        <li>작업대 높이 조절 (권장: 팔꿈치 90도 각도)</li>
+                        <li>1시간마다 5분씩 스트레칭</li>
+                        <li>허리 지지대 착용 검토</li>
+                        <li>무거운 물건 들기 시 올바른 자세 교육</li>
+                    </ul>
                 </div>
             </div>
 
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="work_height" class="form-label">작업높이</label>
-                        <select class="form-select" id="work_height" name="work_height">
-                            <option value="">선택</option>
-                            <option value="적정">적정</option>
-                            <option value="높음">높음</option>
-                            <option value="낮음">낮음</option>
-                            <option value="변동">변동</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="tool_usage" class="form-label">사용도구</label>
-                        <textarea class="form-control" id="tool_usage" name="tool_usage" rows="3" placeholder="사용하는 도구나 장비를 입력해주세요"></textarea>
-                    </div>
+            <div id="recommendedPrograms">
+                <h5 class="text-warning">권장 프로그램</h5>
+                <div class="program-card program-recommended">
+                    <h6><i class="bi bi-clock text-warning"></i> 목/어깨 예방 프로그램</h6>
+                    <p>목과 어깨 부위의 피로도가 증가하고 있습니다. 예방적 조치를 권장합니다.</p>
+                    <ul>
+                        <li>목과 어깨 스트레칭 (하루 3회, 10분씩)</li>
+                        <li>모니터 높이 조절 (시선과 수평)</li>
+                        <li>키보드, 마우스 위치 최적화</li>
+                    </ul>
                 </div>
             </div>
 
-            <!-- 건강상태 평가 섹션 -->
-            <div class="section-header">
-                <h3><i class="bi bi-heart-pulse-fill"></i> 건강상태 평가</h3>
+            <div id="preventivePrograms">
+                <h5 class="text-success">예방 프로그램</h5>
+                <div class="program-card program-preventive">
+                    <h6><i class="bi bi-shield-check text-success"></i> 전신 건강 관리 프로그램</h6>
+                    <p>현재 상태를 유지하고 향후 위험을 예방하기 위한 종합 관리 프로그램입니다.</p>
+                    <ul>
+                        <li>주 3회 이상 근력 강화 운동</li>
+                        <li>유산소 운동 (주 150분 이상)</li>
+                        <li>작업 전후 워밍업/쿨다운</li>
+                        <li>정기적인 건강검진 (6개월마다)</li>
+                    </ul>
+                </div>
             </div>
+        </div>
 
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="muscle_pain" class="form-label">근육통</label>
-                        <select class="form-select" id="muscle_pain" name="muscle_pain">
-                            <option value="">선택</option>
-                            <option value="없음">없음</option>
-                            <option value="가끔">가끔</option>
-                            <option value="자주">자주</option>
-                            <option value="항상">항상</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="joint_pain" class="form-label">관절통</label>
-                        <select class="form-select" id="joint_pain" name="joint_pain">
-                            <option value="">선택</option>
-                            <option value="없음">없음</option>
-                            <option value="가끔">가끔</option>
-                            <option value="자주">자주</option>
-                            <option value="항상">항상</option>
-                        </select>
-                    </div>
-                </div>
+        <!-- Medical Consultation Recommendation -->
+        <div class="analysis-section" id="medicalConsultation" style="display: none;">
+            <h3 class="section-title text-danger"><i class="bi bi-hospital"></i> 의료진 상담 권고</h3>
+            <div class="alert alert-danger">
+                <h5>즉시 전문의 상담을 받으시기 바랍니다</h5>
+                <p>현재 증상의 정도가 심각한 수준입니다. 다음과 같은 전문의 상담을 권장합니다:</p>
+                <ul id="medicalRecommendations">
+                    <li>정형외과 - 허리, 목, 어깨 관련 증상</li>
+                    <li>신경외과 - 신경 압박 증상</li>
+                    <li>재활의학과 - 물리치료 및 재활 프로그램</li>
+                </ul>
             </div>
+        </div>
 
-            <div class="row">
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label for="fatigue_level" class="form-label">피로도</label>
-                        <select class="form-select" id="fatigue_level" name="fatigue_level">
-                            <option value="">선택</option>
-                            <option value="낮음">낮음</option>
-                            <option value="보통">보통</option>
-                            <option value="높음">높음</option>
-                            <option value="매우높음">매우높음</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label for="sleep_quality" class="form-label">수면의질</label>
-                        <select class="form-select" id="sleep_quality" name="sleep_quality">
-                            <option value="">선택</option>
-                            <option value="좋음">좋음</option>
-                            <option value="보통">보통</option>
-                            <option value="나쁨">나쁨</option>
-                            <option value="매우나쁨">매우나쁨</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label for="stress_level" class="form-label">스트레스수준</label>
-                        <select class="form-select" id="stress_level" name="stress_level">
-                            <option value="">선택</option>
-                            <option value="낮음">낮음</option>
-                            <option value="보통">보통</option>
-                            <option value="높음">높음</option>
-                            <option value="매우높음">매우높음</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 위험요인 분석 섹션 -->
-            <div class="section-header">
-                <h3><i class="bi bi-exclamation-triangle-fill"></i> 위험요인 분석</h3>
-            </div>
-
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="physical_factors" class="form-label">물리적 위험요인</label>
-                        <textarea class="form-control" id="physical_factors" name="physical_factors" rows="3" placeholder="물리적 위험요인을 기술해주세요"></textarea>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="environmental_factors" class="form-label">환경적 위험요인</label>
-                        <textarea class="form-control" id="environmental_factors" name="environmental_factors" rows="3" placeholder="환경적 위험요인을 기술해주세요"></textarea>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="psychosocial_factors" class="form-label">심리사회적 위험요인</label>
-                        <textarea class="form-control" id="psychosocial_factors" name="psychosocial_factors" rows="3" placeholder="심리사회적 위험요인을 기술해주세요"></textarea>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="work_schedule" class="form-label">근무형태</label>
-                        <select class="form-select" id="work_schedule" name="work_schedule">
-                            <option value="">선택</option>
-                            <option value="주간">주간</option>
-                            <option value="야간">야간</option>
-                            <option value="교대">교대</option>
-                            <option value="불규칙">불규칙</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 개선방안 섹션 -->
-            <div class="section-header">
-                <h3><i class="bi bi-lightbulb-fill"></i> 개선방안</h3>
-            </div>
-
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="immediate_actions" class="form-label">즉시 개선사항</label>
-                        <textarea class="form-control" id="immediate_actions" name="immediate_actions" rows="3" placeholder="즉시 개선이 필요한 사항을 기술해주세요"></textarea>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="long_term_plans" class="form-label">장기 개선계획</label>
-                        <textarea class="form-control" id="long_term_plans" name="long_term_plans" rows="3" placeholder="장기적 개선계획을 기술해주세요"></textarea>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="training_needs" class="form-label">교육필요사항</label>
-                        <textarea class="form-control" id="training_needs" name="training_needs" rows="3" placeholder="필요한 교육 내용을 기술해주세요"></textarea>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="equipment_needs" class="form-label">장비개선사항</label>
-                        <textarea class="form-control" id="equipment_needs" name="equipment_needs" rows="3" placeholder="개선이 필요한 장비나 설비를 기술해주세요"></textarea>
-                    </div>
-                </div>
-            </div>
-
-            <div class="text-center mt-4">
-                <button type="submit" class="btn btn-submit">
-                    <i class="bi bi-check-lg"></i> 조사표 제출
-                </button>
-            </div>
-        </form>
+        <!-- Action Buttons -->
+        <div class="text-center">
+            <button onclick="printResults()" class="btn btn-primary me-3">
+                <i class="bi bi-printer"></i> 결과 인쇄
+            </button>
+            <button onclick="downloadPDF()" class="btn btn-secondary me-3">
+                <i class="bi bi-file-earmark-pdf"></i> PDF 다운로드
+            </button>
+            <a href="/survey/001_musculoskeletal_symptom_survey" class="btn btn-outline-primary">
+                <i class="bi bi-arrow-clockwise"></i> 재조사 실시
+            </a>
+        </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-    document.getElementById('musculoskeletalForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const formData = new FormData(this);
-        const data = Object.fromEntries(formData);
-        
-        // Submit to API
-        fetch('/api/survey/submit', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                form_type: '002_musculoskeletal_symptom_program',
-                response_data: data,
-                is_anonymous: true
-            })
-        })
-        .then(response => response.json())
-        .then(result => {
-            if (result.success) {
-                alert('근골격계부담작업 유해요인조사가 성공적으로 제출되었습니다.');
-                window.location.href = '/';
-            } else {
-                alert('제출 중 오류가 발생했습니다: ' + result.message);
+        console.log('002 Analysis Page Loaded - ENG LOG');
+
+        // Extract 001 survey data from URL
+        function getAnalysisData() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const dataParam = urlParams.get('data');
+
+            if (dataParam) {
+                try {
+                    const parsedData = JSON.parse(decodeURIComponent(dataParam));
+                    console.log('Parsed 001 survey data:', parsedData);
+                    return parsedData;
+                } catch (e) {
+                    console.error('Failed to parse survey data:', e);
+                }
             }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('제출 중 오류가 발생했습니다.');
+
+            // Default demo data
+            console.log('Using demo data - no 001 survey data found');
+            return {
+                name: '홍길동',
+                department: '생산팀',
+                work_experience: '5',
+                age: '35',
+                gender: 'male',
+                neck_shoulder_pain: 'moderate',
+                neck_shoulder_intensity: '6',
+                arm_elbow_pain: 'mild',
+                arm_elbow_intensity: '2',
+                wrist_hand_pain: 'mild',
+                wrist_hand_intensity: '3',
+                back_pain: 'severe',
+                back_intensity: '8',
+                leg_knee_pain: 'moderate',
+                leg_knee_intensity: '4',
+                medical_consultation: 'needed'
+            };
+        }
+
+        // Calculate risk score
+        function calculateRiskScore(painLevel, intensity) {
+            const painScores = { none: 0, mild: 25, moderate: 50, severe: 75 };
+            const intensityScore = parseInt(intensity) * 10;
+            const score = Math.min(100, (painScores[painLevel] || 0) + intensityScore);
+            console.log('Risk calculation:', { painLevel, intensity, score });
+            return score;
+        }
+
+        // Assess overall risk
+        function assessOverallRisk(scores) {
+            const maxScore = Math.max(...Object.values(scores));
+            const avgScore = Object.values(scores).reduce((a, b) => a + b, 0) / Object.values(scores).length;
+
+            console.log('Overall risk assessment:', { maxScore, avgScore, scores });
+
+            if (maxScore >= 80 || avgScore >= 60) return { level: 'critical', label: '고위험', class: 'risk-critical' };
+            if (maxScore >= 60 || avgScore >= 40) return { level: 'high', label: '중위험', class: 'risk-high' };
+            if (maxScore >= 40 || avgScore >= 25) return { level: 'medium', label: '저위험', class: 'risk-medium' };
+            return { level: 'low', label: '정상', class: 'risk-low' };
+        }
+
+        // Render analysis results
+        function renderAnalysis() {
+            console.log('Starting analysis rendering');
+            const data = getAnalysisData();
+
+            // Display personal info
+            document.getElementById('userName').textContent = data.name || '미입력';
+            document.getElementById('userDept').textContent = data.department || '미입력';
+            document.getElementById('userExp').textContent = data.work_experience || '0';
+            document.getElementById('analysisDate').textContent = new Date().toLocaleDateString('ko-KR');
+
+            // Calculate risk scores
+            const scores = {
+                neck: calculateRiskScore(data.neck_shoulder_pain, data.neck_shoulder_intensity),
+                arm: calculateRiskScore(data.arm_elbow_pain, data.arm_elbow_intensity),
+                wrist: calculateRiskScore(data.wrist_hand_pain, data.wrist_hand_intensity),
+                back: calculateRiskScore(data.back_pain, data.back_intensity),
+                leg: calculateRiskScore(data.leg_knee_pain, data.leg_knee_intensity)
+            };
+
+            // Update progress bars
+            const progressBars = [
+                { id: 'neckProgress', score: scores.neck },
+                { id: 'armProgress', score: scores.arm },
+                { id: 'wristProgress', score: scores.wrist },
+                { id: 'backProgress', score: scores.back },
+                { id: 'legProgress', score: scores.leg }
+            ];
+
+            progressBars.forEach(bar => {
+                const element = document.getElementById(bar.id);
+                element.style.width = bar.score + '%';
+                element.textContent = bar.score + '점';
+
+                // Update color based on score
+                element.className = 'progress-bar';
+                if (bar.score >= 70) element.classList.add('bg-danger');
+                else if (bar.score >= 40) element.classList.add('bg-warning');
+                else element.classList.add('bg-success');
+            });
+
+            // Overall risk assessment
+            const overallRisk = assessOverallRisk(scores);
+            const riskElement = document.getElementById('overallRisk');
+            riskElement.textContent = overallRisk.label;
+            riskElement.className = 'risk-badge ' + overallRisk.class;
+
+            // Show medical consultation if needed
+            if (data.medical_consultation === 'needed' || data.medical_consultation === 'urgent' || overallRisk.level === 'critical') {
+                document.getElementById('medicalConsultation').style.display = 'block';
+                console.log('Medical consultation recommended');
+            }
+
+            console.log('Analysis rendering completed');
+        }
+
+        // Print results
+        function printResults() {
+            console.log('Print results requested');
+            window.print();
+        }
+
+        // Download PDF (using browser print function)
+        function downloadPDF() {
+            console.log('PDF download requested');
+            alert('PDF 다운로드 기능은 브라우저의 인쇄 기능을 이용해 주세요.\\n인쇄 → 대상을 PDF로 저장');
+            window.print();
+        }
+
+        // Execute analysis on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Page loaded, executing analysis');
+            renderAnalysis();
         });
-    });
     </script>
 </body>
 </html>`;

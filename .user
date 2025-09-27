@@ -1,0 +1,28 @@
+# safework Project Status
+
+## Project Information
+- Name: safework
+- Path: /home/jclee/app/safework
+- Created: 2025-09-27T23:39:53+09:00
+- Status: INCOMPLETE
+
+## Requirements
+- [ ] Tests implemented
+- [ ] Documentation complete
+- [ ] CI/CD configured
+- [ ] Deployed to production
+- [ ] Error-free execution
+
+## Notes
+Add project-specific notes here...
+
+## Completion Criteria
+This project will be considered complete when:
+1. All tests pass
+2. Documentation is comprehensive
+3. CI/CD pipeline is functional
+4. Successfully deployed
+5. No critical errors
+
+## Auto-tracking
+This file is automatically tracked by Claude Code's user-project-manager.
