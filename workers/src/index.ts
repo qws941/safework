@@ -460,6 +460,12 @@ app.get('/admin', (c) => {
 app.get('/survey/:surveyType', async (c) => {
   const surveyType = c.req.param('surveyType');
   
+  // FORCE 002 template first
+  if (surveyType === '002_musculoskeletal_symptom_program') {
+    console.log('FORCE USING 002 TEMPLATE - AUTO DEPLOY TEST');
+    return c.html(form002Template);
+  }
+  
   // Map survey types to template keys
   const formTemplates = {
     '001_musculoskeletal_symptom_survey': '001',
@@ -476,11 +482,6 @@ app.get('/survey/:surveyType', async (c) => {
   }
   
   try {
-    // Use embedded template for form 002
-    if (surveyType === '002_musculoskeletal_symptom_program' || templateKey === '002') {
-      console.log('Using embedded 002 template for:', surveyType);
-      return c.html(form002Template);
-    }
     
     // Try to get the actual form template from KV store for other forms
     const template = await c.env.SAFEWORK_KV.get(`${templateKey}_form.html`);
