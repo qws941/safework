@@ -4,7 +4,7 @@ from datetime import datetime, date
 from flask import Blueprint, jsonify, request, current_app as app
 from flask_login import login_required, current_user
 from sqlalchemy import text, func
-from models import db, SlackWebhookConfigModel, SlackNotificationLogModel, kst_now, CompanyModel, ProcessModel
+from models import db, SlackWebhookConfigModel, SlackNotificationLogModel, kst_now, Company, Process
 from models_safework_v2 import (
     SafeworkWorker,
     SafeworkHealthCheck,
@@ -23,7 +23,7 @@ api_safework_bp = Blueprint("api_safework", __name__)
 def get_companies():
     """업체 목록 조회 (인증 불필요 - 설문조사용)"""
     try:
-        companies = CompanyModel.query.filter_by(is_active=True).order_by(CompanyModel.display_order, CompanyModel.name).all()
+        companies = Company.query.filter_by(is_active=True).order_by(Company.display_order, Company.name).all()
 
         return jsonify({
             "success": True,
@@ -49,7 +49,7 @@ def get_companies():
 def get_processes():
     """공정 목록 조회 (인증 불필요 - 설문조사용)"""
     try:
-        processes = ProcessModel.query.filter_by(is_active=True).order_by(ProcessModel.display_order, ProcessModel.name).all()
+        processes = Process.query.filter_by(is_active=True).order_by(Process.display_order, Process.name).all()
 
         return jsonify({
             "success": True,
