@@ -227,7 +227,7 @@ surveyRoutes.get('/stats', async (c) => {
     
     return c.json({
       statistics: stats.results,
-      total_surveys: stats.results.reduce((sum, s) => sum + s.count, 0),
+      total_surveys: stats.results.reduce((sum: number, s: any) => sum + (Number(s.count) || 0), 0),
     });
   } catch (error) {
     return c.json({ error: 'Failed to fetch statistics' }, 500);

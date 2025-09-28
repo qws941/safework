@@ -18,7 +18,15 @@ ENVIRONMENT = "production"
 
 # Routes
 [[routes]]
-pattern = "safework.jclee.me/*"
+pattern = "safework.jclee.me/survey/001_musculoskeletal_symptom_survey"
+zone_name = "jclee.me"
+
+[[routes]]
+pattern = "safework.jclee.me/survey/002_musculoskeletal_symptom_program"
+zone_name = "jclee.me"
+
+[[routes]]
+pattern = "safework.jclee.me/api/*"
 zone_name = "jclee.me"
 
 # Rate limiting removed for Free plan

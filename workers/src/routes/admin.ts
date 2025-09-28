@@ -332,7 +332,7 @@ adminRoutes.get('/system-health', async (c) => {
     
     // Storage usage (approximate)
     const storageInfo = {
-      database_records: Object.values(dbStats || {}).reduce((sum, val) => sum + (val as number), 0),
+      database_records: Object.values(dbStats || {}).reduce((sum: number, val) => sum + (Number(val) || 0), 0),
       kv_estimated: 'Unknown', // KV doesn't provide size info
     };
     

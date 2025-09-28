@@ -108,9 +108,9 @@ excelProcessorRoutes.get('/download/:fileId', async (c) => {
 
     // Set appropriate headers for Excel download
     c.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    c.header('Content-Disposition', `attachment; filename="${fileData.fileName}"`);
+    c.header('Content-Disposition', `attachment; filename="${(fileData as any).fileName}"`);
 
-    return new Response(fileData.buffer, {
+    return new Response((fileData as any).buffer, {
       headers: c.res.headers
     });
 
