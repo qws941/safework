@@ -6,8 +6,14 @@ compatibility_flags = ["nodejs_compat"]
 # KV Namespaces
 [[kv_namespaces]]
 binding = "SAFEWORK_KV"
-preview_id = "54cbaf6aeff64ebbab07adb7ac56f5c8"
-id = "54cbaf6aeff64ebbab07adb7ac56f5c8"
+preview_id = "placeholder-will-be-created-by-wrangler"
+id = "placeholder-will-be-created-by-wrangler"
+
+# Additional KV for caching
+[[kv_namespaces]]
+binding = "SAFEWORK_CACHE"
+preview_id = "placeholder-cache-preview"
+id = "placeholder-cache-production"
 
 # Environment variables
 [vars]
@@ -49,8 +55,8 @@ BACKEND_URL = "https://safework.jclee.me"
 DEBUG = "false"
 ENVIRONMENT = "production"
 
-# D1 Database - Will be configured by GitHub Actions
-# [[d1_databases]]
-# binding = "SAFEWORK_DB"
-# database_name = "safework-db"
-# database_id = "will-be-configured-by-github-actions"
+# D1 Database
+[[d1_databases]]
+binding = "SAFEWORK_DB"
+database_name = "safework-db"
+database_id = "placeholder-will-be-created-by-wrangler"

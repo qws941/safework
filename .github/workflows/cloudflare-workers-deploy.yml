@@ -53,33 +53,60 @@ jobs:
           cd workers
           npm run lint
           
-      # Stage 4: Create KV Namespace (if needed)
-      - name: Setup KV Namespace
+      # Stage 4: Setup D1 Database and KV Namespaces
+      - name: Setup D1 Database
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           cd workers
-          
-          # Create production KV namespace if it doesn't exist
-          EXISTING_KV=$(npx wrangler kv:namespace list | grep "safework_cache_prod" || echo "")
-          
-          if [ -z "$EXISTING_KV" ]; then
-            echo "Creating production KV namespace..."
-            npx wrangler kv:namespace create "SAFEWORK_CACHE"
-            echo "✅ Production KV namespace created"
+
+          echo "🗄️ Setting up D1 Database..."
+
+          # Create D1 database if it doesn't exist
+          EXISTING_D1=$(npx wrangler d1 list | grep "safework-db" || echo "")
+
+          if [ -z "$EXISTING_D1" ]; then
+            echo "Creating D1 database..."
+            npx wrangler d1 create safework-db
+            echo "✅ D1 database created"
           else
-            echo "✅ Production KV namespace already exists"
+            echo "✅ D1 database already exists"
           fi
-          
-          # Create preview KV namespace if it doesn't exist
-          EXISTING_PREVIEW_KV=$(npx wrangler kv:namespace list | grep "safework_cache_preview" || echo "")
-          
-          if [ -z "$EXISTING_PREVIEW_KV" ]; then
-            echo "Creating preview KV namespace..."
-            npx wrangler kv:namespace create "SAFEWORK_CACHE" --preview
-            echo "✅ Preview KV namespace created"
+
+          # Execute migrations
+          echo "Running D1 migrations..."
+          npx wrangler d1 execute safework-db --file=./schema.sql --remote
+          npx wrangler d1 execute safework-db --file=./migrations/001_initial_setup.sql --remote
+          echo "✅ D1 migrations completed"
+
+      - name: Setup KV Namespaces
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          cd workers
+
+          echo "🔑 Setting up KV Namespaces..."
+
+          # Create SAFEWORK_KV namespace
+          EXISTING_KV=$(npx wrangler kv:namespace list | grep "SAFEWORK_KV" || echo "")
+          if [ -z "$EXISTING_KV" ]; then
+            echo "Creating SAFEWORK_KV namespace..."
+            npx wrangler kv:namespace create "SAFEWORK_KV"
+            npx wrangler kv:namespace create "SAFEWORK_KV" --preview
+            echo "✅ SAFEWORK_KV namespace created"
           else
-            echo "✅ Preview KV namespace already exists"
+            echo "✅ SAFEWORK_KV namespace already exists"
+          fi
+
+          # Create SAFEWORK_CACHE namespace
+          EXISTING_CACHE=$(npx wrangler kv:namespace list | grep "SAFEWORK_CACHE" || echo "")
+          if [ -z "$EXISTING_CACHE" ]; then
+            echo "Creating SAFEWORK_CACHE namespace..."
+            npx wrangler kv:namespace create "SAFEWORK_CACHE"
+            npx wrangler kv:namespace create "SAFEWORK_CACHE" --preview
+            echo "✅ SAFEWORK_CACHE namespace created"
+          else
+            echo "✅ SAFEWORK_CACHE namespace already exists"
           fi
           
       # Stage 5: Deploy Worker
