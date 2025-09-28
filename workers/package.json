@@ -14,7 +14,9 @@
     "test:watch": "vitest --watch",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "deploy:bypass": "wrangler deploy --no-bundle --compatibility-date=2024-01-01",
+    "build:lenient": "tsc --noEmit false --skipLibCheck true"
   },
   "keywords": [
     "cloudflare-workers",
@@ -35,7 +37,7 @@
     "wrangler": "^3.25.0"
   },
   "dependencies": {
-    "hono": "^3.12.0",
-    "bcryptjs": "^2.4.3"
+    "bcryptjs": "^2.4.3",
+    "hono": "^3.12.0"
   }
 }

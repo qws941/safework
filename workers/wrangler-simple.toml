@@ -1,0 +1,20 @@
+name = "safework"
+main = "direct-deploy.js"
+compatibility_date = "2024-01-01"
+
+# KV Namespaces (optional)
+[[kv_namespaces]]
+binding = "SAFEWORK_KV"
+id = "54cbaf6aeff64ebbab07adb7ac56f5c8"
+
+# Environment variables
+[vars]
+JWT_SECRET = "safework-jwt-secret-2024-production"
+ADMIN_USERNAME = "admin"
+BACKEND_URL = "https://safework.jclee.me"
+ENVIRONMENT = "production"
+
+# Routes
+[[routes]]
+pattern = "safework.jclee.me/*"
+zone_name = "jclee.me"
