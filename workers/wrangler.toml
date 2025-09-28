@@ -1,19 +1,26 @@
 name = "safework"
 main = "src/index.ts"
-compatibility_date = "2024-01-01"
+compatibility_date = "2024-10-22"
 compatibility_flags = ["nodejs_compat"]
 
-# KV Namespaces
+# KV Namespaces - CF Native Naming Convention
+# Primary storage: SESSION_DATA, API_CONFIG, FORM_STRUCTURES
 [[kv_namespaces]]
-binding = "SAFEWORK_KV"
-preview_id = "placeholder-will-be-created-by-wrangler"
-id = "placeholder-will-be-created-by-wrangler"
+binding = "SESSION_STORE"
+preview_id = "placeholder-session-store-preview"
+id = "placeholder-session-store-production"
 
-# Additional KV for caching
+# Cache layer: COMPUTED_DATA, STATISTICS, TEMP_RESPONSES
 [[kv_namespaces]]
-binding = "SAFEWORK_CACHE"
-preview_id = "placeholder-cache-preview"
-id = "placeholder-cache-production"
+binding = "CACHE_LAYER"
+preview_id = "placeholder-cache-layer-preview"
+id = "placeholder-cache-layer-production"
+
+# Authentication: JWT_TOKENS, API_KEYS, USER_SESSIONS
+[[kv_namespaces]]
+binding = "AUTH_STORE"
+preview_id = "placeholder-auth-store-preview"
+id = "placeholder-auth-store-production"
 
 # Environment variables
 [vars]
@@ -55,8 +62,15 @@ BACKEND_URL = "https://safework.jclee.me"
 DEBUG = "false"
 ENVIRONMENT = "production"
 
-# D1 Database
+# D1 Database - CF Native Naming Convention
+# Primary database: USER_DATA, SURVEY_RESPONSES, AUDIT_LOGS
 [[d1_databases]]
-binding = "SAFEWORK_DB"
-database_name = "safework-db"
-database_id = "placeholder-will-be-created-by-wrangler"
+binding = "PRIMARY_DB"
+database_name = "safework-primary"
+database_id = "placeholder-primary-db-production"
+
+# Analytics database: STATISTICS, REPORTS, AGGREGATED_DATA
+[[d1_databases]]
+binding = "ANALYTICS_DB"
+database_name = "safework-analytics"
+database_id = "placeholder-analytics-db-production"

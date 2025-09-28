@@ -1,5 +1,5 @@
--- D1 Migration 001: Initial Setup
--- SafeWork D1 Database Initial Schema
+-- Primary Database Migration 001: Primary Schema Setup
+-- SafeWork Primary D1 Database for Core Application Data
 
 -- Create basic user session tracking for edge cache
 CREATE TABLE IF NOT EXISTS edge_sessions (

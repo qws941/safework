@@ -62,22 +62,36 @@ jobs:
 
           echo "🗄️ Setting up D1 Database..."
 
-          # Create D1 database if it doesn't exist
-          EXISTING_D1=$(npx wrangler d1 list | grep "safework-db" || echo "")
-
-          if [ -z "$EXISTING_D1" ]; then
-            echo "Creating D1 database..."
-            npx wrangler d1 create safework-db
-            echo "✅ D1 database created"
+          # Create Primary D1 database if it doesn't exist
+          EXISTING_PRIMARY=$(npx wrangler d1 list | grep "safework-primary" || echo "")
+          if [ -z "$EXISTING_PRIMARY" ]; then
+            echo "Creating Primary D1 database..."
+            npx wrangler d1 create safework-primary
+            echo "✅ Primary D1 database created"
           else
-            echo "✅ D1 database already exists"
+            echo "✅ Primary D1 database already exists"
           fi
 
-          # Execute migrations
-          echo "Running D1 migrations..."
-          npx wrangler d1 execute safework-db --file=./schema.sql --remote
-          npx wrangler d1 execute safework-db --file=./migrations/001_initial_setup.sql --remote
-          echo "✅ D1 migrations completed"
+          # Create Analytics D1 database if it doesn't exist
+          EXISTING_ANALYTICS=$(npx wrangler d1 list | grep "safework-analytics" || echo "")
+          if [ -z "$EXISTING_ANALYTICS" ]; then
+            echo "Creating Analytics D1 database..."
+            npx wrangler d1 create safework-analytics
+            echo "✅ Analytics D1 database created"
+          else
+            echo "✅ Analytics D1 database already exists"
+          fi
+
+          # Execute migrations for Primary DB
+          echo "Running Primary DB migrations..."
+          npx wrangler d1 execute safework-primary --file=./schema.sql --remote
+          npx wrangler d1 execute safework-primary --file=./migrations/001_primary_db_init.sql --remote
+          echo "✅ Primary DB migrations completed"
+
+          # Execute migrations for Analytics DB
+          echo "Running Analytics DB migrations..."
+          npx wrangler d1 execute safework-analytics --file=./migrations/002_analytics_db_init.sql --remote
+          echo "✅ Analytics DB migrations completed"
 
       - name: Setup KV Namespaces
         env:
@@ -87,26 +101,37 @@ jobs:
 
           echo "🔑 Setting up KV Namespaces..."
 
-          # Create SAFEWORK_KV namespace
-          EXISTING_KV=$(npx wrangler kv:namespace list | grep "SAFEWORK_KV" || echo "")
-          if [ -z "$EXISTING_KV" ]; then
-            echo "Creating SAFEWORK_KV namespace..."
-            npx wrangler kv:namespace create "SAFEWORK_KV"
-            npx wrangler kv:namespace create "SAFEWORK_KV" --preview
-            echo "✅ SAFEWORK_KV namespace created"
+          # Create SESSION_STORE namespace
+          EXISTING_SESSION=$(npx wrangler kv:namespace list | grep "SESSION_STORE" || echo "")
+          if [ -z "$EXISTING_SESSION" ]; then
+            echo "Creating SESSION_STORE namespace..."
+            npx wrangler kv:namespace create "SESSION_STORE"
+            npx wrangler kv:namespace create "SESSION_STORE" --preview
+            echo "✅ SESSION_STORE namespace created"
           else
-            echo "✅ SAFEWORK_KV namespace already exists"
+            echo "✅ SESSION_STORE namespace already exists"
           fi
 
-          # Create SAFEWORK_CACHE namespace
-          EXISTING_CACHE=$(npx wrangler kv:namespace list | grep "SAFEWORK_CACHE" || echo "")
+          # Create CACHE_LAYER namespace
+          EXISTING_CACHE=$(npx wrangler kv:namespace list | grep "CACHE_LAYER" || echo "")
           if [ -z "$EXISTING_CACHE" ]; then
-            echo "Creating SAFEWORK_CACHE namespace..."
-            npx wrangler kv:namespace create "SAFEWORK_CACHE"
-            npx wrangler kv:namespace create "SAFEWORK_CACHE" --preview
-            echo "✅ SAFEWORK_CACHE namespace created"
+            echo "Creating CACHE_LAYER namespace..."
+            npx wrangler kv:namespace create "CACHE_LAYER"
+            npx wrangler kv:namespace create "CACHE_LAYER" --preview
+            echo "✅ CACHE_LAYER namespace created"
           else
-            echo "✅ SAFEWORK_CACHE namespace already exists"
+            echo "✅ CACHE_LAYER namespace already exists"
+          fi
+
+          # Create AUTH_STORE namespace
+          EXISTING_AUTH=$(npx wrangler kv:namespace list | grep "AUTH_STORE" || echo "")
+          if [ -z "$EXISTING_AUTH" ]; then
+            echo "Creating AUTH_STORE namespace..."
+            npx wrangler kv:namespace create "AUTH_STORE"
+            npx wrangler kv:namespace create "AUTH_STORE" --preview
+            echo "✅ AUTH_STORE namespace created"
+          else
+            echo "✅ AUTH_STORE namespace already exists"
           fi
           
       # Stage 5: Deploy Worker
