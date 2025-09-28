@@ -40,7 +40,7 @@ vars = { BACKEND_URL = "http://localhost:4545", DEBUG = "true", ENVIRONMENT = "d
 
 # Production environment
 [env.production]
-name = "safework-prod"
+name = "safework"
 
 [env.production.vars]
 JWT_SECRET = "safework-jwt-secret-2024-production"
