@@ -41,7 +41,7 @@ jobs:
         run: |
           cd workers
           npx wrangler whoami
-          npx wrangler kv:namespace list || echo "No KV namespaces yet"
+          npx wrangler kv namespace list || echo "No KV namespaces yet"
           
       - name: TypeScript Type Check
         run: |
@@ -77,33 +77,33 @@ jobs:
           echo "🔑 Setting up KV Namespaces..."
 
           # Create SESSION_STORE namespace
-          EXISTING_SESSION=$(npx wrangler kv:namespace list | grep "SESSION_STORE" || echo "")
+          EXISTING_SESSION=$(npx wrangler kv namespace list | grep "SESSION_STORE" || echo "")
           if [ -z "$EXISTING_SESSION" ]; then
             echo "Creating SESSION_STORE namespace..."
-            npx wrangler kv:namespace create "SESSION_STORE"
-            npx wrangler kv:namespace create "SESSION_STORE" --preview
+            npx wrangler kv namespace create "SESSION_STORE"
+            npx wrangler kv namespace create "SESSION_STORE" --preview
             echo "✅ SESSION_STORE namespace created"
           else
             echo "✅ SESSION_STORE namespace already exists"
           fi
 
           # Create CACHE_LAYER namespace
-          EXISTING_CACHE=$(npx wrangler kv:namespace list | grep "CACHE_LAYER" || echo "")
+          EXISTING_CACHE=$(npx wrangler kv namespace list | grep "CACHE_LAYER" || echo "")
           if [ -z "$EXISTING_CACHE" ]; then
             echo "Creating CACHE_LAYER namespace..."
-            npx wrangler kv:namespace create "CACHE_LAYER"
-            npx wrangler kv:namespace create "CACHE_LAYER" --preview
+            npx wrangler kv namespace create "CACHE_LAYER"
+            npx wrangler kv namespace create "CACHE_LAYER" --preview
             echo "✅ CACHE_LAYER namespace created"
           else
             echo "✅ CACHE_LAYER namespace already exists"
           fi
 
           # Create AUTH_STORE namespace
-          EXISTING_AUTH=$(npx wrangler kv:namespace list | grep "AUTH_STORE" || echo "")
+          EXISTING_AUTH=$(npx wrangler kv namespace list | grep "AUTH_STORE" || echo "")
           if [ -z "$EXISTING_AUTH" ]; then
             echo "Creating AUTH_STORE namespace..."
-            npx wrangler kv:namespace create "AUTH_STORE"
-            npx wrangler kv:namespace create "AUTH_STORE" --preview
+            npx wrangler kv namespace create "AUTH_STORE"
+            npx wrangler kv namespace create "AUTH_STORE" --preview
             echo "✅ AUTH_STORE namespace created"
           else
             echo "✅ AUTH_STORE namespace already exists"
