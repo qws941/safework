@@ -48,6 +48,8 @@ services:
   safework-app:
     image: registry.jclee.me/safework-app:latest
     container_name: safework-app
+    ports:
+      - "4545:4545"
     environment:
       - FLASK_CONFIG=${FLASK_CONFIG:-production}
       - TZ=Asia/Seoul
