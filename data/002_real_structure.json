@@ -1,0 +1,365 @@
+{
+  "formId": "002_musculoskeletal_symptom_program",
+  "title": "근골격계질환 증상조사표",
+  "description": "근골격계부담작업 유해요인조사를 위한 증상조사표",
+  "fields": [
+    {
+      "id": "number",
+      "label": "#",
+      "type": "number",
+      "required": true
+    },
+    {
+      "id": "name",
+      "label": "성명",
+      "type": "text",
+      "required": true
+    },
+    {
+      "id": "age",
+      "label": "연령",
+      "type": "number",
+      "required": true
+    },
+    {
+      "id": "gender",
+      "label": "성별",
+      "type": "select",
+      "options": [
+        "남",
+        "여"
+      ],
+      "required": true
+    },
+    {
+      "id": "work_experience",
+      "label": "현 직장 경력(년)",
+      "type": "number",
+      "required": true
+    },
+    {
+      "id": "department",
+      "label": "부서",
+      "type": "text",
+      "required": true
+    },
+    {
+      "id": "line",
+      "label": "라인",
+      "type": "text",
+      "required": false
+    },
+    {
+      "id": "work_type",
+      "label": "작업",
+      "type": "text",
+      "required": false
+    },
+    {
+      "id": "work_content",
+      "label": "작업내용",
+      "type": "textarea",
+      "required": false
+    },
+    {
+      "id": "work_period",
+      "label": "작업기간",
+      "type": "text",
+      "required": false
+    },
+    {
+      "id": "목_통증",
+      "label": "목 통증",
+      "type": "select",
+      "options": [
+        "없음",
+        "있음"
+      ],
+      "required": false
+    },
+    {
+      "id": "목_통증기간",
+      "label": "목 통증기간",
+      "type": "select",
+      "options": [
+        "없음",
+        "1주일 미만",
+        "1주일~1개월",
+        "1개월~6개월",
+        "6개월 이상"
+      ],
+      "required": false
+    },
+    {
+      "id": "목_통증강도",
+      "label": "목 통증강도",
+      "type": "select",
+      "options": [
+        "없음",
+        "약한 통증",
+        "중간 정도",
+        "심한 통증",
+        "매우 심한 통증"
+      ],
+      "required": false
+    },
+    {
+      "id": "목_통증빈도",
+      "label": "목 통증빈도",
+      "type": "select",
+      "options": [
+        "없음",
+        "1달에 1회 미만",
+        "1달에 1-3회",
+        "1주일에 1-2회",
+        "매일"
+      ],
+      "required": false
+    },
+    {
+      "id": "어깨_통증",
+      "label": "어깨 통증",
+      "type": "select",
+      "options": [
+        "없음",
+        "있음"
+      ],
+      "required": false
+    },
+    {
+      "id": "어깨_통증기간",
+      "label": "어깨 통증기간",
+      "type": "select",
+      "options": [
+        "없음",
+        "1주일 미만",
+        "1주일~1개월",
+        "1개월~6개월",
+        "6개월 이상"
+      ],
+      "required": false
+    },
+    {
+      "id": "어깨_통증강도",
+      "label": "어깨 통증강도",
+      "type": "select",
+      "options": [
+        "없음",
+        "약한 통증",
+        "중간 정도",
+        "심한 통증",
+        "매우 심한 통증"
+      ],
+      "required": false
+    },
+    {
+      "id": "어깨_통증빈도",
+      "label": "어깨 통증빈도",
+      "type": "select",
+      "options": [
+        "없음",
+        "1달에 1회 미만",
+        "1달에 1-3회",
+        "1주일에 1-2회",
+        "매일"
+      ],
+      "required": false
+    },
+    {
+      "id": "팔꿈치_통증",
+      "label": "팔꿈치 통증",
+      "type": "select",
+      "options": [
+        "없음",
+        "있음"
+      ],
+      "required": false
+    },
+    {
+      "id": "팔꿈치_통증기간",
+      "label": "팔꿈치 통증기간",
+      "type": "select",
+      "options": [
+        "없음",
+        "1주일 미만",
+        "1주일~1개월",
+        "1개월~6개월",
+        "6개월 이상"
+      ],
+      "required": false
+    },
+    {
+      "id": "팔꿈치_통증강도",
+      "label": "팔꿈치 통증강도",
+      "type": "select",
+      "options": [
+        "없음",
+        "약한 통증",
+        "중간 정도",
+        "심한 통증",
+        "매우 심한 통증"
+      ],
+      "required": false
+    },
+    {
+      "id": "팔꿈치_통증빈도",
+      "label": "팔꿈치 통증빈도",
+      "type": "select",
+      "options": [
+        "없음",
+        "1달에 1회 미만",
+        "1달에 1-3회",
+        "1주일에 1-2회",
+        "매일"
+      ],
+      "required": false
+    },
+    {
+      "id": "손목_통증",
+      "label": "손목 통증",
+      "type": "select",
+      "options": [
+        "없음",
+        "있음"
+      ],
+      "required": false
+    },
+    {
+      "id": "손목_통증기간",
+      "label": "손목 통증기간",
+      "type": "select",
+      "options": [
+        "없음",
+        "1주일 미만",
+        "1주일~1개월",
+        "1개월~6개월",
+        "6개월 이상"
+      ],
+      "required": false
+    },
+    {
+      "id": "손목_통증강도",
+      "label": "손목 통증강도",
+      "type": "select",
+      "options": [
+        "없음",
+        "약한 통증",
+        "중간 정도",
+        "심한 통증",
+        "매우 심한 통증"
+      ],
+      "required": false
+    },
+    {
+      "id": "손목_통증빈도",
+      "label": "손목 통증빈도",
+      "type": "select",
+      "options": [
+        "없음",
+        "1달에 1회 미만",
+        "1달에 1-3회",
+        "1주일에 1-2회",
+        "매일"
+      ],
+      "required": false
+    },
+    {
+      "id": "허리_통증",
+      "label": "허리 통증",
+      "type": "select",
+      "options": [
+        "없음",
+        "있음"
+      ],
+      "required": false
+    },
+    {
+      "id": "허리_통증기간",
+      "label": "허리 통증기간",
+      "type": "select",
+      "options": [
+        "없음",
+        "1주일 미만",
+        "1주일~1개월",
+        "1개월~6개월",
+        "6개월 이상"
+      ],
+      "required": false
+    },
+    {
+      "id": "허리_통증강도",
+      "label": "허리 통증강도",
+      "type": "select",
+      "options": [
+        "없음",
+        "약한 통증",
+        "중간 정도",
+        "심한 통증",
+        "매우 심한 통증"
+      ],
+      "required": false
+    },
+    {
+      "id": "허리_통증빈도",
+      "label": "허리 통증빈도",
+      "type": "select",
+      "options": [
+        "없음",
+        "1달에 1회 미만",
+        "1달에 1-3회",
+        "1주일에 1-2회",
+        "매일"
+      ],
+      "required": false
+    },
+    {
+      "id": "다리_통증",
+      "label": "다리 통증",
+      "type": "select",
+      "options": [
+        "없음",
+        "있음"
+      ],
+      "required": false
+    },
+    {
+      "id": "다리_통증기간",
+      "label": "다리 통증기간",
+      "type": "select",
+      "options": [
+        "없음",
+        "1주일 미만",
+        "1주일~1개월",
+        "1개월~6개월",
+        "6개월 이상"
+      ],
+      "required": false
+    },
+    {
+      "id": "다리_통증강도",
+      "label": "다리 통증강도",
+      "type": "select",
+      "options": [
+        "없음",
+        "약한 통증",
+        "중간 정도",
+        "심한 통증",
+        "매우 심한 통증"
+      ],
+      "required": false
+    },
+    {
+      "id": "다리_통증빈도",
+      "label": "다리 통증빈도",
+      "type": "select",
+      "options": [
+        "없음",
+        "1달에 1회 미만",
+        "1달에 1-3회",
+        "1주일에 1-2회",
+        "매일"
+      ],
+      "required": false
+    }
+  ]
+}

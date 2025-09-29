@@ -1,0 +1,514 @@
+{
+  "formId": "001_musculoskeletal_symptom_survey",
+  "title": "근골격계 증상조사표",
+  "description": "근골격계부담작업 유해요인조사를 위한 증상조사표 - 원본 HWP 구조",
+  "sections": [
+    {
+      "id": "basic_info",
+      "title": "기본 정보",
+      "fields": [
+        "employee_number",
+        "name",
+        "age",
+        "gender",
+        "work_experience_years",
+        "work_experience_months",
+        "married",
+        "department",
+        "line",
+        "work_type",
+        "work_content"
+      ]
+    },
+    {
+      "id": "work_schedule",
+      "title": "근무 정보",
+      "fields": [
+        "current_work_months",
+        "daily_work_hours",
+        "rest_time_minutes",
+        "previous_work",
+        "previous_work_months"
+      ]
+    },
+    {
+      "id": "leisure_activity",
+      "title": "여가 및 취미활동",
+      "fields": [
+        "regular_activity",
+        "activity_frequency",
+        "computer_related",
+        "musical_instrument",
+        "handicraft",
+        "sports",
+        "other_activity"
+      ]
+    },
+    {
+      "id": "household_work",
+      "title": "가사노동",
+      "fields": [
+        "daily_household_hours",
+        "cooking",
+        "laundry",
+        "cleaning",
+        "childcare"
+      ]
+    },
+    {
+      "id": "medical_history",
+      "title": "의료진 진단",
+      "fields": [
+        "medical_diagnosis",
+        "diagnosis_details"
+      ]
+    },
+    {
+      "id": "pain_assessment",
+      "title": "신체 부위별 통증 평가",
+      "fields": [
+        "neck_pain_frequency",
+        "neck_pain_duration",
+        "neck_pain_intensity",
+        "neck_work_interference",
+        "shoulder_pain_frequency",
+        "shoulder_pain_duration",
+        "shoulder_pain_intensity",
+        "shoulder_work_interference",
+        "arm_elbow_pain_frequency",
+        "arm_elbow_pain_duration",
+        "arm_elbow_pain_intensity",
+        "arm_elbow_work_interference",
+        "wrist_hand_pain_frequency",
+        "wrist_hand_pain_duration",
+        "wrist_hand_pain_intensity",
+        "wrist_hand_work_interference",
+        "back_pain_frequency",
+        "back_pain_duration",
+        "back_pain_intensity",
+        "back_work_interference",
+        "leg_foot_pain_frequency",
+        "leg_foot_pain_duration",
+        "leg_foot_pain_intensity",
+        "leg_foot_work_interference"
+      ]
+    }
+  ],
+  "fields": [
+    {
+      "id": "employee_number",
+      "label": "사번",
+      "type": "text",
+      "required": false,
+      "section": "basic_info"
+    },
+    {
+      "id": "name",
+      "label": "성명",
+      "type": "text",
+      "required": true,
+      "section": "basic_info"
+    },
+    {
+      "id": "age",
+      "label": "연령",
+      "type": "number",
+      "required": true,
+      "section": "basic_info"
+    },
+    {
+      "id": "gender",
+      "label": "성별",
+      "type": "select",
+      "options": ["남", "여"],
+      "required": true,
+      "section": "basic_info"
+    },
+    {
+      "id": "work_experience_years",
+      "label": "현 직장 경력(년)",
+      "type": "number",
+      "required": true,
+      "section": "basic_info"
+    },
+    {
+      "id": "work_experience_months",
+      "label": "현 직장 경력(개월)",
+      "type": "number",
+      "required": false,
+      "section": "basic_info"
+    },
+    {
+      "id": "married",
+      "label": "결혼여부",
+      "type": "select",
+      "options": ["기혼", "미혼"],
+      "required": false,
+      "section": "basic_info"
+    },
+    {
+      "id": "department",
+      "label": "작업부서",
+      "type": "text",
+      "required": true,
+      "section": "basic_info"
+    },
+    {
+      "id": "line",
+      "label": "라인",
+      "type": "text",
+      "required": false,
+      "section": "basic_info"
+    },
+    {
+      "id": "work_type",
+      "label": "작업(수행작업)",
+      "type": "text",
+      "required": false,
+      "section": "basic_info"
+    },
+    {
+      "id": "work_content",
+      "label": "현재하고 있는 작업(구체적으로)",
+      "type": "textarea",
+      "required": true,
+      "section": "basic_info"
+    },
+    {
+      "id": "current_work_months",
+      "label": "현재 작업 개월수",
+      "type": "number",
+      "required": false,
+      "section": "work_schedule"
+    },
+    {
+      "id": "daily_work_hours",
+      "label": "1일 근무시간",
+      "type": "number",
+      "required": true,
+      "section": "work_schedule"
+    },
+    {
+      "id": "rest_time_minutes",
+      "label": "휴식시간(분)",
+      "type": "number",
+      "required": false,
+      "section": "work_schedule"
+    },
+    {
+      "id": "previous_work",
+      "label": "현작업을 하기 전에 했던 작업",
+      "type": "textarea",
+      "required": false,
+      "section": "work_schedule"
+    },
+    {
+      "id": "previous_work_months",
+      "label": "이전 작업 기간(개월)",
+      "type": "number",
+      "required": false,
+      "section": "work_schedule"
+    },
+    {
+      "id": "regular_activity",
+      "label": "규칙적인 활동 여부",
+      "type": "select",
+      "options": ["있음", "없음"],
+      "required": false,
+      "section": "leisure_activity"
+    },
+    {
+      "id": "activity_frequency",
+      "label": "활동 빈도",
+      "type": "select",
+      "options": ["1주일에 1회 이상", "1주일에 2회 이상", "거의 하지 않음"],
+      "required": false,
+      "section": "leisure_activity"
+    },
+    {
+      "id": "computer_related",
+      "label": "컴퓨터 관련활동",
+      "type": "select",
+      "options": ["있음", "없음"],
+      "required": false,
+      "section": "leisure_activity"
+    },
+    {
+      "id": "musical_instrument",
+      "label": "악기연주(피아노, 바이올린 등)",
+      "type": "select",
+      "options": ["있음", "없음"],
+      "required": false,
+      "section": "leisure_activity"
+    },
+    {
+      "id": "handicraft",
+      "label": "뜨개질, 자수, 붓글씨",
+      "type": "select",
+      "options": ["있음", "없음"],
+      "required": false,
+      "section": "leisure_activity"
+    },
+    {
+      "id": "sports",
+      "label": "테니스, 배드민턴, 스쿼시, 축구, 족구, 농구, 스키",
+      "type": "select",
+      "options": ["있음", "없음"],
+      "required": false,
+      "section": "leisure_activity"
+    },
+    {
+      "id": "other_activity",
+      "label": "기타 활동",
+      "type": "textarea",
+      "required": false,
+      "section": "leisure_activity"
+    },
+    {
+      "id": "daily_household_hours",
+      "label": "하루 평균 가사노동시간",
+      "type": "select",
+      "options": ["거의 하지 않는다", "1시간 미만", "1-2시간", "2-3시간", "3시간 이상"],
+      "required": false,
+      "section": "household_work"
+    },
+    {
+      "id": "cooking",
+      "label": "밥하기",
+      "type": "select",
+      "options": ["있음", "없음"],
+      "required": false,
+      "section": "household_work"
+    },
+    {
+      "id": "laundry",
+      "label": "빨래하기",
+      "type": "select",
+      "options": ["있음", "없음"],
+      "required": false,
+      "section": "household_work"
+    },
+    {
+      "id": "cleaning",
+      "label": "청소하기",
+      "type": "select",
+      "options": ["있음", "없음"],
+      "required": false,
+      "section": "household_work"
+    },
+    {
+      "id": "childcare",
+      "label": "아이 돌보기",
+      "type": "select",
+      "options": ["있음", "없음"],
+      "required": false,
+      "section": "household_work"
+    },
+    {
+      "id": "medical_diagnosis",
+      "label": "의사로부터 진단받은 질병",
+      "type": "textarea",
+      "required": false,
+      "section": "medical_history"
+    },
+    {
+      "id": "diagnosis_details",
+      "label": "진단 세부사항",
+      "type": "textarea",
+      "required": false,
+      "section": "medical_history"
+    },
+    {
+      "id": "neck_pain_frequency",
+      "label": "목 - 통증 빈도",
+      "type": "select",
+      "options": ["없음", "가끔", "자주", "항상"],
+      "required": false,
+      "section": "pain_assessment"
+    },
+    {
+      "id": "neck_pain_duration",
+      "label": "목 - 통증 지속기간",
+      "type": "select",
+      "options": ["없음", "1주일 미만", "1주일 이상"],
+      "required": false,
+      "section": "pain_assessment"
+    },
+    {
+      "id": "neck_pain_intensity",
+      "label": "목 - 통증 강도",
+      "type": "select",
+      "options": ["없음", "약한 통증", "중간 정도", "심한 통증", "매우 심한 통증"],
+      "required": false,
+      "section": "pain_assessment"
+    },
+    {
+      "id": "neck_work_interference",
+      "label": "목 - 업무 지장도",
+      "type": "select",
+      "options": ["없음", "있음"],
+      "required": false,
+      "section": "pain_assessment"
+    },
+    {
+      "id": "shoulder_pain_frequency",
+      "label": "어깨 - 통증 빈도",
+      "type": "select",
+      "options": ["없음", "가끔", "자주", "항상"],
+      "required": false,
+      "section": "pain_assessment"
+    },
+    {
+      "id": "shoulder_pain_duration",
+      "label": "어깨 - 통증 지속기간",
+      "type": "select",
+      "options": ["없음", "1주일 미만", "1주일 이상"],
+      "required": false,
+      "section": "pain_assessment"
+    },
+    {
+      "id": "shoulder_pain_intensity",
+      "label": "어깨 - 통증 강도",
+      "type": "select",
+      "options": ["없음", "약한 통증", "중간 정도", "심한 통증", "매우 심한 통증"],
+      "required": false,
+      "section": "pain_assessment"
+    },
+    {
+      "id": "shoulder_work_interference",
+      "label": "어깨 - 업무 지장도",
+      "type": "select",
+      "options": ["없음", "있음"],
+      "required": false,
+      "section": "pain_assessment"
+    },
+    {
+      "id": "arm_elbow_pain_frequency",
+      "label": "팔/팔꿈치 - 통증 빈도",
+      "type": "select",
+      "options": ["없음", "가끔", "자주", "항상"],
+      "required": false,
+      "section": "pain_assessment"
+    },
+    {
+      "id": "arm_elbow_pain_duration",
+      "label": "팔/팔꿈치 - 통증 지속기간",
+      "type": "select",
+      "options": ["없음", "1주일 미만", "1주일 이상"],
+      "required": false,
+      "section": "pain_assessment"
+    },
+    {
+      "id": "arm_elbow_pain_intensity",
+      "label": "팔/팔꿈치 - 통증 강도",
+      "type": "select",
+      "options": ["없음", "약한 통증", "중간 정도", "심한 통증", "매우 심한 통증"],
+      "required": false,
+      "section": "pain_assessment"
+    },
+    {
+      "id": "arm_elbow_work_interference",
+      "label": "팔/팔꿈치 - 업무 지장도",
+      "type": "select",
+      "options": ["없음", "있음"],
+      "required": false,
+      "section": "pain_assessment"
+    },
+    {
+      "id": "wrist_hand_pain_frequency",
+      "label": "손목/손 - 통증 빈도",
+      "type": "select",
+      "options": ["없음", "가끔", "자주", "항상"],
+      "required": false,
+      "section": "pain_assessment"
+    },
+    {
+      "id": "wrist_hand_pain_duration",
+      "label": "손목/손 - 통증 지속기간",
+      "type": "select",
+      "options": ["없음", "1주일 미만", "1주일 이상"],
+      "required": false,
+      "section": "pain_assessment"
+    },
+    {
+      "id": "wrist_hand_pain_intensity",
+      "label": "손목/손 - 통증 강도",
+      "type": "select",
+      "options": ["없음", "약한 통증", "중간 정도", "심한 통증", "매우 심한 통증"],
+      "required": false,
+      "section": "pain_assessment"
+    },
+    {
+      "id": "wrist_hand_work_interference",
+      "label": "손목/손 - 업무 지장도",
+      "type": "select",
+      "options": ["없음", "있음"],
+      "required": false,
+      "section": "pain_assessment"
+    },
+    {
+      "id": "back_pain_frequency",
+      "label": "허리 - 통증 빈도",
+      "type": "select",
+      "options": ["없음", "가끔", "자주", "항상"],
+      "required": false,
+      "section": "pain_assessment"
+    },
+    {
+      "id": "back_pain_duration",
+      "label": "허리 - 통증 지속기간",
+      "type": "select",
+      "options": ["없음", "1주일 미만", "1주일 이상"],
+      "required": false,
+      "section": "pain_assessment"
+    },
+    {
+      "id": "back_pain_intensity",
+      "label": "허리 - 통증 강도",
+      "type": "select",
+      "options": ["없음", "약한 통증", "중간 정도", "심한 통증", "매우 심한 통증"],
+      "required": false,
+      "section": "pain_assessment"
+    },
+    {
+      "id": "back_work_interference",
+      "label": "허리 - 업무 지장도",
+      "type": "select",
+      "options": ["없음", "있음"],
+      "required": false,
+      "section": "pain_assessment"
+    },
+    {
+      "id": "leg_foot_pain_frequency",
+      "label": "다리/발 - 통증 빈도",
+      "type": "select",
+      "options": ["없음", "가끔", "자주", "항상"],
+      "required": false,
+      "section": "pain_assessment"
+    },
+    {
+      "id": "leg_foot_pain_duration",
+      "label": "다리/발 - 통증 지속기간",
+      "type": "select",
+      "options": ["없음", "1주일 미만", "1주일 이상"],
+      "required": false,
+      "section": "pain_assessment"
+    },
+    {
+      "id": "leg_foot_pain_intensity",
+      "label": "다리/발 - 통증 강도",
+      "type": "select",
+      "options": ["없음", "약한 통증", "중간 정도", "심한 통증", "매우 심한 통증"],
+      "required": false,
+      "section": "pain_assessment"
+    },
+    {
+      "id": "leg_foot_work_interference",
+      "label": "다리/발 - 업무 지장도",
+      "type": "select",
+      "options": ["없음", "있음"],
+      "required": false,
+      "section": "pain_assessment"
+    }
+  ]
+}

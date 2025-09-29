@@ -118,3 +118,6 @@ deploy_timestamp.txt
 # Data directories (contain sensitive or large files)
 raw_data/
 data/workers/node_modules/
+
+# Claude Code conversations
+.claude/

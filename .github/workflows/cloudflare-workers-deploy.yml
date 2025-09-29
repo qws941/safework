@@ -60,38 +60,13 @@ jobs:
         run: |
           cd workers
 
-          echo "🗄️ Setting up D1 Database..."
+          echo "⚠️ Skipping D1 Database setup due to authentication issues..."
+          echo "📌 Using KV storage only for this deployment"
 
-          # Create Primary D1 database if it doesn't exist
-          EXISTING_PRIMARY=$(npx wrangler d1 list | grep "safework-primary" || echo "")
-          if [ -z "$EXISTING_PRIMARY" ]; then
-            echo "Creating Primary D1 database..."
-            npx wrangler d1 create safework-primary
-            echo "✅ Primary D1 database created"
-          else
-            echo "✅ Primary D1 database already exists"
-          fi
+          # D1 setup temporarily disabled due to API token issues
+          # Will be re-enabled once authentication is fixed
 
-          # Create Analytics D1 database if it doesn't exist
-          EXISTING_ANALYTICS=$(npx wrangler d1 list | grep "safework-analytics" || echo "")
-          if [ -z "$EXISTING_ANALYTICS" ]; then
-            echo "Creating Analytics D1 database..."
-            npx wrangler d1 create safework-analytics
-            echo "✅ Analytics D1 database created"
-          else
-            echo "✅ Analytics D1 database already exists"
-          fi
-
-          # Execute migrations for Primary DB
-          echo "Running Primary DB migrations..."
-          npx wrangler d1 execute safework-primary --file=./schema.sql --remote
-          npx wrangler d1 execute safework-primary --file=./migrations/001_primary_db_init.sql --remote
-          echo "✅ Primary DB migrations completed"
-
-          # Execute migrations for Analytics DB
-          echo "Running Analytics DB migrations..."
-          npx wrangler d1 execute safework-analytics --file=./migrations/002_analytics_db_init.sql --remote
-          echo "✅ Analytics DB migrations completed"
+          echo "✅ Proceeding with KV-only configuration"
 
       - name: Setup KV Namespaces
         env:

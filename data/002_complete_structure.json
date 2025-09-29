@@ -1,0 +1,778 @@
+{
+  "formId": "002_musculoskeletal_symptom_program",
+  "title": "근골격계질환 증상조사표 (완전판)",
+  "description": "근골격계부담작업 유해요인조사를 위한 증상조사표 - Excel 원본 완전 추출",
+  "sections": [
+    {
+      "id": "basic_info",
+      "title": "기본 정보",
+      "fields": [
+        "number",
+        "name",
+        "age",
+        "gender",
+        "work_experience",
+        "married"
+      ]
+    },
+    {
+      "id": "work_info",
+      "title": "작업 정보",
+      "fields": [
+        "department",
+        "line",
+        "work_type",
+        "work_content",
+        "work_period",
+        "current_work_period",
+        "daily_work_hours",
+        "rest_time",
+        "previous_work_content",
+        "previous_work_period",
+        "leisure_activity",
+        "household_work",
+        "medical_diagnosis",
+        "physical_burden"
+      ]
+    },
+    {
+      "id": "pain_목",
+      "title": "목 부위 통증 평가",
+      "fields": [
+        "목_2",
+        "목_3",
+        "목_4",
+        "목_5",
+        "목_6",
+        "목_1"
+      ]
+    },
+    {
+      "id": "pain_어깨",
+      "title": "어깨 부위 통증 평가",
+      "fields": [
+        "어깨_1",
+        "어깨_2",
+        "어깨_3",
+        "어깨_4",
+        "어깨_5",
+        "어깨_6"
+      ]
+    },
+    {
+      "id": "pain_팔꿈치",
+      "title": "팔꿈치 부위 통증 평가",
+      "fields": [
+        "팔꿈치_1",
+        "팔꿈치_2",
+        "팔꿈치_3",
+        "팔꿈치_4",
+        "팔꿈치_5",
+        "팔꿈치_6"
+      ]
+    },
+    {
+      "id": "pain_손목",
+      "title": "손목 부위 통증 평가",
+      "fields": [
+        "손목_1",
+        "손목_2",
+        "손목_3",
+        "손목_4",
+        "손목_5",
+        "손목_6"
+      ]
+    },
+    {
+      "id": "pain_허리",
+      "title": "허리 부위 통증 평가",
+      "fields": [
+        "허리_2",
+        "허리_3",
+        "허리_4",
+        "허리_5",
+        "허리_6",
+        "허리_1"
+      ]
+    },
+    {
+      "id": "pain_다리",
+      "title": "다리 부위 통증 평가",
+      "fields": [
+        "다리_1",
+        "다리_2",
+        "다리_3",
+        "다리_4",
+        "다리_5",
+        "다리_6"
+      ]
+    }
+  ],
+  "fields": [
+    {
+      "id": "number",
+      "label": "#",
+      "type": "number",
+      "required": true,
+      "section": "basic_info"
+    },
+    {
+      "id": "name",
+      "label": "성명",
+      "type": "text",
+      "required": true,
+      "section": "basic_info"
+    },
+    {
+      "id": "age",
+      "label": "연령",
+      "type": "number",
+      "required": true,
+      "section": "basic_info"
+    },
+    {
+      "id": "gender",
+      "label": "성별",
+      "type": "select",
+      "options": [
+        "남",
+        "여"
+      ],
+      "required": true,
+      "section": "basic_info"
+    },
+    {
+      "id": "work_experience",
+      "label": "현 직장 경력(년)",
+      "type": "number",
+      "required": true,
+      "section": "basic_info"
+    },
+    {
+      "id": "married",
+      "label": "결혼여부",
+      "type": "select",
+      "options": [
+        "기혼",
+        "미혼"
+      ],
+      "required": false,
+      "section": "basic_info"
+    },
+    {
+      "id": "department",
+      "label": "작업부서",
+      "type": "text",
+      "required": true,
+      "section": "work_info"
+    },
+    {
+      "id": "line",
+      "label": "라인",
+      "type": "text",
+      "required": false,
+      "section": "work_info"
+    },
+    {
+      "id": "work_type",
+      "label": "작업",
+      "type": "text",
+      "required": false,
+      "section": "work_info"
+    },
+    {
+      "id": "work_content",
+      "label": "작업내용",
+      "type": "textarea",
+      "required": false,
+      "section": "work_info"
+    },
+    {
+      "id": "work_period",
+      "label": "작업기간",
+      "type": "text",
+      "required": false,
+      "section": "work_info"
+    },
+    {
+      "id": "current_work_period",
+      "label": "현재 작업 기간(년)",
+      "type": "number",
+      "required": false,
+      "section": "work_info"
+    },
+    {
+      "id": "daily_work_hours",
+      "label": "1일 근무시간",
+      "type": "number",
+      "required": false,
+      "section": "work_info"
+    },
+    {
+      "id": "rest_time",
+      "label": "휴식시간",
+      "type": "number",
+      "required": false,
+      "section": "work_info"
+    },
+    {
+      "id": "previous_work_content",
+      "label": "이전 작업내용",
+      "type": "textarea",
+      "required": false,
+      "section": "work_info"
+    },
+    {
+      "id": "previous_work_period",
+      "label": "이전 작업 기간(년)",
+      "type": "number",
+      "required": false,
+      "section": "work_info"
+    },
+    {
+      "id": "leisure_activity",
+      "label": "여가 및 취미활동",
+      "type": "textarea",
+      "required": false,
+      "section": "work_info"
+    },
+    {
+      "id": "household_work",
+      "label": "하루 가사노동",
+      "type": "textarea",
+      "required": false,
+      "section": "work_info"
+    },
+    {
+      "id": "medical_diagnosis",
+      "label": "의사 진단",
+      "type": "textarea",
+      "required": false,
+      "section": "work_info"
+    },
+    {
+      "id": "physical_burden",
+      "label": "육체적 부담정도",
+      "type": "select",
+      "options": [
+        "매우 가벼움",
+        "가벼움",
+        "보통",
+        "무거움",
+        "매우 무거움"
+      ],
+      "required": false,
+      "section": "work_info"
+    },
+    {
+      "id": "목_2",
+      "label": "목 통증 기간",
+      "type": "select",
+      "options": [
+        "없음",
+        "1주일 미만",
+        "1주일 이상 지속"
+      ],
+      "required": false,
+      "column": 19,
+      "question_num": "2번",
+      "section": "pain_목"
+    },
+    {
+      "id": "목_3",
+      "label": "목 통증 강도",
+      "type": "select",
+      "options": [
+        "없음",
+        "약한 통증",
+        "중간 정도",
+        "심한 통증",
+        "매우 심한 통증"
+      ],
+      "required": false,
+      "column": 20,
+      "question_num": "3번",
+      "section": "pain_목"
+    },
+    {
+      "id": "목_4",
+      "label": "목 통증 빈도",
+      "type": "select",
+      "options": [
+        "없음",
+        "1달에 1회 미만",
+        "1달에 1-3회",
+        "1주일에 1-2회",
+        "매일"
+      ],
+      "required": false,
+      "column": 21,
+      "question_num": "4번",
+      "section": "pain_목"
+    },
+    {
+      "id": "목_5",
+      "label": "목 증상 심화",
+      "type": "select",
+      "options": [
+        "아니오",
+        "예"
+      ],
+      "required": false,
+      "column": 22,
+      "question_num": "5번",
+      "section": "pain_목"
+    },
+    {
+      "id": "목_6",
+      "label": "목 기타",
+      "type": "select",
+      "options": [
+        "없음",
+        "있음"
+      ],
+      "required": false,
+      "column": 23,
+      "question_num": "6번",
+      "section": "pain_목"
+    },
+    {
+      "id": "목_1",
+      "label": "목 통증 여부",
+      "type": "select",
+      "options": [
+        "없음",
+        "있음"
+      ],
+      "required": false,
+      "column": 24,
+      "question_num": "1번",
+      "section": "pain_목"
+    },
+    {
+      "id": "어깨_1",
+      "label": "어깨 통증 여부",
+      "type": "select",
+      "options": [
+        "없음",
+        "있음"
+      ],
+      "required": false,
+      "column": 24,
+      "question_num": "1번",
+      "section": "pain_어깨"
+    },
+    {
+      "id": "어깨_2",
+      "label": "어깨 통증 기간",
+      "type": "select",
+      "options": [
+        "없음",
+        "1주일 미만",
+        "1주일 이상 지속"
+      ],
+      "required": false,
+      "column": 25,
+      "question_num": "2번",
+      "section": "pain_어깨"
+    },
+    {
+      "id": "어깨_3",
+      "label": "어깨 통증 강도",
+      "type": "select",
+      "options": [
+        "없음",
+        "약한 통증",
+        "중간 정도",
+        "심한 통증",
+        "매우 심한 통증"
+      ],
+      "required": false,
+      "column": 26,
+      "question_num": "3번",
+      "section": "pain_어깨"
+    },
+    {
+      "id": "어깨_4",
+      "label": "어깨 통증 빈도",
+      "type": "select",
+      "options": [
+        "없음",
+        "1달에 1회 미만",
+        "1달에 1-3회",
+        "1주일에 1-2회",
+        "매일"
+      ],
+      "required": false,
+      "column": 27,
+      "question_num": "4번",
+      "section": "pain_어깨"
+    },
+    {
+      "id": "어깨_5",
+      "label": "어깨 증상 심화",
+      "type": "select",
+      "options": [
+        "아니오",
+        "예"
+      ],
+      "required": false,
+      "column": 28,
+      "question_num": "5번",
+      "section": "pain_어깨"
+    },
+    {
+      "id": "어깨_6",
+      "label": "어깨 기타",
+      "type": "select",
+      "options": [
+        "없음",
+        "있음"
+      ],
+      "required": false,
+      "column": 29,
+      "question_num": "6번",
+      "section": "pain_어깨"
+    },
+    {
+      "id": "팔꿈치_1",
+      "label": "팔꿈치 통증 여부",
+      "type": "select",
+      "options": [
+        "없음",
+        "있음"
+      ],
+      "required": false,
+      "column": 30,
+      "question_num": "1번",
+      "section": "pain_팔꿈치"
+    },
+    {
+      "id": "팔꿈치_2",
+      "label": "팔꿈치 통증 기간",
+      "type": "select",
+      "options": [
+        "없음",
+        "1주일 미만",
+        "1주일 이상 지속"
+      ],
+      "required": false,
+      "column": 31,
+      "question_num": "2번",
+      "section": "pain_팔꿈치"
+    },
+    {
+      "id": "팔꿈치_3",
+      "label": "팔꿈치 통증 강도",
+      "type": "select",
+      "options": [
+        "없음",
+        "약한 통증",
+        "중간 정도",
+        "심한 통증",
+        "매우 심한 통증"
+      ],
+      "required": false,
+      "column": 32,
+      "question_num": "3번",
+      "section": "pain_팔꿈치"
+    },
+    {
+      "id": "팔꿈치_4",
+      "label": "팔꿈치 통증 빈도",
+      "type": "select",
+      "options": [
+        "없음",
+        "1달에 1회 미만",
+        "1달에 1-3회",
+        "1주일에 1-2회",
+        "매일"
+      ],
+      "required": false,
+      "column": 33,
+      "question_num": "4번",
+      "section": "pain_팔꿈치"
+    },
+    {
+      "id": "팔꿈치_5",
+      "label": "팔꿈치 증상 심화",
+      "type": "select",
+      "options": [
+        "아니오",
+        "예"
+      ],
+      "required": false,
+      "column": 34,
+      "question_num": "5번",
+      "section": "pain_팔꿈치"
+    },
+    {
+      "id": "팔꿈치_6",
+      "label": "팔꿈치 기타",
+      "type": "select",
+      "options": [
+        "없음",
+        "있음"
+      ],
+      "required": false,
+      "column": 35,
+      "question_num": "6번",
+      "section": "pain_팔꿈치"
+    },
+    {
+      "id": "손목_1",
+      "label": "손목 통증 여부",
+      "type": "select",
+      "options": [
+        "없음",
+        "있음"
+      ],
+      "required": false,
+      "column": 36,
+      "question_num": "1번",
+      "section": "pain_손목"
+    },
+    {
+      "id": "손목_2",
+      "label": "손목 통증 기간",
+      "type": "select",
+      "options": [
+        "없음",
+        "1주일 미만",
+        "1주일 이상 지속"
+      ],
+      "required": false,
+      "column": 37,
+      "question_num": "2번",
+      "section": "pain_손목"
+    },
+    {
+      "id": "손목_3",
+      "label": "손목 통증 강도",
+      "type": "select",
+      "options": [
+        "없음",
+        "약한 통증",
+        "중간 정도",
+        "심한 통증",
+        "매우 심한 통증"
+      ],
+      "required": false,
+      "column": 38,
+      "question_num": "3번",
+      "section": "pain_손목"
+    },
+    {
+      "id": "손목_4",
+      "label": "손목 통증 빈도",
+      "type": "select",
+      "options": [
+        "없음",
+        "1달에 1회 미만",
+        "1달에 1-3회",
+        "1주일에 1-2회",
+        "매일"
+      ],
+      "required": false,
+      "column": 39,
+      "question_num": "4번",
+      "section": "pain_손목"
+    },
+    {
+      "id": "손목_5",
+      "label": "손목 증상 심화",
+      "type": "select",
+      "options": [
+        "아니오",
+        "예"
+      ],
+      "required": false,
+      "column": 40,
+      "question_num": "5번",
+      "section": "pain_손목"
+    },
+    {
+      "id": "손목_6",
+      "label": "손목 기타",
+      "type": "select",
+      "options": [
+        "없음",
+        "있음"
+      ],
+      "required": false,
+      "column": 41,
+      "question_num": "6번",
+      "section": "pain_손목"
+    },
+    {
+      "id": "허리_2",
+      "label": "허리 통증 기간",
+      "type": "select",
+      "options": [
+        "없음",
+        "1주일 미만",
+        "1주일 이상 지속"
+      ],
+      "required": false,
+      "column": 42,
+      "question_num": "2번",
+      "section": "pain_허리"
+    },
+    {
+      "id": "허리_3",
+      "label": "허리 통증 강도",
+      "type": "select",
+      "options": [
+        "없음",
+        "약한 통증",
+        "중간 정도",
+        "심한 통증",
+        "매우 심한 통증"
+      ],
+      "required": false,
+      "column": 43,
+      "question_num": "3번",
+      "section": "pain_허리"
+    },
+    {
+      "id": "허리_4",
+      "label": "허리 통증 빈도",
+      "type": "select",
+      "options": [
+        "없음",
+        "1달에 1회 미만",
+        "1달에 1-3회",
+        "1주일에 1-2회",
+        "매일"
+      ],
+      "required": false,
+      "column": 44,
+      "question_num": "4번",
+      "section": "pain_허리"
+    },
+    {
+      "id": "허리_5",
+      "label": "허리 증상 심화",
+      "type": "select",
+      "options": [
+        "아니오",
+        "예"
+      ],
+      "required": false,
+      "column": 45,
+      "question_num": "5번",
+      "section": "pain_허리"
+    },
+    {
+      "id": "허리_6",
+      "label": "허리 기타",
+      "type": "select",
+      "options": [
+        "없음",
+        "있음"
+      ],
+      "required": false,
+      "column": 46,
+      "question_num": "6번",
+      "section": "pain_허리"
+    },
+    {
+      "id": "허리_1",
+      "label": "허리 통증 여부",
+      "type": "select",
+      "options": [
+        "없음",
+        "있음"
+      ],
+      "required": false,
+      "column": 47,
+      "question_num": "1번",
+      "section": "pain_허리"
+    },
+    {
+      "id": "다리_1",
+      "label": "다리 통증 여부",
+      "type": "select",
+      "options": [
+        "없음",
+        "있음"
+      ],
+      "required": false,
+      "column": 47,
+      "question_num": "1번",
+      "section": "pain_다리"
+    },
+    {
+      "id": "다리_2",
+      "label": "다리 통증 기간",
+      "type": "select",
+      "options": [
+        "없음",
+        "1주일 미만",
+        "1주일 이상 지속"
+      ],
+      "required": false,
+      "column": 48,
+      "question_num": "2번",
+      "section": "pain_다리"
+    },
+    {
+      "id": "다리_3",
+      "label": "다리 통증 강도",
+      "type": "select",
+      "options": [
+        "없음",
+        "약한 통증",
+        "중간 정도",
+        "심한 통증",
+        "매우 심한 통증"
+      ],
+      "required": false,
+      "column": 49,
+      "question_num": "3번",
+      "section": "pain_다리"
+    },
+    {
+      "id": "다리_4",
+      "label": "다리 통증 빈도",
+      "type": "select",
+      "options": [
+        "없음",
+        "1달에 1회 미만",
+        "1달에 1-3회",
+        "1주일에 1-2회",
+        "매일"
+      ],
+      "required": false,
+      "column": 50,
+      "question_num": "4번",
+      "section": "pain_다리"
+    },
+    {
+      "id": "다리_5",
+      "label": "다리 증상 심화",
+      "type": "select",
+      "options": [
+        "아니오",
+        "예"
+      ],
+      "required": false,
+      "column": 51,
+      "question_num": "5번",
+      "section": "pain_다리"
+    },
+    {
+      "id": "다리_6",
+      "label": "다리 기타",
+      "type": "select",
+      "options": [
+        "없음",
+        "있음"
+      ],
+      "required": false,
+      "column": 52,
+      "question_num": "6번",
+      "section": "pain_다리"
+    }
+  ]
+}
