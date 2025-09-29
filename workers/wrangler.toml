@@ -2,25 +2,28 @@ name = "safework"
 main = "src/index.ts"
 compatibility_date = "2024-10-22"
 compatibility_flags = ["nodejs_compat"]
+account_id = "a8d9c67f586acdd15eebcc65ca3aa5bb"
 
 # KV Namespaces - CF Native Naming Convention
+# Main KV namespace for SAFEWORK_KV binding
+[[kv_namespaces]]
+binding = "SAFEWORK_KV"
+id = "51e576a5d32d48bbac9c8bad7cb26556"
+
 # Primary storage: SESSION_DATA, API_CONFIG, FORM_STRUCTURES
 [[kv_namespaces]]
 binding = "SESSION_STORE"
-preview_id = "placeholder-session-store-preview"
-id = "placeholder-session-store-production"
+id = "51e576a5d32d48bbac9c8bad7cb26556"
 
 # Cache layer: COMPUTED_DATA, STATISTICS, TEMP_RESPONSES
 [[kv_namespaces]]
 binding = "CACHE_LAYER"
-preview_id = "placeholder-cache-layer-preview"
-id = "placeholder-cache-layer-production"
+id = "5a30c645c88644068089f1733b2c81b9"
 
 # Authentication: JWT_TOKENS, API_KEYS, USER_SESSIONS
 [[kv_namespaces]]
 binding = "AUTH_STORE"
-preview_id = "placeholder-auth-store-preview"
-id = "placeholder-auth-store-production"
+id = "e6a6466f4c53466087f6fdd2cd6ca001"
 
 # Environment variables
 [vars]
@@ -31,20 +34,16 @@ ENVIRONMENT = "production"
 
 # Routes
 [[routes]]
-pattern = "safework.jclee.me/survey/001_musculoskeletal_symptom_survey"
+pattern = "safework.jclee.me/*"
 zone_name = "jclee.me"
 
-[[routes]]
-pattern = "safework.jclee.me/survey/002_musculoskeletal_symptom_program"
-zone_name = "jclee.me"
-
-[[routes]]
-pattern = "safework.jclee.me/api/*"
-zone_name = "jclee.me"
+# Build configuration for CI/CD
+[build]
+command = "npm run build"
+cwd = "."
+watch_dir = "src"
 
 # Rate limiting removed for Free plan
-
-# Build configuration removed to prevent infinite loop
 
 # Development environment
 [env.development]
@@ -55,6 +54,23 @@ vars = { BACKEND_URL = "http://localhost:4545", DEBUG = "true", ENVIRONMENT = "d
 [env.production]
 name = "safework"
 
+# KV Namespaces for production
+[[env.production.kv_namespaces]]
+binding = "SAFEWORK_KV"
+id = "51e576a5d32d48bbac9c8bad7cb26556"
+
+[[env.production.kv_namespaces]]
+binding = "SESSION_STORE"
+id = "51e576a5d32d48bbac9c8bad7cb26556"
+
+[[env.production.kv_namespaces]]
+binding = "CACHE_LAYER"
+id = "5a30c645c88644068089f1733b2c81b9"
+
+[[env.production.kv_namespaces]]
+binding = "AUTH_STORE"
+id = "e6a6466f4c53466087f6fdd2cd6ca001"
+
 [env.production.vars]
 JWT_SECRET = "safework-jwt-secret-2024-production"
 ADMIN_USERNAME = "admin"
@@ -62,15 +78,15 @@ BACKEND_URL = "https://safework.jclee.me"
 DEBUG = "false"
 ENVIRONMENT = "production"
 
-# D1 Database - CF Native Naming Convention
+# D1 Database - CF Native Naming Convention (Temporarily disabled - requires D1 permissions)
 # Primary database: USER_DATA, SURVEY_RESPONSES, AUDIT_LOGS
-[[d1_databases]]
-binding = "PRIMARY_DB"
-database_name = "safework-primary"
-database_id = "placeholder-primary-db-production"
+# [[d1_databases]]
+# binding = "PRIMARY_DB"
+# database_name = "safework-primary"
+# database_id = "placeholder-primary-db-production"
 
 # Analytics database: STATISTICS, REPORTS, AGGREGATED_DATA
-[[d1_databases]]
-binding = "ANALYTICS_DB"
-database_name = "safework-analytics"
-database_id = "placeholder-analytics-db-production"
+# [[d1_databases]]
+# binding = "ANALYTICS_DB"
+# database_name = "safework-analytics"
+# database_id = "placeholder-analytics-db-production"

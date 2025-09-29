@@ -7,54 +7,72 @@ export const healthRoutes = new Hono<{ Bindings: Env }>();
 healthRoutes.get('/', async (c) => {
   const checks = {
     service: 'healthy',
-    database: 'unknown',
-    cache: 'unknown',
+    kv_storage: 'unknown',
+    backend: 'unknown',
   };
-  
-  try {
-    // Check D1 database - fallback if not configured
-    if (c.env.SAFEWORK_DB) {
-      const dbCheck = await c.env.SAFEWORK_DB.prepare('SELECT 1 as ok').first();
-      checks.database = dbCheck?.ok === 1 ? 'healthy' : 'unhealthy';
-    } else {
-      checks.database = 'not_configured';
-    }
-  } catch (error) {
-    checks.database = 'unhealthy';
-  }
-  
+
   try {
     // Check KV namespace
     await c.env.SAFEWORK_KV.put('health_check', new Date().toISOString(), {
       expirationTtl: 60,
     });
-    checks.cache = 'healthy';
+    const kvTest = await c.env.SAFEWORK_KV.get('health_check');
+    checks.kv_storage = kvTest ? 'healthy' : 'degraded';
   } catch (error) {
-    checks.cache = 'unhealthy';
+    checks.kv_storage = 'unhealthy';
   }
-  
-  const allHealthy = Object.values(checks).every(status => status === 'healthy');
-  
+
+  try {
+    // Check backend connectivity
+    const backendUrl = c.env.BACKEND_URL || 'https://safework.jclee.me';
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+    const response = await fetch(`${backendUrl}/health`, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Cloudflare-Worker-Health-Check',
+      },
+    });
+    clearTimeout(timeoutId);
+
+    checks.backend = response.ok ? 'healthy' : 'degraded';
+  } catch (error) {
+    checks.backend = 'degraded';
+  }
+
+  // Consider service healthy if KV is working (backend is optional)
+  const isHealthy = checks.service === 'healthy' && checks.kv_storage === 'healthy';
+
   return c.json({
-    status: allHealthy ? 'healthy' : 'degraded',
+    status: isHealthy ? 'healthy' : (checks.kv_storage === 'unhealthy' ? 'unhealthy' : 'degraded'),
     checks,
     timestamp: new Date().toISOString(),
     platform: 'Cloudflare Workers',
+    environment: c.env.ENVIRONMENT || 'production',
     region: c.req.header('CF-Ray')?.split('-')[1] || 'unknown',
-  }, allHealthy ? 200 : 503);
+  }, isHealthy ? 200 : (checks.kv_storage === 'unhealthy' ? 503 : 200));
 });
 
 // Health check plans management
 healthRoutes.get('/plans', async (c) => {
   try {
+    // D1 database not configured in Free plan
+    if (!c.env.SAFEWORK_DB) {
+      return c.json({
+        error: 'Database not configured',
+        message: 'D1 database requires paid Cloudflare plan',
+      }, 501);
+    }
+
     const year = c.req.query('year') || new Date().getFullYear();
-    
+
     const plans = await c.env.SAFEWORK_DB.prepare(`
-      SELECT * FROM health_check_plans 
-      WHERE year = ? 
+      SELECT * FROM health_check_plans
+      WHERE year = ?
       ORDER BY created_at DESC
     `).bind(year).all();
-    
+
     return c.json({
       year,
       plans: plans.results,
@@ -67,15 +85,23 @@ healthRoutes.get('/plans', async (c) => {
 
 // Create health check plan
 healthRoutes.post('/plans', async (c) => {
+  // D1 database not configured in Free plan
+  if (!c.env.SAFEWORK_DB) {
+    return c.json({
+      error: 'Database not configured',
+      message: 'D1 database requires paid Cloudflare plan',
+    }, 501);
+  }
+
   const body = await c.req.json();
   const { year, plan_type, description, target_count } = body;
-  
+
   try {
     const result = await c.env.SAFEWORK_DB.prepare(`
       INSERT INTO health_check_plans (year, plan_type, description, target_count, status)
       VALUES (?, ?, ?, ?, 'planned')
     `).bind(year, plan_type, description, target_count).run();
-    
+
     return c.json({
       success: true,
       plan_id: result.meta.last_row_id,
@@ -89,7 +115,15 @@ healthRoutes.post('/plans', async (c) => {
 // Get health check targets for a worker
 healthRoutes.get('/targets/:workerId', async (c) => {
   const workerId = c.req.param('workerId');
-  
+
+  // D1 database not configured in Free plan
+  if (!c.env.SAFEWORK_DB) {
+    return c.json({
+      error: 'Database not configured',
+      message: 'D1 database requires paid Cloudflare plan',
+    }, 501);
+  }
+
   try {
     const targets = await c.env.SAFEWORK_DB.prepare(`
       SELECT 
@@ -115,6 +149,14 @@ healthRoutes.get('/targets/:workerId', async (c) => {
 
 // Submit health check result
 healthRoutes.post('/results', async (c) => {
+  // D1 database not configured in Free plan
+  if (!c.env.SAFEWORK_DB) {
+    return c.json({
+      error: 'Database not configured',
+      message: 'D1 database requires paid Cloudflare plan',
+    }, 501);
+  }
+
   const body = await c.req.json();
   const {
     target_id,

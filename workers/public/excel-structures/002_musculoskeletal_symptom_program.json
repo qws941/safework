@@ -1,0 +1,176 @@
+{
+  "form_id": "002_musculoskeletal_symptom_program",
+  "title": "근골격계 증상 조사표",
+  "description": "근골격계 질환 예방을 위한 증상 조사",
+  "version": "2024.1",
+  "sections": [
+    {
+      "id": "basic_info",
+      "title": "기본 정보",
+      "fields": [
+        {
+          "id": "name",
+          "label": "성명",
+          "type": "text",
+          "required": true
+        },
+        {
+          "id": "employee_number",
+          "label": "사번",
+          "type": "text",
+          "required": true
+        },
+        {
+          "id": "department",
+          "label": "부서",
+          "type": "text",
+          "required": true
+        },
+        {
+          "id": "job_title",
+          "label": "직책",
+          "type": "text",
+          "required": true
+        },
+        {
+          "id": "age",
+          "label": "나이",
+          "type": "number",
+          "required": true
+        },
+        {
+          "id": "gender",
+          "label": "성별",
+          "type": "select",
+          "options": ["남성", "여성"],
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "work_environment",
+      "title": "작업 환경",
+      "fields": [
+        {
+          "id": "work_years",
+          "label": "현 작업 근무연수",
+          "type": "number",
+          "required": true
+        },
+        {
+          "id": "daily_work_hours",
+          "label": "1일 평균 작업시간",
+          "type": "number",
+          "required": true
+        },
+        {
+          "id": "work_intensity",
+          "label": "작업 강도",
+          "type": "select",
+          "options": ["매우 쉬움", "쉬움", "보통", "힘듦", "매우 힘듦"],
+          "required": true
+        },
+        {
+          "id": "repetitive_work",
+          "label": "반복 작업 여부",
+          "type": "select",
+          "options": ["예", "아니오"],
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "symptom_assessment",
+      "title": "증상 평가",
+      "fields": [
+        {
+          "id": "neck_pain",
+          "label": "목 통증",
+          "type": "select",
+          "options": ["없음", "약함", "중간", "심함", "매우 심함"],
+          "required": true
+        },
+        {
+          "id": "shoulder_pain",
+          "label": "어깨 통증",
+          "type": "select",
+          "options": ["없음", "약함", "중간", "심함", "매우 심함"],
+          "required": true
+        },
+        {
+          "id": "arm_pain",
+          "label": "팔/팔꿈치 통증",
+          "type": "select",
+          "options": ["없음", "약함", "중간", "심함", "매우 심함"],
+          "required": true
+        },
+        {
+          "id": "wrist_pain",
+          "label": "손목/손가락 통증",
+          "type": "select",
+          "options": ["없음", "약함", "중간", "심함", "매우 심함"],
+          "required": true
+        },
+        {
+          "id": "back_pain",
+          "label": "허리 통증",
+          "type": "select",
+          "options": ["없음", "약함", "중간", "심함", "매우 심함"],
+          "required": true
+        },
+        {
+          "id": "leg_pain",
+          "label": "다리/무릎 통증",
+          "type": "select",
+          "options": ["없음", "약함", "중간", "심함", "매우 심함"],
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "pain_characteristics",
+      "title": "통증 특성",
+      "fields": [
+        {
+          "id": "pain_duration",
+          "label": "통증 지속기간",
+          "type": "select",
+          "options": ["1주일 미만", "1주일-1개월", "1-6개월", "6개월 이상"],
+          "required": false
+        },
+        {
+          "id": "pain_frequency",
+          "label": "통증 빈도",
+          "type": "select",
+          "options": ["거의 없음", "가끔", "자주", "항상"],
+          "required": false
+        },
+        {
+          "id": "medical_treatment",
+          "label": "치료 경험",
+          "type": "select",
+          "options": ["없음", "자가치료", "병원치료", "한의원치료", "물리치료"],
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "recommendations",
+      "title": "개선 요구사항",
+      "fields": [
+        {
+          "id": "work_improvement",
+          "label": "작업환경 개선 필요사항",
+          "type": "textarea",
+          "required": false
+        },
+        {
+          "id": "additional_comments",
+          "label": "추가 의견",
+          "type": "textarea",
+          "required": false
+        }
+      ]
+    }
+  ]
+}

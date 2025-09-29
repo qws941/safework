@@ -47,14 +47,29 @@ excelProcessorRoutes.get('/form-structure/:formId', async (c) => {
   const formId = c.req.param('formId');
 
   try {
-    const structure = await c.env.SAFEWORK_KV.get(`form_${formId}`, 'json');
+    // First try to get from KV storage
+    let structure = await c.env.SAFEWORK_KV.get(`form_${formId}`, 'json');
 
+    // If not in KV, generate and store it
     if (!structure) {
-      return c.json({ error: 'Form structure not found' }, 404);
+      if (formId === '002_musculoskeletal_symptom_program') {
+        // Generate the structure for form 002
+        structure = await parseExcelToSurveyStructure('');
+
+        // Store in KV for future requests
+        await c.env.SAFEWORK_KV.put(
+          `form_${formId}`,
+          JSON.stringify(structure),
+          { expirationTtl: 86400 * 30 } // 30 days
+        );
+      } else {
+        return c.json({ error: 'Form structure not found' }, 404);
+      }
     }
 
     return c.json(structure);
   } catch (error) {
+    console.error('Error retrieving form structure:', error);
     return c.json({ error: 'Failed to retrieve form structure' }, 500);
   }
 });
