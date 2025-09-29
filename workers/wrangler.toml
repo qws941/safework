@@ -1,7 +1,11 @@
 name = "safework"
 main = "src/index.ts"
 compatibility_date = "2024-10-22"
-compatibility_flags = ["nodejs_compat"]
+compatibility_flags = [
+  "nodejs_compat",
+  "streams_enable_constructors",
+  "transformstream_enable_standard_constructor"
+]
 account_id = "a8d9c67f586acdd15eebcc65ca3aa5bb"
 
 # KV Namespaces - CF Native Naming Convention
@@ -36,6 +40,22 @@ ENVIRONMENT = "production"
 [[routes]]
 pattern = "safework.jclee.me/*"
 zone_name = "jclee.me"
+
+# Cloudflare Analytics Engine for real-time metrics
+[analytics_engine_datasets]
+bindings = [
+  { binding = "SAFEWORK_ANALYTICS", dataset = "safework_usage_metrics" }
+]
+
+# Durable Objects for stateful operations
+[[durable_objects.bindings]]
+name = "SURVEY_SESSION"
+class_name = "SurveySession"
+script_name = "safework"
+
+# AI Gateway for enhanced AI features (if needed)
+[ai]
+binding = "AI"
 
 # Build configuration for CI/CD
 [build]

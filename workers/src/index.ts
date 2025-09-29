@@ -12,19 +12,66 @@ import { form002Template } from './templates/002';
 import { form001Template } from './templates/001';
 
 export interface Env {
+  // KV Namespaces - CF Native Naming
   SAFEWORK_KV: KVNamespace;
+  SESSION_STORE: KVNamespace;
+  CACHE_LAYER: KVNamespace;
+  AUTH_STORE: KVNamespace;
+
+  // D1 Database
   SAFEWORK_DB?: D1Database;
+
+  // Analytics Engine
+  SAFEWORK_ANALYTICS: AnalyticsEngineDataset;
+
+  // Durable Objects
+  SURVEY_SESSION: DurableObjectNamespace;
+
+  // AI Gateway
+  AI: Ai;
+
+  // Environment Variables
   JWT_SECRET: string;
   ADMIN_USERNAME: string;
   BACKEND_URL: string;
   DEBUG: string;
   ENVIRONMENT: string;
+
   [key: string]: any;
 }
 
 const app = new Hono<{ Bindings: Env }>();
 
-// Middleware
+// Cloudflare Native Analytics Middleware
+app.use('*', async (c, next) => {
+  const start = Date.now();
+
+  await next();
+
+  // Track request metrics with Analytics Engine
+  if (c.env.SAFEWORK_ANALYTICS) {
+    try {
+      await c.env.SAFEWORK_ANALYTICS.writeDataPoint({
+        blobs: [
+          c.req.path,
+          c.req.method,
+          c.res.status.toString(),
+          c.env.ENVIRONMENT || 'unknown'
+        ],
+        doubles: [
+          Date.now() - start // Response time in ms
+        ],
+        indexes: [
+          c.req.path // Enable querying by path
+        ]
+      });
+    } catch (error) {
+      console.warn('Analytics logging failed:', error);
+    }
+  }
+});
+
+// Standard middleware
 app.use('*', logger());
 app.use('/api/*', cors({
   origin: ['https://safework.jclee.me', 'http://localhost:3000'],
@@ -47,6 +94,59 @@ app.use('/api/admin/*', async (c, next) => {
 
 app.route('/api/admin', adminRoutes);
 app.route('/api/workers', workerRoutes);
+
+// Cloudflare Native Analytics Dashboard
+app.get('/api/analytics/dashboard', async (c) => {
+  if (!c.env.CACHE_LAYER) {
+    return c.json({ error: 'Analytics not available' }, 503);
+  }
+
+  try {
+    // Get cached analytics data
+    const cachedData = await c.env.CACHE_LAYER.get('analytics:dashboard', 'json');
+
+    if (cachedData) {
+      return c.json({
+        status: 'success',
+        data: cachedData,
+        source: 'cache',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // If no cache, return basic metrics
+    const basicMetrics = {
+      platform: 'Cloudflare Workers',
+      region: c.req.cf?.colo || 'unknown',
+      timestamp: new Date().toISOString(),
+      features: {
+        kv_namespaces: 4,
+        d1_database: true,
+        analytics_engine: true,
+        durable_objects: true,
+        ai_gateway: true
+      }
+    };
+
+    // Cache for 5 minutes
+    await c.env.CACHE_LAYER.put('analytics:dashboard', JSON.stringify(basicMetrics), {
+      expirationTtl: 300
+    });
+
+    return c.json({
+      status: 'success',
+      data: basicMetrics,
+      source: 'live',
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    return c.json({
+      error: 'Analytics dashboard error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, 500);
+  }
+});
 
 // SafeWork Main UI - Using Original Flask UI Design
 app.get('/', (c) => {
