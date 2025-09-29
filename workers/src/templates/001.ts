@@ -353,6 +353,16 @@ export const form001Template = `
                         <input type="checkbox" name="sports" value="있음" id="sports">
                         <label for="sports">테니스, 배드민턴, 스쿼시, 축구, 족구, 농구, 스키</label>
                     </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">기타 활동</label>
+                <textarea class="form-control" name="other_activity" rows="3" placeholder="기타 활동을 입력해주세요"></textarea>
+            </div>
+
+            <div class="form-group">
+                <div class="activity-container">
                     <div class="activity-item">
                         <input type="checkbox" name="no_activity" value="있음" id="no_activity">
                         <label for="no_activity">해당사항 없음</label>
