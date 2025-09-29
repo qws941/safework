@@ -23,20 +23,10 @@ healthRoutes.get('/', async (c) => {
   }
 
   try {
-    // Check backend connectivity
-    const backendUrl = c.env.BACKEND_URL || 'https://safework.jclee.me';
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-    const response = await fetch(`${backendUrl}/health`, {
-      signal: controller.signal,
-      headers: {
-        'User-Agent': 'Cloudflare-Worker-Health-Check',
-      },
-    });
-    clearTimeout(timeoutId);
-
-    checks.backend = response.ok ? 'healthy' : 'degraded';
+    // Check backend connectivity - Skip to avoid routing loop
+    // The backend is accessed through the same domain which would cause a loop
+    // Backend health is monitored separately through container health checks
+    checks.backend = 'skipped'; // Backend check skipped to prevent routing loop
   } catch (error) {
     checks.backend = 'degraded';
   }
