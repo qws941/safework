@@ -45,12 +45,13 @@ excelProcessorRoutes.post('/process-excel', async (c) => {
 // Get processed survey structure
 excelProcessorRoutes.get('/form-structure/:formId', async (c) => {
   const formId = c.req.param('formId');
+  const forceRefresh = c.req.query('refresh') === 'true';
 
   try {
-    // First try to get from KV storage
-    let structure = await c.env.SAFEWORK_KV.get(`form_${formId}`, 'json');
+    // First try to get from KV storage (unless force refresh is requested)
+    let structure = !forceRefresh ? await c.env.SAFEWORK_KV.get(`form_${formId}`, 'json') : null;
 
-    // If not in KV, generate and store it
+    // If not in KV or force refresh, generate and store it
     if (!structure) {
       if (formId === '002_musculoskeletal_symptom_program') {
         // Generate the structure for form 002
