@@ -2,9 +2,7 @@ name = "safework"
 main = "src/index.ts"
 compatibility_date = "2024-10-22"
 compatibility_flags = [
-  "nodejs_compat",
-  "streams_enable_constructors",
-  "transformstream_enable_standard_constructor"
+  "nodejs_compat"
 ]
 account_id = "a8d9c67f586acdd15eebcc65ca3aa5bb"
 
@@ -41,17 +39,16 @@ ENVIRONMENT = "production"
 pattern = "safework.jclee.me/*"
 zone_name = "jclee.me"
 
-# Cloudflare Analytics Engine for real-time metrics
-[analytics_engine_datasets]
-bindings = [
-  { binding = "SAFEWORK_ANALYTICS", dataset = "safework_usage_metrics" }
-]
+# Cloudflare Analytics Engine for real-time metrics (disabled - Free plan)
+# [[analytics_engine_datasets]]
+# binding = "SAFEWORK_ANALYTICS"
+# dataset = "safework_usage_metrics"
 
-# Durable Objects for stateful operations
-[[durable_objects.bindings]]
-name = "SURVEY_SESSION"
-class_name = "SurveySession"
-script_name = "safework"
+# Durable Objects for stateful operations (disabled - not needed for now)
+# [[durable_objects.bindings]]
+# name = "SURVEY_SESSION"
+# class_name = "SurveySession"
+# script_name = "safework"
 
 # AI Gateway for enhanced AI features (if needed)
 [ai]
@@ -98,15 +95,8 @@ BACKEND_URL = "https://safework.jclee.me"
 DEBUG = "false"
 ENVIRONMENT = "production"
 
-# D1 Database - CF Native Naming Convention (Temporarily disabled - requires D1 permissions)
-# Primary database: USER_DATA, SURVEY_RESPONSES, AUDIT_LOGS
-# [[d1_databases]]
-# binding = "PRIMARY_DB"
-# database_name = "safework-primary"
-# database_id = "placeholder-primary-db-production"
-
-# Analytics database: STATISTICS, REPORTS, AGGREGATED_DATA
-# [[d1_databases]]
-# binding = "ANALYTICS_DB"
-# database_name = "safework-analytics"
-# database_id = "placeholder-analytics-db-production"
+# D1 Database for production
+[[env.production.d1_databases]]
+binding = "PRIMARY_DB"
+database_name = "safework-primary"
+database_id = "d1db1d92-f598-415e-910f-1af511bc182f"
