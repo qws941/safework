@@ -57,25 +57,66 @@ survey002D1Routes.post('/submit', async (c) => {
     if (contentType.includes('application/json')) {
       body = await c.req.json();
     } else {
-      // Handle form-urlencoded
+      // Handle form-urlencoded from HTML form
       const formData = await c.req.formData();
-      body = {} as Survey002SubmissionRequest;
+      const responses: Record<string, string> = {};
 
-      // Convert FormData to object
+      body = {
+        name: '',
+        age: 0,
+        gender: '',
+        department: '',
+      } as Survey002SubmissionRequest;
+
+      // Process each form field
       for (const [key, value] of formData.entries()) {
-        if (key === 'responses') {
-          try {
-            (body as any)[key] = JSON.parse(value as string);
-          } catch {
-            (body as any)[key] = value;
-          }
-        } else if (key === 'age' || key === 'work_experience' || key === 'current_work_period' ||
-                   key === 'daily_work_hours' || key === 'rest_time' || key === 'previous_work_period' ||
-                   key === 'user_id' || key === 'company_id' || key === 'process_id' || key === 'role_id') {
-          (body as any)[key] = parseFloat(value as string);
-        } else {
-          (body as any)[key] = value;
+        const strValue = value as string;
+
+        // Map company/process/role to their _id versions
+        if (key === 'company') {
+          body.company_id = parseInt(strValue) || null;
+        } else if (key === 'process') {
+          body.process_id = parseInt(strValue) || null;
+        } else if (key === 'role') {
+          body.role_id = parseInt(strValue) || null;
         }
+        // Basic fields
+        else if (key === 'name') {
+          body.name = strValue;
+        } else if (key === 'age') {
+          body.age = parseInt(strValue);
+        } else if (key === 'gender') {
+          body.gender = strValue;
+        } else if (key === 'department') {
+          body.department = strValue;
+        } else if (key === 'number') {
+          body.number = strValue;
+        } else if (key === 'married') {
+          body.married = strValue;
+        } else if (key === 'line') {
+          body.line = strValue;
+        } else if (key === 'work_type') {
+          body.work_type = strValue;
+        } else if (key === 'work_period') {
+          body.work_period = strValue;
+        } else if (key === 'physical_burden') {
+          body.physical_burden = strValue;
+        } else if (key === 'work_experience' || key === 'current_work_period' ||
+                   key === 'daily_work_hours' || key === 'rest_time' ||
+                   key === 'previous_work_period') {
+          (body as any)[key] = parseFloat(strValue);
+        }
+        // Symptom fields - collect in responses object (목_1, 목_2, 어깨_1, etc)
+        else if (key.includes('목_') || key.includes('어깨_') ||
+                 key.includes('팔꿈치_') || key.includes('손손목_') ||
+                 key.includes('허리_') || key.includes('다리발_')) {
+          responses[key] = strValue;
+        }
+      }
+
+      // Attach responses if any
+      if (Object.keys(responses).length > 0) {
+        body.responses = responses;
       }
     }
 
