@@ -283,6 +283,62 @@ export const unifiedAdminDashboardTemplate = `
       margin-bottom: 20px;
     }
 
+    /* Refresh Controls */
+    .refresh-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .refresh-controls .btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* Filter Panel */
+    .filter-panel {
+      background: white;
+      border-radius: 15px;
+      padding: 25px;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    }
+
+    .filter-panel h5 {
+      color: var(--primary);
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+
+    /* Search Panel */
+    .search-panel {
+      background: white;
+      border-radius: 15px;
+      padding: 25px;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    }
+
+    .search-panel .input-group-text {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+      border: none;
+    }
+
+    .search-panel .form-control {
+      border-left: none;
+      padding: 12px;
+      font-size: 1.05rem;
+    }
+
+    .search-panel .form-control:focus {
+      border-color: var(--primary);
+      box-shadow: none;
+    }
+
     @media (max-width: 768px) {
       .stats-grid {
         grid-template-columns: 1fr;
@@ -290,6 +346,15 @@ export const unifiedAdminDashboardTemplate = `
 
       .action-grid {
         grid-template-columns: 1fr;
+      }
+
+      .refresh-controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .refresh-controls .btn {
+        justify-content: center;
       }
     }
   </style>
@@ -369,6 +434,63 @@ export const unifiedAdminDashboardTemplate = `
       </div>
     </div>
 
+    <!-- Search Panel -->
+    <div class="search-panel">
+      <div class="input-group input-group-lg">
+        <span class="input-group-text">
+          <i class="bi bi-search"></i>
+        </span>
+        <input
+          type="text"
+          id="search-input"
+          class="form-control"
+          placeholder="ID, 이름, 부서로 검색..."
+          autocomplete="off"
+        >
+        <button class="btn btn-outline-secondary" id="clear-search">
+          <i class="bi bi-x"></i>
+        </button>
+      </div>
+      <small id="search-results-count" class="text-muted d-block mt-2">
+        전체 <span id="total-count">0</span>건
+      </small>
+    </div>
+
+    <!-- Filter Panel -->
+    <div class="filter-panel">
+      <h5><i class="bi bi-funnel"></i> 필터</h5>
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label">부서</label>
+          <select id="filter-department" class="form-select">
+            <option value="all">전체</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">양식</label>
+          <select id="filter-formType" class="form-select">
+            <option value="all">전체</option>
+            <option value="001">Form 001</option>
+            <option value="002">Form 002</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">증상</label>
+          <select id="filter-hasSymptoms" class="form-select">
+            <option value="all">전체</option>
+            <option value="yes">있음</option>
+            <option value="no">없음</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">&nbsp;</label>
+          <button id="reset-filters" class="btn btn-secondary w-100">
+            <i class="bi bi-x-circle"></i> 필터 초기화
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Quick Actions -->
     <div class="quick-actions">
       <h3><i class="bi bi-lightning"></i> 빠른 액세스</h3>
@@ -432,7 +554,20 @@ export const unifiedAdminDashboardTemplate = `
 
     <!-- Recent Submissions -->
     <div class="recent-submissions">
-      <h3><i class="bi bi-clock-history"></i> 최근 제출 내역</h3>
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="mb-0"><i class="bi bi-clock-history"></i> 최근 제출 내역</h3>
+        <div class="refresh-controls">
+          <button id="manual-refresh" class="btn btn-primary btn-sm">
+            <i class="bi bi-arrow-clockwise"></i> 새로고침
+          </button>
+          <button id="auto-refresh-toggle" class="btn btn-success btn-sm">
+            <i class="bi bi-lightning-fill"></i> 자동 갱신 켜짐
+          </button>
+          <span id="last-refresh-time" class="text-muted ms-2" style="font-size: 0.9rem;">
+            마지막 업데이트: --:--:--
+          </span>
+        </div>
+      </div>
       <div id="recent-submissions-list">
         <div class="text-center py-4">
           <div class="spinner-border text-primary" role="status">
@@ -447,6 +582,172 @@ export const unifiedAdminDashboardTemplate = `
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script>
     let charts = {};
+    let allSubmissions = [];
+    let currentFilters = {
+      department: 'all',
+      formType: 'all',
+      hasSymptoms: 'all'
+    };
+    let autoRefreshInterval;
+    let autoRefreshEnabled = true;
+    const REFRESH_INTERVAL = 30000; // 30초
+
+    // KST 시간 변환 함수
+    function formatKST(utcString) {
+      const date = new Date(utcString);
+      const options = {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+        timeZone: 'Asia/Seoul'
+      };
+      return new Intl.DateTimeFormat('ko-KR', options).format(date);
+    }
+
+    // 상대 시간 표시
+    function getRelativeTime(utcString) {
+      const now = new Date();
+      const date = new Date(utcString);
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMins / 60);
+      const diffDays = Math.floor(diffHours / 24);
+
+      if (diffMins < 1) return '방금 전';
+      if (diffMins < 60) return \`\${diffMins}분 전\`;
+      if (diffHours < 24) return \`\${diffHours}시간 전\`;
+      if (diffDays < 7) return \`\${diffDays}일 전\`;
+      return formatKST(utcString);
+    }
+
+    // 자동 갱신 시작
+    function startAutoRefresh() {
+      if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+      }
+
+      autoRefreshInterval = setInterval(() => {
+        if (autoRefreshEnabled) {
+          loadDashboard();
+          updateLastRefreshTime();
+        }
+      }, REFRESH_INTERVAL);
+    }
+
+    // 마지막 업데이트 시간 표시
+    function updateLastRefreshTime() {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('ko-KR');
+      document.getElementById('last-refresh-time').textContent = \`마지막 업데이트: \${timeStr}\`;
+    }
+
+    // 자동 갱신 토글
+    function toggleAutoRefresh() {
+      autoRefreshEnabled = !autoRefreshEnabled;
+      const btn = document.getElementById('auto-refresh-toggle');
+      btn.innerHTML = autoRefreshEnabled
+        ? '<i class="bi bi-lightning-fill"></i> 자동 갱신 켜짐'
+        : '<i class="bi bi-lightning"></i> 자동 갱신 꺼짐';
+      btn.className = autoRefreshEnabled ? 'btn btn-success btn-sm' : 'btn btn-secondary btn-sm';
+    }
+
+    // 필터 적용
+    function applyFilters(submissions) {
+      return submissions.filter(sub => {
+        // 부서 필터
+        if (currentFilters.department !== 'all' &&
+            sub.department !== currentFilters.department) {
+          return false;
+        }
+
+        // 양식 필터
+        if (currentFilters.formType !== 'all') {
+          const isForm001 = sub.form_type?.includes('001');
+          if (currentFilters.formType === '001' && !isForm001) return false;
+          if (currentFilters.formType === '002' && isForm001) return false;
+        }
+
+        // 증상 필터
+        if (currentFilters.hasSymptoms !== 'all') {
+          const hasSymptoms = sub.has_symptoms === 1 || sub.has_symptoms === true;
+          if (currentFilters.hasSymptoms === 'yes' && !hasSymptoms) return false;
+          if (currentFilters.hasSymptoms === 'no' && hasSymptoms) return false;
+        }
+
+        return true;
+      });
+    }
+
+    // 검색 기능
+    function searchSubmissions(query) {
+      if (!query || query.trim() === '') {
+        return allSubmissions;
+      }
+
+      const lowerQuery = query.toLowerCase().trim();
+
+      return allSubmissions.filter(sub => {
+        // ID 검색
+        if (sub.submission_id && sub.submission_id.toString() === lowerQuery) {
+          return true;
+        }
+
+        // 이름 검색 (부분 일치)
+        if (sub.name && sub.name.toLowerCase().includes(lowerQuery)) {
+          return true;
+        }
+
+        // 부서 검색
+        if (sub.department && sub.department.toLowerCase().includes(lowerQuery)) {
+          return true;
+        }
+
+        return false;
+      });
+    }
+
+    // 필터 및 검색 적용
+    function updateFilteredData() {
+      const searchQuery = document.getElementById('search-input').value;
+      let filtered = searchSubmissions(searchQuery);
+      filtered = applyFilters(filtered);
+
+      loadRecentSubmissions(filtered);
+
+      // 검색 결과 개수 표시
+      document.getElementById('total-count').textContent = allSubmissions.length;
+      document.getElementById('search-results-count').innerHTML =
+        searchQuery || currentFilters.department !== 'all' || currentFilters.formType !== 'all' || currentFilters.hasSymptoms !== 'all'
+          ? \`<span class="text-primary">\${filtered.length}건의 결과</span> (전체 \${allSubmissions.length}건)\`
+          : \`전체 <span id="total-count">\${allSubmissions.length}</span>건\`;
+    }
+
+    // 부서 목록 로드
+    function loadDepartmentOptions(submissions) {
+      const departments = new Set();
+      submissions.forEach(sub => {
+        if (sub.department) {
+          departments.add(sub.department);
+        }
+      });
+
+      const select = document.getElementById('filter-department');
+      const currentValue = select.value;
+
+      select.innerHTML = '<option value="all">전체</option>';
+      Array.from(departments).sort().forEach(dept => {
+        const option = document.createElement('option');
+        option.value = dept;
+        option.textContent = dept;
+        select.appendChild(option);
+      });
+
+      select.value = currentValue;
+    }
 
     // Load dashboard data
     async function loadDashboard() {
@@ -465,6 +766,9 @@ export const unifiedAdminDashboardTemplate = `
 
         const stats = statsResponse.statistics;
         const recent = recentResponse.submissions || [];
+
+        // Store all submissions for filtering and search
+        allSubmissions = recent;
 
         // Use unified statistics directly
         const totalSubmissions = stats.total || 0;
@@ -505,8 +809,14 @@ export const unifiedAdminDashboardTemplate = `
         renderDepartmentChart(deptObj);
         renderTimelineChart(stats.timeline || []);
 
-        // Load recent submissions from unified endpoint
-        loadRecentSubmissions(recent);
+        // Load department options for filter
+        loadDepartmentOptions(allSubmissions);
+
+        // Apply current filters and search
+        updateFilteredData();
+
+        // Update last refresh time
+        updateLastRefreshTime();
 
         document.getElementById('loading').style.display = 'none';
       } catch (error) {
@@ -630,12 +940,12 @@ export const unifiedAdminDashboardTemplate = `
       });
     }
 
-    // Load recent submissions
+    // Load recent submissions (with KST time display)
     function loadRecentSubmissions(submissions) {
       const container = document.getElementById('recent-submissions-list');
 
       if (submissions.length === 0) {
-        container.innerHTML = '<p class="text-center text-muted py-4">최근 제출 내역이 없습니다.</p>';
+        container.innerHTML = '<p class="text-center text-muted py-4">검색 결과가 없습니다.</p>';
         return;
       }
 
@@ -644,12 +954,12 @@ export const unifiedAdminDashboardTemplate = `
         const dateA = new Date(a.submitted_at);
         const dateB = new Date(b.submitted_at);
         return dateB - dateA;
-      }).slice(0, 10);
+      }).slice(0, 20);
 
       container.innerHTML = sorted.map(sub => {
         const formType = sub.form_type?.includes('001') ? '001' : '002';
-        const date = new Date(sub.submitted_at);
-        const timeStr = date.toLocaleString('ko-KR');
+        const relativeTime = getRelativeTime(sub.submitted_at);
+        const fullTime = formatKST(sub.submitted_at);
 
         return \`
           <div class="submission-item">
@@ -657,9 +967,10 @@ export const unifiedAdminDashboardTemplate = `
               <span class="form-badge form-\${formType}">Form \${formType}</span>
               <strong class="ms-2">\${sub.name || '익명'}</strong>
               <span class="text-muted ms-2">\${sub.department || '-'}</span>
+              <span class="badge bg-secondary ms-2">ID: \${sub.submission_id}</span>
             </div>
             <div class="text-end">
-              <small class="text-muted">\${timeStr}</small>
+              <small class="text-muted" title="\${fullTime}">\${relativeTime}</small>
               <a href="/admin/\${formType}/view/\${sub.submission_id}" class="btn btn-sm btn-outline-primary ms-2">
                 <i class="bi bi-eye"></i>
               </a>
@@ -691,11 +1002,63 @@ export const unifiedAdminDashboardTemplate = `
       }
     }
 
-    // Auto-refresh every 5 minutes
-    setInterval(loadDashboard, 300000);
+    // Event listeners
+    window.addEventListener('DOMContentLoaded', () => {
+      // Initial load
+      loadDashboard();
 
-    // Load dashboard on page load
-    window.addEventListener('DOMContentLoaded', loadDashboard);
+      // Start auto-refresh
+      startAutoRefresh();
+
+      // Manual refresh button
+      document.getElementById('manual-refresh').addEventListener('click', () => {
+        loadDashboard();
+      });
+
+      // Auto-refresh toggle button
+      document.getElementById('auto-refresh-toggle').addEventListener('click', toggleAutoRefresh);
+
+      // Search input
+      document.getElementById('search-input').addEventListener('input', () => {
+        updateFilteredData();
+      });
+
+      // Clear search button
+      document.getElementById('clear-search').addEventListener('click', () => {
+        document.getElementById('search-input').value = '';
+        updateFilteredData();
+      });
+
+      // Filter dropdowns
+      document.getElementById('filter-department').addEventListener('change', (e) => {
+        currentFilters.department = e.target.value;
+        updateFilteredData();
+      });
+
+      document.getElementById('filter-formType').addEventListener('change', (e) => {
+        currentFilters.formType = e.target.value;
+        updateFilteredData();
+      });
+
+      document.getElementById('filter-hasSymptoms').addEventListener('change', (e) => {
+        currentFilters.hasSymptoms = e.target.value;
+        updateFilteredData();
+      });
+
+      // Reset filters button
+      document.getElementById('reset-filters').addEventListener('click', () => {
+        currentFilters = {
+          department: 'all',
+          formType: 'all',
+          hasSymptoms: 'all'
+        };
+        document.getElementById('filter-department').value = 'all';
+        document.getElementById('filter-formType').value = 'all';
+        document.getElementById('filter-hasSymptoms').value = 'all';
+        document.getElementById('search-input').value = '';
+        updateFilteredData();
+      });
+    });
   </script>
 </body>
 </html>
