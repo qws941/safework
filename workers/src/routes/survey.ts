@@ -68,28 +68,44 @@ surveyRoutes.get('/form/:formId', async (c) => {
 // Render survey form HTML
 surveyRoutes.get('/:formId', async (c) => {
   const formId = c.req.param('formId');
-  
+
   // Define form templates mapping
   const formTemplates = {
     '001_musculoskeletal_symptom_survey': '001',
+    '001_musculoskeletal_symptom_survey_intuitive': '001_intuitive',
     '002_musculoskeletal_symptom_program': '002',
+    '002_musculoskeletal_symptom_program_intuitive': '002_intuitive',
     '003_cardiovascular_risk_assessment': '003',
     '004_industrial_accident_survey': '004',
     '005_basic_hazard_factor_survey': '005',
     '006_elderly_worker_approval_form': '006'
   };
-  
+
   const templateKey = formTemplates[formId];
   if (!templateKey) {
     return c.text('Form not found', 404);
   }
-  
+
   try {
-    const template = await c.env.FORM_TEMPLATES.get(`${templateKey}_form.html`);
-    if (!template) {
-      return c.text('Template not found', 404);
+    // First try to get from KV storage (for intuitive templates)
+    let template = await c.env.SAFEWORK_KV.get(`template_${templateKey}`);
+
+    if (!template && c.env.FORM_TEMPLATES) {
+      // Fallback to FORM_TEMPLATES binding
+      template = await c.env.FORM_TEMPLATES.get(`${templateKey}_form.html`);
     }
-    
+
+    if (!template) {
+      // Fallback: Proxy to backend
+      const backendUrl = c.env.BACKEND_URL || 'https://safework.jclee.me';
+      const response = await fetch(`${backendUrl}/survey/${formId}`);
+      if (response.ok) {
+        template = await response.text();
+      } else {
+        return c.text('Template not found', 404);
+      }
+    }
+
     return c.html(template);
   } catch (error) {
     console.error('Template error:', error);

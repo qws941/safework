@@ -1,41 +1,31 @@
 /**
- * SafeWork 관리자 API 라우트
+ * SafeWork 002 관리자 API 라우트
  * D1 Database 기반 데이터 조회 및 관리
  */
 
 import { Hono } from 'hono';
-import { adminDashboardTemplate } from '../templates/admin-dashboard';
+import { admin002DashboardTemplate } from '../templates/admin-002-dashboard';
 
 type Bindings = {
   PRIMARY_DB: D1Database;
   SAFEWORK_KV: KVNamespace;
-  JWT_SECRET: string;
-  ADMIN_USERNAME: string;
 };
 
-export const adminRoutes = new Hono<{ Bindings: Bindings }>();
+export const admin002Routes = new Hono<{ Bindings: Bindings }>();
 
 /**
- * GET /admin
- * 관리자 대시보드 페이지
+ * GET /admin/002
+ * 002 관리자 대시보드 페이지
  */
-adminRoutes.get('/', async (c) => {
-  return c.html(adminDashboardTemplate);
+admin002Routes.get('/', async (c) => {
+  return c.html(admin002DashboardTemplate);
 });
 
 /**
- * GET /admin/dashboard
- * 관리자 대시보드 페이지 (alias)
+ * GET /api/admin/002/submissions
+ * 모든 002 제출 데이터 조회 (통계 포함)
  */
-adminRoutes.get('/dashboard', async (c) => {
-  return c.html(adminDashboardTemplate);
-});
-
-/**
- * GET /api/admin/submissions
- * 모든 제출 데이터 조회 (통계 포함)
- */
-adminRoutes.get('/submissions', async (c) => {
+admin002Routes.get('/submissions', async (c) => {
   try {
     const db = c.env.PRIMARY_DB;
 
@@ -49,11 +39,12 @@ adminRoutes.get('/submissions', async (c) => {
     // 전체 제출 데이터 조회
     const submissionsResult = await db.prepare(`
       SELECT
-        submission_id, name, age, gender,
-        company, process, role, position,
-        diagnosed, diagnosed_details,
+        submission_id, name, age, gender, department,
+        work_experience, married, physical_burden,
+        neck_pain_exists, shoulder_pain_exists, elbow_pain_exists,
+        wrist_pain_exists, back_pain_exists, leg_pain_exists,
         submitted_at, cf_ray, country
-      FROM surveys_001
+      FROM surveys_002
       ORDER BY submitted_at DESC
       LIMIT 100
     `).all();
@@ -63,9 +54,11 @@ adminRoutes.get('/submissions', async (c) => {
       SELECT
         COUNT(*) as total,
         AVG(age) as avg_age,
-        SUM(CASE WHEN diagnosed = 'yes' THEN 1 ELSE 0 END) as with_symptoms,
+        SUM(CASE WHEN neck_pain_exists = '있음' THEN 1 ELSE 0 END) as neck_pain_count,
+        SUM(CASE WHEN shoulder_pain_exists = '있음' THEN 1 ELSE 0 END) as shoulder_pain_count,
+        SUM(CASE WHEN back_pain_exists = '있음' THEN 1 ELSE 0 END) as back_pain_count,
         SUM(CASE WHEN DATE(submitted_at) = DATE('now') THEN 1 ELSE 0 END) as today_count
-      FROM surveys_001
+      FROM surveys_002
     `).first();
 
     return c.json({
@@ -74,14 +67,16 @@ adminRoutes.get('/submissions', async (c) => {
       statistics: {
         total: statsResult?.total || 0,
         avgAge: statsResult?.avg_age || 0,
-        withSymptoms: statsResult?.with_symptoms || 0,
+        neckPain: statsResult?.neck_pain_count || 0,
+        shoulderPain: statsResult?.shoulder_pain_count || 0,
+        backPain: statsResult?.back_pain_count || 0,
         today: statsResult?.today_count || 0
       },
       timestamp: new Date().toISOString()
     });
 
   } catch (error) {
-    console.error('Admin submissions error:', error);
+    console.error('Admin 002 submissions error:', error);
     return c.json({
       success: false,
       error: 'Failed to load submissions',
@@ -91,10 +86,10 @@ adminRoutes.get('/submissions', async (c) => {
 });
 
 /**
- * GET /api/admin/submission/:id
- * 특정 제출 데이터 상세 조회
+ * GET /api/admin/002/submission/:id
+ * 특정 002 제출 데이터 상세 조회
  */
-adminRoutes.get('/submission/:id', async (c) => {
+admin002Routes.get('/submission/:id', async (c) => {
   try {
     const submissionId = c.req.param('id');
     const db = c.env.PRIMARY_DB;
@@ -107,7 +102,7 @@ adminRoutes.get('/submission/:id', async (c) => {
     }
 
     const result = await db.prepare(`
-      SELECT * FROM surveys_001
+      SELECT * FROM surveys_002
       WHERE submission_id = ?
     `).bind(submissionId).first();
 
@@ -125,7 +120,7 @@ adminRoutes.get('/submission/:id', async (c) => {
     });
 
   } catch (error) {
-    console.error('Admin submission detail error:', error);
+    console.error('Admin 002 submission detail error:', error);
     return c.json({
       success: false,
       error: 'Failed to load submission',
@@ -135,10 +130,10 @@ adminRoutes.get('/submission/:id', async (c) => {
 });
 
 /**
- * PUT /api/admin/submission/:id
- * 제출 데이터 수정
+ * PUT /api/admin/002/submission/:id
+ * 002 제출 데이터 수정
  */
-adminRoutes.put('/submission/:id', async (c) => {
+admin002Routes.put('/submission/:id', async (c) => {
   try {
     const submissionId = c.req.param('id');
     const updateData = await c.req.json();
@@ -153,37 +148,47 @@ adminRoutes.put('/submission/:id', async (c) => {
 
     // 업데이트 실행
     await db.prepare(`
-      UPDATE surveys_001
+      UPDATE surveys_002
       SET
         name = ?,
         age = ?,
         gender = ?,
-        company = ?,
-        process = ?,
-        role = ?,
-        position = ?,
-        work_years = ?,
-        marriage_status = ?,
-        diagnosed = ?,
-        diagnosed_details = ?
+        work_experience = ?,
+        married = ?,
+        department = ?,
+        line = ?,
+        work_type = ?,
+        work_content = ?,
+        physical_burden = ?,
+        neck_pain_exists = ?,
+        shoulder_pain_exists = ?,
+        elbow_pain_exists = ?,
+        wrist_pain_exists = ?,
+        back_pain_exists = ?,
+        leg_pain_exists = ?
       WHERE submission_id = ?
     `).bind(
       updateData.name,
       updateData.age,
       updateData.gender,
-      updateData.company || null,
-      updateData.process || null,
-      updateData.role || null,
-      updateData.position || null,
-      updateData.work_years || null,
-      updateData.marriage_status || null,
-      updateData.diagnosed || null,
-      updateData.diagnosed_details || null,
+      updateData.work_experience || null,
+      updateData.married || null,
+      updateData.department || null,
+      updateData.line || null,
+      updateData.work_type || null,
+      updateData.work_content || null,
+      updateData.physical_burden || null,
+      updateData.neck_pain_exists || null,
+      updateData.shoulder_pain_exists || null,
+      updateData.elbow_pain_exists || null,
+      updateData.wrist_pain_exists || null,
+      updateData.back_pain_exists || null,
+      updateData.leg_pain_exists || null,
       submissionId
     ).run();
 
     // KV도 업데이트 (있다면)
-    const kvKey = `submission:001:${submissionId}`;
+    const kvKey = `submission:002:${submissionId}`;
     const existingKV = await c.env.SAFEWORK_KV?.get(kvKey, 'json') as any;
     if (existingKV && typeof existingKV === 'object') {
       const updatedKV = {
@@ -194,7 +199,7 @@ adminRoutes.put('/submission/:id', async (c) => {
         }
       };
       await c.env.SAFEWORK_KV?.put(kvKey, JSON.stringify(updatedKV), {
-        expirationTtl: 2592000 // 30일
+        expirationTtl: 2592000
       });
     }
 
@@ -206,7 +211,7 @@ adminRoutes.put('/submission/:id', async (c) => {
     });
 
   } catch (error) {
-    console.error('Admin update error:', error);
+    console.error('Admin 002 update error:', error);
     return c.json({
       success: false,
       error: 'Failed to update submission',
@@ -216,10 +221,10 @@ adminRoutes.put('/submission/:id', async (c) => {
 });
 
 /**
- * DELETE /api/admin/submission/:id
- * 제출 데이터 삭제
+ * DELETE /api/admin/002/submission/:id
+ * 002 제출 데이터 삭제
  */
-adminRoutes.delete('/submission/:id', async (c) => {
+admin002Routes.delete('/submission/:id', async (c) => {
   try {
     const submissionId = c.req.param('id');
     const db = c.env.PRIMARY_DB;
@@ -233,12 +238,12 @@ adminRoutes.delete('/submission/:id', async (c) => {
 
     // D1에서 삭제
     await db.prepare(`
-      DELETE FROM surveys_001
+      DELETE FROM surveys_002
       WHERE submission_id = ?
     `).bind(submissionId).run();
 
     // KV에서도 삭제
-    const kvKey = `submission:001:${submissionId}`;
+    const kvKey = `submission:002:${submissionId}`;
     await c.env.SAFEWORK_KV?.delete(kvKey);
 
     return c.json({
@@ -249,7 +254,7 @@ adminRoutes.delete('/submission/:id', async (c) => {
     });
 
   } catch (error) {
-    console.error('Admin delete error:', error);
+    console.error('Admin 002 delete error:', error);
     return c.json({
       success: false,
       error: 'Failed to delete submission',
@@ -259,10 +264,10 @@ adminRoutes.delete('/submission/:id', async (c) => {
 });
 
 /**
- * GET /api/admin/export/csv
- * CSV 형식으로 데이터 내보내기
+ * GET /api/admin/002/export/csv
+ * 002 데이터 CSV 형식으로 내보내기
  */
-adminRoutes.get('/export/csv', async (c) => {
+admin002Routes.get('/export/csv', async (c) => {
   try {
     const db = c.env.PRIMARY_DB;
 
@@ -275,12 +280,16 @@ adminRoutes.get('/export/csv', async (c) => {
 
     const result = await db.prepare(`
       SELECT
-        submission_id, name, age, gender,
-        company, process, role, position,
-        work_years, marriage_status,
-        diagnosed, diagnosed_details,
+        submission_id, name, age, gender, work_experience, married,
+        department, line, work_type, work_content, physical_burden,
+        neck_pain_exists, neck_pain_duration, neck_pain_intensity,
+        shoulder_pain_exists, shoulder_pain_duration, shoulder_pain_intensity,
+        elbow_pain_exists, elbow_pain_duration, elbow_pain_intensity,
+        wrist_pain_exists, wrist_pain_duration, wrist_pain_intensity,
+        back_pain_exists, back_pain_duration, back_pain_intensity,
+        leg_pain_exists, leg_pain_duration, leg_pain_intensity,
         submitted_at
-      FROM surveys_001
+      FROM surveys_002
       ORDER BY submitted_at DESC
     `).all();
 
@@ -288,8 +297,15 @@ adminRoutes.get('/export/csv', async (c) => {
 
     // CSV 헤더
     const headers = [
-      '제출ID', '이름', '나이', '성별', '업체명', '공정', '역할', '직위',
-      '근무년수', '결혼상태', '진단여부', '진단상세', '제출일시'
+      '제출ID', '이름', '나이', '성별', '경력(년)', '결혼여부',
+      '작업부서', '라인', '작업', '작업내용', '육체부담',
+      '목통증', '목기간', '목강도',
+      '어깨통증', '어깨기간', '어깨강도',
+      '팔꿈치통증', '팔꿈치기간', '팔꿈치강도',
+      '손목통증', '손목기간', '손목강도',
+      '허리통증', '허리기간', '허리강도',
+      '다리통증', '다리기간', '다리강도',
+      '제출일시'
     ];
 
     // CSV 데이터
@@ -298,14 +314,31 @@ adminRoutes.get('/export/csv', async (c) => {
       sub.name,
       sub.age,
       sub.gender,
-      sub.company || '',
-      sub.process || '',
-      sub.role || '',
-      sub.position || '',
-      sub.work_years || '',
-      sub.marriage_status || '',
-      sub.diagnosed || '',
-      sub.diagnosed_details || '',
+      sub.work_experience || '',
+      sub.married || '',
+      sub.department || '',
+      sub.line || '',
+      sub.work_type || '',
+      sub.work_content || '',
+      sub.physical_burden || '',
+      sub.neck_pain_exists || '',
+      sub.neck_pain_duration || '',
+      sub.neck_pain_intensity || '',
+      sub.shoulder_pain_exists || '',
+      sub.shoulder_pain_duration || '',
+      sub.shoulder_pain_intensity || '',
+      sub.elbow_pain_exists || '',
+      sub.elbow_pain_duration || '',
+      sub.elbow_pain_intensity || '',
+      sub.wrist_pain_exists || '',
+      sub.wrist_pain_duration || '',
+      sub.wrist_pain_intensity || '',
+      sub.back_pain_exists || '',
+      sub.back_pain_duration || '',
+      sub.back_pain_intensity || '',
+      sub.leg_pain_exists || '',
+      sub.leg_pain_duration || '',
+      sub.leg_pain_intensity || '',
       sub.submitted_at
     ]);
 
@@ -317,7 +350,7 @@ adminRoutes.get('/export/csv', async (c) => {
     return new Response(csvContent, {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="safework_001_${new Date().toISOString().split('T')[0]}.csv"`
+        'Content-Disposition': `attachment; filename="safework_002_${new Date().toISOString().split('T')[0]}.csv"`
       }
     });
 
@@ -332,10 +365,10 @@ adminRoutes.get('/export/csv', async (c) => {
 });
 
 /**
- * GET /api/admin/stats
- * 통계 데이터 조회
+ * GET /api/admin/002/stats
+ * 002 통계 데이터 조회
  */
-adminRoutes.get('/stats', async (c) => {
+admin002Routes.get('/stats', async (c) => {
   try {
     const db = c.env.PRIMARY_DB;
 
@@ -355,34 +388,37 @@ adminRoutes.get('/stats', async (c) => {
         MAX(age) as max_age,
         SUM(CASE WHEN gender = '남' THEN 1 ELSE 0 END) as male_count,
         SUM(CASE WHEN gender = '여' THEN 1 ELSE 0 END) as female_count,
-        SUM(CASE WHEN diagnosed = 'yes' THEN 1 ELSE 0 END) as with_symptoms
-      FROM surveys_001
+        SUM(CASE WHEN neck_pain_exists = '있음' THEN 1 ELSE 0 END) as neck_pain,
+        SUM(CASE WHEN shoulder_pain_exists = '있음' THEN 1 ELSE 0 END) as shoulder_pain,
+        SUM(CASE WHEN back_pain_exists = '있음' THEN 1 ELSE 0 END) as back_pain
+      FROM surveys_002
     `).first();
 
-    const companyStats = await db.prepare(`
-      SELECT company, COUNT(*) as count
-      FROM surveys_001
-      WHERE company IS NOT NULL
-      GROUP BY company
+    const departmentStats = await db.prepare(`
+      SELECT department, COUNT(*) as count
+      FROM surveys_002
+      WHERE department IS NOT NULL
+      GROUP BY department
       ORDER BY count DESC
       LIMIT 10
     `).all();
 
-    const processStats = await db.prepare(`
-      SELECT process, COUNT(*) as count
-      FROM surveys_001
-      WHERE process IS NOT NULL
-      GROUP BY process
+    const painStats = await db.prepare(`
+      SELECT
+        physical_burden,
+        COUNT(*) as count
+      FROM surveys_002
+      WHERE physical_burden IS NOT NULL
+      GROUP BY physical_burden
       ORDER BY count DESC
-      LIMIT 10
     `).all();
 
     return c.json({
       success: true,
       statistics: {
         general: generalStats,
-        byCompany: companyStats.results,
-        byProcess: processStats.results
+        byDepartment: departmentStats.results,
+        byPhysicalBurden: painStats.results
       },
       timestamp: new Date().toISOString()
     });

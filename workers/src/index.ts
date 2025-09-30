@@ -10,6 +10,11 @@ import { workerRoutes } from './routes/worker';
 import { excelProcessorRoutes } from './routes/excel-processor';
 import { form002Template } from './templates/002';
 import { form001Template } from './templates/001';
+import { form001CompleteTemplate } from './templates/001-complete';
+import { form001Dv06Template } from './templates/001-dv06-restore';
+import { form001Routes } from './routes/form-001';
+import { form002Routes } from './routes/form-002';
+import { admin002Routes } from './routes/admin-002';
 
 export interface Env {
   // KV Namespaces - CF Native Naming
@@ -20,12 +25,13 @@ export interface Env {
 
   // D1 Database
   SAFEWORK_DB?: D1Database;
+  PRIMARY_DB: D1Database;
 
-  // Analytics Engine
-  SAFEWORK_ANALYTICS: AnalyticsEngineDataset;
+  // Analytics Engine (disabled - Free plan)
+  // SAFEWORK_ANALYTICS: AnalyticsEngineDataset;
 
-  // Durable Objects
-  SURVEY_SESSION: DurableObjectNamespace;
+  // Durable Objects (disabled - not needed for now)
+  // SURVEY_SESSION?: DurableObjectNamespace;
 
   // AI Gateway
   AI: Ai;
@@ -48,27 +54,27 @@ app.use('*', async (c, next) => {
 
   await next();
 
-  // Track request metrics with Analytics Engine
-  if (c.env.SAFEWORK_ANALYTICS) {
-    try {
-      await c.env.SAFEWORK_ANALYTICS.writeDataPoint({
-        blobs: [
-          c.req.path,
-          c.req.method,
-          c.res.status.toString(),
-          c.env.ENVIRONMENT || 'unknown'
-        ],
-        doubles: [
-          Date.now() - start // Response time in ms
-        ],
-        indexes: [
-          c.req.path // Enable querying by path
-        ]
-      });
-    } catch (error) {
-      console.warn('Analytics logging failed:', error);
-    }
-  }
+  // Track request metrics with Analytics Engine (disabled - Free plan)
+  // if (c.env.SAFEWORK_ANALYTICS) {
+  //   try {
+  //     await c.env.SAFEWORK_ANALYTICS.writeDataPoint({
+  //       blobs: [
+  //         c.req.path,
+  //         c.req.method,
+  //         c.res.status.toString(),
+  //         c.env.ENVIRONMENT || 'unknown'
+  //       ],
+  //       doubles: [
+  //         Date.now() - start // Response time in ms
+  //       ],
+  //       indexes: [
+  //         c.req.path // Enable querying by path
+  //       ]
+  //     });
+  //   } catch (error) {
+  //     console.warn('Analytics logging failed:', error);
+  //   }
+  // }
 });
 
 // Standard middleware
@@ -83,16 +89,24 @@ app.route('/api/auth', authRoutes);
 app.route('/api/health', healthRoutes);
 app.route('/api/survey', surveyRoutes);
 app.route('/api/excel', excelProcessorRoutes);
+app.route('/api/form/001', form001Routes);
+app.route('/api/form/002', form002Routes);
+
+// Admin routes (temporarily public for testing - add JWT later)
+app.route('/api/admin', adminRoutes);  // 001 Admin API
+app.route('/admin', adminRoutes);  // 001 Admin dashboard pages
+
+app.route('/api/admin/002', admin002Routes);  // 002 Admin API
+app.route('/admin/002', admin002Routes);  // 002 Admin dashboard pages
 
 // Protected routes (require JWT)
-app.use('/api/admin/*', async (c, next) => {
+app.use('/api/workers/*', async (c, next) => {
   const jwtMiddleware = jwt({
     secret: c.env?.JWT_SECRET || 'fallback-secret',
   });
   return jwtMiddleware(c, next);
 });
 
-app.route('/api/admin', adminRoutes);
 app.route('/api/workers', workerRoutes);
 
 // Cloudflare Native Analytics Dashboard
@@ -117,7 +131,7 @@ app.get('/api/analytics/dashboard', async (c) => {
     // If no cache, return basic metrics
     const basicMetrics = {
       platform: 'Cloudflare Workers',
-      region: c.req.cf?.colo || 'unknown',
+      region: (c.req as any).cf?.colo || 'unknown',
       timestamp: new Date().toISOString(),
       features: {
         kv_namespaces: 4,
@@ -561,15 +575,15 @@ app.get('/admin', (c) => {
 // Survey form route - using actual form templates
 app.get('/survey/:surveyType', async (c) => {
   const surveyType = c.req.param('surveyType');
-  
-  // FORCE embedded templates first
+
+  // dv06_2025-09-26_10-36_Flask_089eeaf 복구 버전
   if (surveyType === '001_musculoskeletal_symptom_survey') {
-    console.log('✅ 001 PREMIUM UI LOADED - 근골격계 증상조사표 - FORCE DEPLOY');
-    return c.html(form001Template);
+    console.log('✅ 001 DV06 RESTORE - dv06_2025-09-26_10-36_Flask_089eeaf - CLOUDFLARE WORKERS NATIVE');
+    return c.html(form001Dv06Template);
   }
 
   if (surveyType === '002_musculoskeletal_symptom_program') {
-    console.log('✅ 002 PREMIUM ADMIN DASHBOARD LOADED - MANAGEMENT INTERFACE ACTIVE! - CLOUDFLARE WORKERS PIPELINE - PERFECT SUCCESS V5');
+    console.log('✅ 002 DV06 RESTORE - dv06_2025-09-26_10-36_Flask_089eeaf - CLOUDFLARE WORKERS NATIVE');
     return c.html(form002Template);
   }
   
