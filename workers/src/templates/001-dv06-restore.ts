@@ -978,7 +978,7 @@ export const form001Dv06Template = `<!DOCTYPE html>
 
 
 <div class="survey-container">
-    <form method="POST" action="/api/form/001/submit" id="surveyForm">
+    <form method="POST" action="/api/survey/d1/submit" id="surveyForm">
         
         <div class="text-center mb-4">
             <h2 style="color: #1f2937; margin-bottom: 5px;">
