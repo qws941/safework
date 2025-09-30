@@ -50,7 +50,35 @@ export const survey002D1Routes = new Hono<{ Bindings: SurveyEnv }>();
  */
 survey002D1Routes.post('/submit', async (c) => {
   try {
-    const body: Survey002SubmissionRequest = await c.req.json();
+    // Accept both JSON and form-urlencoded
+    let body: Survey002SubmissionRequest;
+    const contentType = c.req.header('Content-Type') || '';
+
+    if (contentType.includes('application/json')) {
+      body = await c.req.json();
+    } else {
+      // Handle form-urlencoded
+      const formData = await c.req.formData();
+      body = {} as Survey002SubmissionRequest;
+
+      // Convert FormData to object
+      for (const [key, value] of formData.entries()) {
+        if (key === 'responses') {
+          try {
+            (body as any)[key] = JSON.parse(value as string);
+          } catch {
+            (body as any)[key] = value;
+          }
+        } else if (key === 'age' || key === 'work_experience' || key === 'current_work_period' ||
+                   key === 'daily_work_hours' || key === 'rest_time' || key === 'previous_work_period' ||
+                   key === 'user_id' || key === 'company_id' || key === 'process_id' || key === 'role_id') {
+          (body as any)[key] = parseFloat(value as string);
+        } else {
+          (body as any)[key] = value;
+        }
+      }
+    }
+
     const db = createD1Client(c.env.PRIMARY_DB);
 
     // Get client info

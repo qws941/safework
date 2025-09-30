@@ -71,7 +71,35 @@ surveyD1Routes.get('/form/:formId', async (c) => {
  */
 surveyD1Routes.post('/submit', async (c) => {
   try {
-    const body: SurveySubmissionRequest = await c.req.json();
+    // Accept both JSON and form-urlencoded
+    let body: SurveySubmissionRequest;
+    const contentType = c.req.header('Content-Type') || '';
+
+    if (contentType.includes('application/json')) {
+      body = await c.req.json();
+    } else {
+      // Handle form-urlencoded
+      const formData = await c.req.formData();
+      body = {} as SurveySubmissionRequest;
+
+      // Convert FormData to object
+      for (const [key, value] of formData.entries()) {
+        if (key === 'responses' || key === 'data' || key === 'symptoms_data') {
+          try {
+            (body as any)[key] = JSON.parse(value as string);
+          } catch {
+            (body as any)[key] = value;
+          }
+        } else if (key === 'age' || key === 'user_id' || key === 'company_id' || key === 'process_id' || key === 'role_id') {
+          (body as any)[key] = parseInt(value as string);
+        } else if (key === 'has_symptoms') {
+          (body as any)[key] = value === 'true' || value === '1';
+        } else {
+          (body as any)[key] = value;
+        }
+      }
+    }
+
     const db = createD1Client(c.env.PRIMARY_DB);
 
     // Get client info
