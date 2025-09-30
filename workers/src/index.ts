@@ -16,6 +16,8 @@ import { survey002FormTemplate } from './templates/survey-002-form';
 import { form001Routes } from './routes/form-001';
 import { form002Routes } from './routes/form-002';
 import { admin002Routes } from './routes/admin-002';
+import { surveyD1Routes } from './routes/survey-d1';
+import { survey002D1Routes } from './routes/survey-002-d1';
 
 export interface Env {
   // KV Namespaces - CF Native Naming
@@ -89,6 +91,8 @@ app.use('/api/*', cors({
 app.route('/api/auth', authRoutes);
 app.route('/api/health', healthRoutes);
 app.route('/api/survey', surveyRoutes);
+app.route('/api/survey/d1', surveyD1Routes);  // D1 Native API (001)
+app.route('/api/survey/d1/002', survey002D1Routes);  // D1 Native API (002)
 app.route('/api/excel', excelProcessorRoutes);
 app.route('/api/form/001', form001Routes);
 app.route('/api/form/002', form002Routes);
