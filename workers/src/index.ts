@@ -100,13 +100,16 @@ app.route('/api/form/002', form002Routes);
 
 // Admin routes (temporarily public for testing - add JWT later)
 app.route('/api/admin', adminRoutes);  // 001 Admin API
-app.route('/admin', adminRoutes);  // 001 Admin dashboard pages
+// app.route('/admin', adminRoutes);  // OLD - 001 Admin dashboard pages (disabled for unified)
 
 app.route('/api/admin/002', admin002Routes);  // 002 Admin API
 app.route('/admin/002', admin002Routes);  // 002 Admin dashboard pages
 
 app.route('/api/admin/unified', unifiedAdminRoutes);  // Unified Admin API
-app.route('/admin', unifiedAdminRoutes);  // Unified Admin dashboard
+app.route('/admin', unifiedAdminRoutes);  // NEW Unified Admin dashboard (Phase 1 improvements)
+
+// Keep specific admin pages
+app.route('/admin/001', adminRoutes);  // 001-specific admin pages
 
 // Protected routes (require JWT)
 app.use('/api/workers/*', async (c, next) => {
