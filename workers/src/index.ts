@@ -18,6 +18,7 @@ import { form002Routes } from './routes/form-002';
 import { admin002Routes } from './routes/admin-002';
 import { surveyD1Routes } from './routes/survey-d1';
 import { survey002D1Routes } from './routes/survey-002-d1';
+import { unifiedAdminRoutes } from './routes/admin-unified';
 
 export interface Env {
   // KV Namespaces - CF Native Naming
@@ -103,6 +104,9 @@ app.route('/admin', adminRoutes);  // 001 Admin dashboard pages
 
 app.route('/api/admin/002', admin002Routes);  // 002 Admin API
 app.route('/admin/002', admin002Routes);  // 002 Admin dashboard pages
+
+app.route('/api/admin/unified', unifiedAdminRoutes);  // Unified Admin API
+app.route('/admin', unifiedAdminRoutes);  // Unified Admin dashboard
 
 // Protected routes (require JWT)
 app.use('/api/workers/*', async (c, next) => {
