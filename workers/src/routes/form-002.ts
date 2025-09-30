@@ -4,6 +4,7 @@
  */
 
 import { Hono } from 'hono';
+import { survey002FormTemplate } from '../templates/survey-002-form';
 
 type Bindings = {
   PRIMARY_DB: D1Database;
@@ -11,6 +12,14 @@ type Bindings = {
 };
 
 export const form002Routes = new Hono<{ Bindings: Bindings }>();
+
+/**
+ * GET /survey/002_musculoskeletal_symptom_program
+ * 002 설문지 폼 렌더링
+ */
+form002Routes.get('/', async (c) => {
+  return c.html(survey002FormTemplate);
+});
 
 /**
  * POST /api/form/002/submit

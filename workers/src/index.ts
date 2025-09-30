@@ -12,6 +12,7 @@ import { form002Template } from './templates/002';
 import { form001Template } from './templates/001';
 import { form001CompleteTemplate } from './templates/001-complete';
 import { form001Dv06Template } from './templates/001-dv06-restore';
+import { survey002FormTemplate } from './templates/survey-002-form';
 import { form001Routes } from './routes/form-001';
 import { form002Routes } from './routes/form-002';
 import { admin002Routes } from './routes/admin-002';
@@ -583,8 +584,8 @@ app.get('/survey/:surveyType', async (c) => {
   }
 
   if (surveyType === '002_musculoskeletal_symptom_program') {
-    console.log('✅ 002 DV06 RESTORE - dv06_2025-09-26_10-36_Flask_089eeaf - CLOUDFLARE WORKERS NATIVE');
-    return c.html(form002Template);
+    console.log('✅ 002 Complete Form - 56 fields with pain assessment - CLOUDFLARE WORKERS NATIVE');
+    return c.html(survey002FormTemplate);
   }
   
   // Map survey types to template keys
