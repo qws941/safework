@@ -639,16 +639,16 @@ export const unifiedAdminDashboardTemplate = `
         return;
       }
 
-      // Sort by submission_date descending
+      // Sort by submitted_at descending
       const sorted = submissions.sort((a, b) => {
-        const dateA = new Date(a.submission_date || a.submitted_at);
-        const dateB = new Date(b.submission_date || b.submitted_at);
+        const dateA = new Date(a.submitted_at);
+        const dateB = new Date(b.submitted_at);
         return dateB - dateA;
       }).slice(0, 10);
 
       container.innerHTML = sorted.map(sub => {
         const formType = sub.form_type?.includes('001') ? '001' : '002';
-        const date = new Date(sub.submission_date || sub.submitted_at);
+        const date = new Date(sub.submitted_at);
         const timeStr = date.toLocaleString('ko-KR');
 
         return \`
@@ -660,7 +660,7 @@ export const unifiedAdminDashboardTemplate = `
             </div>
             <div class="text-end">
               <small class="text-muted">\${timeStr}</small>
-              <a href="/admin/\${formType}/view/\${sub.id}" class="btn btn-sm btn-outline-primary ms-2">
+              <a href="/admin/\${formType}/view/\${sub.submission_id}" class="btn btn-sm btn-outline-primary ms-2">
                 <i class="bi bi-eye"></i>
               </a>
             </div>
