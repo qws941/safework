@@ -22,6 +22,114 @@ admin002Routes.get('/', async (c) => {
 });
 
 /**
+ * POST /api/admin/002/init-schema
+ * surveys_002 테이블 초기화 (관리자 전용)
+ */
+admin002Routes.post('/init-schema', async (c) => {
+  try {
+    const db = c.env.PRIMARY_DB;
+
+    if (!db) {
+      return c.json({
+        success: false,
+        error: 'Database not available'
+      }, 500);
+    }
+
+    // Create surveys_002 table
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS surveys_002 (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        submission_id TEXT UNIQUE NOT NULL,
+        form_version TEXT NOT NULL,
+        number INTEGER,
+        name TEXT NOT NULL,
+        age INTEGER NOT NULL,
+        gender TEXT NOT NULL,
+        work_experience INTEGER,
+        married TEXT,
+        department TEXT,
+        line TEXT,
+        work_type TEXT,
+        work_content TEXT,
+        work_period TEXT,
+        current_work_period INTEGER,
+        daily_work_hours INTEGER,
+        rest_time INTEGER,
+        previous_work_content TEXT,
+        previous_work_period INTEGER,
+        leisure_activity TEXT,
+        household_work TEXT,
+        medical_diagnosis TEXT,
+        physical_burden TEXT,
+        neck_pain_exists TEXT,
+        neck_pain_duration TEXT,
+        neck_pain_intensity TEXT,
+        neck_pain_frequency TEXT,
+        neck_pain_worsening TEXT,
+        neck_pain_other TEXT,
+        shoulder_pain_exists TEXT,
+        shoulder_pain_duration TEXT,
+        shoulder_pain_intensity TEXT,
+        shoulder_pain_frequency TEXT,
+        shoulder_pain_worsening TEXT,
+        shoulder_pain_other TEXT,
+        elbow_pain_exists TEXT,
+        elbow_pain_duration TEXT,
+        elbow_pain_intensity TEXT,
+        elbow_pain_frequency TEXT,
+        elbow_pain_worsening TEXT,
+        elbow_pain_other TEXT,
+        wrist_pain_exists TEXT,
+        wrist_pain_duration TEXT,
+        wrist_pain_intensity TEXT,
+        wrist_pain_frequency TEXT,
+        wrist_pain_worsening TEXT,
+        wrist_pain_other TEXT,
+        back_pain_exists TEXT,
+        back_pain_duration TEXT,
+        back_pain_intensity TEXT,
+        back_pain_frequency TEXT,
+        back_pain_worsening TEXT,
+        back_pain_other TEXT,
+        leg_pain_exists TEXT,
+        leg_pain_duration TEXT,
+        leg_pain_intensity TEXT,
+        leg_pain_frequency TEXT,
+        leg_pain_worsening TEXT,
+        leg_pain_other TEXT,
+        responses JSON,
+        user_agent TEXT,
+        cf_ray TEXT,
+        country TEXT,
+        colo TEXT,
+        submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+
+    // Create indexes
+    await db.batch([
+      db.prepare('CREATE INDEX IF NOT EXISTS idx_002_submission_id ON surveys_002(submission_id)'),
+      db.prepare('CREATE INDEX IF NOT EXISTS idx_002_submitted_at ON surveys_002(submitted_at)'),
+      db.prepare('CREATE INDEX IF NOT EXISTS idx_002_name ON surveys_002(name)'),
+      db.prepare('CREATE INDEX IF NOT EXISTS idx_002_department ON surveys_002(department)'),
+      db.prepare('CREATE INDEX IF NOT EXISTS idx_002_form_version ON surveys_002(form_version)')
+    ]);
+
+    return c.json({
+      success: true,
+      message: 'surveys_002 table and indexes created successfully'
+    });
+  } catch (error: any) {
+    return c.json({
+      success: false,
+      error: 'Failed to initialize schema',
+      details: error.message
+    }, 500);
+  }
+});
+
+/**
  * GET /api/admin/002/submissions
  * 모든 002 제출 데이터 조회 (통계 포함)
  */
