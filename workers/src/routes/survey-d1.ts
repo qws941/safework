@@ -78,25 +78,68 @@ surveyD1Routes.post('/submit', async (c) => {
     if (contentType.includes('application/json')) {
       body = await c.req.json();
     } else {
-      // Handle form-urlencoded
+      // Handle form-urlencoded from HTML form
       const formData = await c.req.formData();
-      body = {} as SurveySubmissionRequest;
+      const responses: Record<string, string> = {};
 
-      // Convert FormData to object
+      body = {
+        form_type: '001_musculoskeletal_symptom_survey',
+        name: '',
+        age: 0,
+        gender: '',
+        department: '',
+      } as SurveySubmissionRequest;
+
+      // Process each form field
       for (const [key, value] of formData.entries()) {
-        if (key === 'responses' || key === 'data' || key === 'symptoms_data') {
-          try {
-            (body as any)[key] = JSON.parse(value as string);
-          } catch {
-            (body as any)[key] = value;
-          }
-        } else if (key === 'age' || key === 'user_id' || key === 'company_id' || key === 'process_id' || key === 'role_id') {
-          (body as any)[key] = parseInt(value as string);
-        } else if (key === 'has_symptoms') {
-          (body as any)[key] = value === 'true' || value === '1';
-        } else {
-          (body as any)[key] = value;
+        const strValue = value as string;
+
+        // Map company/process/role to their _id versions
+        if (key === 'company') {
+          // Extract ID from option value or use default
+          body.company_id = parseInt(strValue) || null;
+        } else if (key === 'process') {
+          body.process_id = parseInt(strValue) || null;
+        } else if (key === 'role') {
+          body.role_id = parseInt(strValue) || null;
         }
+        // Basic fields
+        else if (key === 'name') {
+          body.name = strValue;
+        } else if (key === 'age') {
+          body.age = parseInt(strValue);
+        } else if (key === 'gender') {
+          body.gender = strValue;
+        } else if (key === 'department') {
+          body.department = strValue;
+        } else if (key === 'position') {
+          body.position = strValue;
+        } else if (key === 'employee_id') {
+          body.employee_id = strValue;
+        } else if (key === 'years_of_service') {
+          body.years_of_service = parseInt(strValue);
+        } else if (key === 'employee_number') {
+          body.employee_number = strValue;
+        } else if (key === 'work_years') {
+          body.work_years = parseInt(strValue);
+        } else if (key === 'work_months') {
+          body.work_months = parseInt(strValue);
+        } else if (key === 'has_symptoms') {
+          body.has_symptoms = strValue === '예' || strValue === 'true' || strValue === '1';
+        }
+        // Symptom fields - collect in responses object
+        else if (key.includes('_side') || key.includes('_duration') ||
+                 key.includes('_severity') || key.includes('_pain') ||
+                 key.includes('neck_') || key.includes('shoulder_') ||
+                 key.includes('back_') || key.includes('arm_') ||
+                 key.includes('hand_') || key.includes('leg_')) {
+          responses[key] = strValue;
+        }
+      }
+
+      // Attach responses if any
+      if (Object.keys(responses).length > 0) {
+        body.responses = responses;
       }
     }
 
