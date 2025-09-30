@@ -1,14 +1,15 @@
-from flask import Blueprint, flash, redirect, render_template, request, url_for, jsonify
+from flask import Blueprint, flash, redirect, render_template, request, url_for, jsonify, session
 from datetime import datetime, timedelta
 from flask_login import login_user, logout_user, current_user
 import secrets
-import qrcode
+# import qrcode  # Temporarily disabled for deployment
 import io
 import base64
 import os
 from werkzeug.security import generate_password_hash
 
 from models import User, db, kst_now
+from utils.session_manager import session_manager
 
 mobile_auth_bp = Blueprint("mobile_auth", __name__)
 
@@ -31,17 +32,18 @@ def generate_mobile_token():
         "created_at": datetime.now()
     }
     
-    # QR 코드 생성
+    # QR 코드 생성 (temporarily disabled)
     mobile_url = f"https://safework.jclee.me/mobile/auth?token={token}"
-    qr = qrcode.QRCode(version=1, box_size=10, border=5)
-    qr.add_data(mobile_url)
-    qr.make(fit=True)
-    
-    img = qr.make_image(fill_color="black", back_color="white")
-    img_io = io.BytesIO()
-    img.save(img_io, 'PNG')
-    img_io.seek(0)
-    img_b64 = base64.b64encode(img_io.getvalue()).decode()
+    # qr = qrcode.QRCode(version=1, box_size=10, border=5)
+    # qr.add_data(mobile_url)
+    # qr.make(fit=True)
+    #
+    # img = qr.make_image(fill_color="black", back_color="white")
+    # img_io = io.BytesIO()
+    # img.save(img_io, 'PNG')
+    # img_io.seek(0)
+    # img_b64 = base64.b64encode(img_io.getvalue()).decode()
+    img_b64 = ""  # Temporary placeholder
     
     return jsonify({
         "token": token,
@@ -73,10 +75,26 @@ def mobile_auth():
     # 사용자 로그인
     user = User.query.get(token_data["user_id"])
     if user:
+        # 기존 세션 중복 체크 및 제거
+        active_sessions = session_manager.get_user_active_sessions(user.id)
+        if active_sessions:
+            revoked_count = session_manager.revoke_user_sessions(user.id)
+            if revoked_count > 0:
+                flash(f"기존 로그인 세션 {revoked_count}개가 종료되었습니다.", "warning")
+
+        # 새 세션 생성
+        new_session_id = session_manager.create_user_session(user.id, force_single=True)
+
+        # Flask-Login 세션 시작
         login_user(user, remember=False)
+
+        # 세션에 SafeWork 세션 ID 저장
+        if new_session_id:
+            session['safework_session_id'] = new_session_id
+
         # 토큰 삭제 (일회용)
         del mobile_tokens[token]
-        
+
         flash("모바일 인증 성공!", "success")
         return redirect("/admin/safework")
     
@@ -99,10 +117,26 @@ def quick_pin():
             user = User.query.filter_by(username=admin_username).first()
             
             if user:
+                # 기존 세션 중복 체크 및 제거
+                active_sessions = session_manager.get_user_active_sessions(user.id)
+                if active_sessions:
+                    revoked_count = session_manager.revoke_user_sessions(user.id)
+                    if revoked_count > 0:
+                        flash(f"기존 로그인 세션 {revoked_count}개가 종료되었습니다.", "warning")
+
+                # 새 세션 생성
+                new_session_id = session_manager.create_user_session(user.id, force_single=True)
+
+                # Flask-Login 세션 시작
                 login_user(user, remember=False)
+
+                # 세션에 SafeWork 세션 ID 저장
+                if new_session_id:
+                    session['safework_session_id'] = new_session_id
+
                 user.last_login = kst_now()
                 db.session.commit()
-                
+
                 flash("PIN 인증 성공!", "success")
                 return redirect("/admin/safework")
         

@@ -1,5 +1,5 @@
 import os
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, redirect, render_template, request, url_for, session
 from datetime import datetime
 from flask_login import current_user, login_required, login_user, logout_user
 from werkzeug.security import generate_password_hash
@@ -7,6 +7,7 @@ from werkzeug.security import generate_password_hash
 from forms import LoginForm, RegisterForm
 from models import User, db, kst_now
 from utils.activity_tracker import track_login_attempt, track_logout, track_page_view
+from utils.session_manager import session_manager
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -28,11 +29,26 @@ def login():
         if username == admin_username and password == admin_password:
             user = User.query.filter_by(username=admin_username).first()
             if user:
+                # 기존 세션 중복 체크 및 제거
+                active_sessions = session_manager.get_user_active_sessions(user.id)
+                if active_sessions:
+                    revoked_count = session_manager.revoke_user_sessions(user.id)
+                    if revoked_count > 0:
+                        flash(f"기존 로그인 세션 {revoked_count}개가 종료되었습니다.", "warning")
+
+                # 새 세션 생성
+                new_session_id = session_manager.create_user_session(user.id, force_single=True)
+
                 # Update last login time
                 user.last_login = kst_now()
                 db.session.commit()
-                
+
+                # Flask-Login 세션 시작
                 login_user(user, remember=False)
+
+                # 세션에 SafeWork 세션 ID 저장
+                if new_session_id:
+                    session['safework_session_id'] = new_session_id
 
                 # 로그인 성공 추적
                 track_login_attempt(username, success=True)
@@ -90,9 +106,18 @@ def register():
 @login_required
 def logout():
     """로그아웃"""
+    # SafeWork 세션 무효화
+    if current_user.is_authenticated:
+        safework_session_id = session.get('safework_session_id')
+        if safework_session_id:
+            # 현재 세션만 무효화
+            session_manager.revoke_user_sessions(current_user.id, exclude_session=None)
+            session.pop('safework_session_id', None)
+
     # 로그아웃 추적
     track_logout()
 
+    # Flask-Login 로그아웃
     logout_user()
     flash("로그아웃되었습니다.", "info")
     return redirect(url_for("main.index"))

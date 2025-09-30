@@ -453,34 +453,27 @@ export const unifiedAdminDashboardTemplate = `
       try {
         document.getElementById('loading').style.display = 'flex';
 
-        // Fetch data from both forms
-        const [data001, data002] = await Promise.all([
-          fetch('/api/admin/001/submissions').then(r => r.json()),
-          fetch('/api/admin/002/submissions').then(r => r.json())
+        // Fetch unified statistics from D1 API
+        const [statsResponse, recentResponse] = await Promise.all([
+          fetch('/api/admin/unified/stats').then(r => r.json()),
+          fetch('/api/admin/unified/recent?limit=10').then(r => r.json())
         ]);
 
-        // Calculate statistics
-        const total001 = data001.statistics?.total || 0;
-        const total002 = data002.statistics?.total || 0;
-        const totalSubmissions = total001 + total002;
+        if (!statsResponse.success) {
+          throw new Error(statsResponse.error || 'Failed to load statistics');
+        }
 
-        const today001 = data001.statistics?.today || 0;
-        const today002 = data002.statistics?.today || 0;
-        const todaySubmissions = today001 + today002;
+        const stats = statsResponse.statistics;
+        const recent = recentResponse.submissions || [];
 
-        const avgAge001 = data001.statistics?.avgAge || 0;
-        const avgAge002 = data002.statistics?.avgAge || 0;
-        const avgAge = total001 + total002 > 0 ?
-          Math.round(((avgAge001 * total001) + (avgAge002 * total002)) / (total001 + total002)) : 0;
-
-        const pain001 = (data001.statistics?.neckPain || 0) +
-                       (data001.statistics?.shoulderPain || 0) +
-                       (data001.statistics?.backPain || 0);
-        const pain002 = (data002.statistics?.neckPain || 0) +
-                       (data002.statistics?.shoulderPain || 0) +
-                       (data002.statistics?.backPain || 0);
-        const totalPain = pain001 + pain002;
-        const painPercentage = totalSubmissions > 0 ? Math.round((totalPain / (totalSubmissions * 3)) * 100) : 0;
+        // Use unified statistics directly
+        const totalSubmissions = stats.total || 0;
+        const todaySubmissions = stats.todayCount || 0;
+        const total001 = stats.form001?.total || 0;
+        const total002 = stats.form002?.total || 0;
+        const avgAge = Math.round(stats.avgAge || 0);
+        const totalPain = stats.symptomsTotal || 0;
+        const painPercentage = totalSubmissions > 0 ? Math.round((totalPain / totalSubmissions) * 100) : 0;
 
         // Update statistics cards
         document.getElementById('total-submissions').textContent = totalSubmissions.toLocaleString();
@@ -491,23 +484,23 @@ export const unifiedAdminDashboardTemplate = `
         document.getElementById('pain-patients').textContent = totalPain.toLocaleString();
         document.getElementById('pain-percentage').textContent = painPercentage;
 
-        // Prepare chart data
+        // Prepare chart data from unified statistics
         const painData = {
-          neck: (data001.statistics?.neckPain || 0) + (data002.statistics?.neckPain || 0),
-          shoulder: (data001.statistics?.shoulderPain || 0) + (data002.statistics?.shoulderPain || 0),
-          back: (data001.statistics?.backPain || 0) + (data002.statistics?.backPain || 0),
-          elbow: (data002.statistics?.elbowPain || 0),
-          wrist: (data002.statistics?.wristPain || 0),
-          leg: (data002.statistics?.legPain || 0)
+          neck: (stats.form001?.neckPain || 0) + (stats.form002?.neckPain || 0),
+          shoulder: (stats.form001?.shoulderPain || 0) + (stats.form002?.shoulderPain || 0),
+          back: (stats.form001?.backPain || 0) + (stats.form002?.backPain || 0),
+          elbow: stats.form002?.elbowPain || 0,
+          wrist: stats.form002?.wristPain || 0,
+          leg: stats.form002?.legPain || 0
         };
 
-        // Render charts
+        // Render charts with unified data
         renderPainChart(painData);
-        renderDepartmentChart(data001.submissions || [], data002.submissions || []);
-        renderTimelineChart(data001.submissions || [], data002.submissions || []);
+        renderDepartmentChart(stats.departmentDistribution || {});
+        renderTimelineChart(stats.timeline || []);
 
-        // Load recent submissions
-        loadRecentSubmissions([...data001.submissions || [], ...data002.submissions || []]);
+        // Load recent submissions from unified endpoint
+        loadRecentSubmissions(recent);
 
         document.getElementById('loading').style.display = 'none';
       } catch (error) {
@@ -546,23 +539,17 @@ export const unifiedAdminDashboardTemplate = `
     }
 
     // Render department chart
-    function renderDepartmentChart(data001, data002) {
-      const departments = {};
-      [...data001, ...data002].forEach(sub => {
-        const dept = sub.department || '미분류';
-        departments[dept] = (departments[dept] || 0) + 1;
-      });
-
+    function renderDepartmentChart(departmentDistribution) {
       const ctx = document.getElementById('departmentChart');
       if (charts.department) charts.department.destroy();
 
       charts.department = new Chart(ctx, {
         type: 'bar',
         data: {
-          labels: Object.keys(departments),
+          labels: Object.keys(departmentDistribution),
           datasets: [{
             label: '제출 건수',
-            data: Object.values(departments),
+            data: Object.values(departmentDistribution),
             backgroundColor: 'rgba(102, 126, 234, 0.8)',
             borderColor: 'rgba(102, 126, 234, 1)',
             borderWidth: 1
@@ -584,9 +571,9 @@ export const unifiedAdminDashboardTemplate = `
     }
 
     // Render timeline chart
-    function renderTimelineChart(data001, data002) {
-      const timeline = {};
+    function renderTimelineChart(timelineData) {
       const last7Days = [];
+      const timeline = {};
 
       for (let i = 6; i >= 0; i--) {
         const date = new Date();
@@ -596,12 +583,10 @@ export const unifiedAdminDashboardTemplate = `
         timeline[dateStr] = 0;
       }
 
-      [...data001, ...data002].forEach(sub => {
-        if (sub.submitted_at) {
-          const dateStr = sub.submitted_at.split('T')[0];
-          if (timeline.hasOwnProperty(dateStr)) {
-            timeline[dateStr]++;
-          }
+      // Use timeline data from unified API
+      timelineData.forEach(item => {
+        if (item.date && timeline.hasOwnProperty(item.date)) {
+          timeline[item.date] = item.count || 0;
         }
       });
 
@@ -648,14 +633,16 @@ export const unifiedAdminDashboardTemplate = `
         return;
       }
 
-      // Sort by submitted_at descending
+      // Sort by submission_date descending
       const sorted = submissions.sort((a, b) => {
-        return new Date(b.submitted_at) - new Date(a.submitted_at);
+        const dateA = new Date(a.submission_date || a.submitted_at);
+        const dateB = new Date(b.submission_date || b.submitted_at);
+        return dateB - dateA;
       }).slice(0, 10);
 
       container.innerHTML = sorted.map(sub => {
-        const formType = sub.submission_id.startsWith('001') ? '001' : '002';
-        const date = new Date(sub.submitted_at);
+        const formType = sub.form_type?.includes('001') ? '001' : '002';
+        const date = new Date(sub.submission_date || sub.submitted_at);
         const timeStr = date.toLocaleString('ko-KR');
 
         return \`
@@ -667,7 +654,7 @@ export const unifiedAdminDashboardTemplate = `
             </div>
             <div class="text-end">
               <small class="text-muted">\${timeStr}</small>
-              <a href="/admin/\${formType}" class="btn btn-sm btn-outline-primary ms-2">
+              <a href="/admin/\${formType}/view/\${sub.id}" class="btn btn-sm btn-outline-primary ms-2">
                 <i class="bi bi-eye"></i>
               </a>
             </div>

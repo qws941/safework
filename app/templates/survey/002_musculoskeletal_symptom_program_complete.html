@@ -1,0 +1,1111 @@
+{% extends "base.html" %}
+
+{% block title %}근골격계질환 증상조사표 (완전판) - {{ app_name }}{% endblock %}
+
+{% block extra_head %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* === SafeWork 설문 통합 디자인 시스템 === */
+    :root {
+        --sw-primary: #6366f1;
+        --sw-primary-light: #a5b4fc;
+        --sw-primary-dark: #4f46e5;
+        --sw-secondary: #64748b;
+        --sw-success: #10b981;
+        --sw-warning: #f59e0b;
+        --sw-danger: #ef4444;
+        --sw-white: #ffffff;
+        --sw-gray-50: #f8fafc;
+        --sw-gray-100: #f1f5f9;
+        --sw-gray-200: #e2e8f0;
+        --sw-gray-600: #475569;
+        --sw-gray-900: #1e293b;
+    }
+
+    /* 전체 컨테이너 */
+    .survey-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 20px;
+        background: linear-gradient(to bottom, #ffffff, #f8f9fa);
+    }
+
+    /* 헤더 섹션 */
+    .survey-header {
+        background: linear-gradient(135deg, var(--sw-primary), var(--sw-primary-dark));
+        color: white;
+        padding: 40px 30px;
+        border-radius: 16px 16px 0 0;
+        margin: -20px -20px 30px -20px;
+        text-align: center;
+        box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);
+    }
+
+    .survey-header h1 {
+        font-size: 2rem;
+        margin-bottom: 10px;
+        font-weight: 700;
+    }
+
+    .survey-header p {
+        font-size: 1.1rem;
+        opacity: 0.95;
+        margin-bottom: 0;
+    }
+
+    /* 섹션 카드 */
+    .section-card {
+        background: white;
+        border-radius: 12px;
+        padding: 28px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        border: 1px solid rgba(99, 102, 241, 0.1);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .section-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--sw-primary), var(--sw-primary-light));
+    }
+
+    /* 섹션 제목 */
+    .section-title {
+        color: var(--sw-gray-900);
+        font-size: 1.4rem;
+        font-weight: 700;
+        margin-bottom: 24px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid var(--sw-primary);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .section-title i {
+        color: var(--sw-primary);
+    }
+
+    /* 폼 그룹 */
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--sw-gray-900);
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+
+    .form-label .required {
+        color: var(--sw-danger);
+        margin-left: 4px;
+    }
+
+    /* 입력 필드 */
+    .form-control {
+        width: 100%;
+        padding: 10px 14px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.2s;
+        background: white;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: var(--sw-primary);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+
+    /* 라디오 그룹 */
+    .radio-group {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+    }
+
+    .radio-item {
+        display: flex;
+        align-items: center;
+        padding: 10px 16px;
+        background: var(--sw-gray-50);
+        border-radius: 8px;
+        border: 2px solid transparent;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .radio-item:hover {
+        background: white;
+        border-color: var(--sw-primary-light);
+    }
+
+    .radio-item input[type="radio"]:checked + label {
+        color: var(--sw-primary);
+        font-weight: 600;
+    }
+
+    .radio-item input[type="radio"] {
+        margin-right: 8px;
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+
+    .radio-item label {
+        cursor: pointer;
+        margin: 0;
+    }
+
+    /* 도움말 텍스트 */
+    .help-text {
+        display: block;
+        margin-top: 6px;
+        font-size: 0.875rem;
+        color: var(--sw-gray-600);
+        line-height: 1.5;
+    }
+
+    /* 알림 박스 */
+    .info-box {
+        background: linear-gradient(135deg, #eff6ff, #dbeafe);
+        border-left: 4px solid #3b82f6;
+        padding: 16px;
+        border-radius: 8px;
+        margin: 20px 0;
+    }
+
+    .info-box h4 {
+        color: #1e40af;
+        margin-bottom: 8px;
+        font-weight: 600;
+    }
+
+    .info-box p {
+        color: #1e40af;
+        margin: 0;
+        line-height: 1.6;
+    }
+
+    /* 제출 버튼 */
+    .submit-section {
+        margin-top: 40px;
+        padding-top: 30px;
+        border-top: 2px solid var(--sw-gray-200);
+        text-align: center;
+    }
+
+    .btn-submit {
+        background: linear-gradient(135deg, var(--sw-primary), var(--sw-primary-dark));
+        color: white;
+        border: none;
+        padding: 14px 40px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s;
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn-submit:active {
+        transform: translateY(0);
+    }
+
+    /* 텍스트영역 */
+    textarea.form-control {
+        min-height: 100px;
+        resize: vertical;
+    }
+
+    /* 그리드 레이아웃 */
+    .row {
+        display: flex;
+        flex-wrap: wrap;
+        margin-left: -15px;
+        margin-right: -15px;
+    }
+
+    .col-md-3, .col-md-4, .col-md-6, .col-md-12 {
+        position: relative;
+        padding-left: 15px;
+        padding-right: 15px;
+        width: 100%;
+    }
+
+    @media (min-width: 768px) {
+        .col-md-3 { width: 25%; }
+        .col-md-4 { width: 33.333%; }
+        .col-md-6 { width: 50%; }
+        .col-md-12 { width: 100%; }
+    }
+
+    /* 반응형 디자인 */
+    @media (max-width: 768px) {
+        .survey-container {
+            padding: 15px;
+        }
+
+        .survey-header {
+            padding: 30px 20px;
+        }
+
+        .survey-header h1 {
+            font-size: 1.5rem;
+        }
+
+        .radio-group {
+            flex-direction: column;
+        }
+
+        .section-card {
+            padding: 20px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="survey-container">
+    <div class="survey-header">
+        <h1><i class="bi bi-clipboard-data"></i> 근골격계질환 증상조사표 (완전판)</h1>
+        <p>근골격계부담작업 유해요인조사를 위한 증상조사표 - Excel 원본 완전 추출</p>
+    </div>
+
+    <form id="musculoskeletalCompleteForm" method="POST">
+        <!-- 기본 정보 섹션 -->
+        <div class="section-card">
+            <h2 class="section-title">
+                <i class="bi bi-person-badge"></i> 기본 정보
+            </h2>
+
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="number" class="form-label">
+                            # <span class="required">*</span>
+                        </label>
+                        <input type="number" class="form-control" id="number" name="number" required>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="name" class="form-label">
+                            성명 <span class="required">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="name" name="name" required>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="age" class="form-label">
+                            연령 <span class="required">*</span>
+                        </label>
+                        <input type="number" class="form-control" id="age" name="age" min="15" max="100" required>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="gender" class="form-label">
+                            성별 <span class="required">*</span>
+                        </label>
+                        <select class="form-control" id="gender" name="gender" required>
+                            <option value="">선택하세요</option>
+                            <option value="남">남</option>
+                            <option value="여">여</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="work_experience" class="form-label">
+                            현 직장 경력(년) <span class="required">*</span>
+                        </label>
+                        <input type="number" class="form-control" id="work_experience" name="work_experience" min="0" step="0.1" required>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="married" class="form-label">
+                            결혼여부
+                        </label>
+                        <select class="form-control" id="married" name="married">
+                            <option value="">선택하세요</option>
+                            <option value="기혼">기혼</option>
+                            <option value="미혼">미혼</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 작업 정보 섹션 -->
+        <div class="section-card">
+            <h2 class="section-title">
+                <i class="bi bi-briefcase-fill"></i> 작업 정보
+            </h2>
+
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="department" class="form-label">
+                            작업부서 <span class="required">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="department" name="department" required>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="line" class="form-label">
+                            라인
+                        </label>
+                        <input type="text" class="form-control" id="line" name="line">
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="work_type" class="form-label">
+                            작업
+                        </label>
+                        <input type="text" class="form-control" id="work_type" name="work_type">
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label for="work_content" class="form-label">
+                            작업내용
+                        </label>
+                        <textarea class="form-control" id="work_content" name="work_content" rows="3" placeholder="현재 수행하고 있는 주요 작업내용을 상세히 기술해주세요"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="work_period" class="form-label">
+                            작업기간
+                        </label>
+                        <input type="text" class="form-control" id="work_period" name="work_period" placeholder="예: 2020.03 ~ 현재">
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="current_work_period" class="form-label">
+                            현재 작업 기간(년)
+                        </label>
+                        <input type="number" class="form-control" id="current_work_period" name="current_work_period" min="0" step="0.1">
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="daily_work_hours" class="form-label">
+                            1일 근무시간
+                        </label>
+                        <input type="number" class="form-control" id="daily_work_hours" name="daily_work_hours" min="0" max="24" step="0.5">
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="rest_time" class="form-label">
+                            휴식시간 (시간)
+                        </label>
+                        <input type="number" class="form-control" id="rest_time" name="rest_time" min="0" step="0.5">
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="previous_work_period" class="form-label">
+                            이전 작업 기간(년)
+                        </label>
+                        <input type="number" class="form-control" id="previous_work_period" name="previous_work_period" min="0" step="0.1">
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="previous_work_content" class="form-label">
+                            이전 작업내용
+                        </label>
+                        <textarea class="form-control" id="previous_work_content" name="previous_work_content" rows="3" placeholder="이전에 수행했던 주요 작업내용"></textarea>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="leisure_activity" class="form-label">
+                            여가 및 취미활동
+                        </label>
+                        <textarea class="form-control" id="leisure_activity" name="leisure_activity" rows="3" placeholder="주요 여가활동이나 취미생활"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="household_work" class="form-label">
+                            하루 가사노동
+                        </label>
+                        <textarea class="form-control" id="household_work" name="household_work" rows="2" placeholder="가사노동의 종류와 소요시간"></textarea>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="medical_diagnosis" class="form-label">
+                            의사 진단
+                        </label>
+                        <textarea class="form-control" id="medical_diagnosis" name="medical_diagnosis" rows="2" placeholder="근골격계 관련 진단받은 질환이 있다면 기재"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="physical_burden" class="form-label">
+                            육체적 부담정도
+                        </label>
+                        <select class="form-control" id="physical_burden" name="physical_burden">
+                            <option value="">선택하세요</option>
+                            <option value="매우 가벼움">매우 가벼움</option>
+                            <option value="가벼움">가벼움</option>
+                            <option value="보통">보통</option>
+                            <option value="무거움">무거움</option>
+                            <option value="매우 무거움">매우 무거움</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 목 부위 통증 평가 섹션 -->
+        <div class="section-card">
+            <h2 class="section-title">
+                <i class="bi bi-person-standing"></i> 목 부위 통증 평가
+            </h2>
+
+            <div class="info-box">
+                <h4><i class="bi bi-info-circle"></i> 평가 안내</h4>
+                <p>목 부위에 관련된 증상이나 불편함에 대해 해당하는 항목을 선택해주세요.</p>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="목_1" class="form-label">1번. 목 통증 여부</label>
+                        <select class="form-control" id="목_1" name="목_1">
+                            <option value="">선택하세요</option>
+                            <option value="없음">없음</option>
+                            <option value="있음">있음</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="목_2" class="form-label">2번. 목 통증 기간</label>
+                        <select class="form-control" id="목_2" name="목_2">
+                            <option value="">선택하세요</option>
+                            <option value="없음">없음</option>
+                            <option value="1주일 미만">1주일 미만</option>
+                            <option value="1주일 이상 지속">1주일 이상 지속</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="목_3" class="form-label">3번. 목 통증 강도</label>
+                        <select class="form-control" id="목_3" name="목_3">
+                            <option value="">선택하세요</option>
+                            <option value="없음">없음</option>
+                            <option value="약한 통증">약한 통증</option>
+                            <option value="중간 정도">중간 정도</option>
+                            <option value="심한 통증">심한 통증</option>
+                            <option value="매우 심한 통증">매우 심한 통증</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="목_4" class="form-label">4번. 목 통증 빈도</label>
+                        <select class="form-control" id="목_4" name="목_4">
+                            <option value="">선택하세요</option>
+                            <option value="없음">없음</option>
+                            <option value="1달에 1회 미만">1달에 1회 미만</option>
+                            <option value="1달에 1-3회">1달에 1-3회</option>
+                            <option value="1주일에 1-2회">1주일에 1-2회</option>
+                            <option value="매일">매일</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="목_5" class="form-label">5번. 목 증상 심화</label>
+                        <select class="form-control" id="목_5" name="목_5">
+                            <option value="">선택하세요</option>
+                            <option value="아니오">아니오</option>
+                            <option value="예">예</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="목_6" class="form-label">6번. 목 기타</label>
+                        <select class="form-control" id="목_6" name="목_6">
+                            <option value="">선택하세요</option>
+                            <option value="없음">없음</option>
+                            <option value="있음">있음</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 어깨 부위 통증 평가 섹션 -->
+        <div class="section-card">
+            <h2 class="section-title">
+                <i class="bi bi-person-arms-up"></i> 어깨 부위 통증 평가
+            </h2>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="어깨_1" class="form-label">1번. 어깨 통증 여부</label>
+                        <select class="form-control" id="어깨_1" name="어깨_1">
+                            <option value="">선택하세요</option>
+                            <option value="없음">없음</option>
+                            <option value="있음">있음</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="어깨_2" class="form-label">2번. 어깨 통증 기간</label>
+                        <select class="form-control" id="어깨_2" name="어깨_2">
+                            <option value="">선택하세요</option>
+                            <option value="없음">없음</option>
+                            <option value="1주일 미만">1주일 미만</option>
+                            <option value="1주일 이상 지속">1주일 이상 지속</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="어깨_3" class="form-label">3번. 어깨 통증 강도</label>
+                        <select class="form-control" id="어깨_3" name="어깨_3">
+                            <option value="">선택하세요</option>
+                            <option value="없음">없음</option>
+                            <option value="약한 통증">약한 통증</option>
+                            <option value="중간 정도">중간 정도</option>
+                            <option value="심한 통증">심한 통증</option>
+                            <option value="매우 심한 통증">매우 심한 통증</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="어깨_4" class="form-label">4번. 어깨 통증 빈도</label>
+                        <select class="form-control" id="어깨_4" name="어깨_4">
+                            <option value="">선택하세요</option>
+                            <option value="없음">없음</option>
+                            <option value="1달에 1회 미만">1달에 1회 미만</option>
+                            <option value="1달에 1-3회">1달에 1-3회</option>
+                            <option value="1주일에 1-2회">1주일에 1-2회</option>
+                            <option value="매일">매일</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="어깨_5" class="form-label">5번. 어깨 증상 심화</label>
+                        <select class="form-control" id="어깨_5" name="어깨_5">
+                            <option value="">선택하세요</option>
+                            <option value="아니오">아니오</option>
+                            <option value="예">예</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="어깨_6" class="form-label">6번. 어깨 기타</label>
+                        <select class="form-control" id="어깨_6" name="어깨_6">
+                            <option value="">선택하세요</option>
+                            <option value="없음">없음</option>
+                            <option value="있음">있음</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 팔꿈치 부위 통증 평가 섹션 -->
+        <div class="section-card">
+            <h2 class="section-title">
+                <i class="bi bi-arrow-down-right"></i> 팔꿈치 부위 통증 평가
+            </h2>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="팔꿈치_1" class="form-label">1번. 팔꿈치 통증 여부</label>
+                        <select class="form-control" id="팔꿈치_1" name="팔꿈치_1">
+                            <option value="">선택하세요</option>
+                            <option value="없음">없음</option>
+                            <option value="있음">있음</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="팔꿈치_2" class="form-label">2번. 팔꿈치 통증 기간</label>
+                        <select class="form-control" id="팔꿈치_2" name="팔꿈치_2">
+                            <option value="">선택하세요</option>
+                            <option value="없음">없음</option>
+                            <option value="1주일 미만">1주일 미만</option>
+                            <option value="1주일 이상 지속">1주일 이상 지속</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="팔꿈치_3" class="form-label">3번. 팔꿈치 통증 강도</label>
+                        <select class="form-control" id="팔꿈치_3" name="팔꿈치_3">
+                            <option value="">선택하세요</option>
+                            <option value="없음">없음</option>
+                            <option value="약한 통증">약한 통증</option>
+                            <option value="중간 정도">중간 정도</option>
+                            <option value="심한 통증">심한 통증</option>
+                            <option value="매우 심한 통증">매우 심한 통증</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="팔꿈치_4" class="form-label">4번. 팔꿈치 통증 빈도</label>
+                        <select class="form-control" id="팔꿈치_4" name="팔꿈치_4">
+                            <option value="">선택하세요</option>
+                            <option value="없음">없음</option>
+                            <option value="1달에 1회 미만">1달에 1회 미만</option>
+                            <option value="1달에 1-3회">1달에 1-3회</option>
+                            <option value="1주일에 1-2회">1주일에 1-2회</option>
+                            <option value="매일">매일</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="팔꿈치_5" class="form-label">5번. 팔꿈치 증상 심화</label>
+                        <select class="form-control" id="팔꿈치_5" name="팔꿈치_5">
+                            <option value="">선택하세요</option>
+                            <option value="아니오">아니오</option>
+                            <option value="예">예</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="팔꿈치_6" class="form-label">6번. 팔꿈치 기타</label>
+                        <select class="form-control" id="팔꿈치_6" name="팔꿈치_6">
+                            <option value="">선택하세요</option>
+                            <option value="없음">없음</option>
+                            <option value="있음">있음</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 손목 부위 통증 평가 섹션 -->
+        <div class="section-card">
+            <h2 class="section-title">
+                <i class="bi bi-hand-index"></i> 손목 부위 통증 평가
+            </h2>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="손목_1" class="form-label">1번. 손목 통증 여부</label>
+                        <select class="form-control" id="손목_1" name="손목_1">
+                            <option value="">선택하세요</option>
+                            <option value="없음">없음</option>
+                            <option value="있음">있음</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="손목_2" class="form-label">2번. 손목 통증 기간</label>
+                        <select class="form-control" id="손목_2" name="손목_2">
+                            <option value="">선택하세요</option>
+                            <option value="없음">없음</option>
+                            <option value="1주일 미만">1주일 미만</option>
+                            <option value="1주일 이상 지속">1주일 이상 지속</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="손목_3" class="form-label">3번. 손목 통증 강도</label>
+                        <select class="form-control" id="손목_3" name="손목_3">
+                            <option value="">선택하세요</option>
+                            <option value="없음">없음</option>
+                            <option value="약한 통증">약한 통증</option>
+                            <option value="중간 정도">중간 정도</option>
+                            <option value="심한 통증">심한 통증</option>
+                            <option value="매우 심한 통증">매우 심한 통증</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="손목_4" class="form-label">4번. 손목 통증 빈도</label>
+                        <select class="form-control" id="손목_4" name="손목_4">
+                            <option value="">선택하세요</option>
+                            <option value="없음">없음</option>
+                            <option value="1달에 1회 미만">1달에 1회 미만</option>
+                            <option value="1달에 1-3회">1달에 1-3회</option>
+                            <option value="1주일에 1-2회">1주일에 1-2회</option>
+                            <option value="매일">매일</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="손목_5" class="form-label">5번. 손목 증상 심화</label>
+                        <select class="form-control" id="손목_5" name="손목_5">
+                            <option value="">선택하세요</option>
+                            <option value="아니오">아니오</option>
+                            <option value="예">예</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="손목_6" class="form-label">6번. 손목 기타</label>
+                        <select class="form-control" id="손목_6" name="손목_6">
+                            <option value="">선택하세요</option>
+                            <option value="없음">없음</option>
+                            <option value="있음">있음</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 허리 부위 통증 평가 섹션 -->
+        <div class="section-card">
+            <h2 class="section-title">
+                <i class="bi bi-person-standing-dress"></i> 허리 부위 통증 평가
+            </h2>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="허리_1" class="form-label">1번. 허리 통증 여부</label>
+                        <select class="form-control" id="허리_1" name="허리_1">
+                            <option value="">선택하세요</option>
+                            <option value="없음">없음</option>
+                            <option value="있음">있음</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="허리_2" class="form-label">2번. 허리 통증 기간</label>
+                        <select class="form-control" id="허리_2" name="허리_2">
+                            <option value="">선택하세요</option>
+                            <option value="없음">없음</option>
+                            <option value="1주일 미만">1주일 미만</option>
+                            <option value="1주일 이상 지속">1주일 이상 지속</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="허리_3" class="form-label">3번. 허리 통증 강도</label>
+                        <select class="form-control" id="허리_3" name="허리_3">
+                            <option value="">선택하세요</option>
+                            <option value="없음">없음</option>
+                            <option value="약한 통증">약한 통증</option>
+                            <option value="중간 정도">중간 정도</option>
+                            <option value="심한 통증">심한 통증</option>
+                            <option value="매우 심한 통증">매우 심한 통증</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="허리_4" class="form-label">4번. 허리 통증 빈도</label>
+                        <select class="form-control" id="허리_4" name="허리_4">
+                            <option value="">선택하세요</option>
+                            <option value="없음">없음</option>
+                            <option value="1달에 1회 미만">1달에 1회 미만</option>
+                            <option value="1달에 1-3회">1달에 1-3회</option>
+                            <option value="1주일에 1-2회">1주일에 1-2회</option>
+                            <option value="매일">매일</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="허리_5" class="form-label">5번. 허리 증상 심화</label>
+                        <select class="form-control" id="허리_5" name="허리_5">
+                            <option value="">선택하세요</option>
+                            <option value="아니오">아니오</option>
+                            <option value="예">예</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="허리_6" class="form-label">6번. 허리 기타</label>
+                        <select class="form-control" id="허리_6" name="허리_6">
+                            <option value="">선택하세요</option>
+                            <option value="없음">없음</option>
+                            <option value="있음">있음</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 다리 부위 통증 평가 섹션 -->
+        <div class="section-card">
+            <h2 class="section-title">
+                <i class="bi bi-person-walking"></i> 다리 부위 통증 평가
+            </h2>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="다리_1" class="form-label">1번. 다리 통증 여부</label>
+                        <select class="form-control" id="다리_1" name="다리_1">
+                            <option value="">선택하세요</option>
+                            <option value="없음">없음</option>
+                            <option value="있음">있음</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="다리_2" class="form-label">2번. 다리 통증 기간</label>
+                        <select class="form-control" id="다리_2" name="다리_2">
+                            <option value="">선택하세요</option>
+                            <option value="없음">없음</option>
+                            <option value="1주일 미만">1주일 미만</option>
+                            <option value="1주일 이상 지속">1주일 이상 지속</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="다리_3" class="form-label">3번. 다리 통증 강도</label>
+                        <select class="form-control" id="다리_3" name="다리_3">
+                            <option value="">선택하세요</option>
+                            <option value="없음">없음</option>
+                            <option value="약한 통증">약한 통증</option>
+                            <option value="중간 정도">중간 정도</option>
+                            <option value="심한 통증">심한 통증</option>
+                            <option value="매우 심한 통증">매우 심한 통증</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="다리_4" class="form-label">4번. 다리 통증 빈도</label>
+                        <select class="form-control" id="다리_4" name="다리_4">
+                            <option value="">선택하세요</option>
+                            <option value="없음">없음</option>
+                            <option value="1달에 1회 미만">1달에 1회 미만</option>
+                            <option value="1달에 1-3회">1달에 1-3회</option>
+                            <option value="1주일에 1-2회">1주일에 1-2회</option>
+                            <option value="매일">매일</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="다리_5" class="form-label">5번. 다리 증상 심화</label>
+                        <select class="form-control" id="다리_5" name="다리_5">
+                            <option value="">선택하세요</option>
+                            <option value="아니오">아니오</option>
+                            <option value="예">예</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="다리_6" class="form-label">6번. 다리 기타</label>
+                        <select class="form-control" id="다리_6" name="다리_6">
+                            <option value="">선택하세요</option>
+                            <option value="없음">없음</option>
+                            <option value="있음">있음</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 제출 버튼 -->
+        <div class="submit-section">
+            <button type="submit" class="btn-submit">
+                <i class="bi bi-send-fill"></i> 완전판 증상조사표 제출
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+// 폼 제출 처리
+document.getElementById('musculoskeletalCompleteForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    // 폼 유효성 검사
+    if (!this.checkValidity()) {
+        e.stopPropagation();
+        this.classList.add('was-validated');
+
+        // 필수 항목 미입력 시 경고
+        const firstInvalid = this.querySelector(':invalid');
+        if (firstInvalid) {
+            firstInvalid.focus();
+            alert('필수 항목을 모두 입력해주세요.');
+        }
+        return;
+    }
+
+    // 폼 데이터 수집 및 검증
+    const formData = new FormData(this);
+
+    // 제출 확인
+    if (confirm('근골격계질환 증상조사표 (완전판)를 제출하시겠습니까?')) {
+        // 제출 버튼 비활성화
+        const submitBtn = this.querySelector('.btn-submit');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> 제출 중...';
+
+        // 실제 제출
+        this.submit();
+    }
+});
+
+// 숫자 입력 필드 유효성 검사
+document.querySelectorAll('input[type="number"]').forEach(input => {
+    input.addEventListener('input', function() {
+        if (this.value < 0) {
+            this.value = 0;
+        }
+    });
+});
+
+// 페이지 로드 시 초기화
+document.addEventListener('DOMContentLoaded', function() {
+    // 폼 초기화
+    console.log('근골격계질환 증상조사표 (완전판) 로드 완료');
+
+    // 포커스 이벤트 처리
+    const inputs = document.querySelectorAll('input, select, textarea');
+    inputs.forEach(input => {
+        input.addEventListener('focus', function() {
+            this.parentElement.classList.add('focused');
+        });
+
+        input.addEventListener('blur', function() {
+            this.parentElement.classList.remove('focused');
+        });
+    });
+});
+</script>
+{% endblock %}

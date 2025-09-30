@@ -76,7 +76,9 @@ def index():
 <p>산업안전보건관리시스템 - 건강조사 설문</p>
 <ul>
 <li><a href="/survey/001_musculoskeletal_symptom_survey">📋 근골격계 증상조사표 (Form 001)</a></li>
+<li><a href="/survey/001_musculoskeletal_symptom_survey_intuitive">🎯 근골격계 증상조사표 - 직관적 버전 (Form 001 Easy) <span class="enhanced-badge">초등학생도 OK</span></a></li>
 <li><a href="/survey/002_musculoskeletal_symptom_program">📊 근골격계부담작업 유해요인조사 (Form 002)</a></li>
+<li><a href="/survey/002_musculoskeletal_symptom_program_intuitive">🎯 근골격계부담작업 유해요인조사 - 직관적 버전 (Form 002 Easy) <span class="enhanced-badge">초등학생도 OK</span></a></li>
 
 <li><a href="/survey/003_musculoskeletal_program">📊 근골격계질환 예방관리 프로그램 조사표 (Form 003) <span class="new-badge">기본</span></a></li>
 <li><a href="/survey/003_musculoskeletal_program_enhanced">🔬 근골격계질환 예방관리 프로그램 조사표 - 완전판 (Form 003 Enhanced) <span class="enhanced-badge">60+ 필드</span></a></li>
@@ -183,6 +185,145 @@ def get_or_create_role(title):
 def new():
     """Redirect to musculoskeletal survey for backward compatibility"""
     return redirect(url_for("survey.musculoskeletal_symptom_survey"))
+
+
+@survey_bp.route("/001_musculoskeletal_symptom_survey_intuitive", methods=["GET", "POST"])
+def musculoskeletal_symptom_survey_intuitive():
+    """근골격계 증상조사표 (001) - 초등학생도 이해하는 직관적 UI"""
+    try:
+        from flask import g
+        g._csrf_disabled = True
+    except:
+        pass
+
+    # 기존 처리 로직과 동일, 단지 다른 템플릿 사용
+    kiosk_mode = (
+        request.args.get("kiosk") == "1"
+        or request.referrer is None
+        or "survey" not in (request.referrer or "")
+    )
+
+    if request.method == "POST":
+        # 기존 POST 처리 로직을 그대로 재사용 (musculoskeletal_symptom_survey()와 동일)
+        # 대신 form_type을 "001_intuitive"로 설정
+        user_id = 1  # 익명 사용자
+        if current_user.is_authenticated:
+            user_id = current_user.id
+
+        # 새로운 구조의 근골격계 증상 데이터 처리
+        musculo_details_json = request.form.get("musculo_details_json")
+        musculo_details = []
+        if musculo_details_json:
+            try:
+                musculo_details = json.loads(musculo_details_json)
+            except json.JSONDecodeError:
+                current_app.logger.warning("Invalid JSON musculo details data received")
+
+        # 모든 폼 데이터를 수집하여 responses JSON 필드에 저장
+        all_form_data = {}
+        for key, value in request.form.items():
+            if key.endswith("[]"):
+                all_form_data[key] = request.form.getlist(key)
+            else:
+                all_form_data[key] = value
+
+        # 근골격계 상세 데이터 추가
+        if musculo_details:
+            all_form_data["musculo_details"] = musculo_details
+
+        # 데이터베이스 스키마에 맞춘 Survey 생성
+        survey = Survey(
+            user_id=user_id,
+            form_type="001_intuitive",  # 직관적 버전 구분
+            name=request.form.get("name") or "익명",
+            age=request.form.get("age", type=int) or 30,
+            gender=request.form.get("gender") or "male",
+            department=request.form.get("department"),
+            position=request.form.get("position"),
+            employee_number=request.form.get("employee_number"),
+            has_symptoms=request.form.get("current_symptom") == "예",
+            work_years=request.form.get("work_years", type=int),
+            work_months=request.form.get("work_months", type=int),
+            responses=all_form_data,
+        )
+
+        try:
+            db.session.add(survey)
+            db.session.commit()
+
+            flash("직관적 증상조사표가 성공적으로 제출되었습니다! 🎉", "success")
+            if kiosk_mode:
+                return redirect(url_for("survey.complete", id=survey.id, kiosk=1))
+            return redirect(url_for("survey.complete", id=survey.id))
+
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Intuitive survey submission error: {str(e)}")
+            flash(f"설문 제출 중 오류가 발생했습니다: {str(e)}", "error")
+            return redirect(url_for("survey.musculoskeletal_symptom_survey_intuitive"))
+
+    return render_template(
+        "survey/001_musculoskeletal_symptom_survey_intuitive.html", kiosk_mode=kiosk_mode
+    )
+
+
+@survey_bp.route("/002_musculoskeletal_symptom_program_intuitive", methods=["GET", "POST"])
+def musculoskeletal_symptom_program_intuitive():
+    """근골격계부담작업 유해요인조사 (002) - 초등학생도 이해하는 직관적 UI"""
+    try:
+        from flask import g
+        g._csrf_disabled = True
+    except:
+        pass
+
+    kiosk_mode = (
+        request.args.get("kiosk") == "1"
+        or request.referrer is None
+        or "survey" not in (request.referrer or "")
+    )
+
+    if request.method == "POST":
+        user_id = 1  # 익명 사용자
+        try:
+            if current_user.is_authenticated:
+                user_id = current_user.id
+        except:
+            pass
+
+        # 모든 폼 데이터를 수집
+        all_form_data = {}
+        for key, value in request.form.items():
+            if key.endswith("[]"):
+                all_form_data[key] = request.form.getlist(key)
+            else:
+                all_form_data[key] = value
+
+        # 데이터베이스에 저장
+        survey = Survey(
+            user_id=user_id,
+            form_type="002_intuitive",  # 직관적 버전 구분
+            name=request.form.get("investigator_name") or "조사자",
+            department=request.form.get("department"),
+            position=request.form.get("investigator_position"),
+            responses=all_form_data,
+        )
+
+        try:
+            db.session.add(survey)
+            db.session.commit()
+
+            flash("직관적 유해요인조사가 성공적으로 제출되었습니다! 🎉", "success")
+            if kiosk_mode:
+                return redirect(url_for("survey.complete", id=survey.id, kiosk=1))
+            return redirect(url_for("survey.complete", id=survey.id))
+
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Intuitive 002 submission error: {str(e)}")
+            flash(f"설문 제출 중 오류가 발생했습니다: {str(e)}", "error")
+            return redirect(url_for("survey.musculoskeletal_symptom_program_intuitive"))
+
+    return render_template("survey/002_musculoskeletal_symptom_program_intuitive.html", kiosk_mode=kiosk_mode)
 
 
 @survey_bp.route("/001_musculoskeletal_symptom_survey", methods=["GET", "POST"])

@@ -298,6 +298,39 @@ def create_app(config_name=None):
             except Exception:
                 pass
 
+    # 세션 중복 방지 검증 미들웨어
+    @app.before_request
+    def validate_session():
+        """세션 중복 방지를 위한 검증"""
+        from flask_login import current_user
+        from flask import session as flask_session, request
+        from utils.session_manager import session_manager
+
+        # 로그인이 필요하지 않은 엔드포인트는 건너뛰기
+        if request.endpoint in ['auth.login', 'auth.register', 'main.index', 'health.health', 'static']:
+            return
+
+        # 헬스체크 엔드포인트도 건너뛰기
+        if request.path.startswith('/health') or request.path.startswith('/api/health'):
+            return
+
+        # 현재 사용자가 인증된 상태인지 확인
+        if current_user.is_authenticated:
+            safework_session_id = flask_session.get('safework_session_id')
+
+            # SafeWork 세션 ID가 없거나 유효하지 않은 경우
+            if not safework_session_id or not session_manager.validate_session(current_user.id, safework_session_id):
+                app.logger.warning(f"Invalid session detected for user {current_user.id}, logging out")
+
+                # 강제 로그아웃
+                from flask_login import logout_user
+                logout_user()
+                flask_session.clear()
+
+                from flask import flash, redirect, url_for
+                flash("세션이 만료되었거나 다른 곳에서 로그인하여 자동 로그아웃되었습니다.", "warning")
+                return redirect(url_for('auth.login'))
+
     # Enhanced health endpoint
     @app.route("/health/detailed")
     def detailed_health():

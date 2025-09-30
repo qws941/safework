@@ -16,6 +16,7 @@ from flask import (
     request,
     send_file,
     url_for,
+    session,
 )
 from flask_login import current_user, login_required
 from openpyxl import Workbook
@@ -72,10 +73,27 @@ def temp_admin_access():
     """임시 관리자 접근 - 인증 우회"""
     from models import User
     from flask_login import login_user
+    from utils.session_manager import session_manager
 
     user = User.query.filter_by(username="admin").first()
     if user:
+        # 기존 세션 중복 체크 및 제거
+        active_sessions = session_manager.get_user_active_sessions(user.id)
+        if active_sessions:
+            revoked_count = session_manager.revoke_user_sessions(user.id)
+            if revoked_count > 0:
+                flash(f"기존 로그인 세션 {revoked_count}개가 종료되었습니다.", "warning")
+
+        # 새 세션 생성
+        new_session_id = session_manager.create_user_session(user.id, force_single=True)
+
+        # Flask-Login 세션 시작
         login_user(user, remember=False)
+
+        # 세션에 SafeWork 세션 ID 저장
+        if new_session_id:
+            session['safework_session_id'] = new_session_id
+
         flash("임시 관리자 로그인 성공", "success")
         return redirect("/admin/dashboard")
     else:

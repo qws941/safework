@@ -1,0 +1,2307 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏥 건강 검진 설문지 - 우리 몸을 더 자세히 알아봐요!</title>
+    <style>
+        /* 폰트 및 기본 스타일 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Malgun Gothic', '맑은고딕', sans-serif;
+            font-size: 18px;
+            line-height: 1.6;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* 다크모드 토글 */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 50px;
+            padding: 12px 20px;
+            cursor: pointer;
+            font-size: 16px;
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+
+        /* 메인 컨테이너 */
+        .survey-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 25px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        /* 헤더 */
+        .survey-header {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .survey-header h1 {
+            font-size: 32px;
+            margin-bottom: 15px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .survey-header p {
+            font-size: 20px;
+            opacity: 0.9;
+        }
+
+        /* 진행률 바 */
+        .progress-container {
+            background: white;
+            padding: 20px;
+            border-bottom: 2px solid #f0f0f0;
+            position: relative;
+        }
+
+        .progress-bar {
+            background: #e0e0e0;
+            border-radius: 25px;
+            height: 15px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #ff6b6b 0%, #ee5a24 100%);
+            height: 100%;
+            width: 0%;
+            transition: width 0.5s ease;
+            border-radius: 25px;
+            position: relative;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .progress-text {
+            text-align: center;
+            color: #666;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .section-navigator {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .nav-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ddd;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .nav-dot.completed {
+            background: #28a745;
+            transform: scale(1.2);
+        }
+
+        .nav-dot.current {
+            background: #ff6b6b;
+            transform: scale(1.4);
+        }
+
+        /* 폼 컨테이너 */
+        .form-container {
+            padding: 0;
+        }
+
+        /* 섹션 카드 */
+        .section-card {
+            margin: 0;
+            border-bottom: 3px solid #f0f0f0;
+            padding: 40px 30px;
+            transition: all 0.3s ease;
+            background: white;
+            position: relative;
+        }
+
+        .section-card:last-child {
+            border-bottom: none;
+        }
+
+        .section-card:hover {
+            background: #fafafa;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 6px;
+            height: 100%;
+            background: linear-gradient(180deg, #ff6b6b, #ee5a24);
+            transition: all 0.3s ease;
+        }
+
+        /* 섹션 컬러 코딩 */
+        .section-card[data-section="basic_info"]::before { background: linear-gradient(180deg, #4facfe, #00f2fe); }
+        .section-card[data-section="work_info"]::before { background: linear-gradient(180deg, #43e97b, #38f9d7); }
+        .section-card[data-section*="pain_"]::before { background: linear-gradient(180deg, #ff6b6b, #ee5a24); }
+
+        /* 섹션 헤더 */
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #f0f0f0;
+            position: relative;
+        }
+
+        .section-icon {
+            font-size: 56px;
+            margin-right: 20px;
+            animation: pulse 3s infinite;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
+        }
+
+        .section-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #333;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .section-subtitle {
+            font-size: 18px;
+            color: #666;
+            margin-top: 5px;
+            font-weight: normal;
+        }
+
+        /* 애니메이션 */
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        /* 필드 그룹 */
+        .field-group {
+            margin-bottom: 25px;
+            padding: 25px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-left: 6px solid #007bff;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .field-group::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+            transform: translateX(-100%) translateY(-100%) rotate(45deg);
+            transition: all 0.6s ease;
+        }
+
+        .field-group:hover::before {
+            transform: translateX(100%) translateY(100%) rotate(45deg);
+        }
+
+        .field-group:hover {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border-left-color: #2196f3;
+            transform: translateX(8px);
+            box-shadow: 0 8px 25px rgba(33, 150, 243, 0.15);
+        }
+
+        /* 레이블 */
+        .field-label {
+            display: block;
+            margin-bottom: 15px;
+            font-weight: bold;
+            font-size: 20px;
+            color: #333;
+            position: relative;
+            z-index: 1;
+        }
+
+        .required::after {
+            content: " ⭐";
+            color: #ff4444;
+            animation: twinkle 1.5s infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .tooltip {
+            position: relative;
+            cursor: help;
+        }
+
+        .tooltip::before {
+            content: "💡";
+            margin-left: 8px;
+            animation: glow 2s infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.5); }
+        }
+
+        .tooltip:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            top: -50px;
+            left: 0;
+            background: linear-gradient(135deg, #333, #555);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 12px;
+            font-size: 16px;
+            white-space: nowrap;
+            z-index: 1000;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            animation: tooltipFadeIn 0.3s ease;
+        }
+
+        @keyframes tooltipFadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 입력 필드 */
+        .form-control {
+            width: 100%;
+            padding: 18px 24px;
+            border: 3px solid #e0e0e0;
+            border-radius: 20px;
+            font-size: 18px;
+            transition: all 0.4s ease;
+            background: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            position: relative;
+            z-index: 1;
+        }
+
+        .form-control:focus {
+            border-color: #ff6b6b;
+            box-shadow: 0 0 30px rgba(255, 107, 107, 0.3);
+            outline: none;
+            transform: scale(1.02);
+            background: linear-gradient(135deg, #fff, #fef7f7);
+        }
+
+        .form-control:invalid {
+            border-color: #ff6b6b;
+            background: #fff5f5;
+            animation: shake 0.5s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        /* 선택 박스 */
+        .select-container {
+            position: relative;
+        }
+
+        select.form-control {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,<svg xmlns='http://www.w3.org/2000/svg' fill='%23ff6b6b' viewBox='0 0 24 24'><path d='M7 10l5 5 5-5z'/></svg>");
+            background-repeat: no-repeat;
+            background-position: right 20px center;
+            background-size: 24px;
+            cursor: pointer;
+            padding-right: 60px;
+        }
+
+        select.form-control:focus {
+            background-image: url("data:image/svg+xml;charset=UTF-8,<svg xmlns='http://www.w3.org/2000/svg' fill='%23fff' viewBox='0 0 24 24'><path d='M7 14l5-5 5 5z'/></svg>");
+        }
+
+        /* 통증 평가 섹션 */
+        .pain-section {
+            background: linear-gradient(135deg, #ffe8e8 0%, #ffcdd2 100%);
+        }
+
+        .pain-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+        }
+
+        .body-part {
+            background: white;
+            padding: 30px;
+            border-radius: 25px;
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.1);
+            border-left: 8px solid #ff6b6b;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .body-part::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(255,107,107,0.1) 0%, transparent 70%);
+            transition: all 0.5s ease;
+        }
+
+        .body-part:hover::before {
+            transform: scale(1.5);
+        }
+
+        .body-part:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 50px rgba(255, 107, 107, 0.2);
+        }
+
+        .body-part-title {
+            font-size: 26px;
+            font-weight: bold;
+            margin-bottom: 25px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .body-icon {
+            font-size: 40px;
+            margin-right: 15px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+        }
+
+        /* 통증 질문 그룹 */
+        .pain-questions {
+            display: grid;
+            gap: 20px;
+        }
+
+        .pain-question {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            border-left: 4px solid #17a2b8;
+            transition: all 0.3s ease;
+        }
+
+        .pain-question:hover {
+            background: #e3f7fa;
+            border-left-color: #00bcd4;
+            transform: translateX(5px);
+        }
+
+        .question-label {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            color: #333;
+            display: flex;
+            align-items: center;
+        }
+
+        .question-number {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            margin-right: 12px;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+        }
+
+        /* 통증 선택 옵션 */
+        .pain-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .pain-option {
+            position: relative;
+        }
+
+        .pain-option input[type="radio"] {
+            display: none;
+        }
+
+        .pain-option label {
+            display: block;
+            padding: 15px;
+            text-align: center;
+            background: white;
+            border: 3px solid #e0e0e0;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pain-option label::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: radial-gradient(circle, rgba(255,107,107,0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            transform: translate(-50%, -50%);
+        }
+
+        .pain-option:hover label {
+            border-color: #ff6b6b;
+            background: #fef7f7;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.15);
+        }
+
+        .pain-option:hover label::before {
+            width: 200px;
+            height: 200px;
+        }
+
+        .pain-option input[type="radio"]:checked + label {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            border-color: #ff6b6b;
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.4);
+        }
+
+        /* 이모지 기반 통증 척도 */
+        .emoji-scale {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 20px;
+            border: 2px dashed #dee2e6;
+        }
+
+        .emoji-option {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            padding: 15px;
+            border-radius: 15px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .emoji-option:hover {
+            background: rgba(255, 107, 107, 0.1);
+            transform: translateY(-5px);
+        }
+
+        .emoji-face {
+            font-size: 48px;
+            margin-bottom: 8px;
+            transition: all 0.3s ease;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
+        }
+
+        .emoji-option:hover .emoji-face {
+            transform: scale(1.2);
+        }
+
+        .emoji-option.selected .emoji-face {
+            transform: scale(1.3);
+            filter: drop-shadow(0 6px 15px rgba(255,107,107,0.4));
+        }
+
+        .emoji-text {
+            font-size: 14px;
+            font-weight: bold;
+            color: #666;
+            text-align: center;
+        }
+
+        .emoji-option.selected .emoji-text {
+            color: #ff6b6b;
+        }
+
+        /* 버튼 스타일 */
+        .btn {
+            padding: 18px 35px;
+            border: none;
+            border-radius: 25px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            transition: all 0.6s ease;
+            transform: translate(-50%, -50%);
+        }
+
+        .btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+            color: white;
+            box-shadow: 0 8px 25px rgba(86, 171, 47, 0.3);
+        }
+
+        .btn-success:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(86, 171, 47, 0.4);
+        }
+
+        /* 액션 버튼들 */
+        .form-actions {
+            padding: 40px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            border-top: 3px solid #dee2e6;
+        }
+
+        .auto-save-status {
+            color: #28a745;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            font-size: 16px;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .auto-save-status::before {
+            content: "💾 ";
+            margin-right: 8px;
+            font-size: 20px;
+        }
+
+        /* 반응형 디자인 */
+        @media (max-width: 768px) {
+            body {
+                font-size: 16px;
+                padding: 10px;
+            }
+
+            .survey-header h1 {
+                font-size: 26px;
+            }
+
+            .section-icon {
+                font-size: 40px;
+            }
+
+            .section-title {
+                font-size: 22px;
+            }
+
+            .field-label {
+                font-size: 18px;
+            }
+
+            .form-control {
+                padding: 15px 20px;
+                font-size: 16px;
+            }
+
+            .pain-options {
+                grid-template-columns: 1fr;
+            }
+
+            .emoji-scale {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .emoji-face {
+                font-size: 36px;
+            }
+
+            .form-actions {
+                flex-direction: column;
+                gap: 20px;
+                text-align: center;
+            }
+        }
+
+        /* 페이드 인 애니메이션 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section-card {
+            animation: fadeIn 0.8s ease forwards;
+        }
+
+        /* 다크 모드 */
+        .dark-mode {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+        }
+
+        .dark-mode .survey-container {
+            background: rgba(44, 62, 80, 0.95);
+            color: #ecf0f1;
+        }
+
+        .dark-mode .section-card {
+            background: #34495e;
+            color: #ecf0f1;
+        }
+
+        .dark-mode .section-card:hover {
+            background: #3c5a78;
+        }
+
+        .dark-mode .form-control {
+            background: #2c3e50;
+            color: #ecf0f1;
+            border-color: #34495e;
+        }
+
+        .dark-mode .field-group {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            border-left-color: #3498db;
+        }
+
+        .dark-mode .body-part {
+            background: #34495e;
+            color: #ecf0f1;
+        }
+
+        .dark-mode .pain-question {
+            background: #2c3e50;
+            color: #ecf0f1;
+        }
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()">🌙 다크모드</button>
+
+    <div class="survey-container">
+        <!-- 헤더 -->
+        <div class="survey-header">
+            <h1>🏥 건강 검진 설문지</h1>
+            <p>우리 몸을 더 자세히 알아봐요! 각 질문에 천천히 답해주세요 😊</p>
+        </div>
+
+        <!-- 진행률 바 -->
+        <div class="progress-container">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">시작하기 (0%)</div>
+            <div class="section-navigator" id="sectionNavigator"></div>
+        </div>
+
+        <!-- 설문 폼 -->
+        <form id="surveyForm" class="form-container" action="{{ url_for('survey.submit_survey', form_id='002_musculoskeletal_symptom_program') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+            <!-- 기본 정보 섹션 -->
+            <div class="section-card" data-section="basic_info">
+                <div class="section-header">
+                    <div class="section-icon">👤</div>
+                    <div>
+                        <div class="section-title">기본 정보</div>
+                        <div class="section-subtitle">본인의 기본 정보를 입력해주세요</div>
+                    </div>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label required tooltip" data-tooltip="설문지 번호입니다">
+                        번호
+                    </label>
+                    <input type="number" name="number" class="form-control" placeholder="1" min="1" required>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label required">
+                        이름
+                    </label>
+                    <input type="text" name="name" class="form-control" placeholder="홍길동" required>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label required tooltip" data-tooltip="현재 나이를 숫자로 입력해주세요">
+                        나이
+                    </label>
+                    <input type="number" name="age" class="form-control" placeholder="30" min="18" max="100" required>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label required">
+                        성별
+                    </label>
+                    <div class="select-container">
+                        <select name="gender" class="form-control" required>
+                            <option value="">선택해주세요</option>
+                            <option value="남">👨 남성</option>
+                            <option value="여">👩 여성</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label required tooltip" data-tooltip="현재 직장에서 일한 기간을 년 단위로 입력해주세요">
+                        현재 직장 경력 (년)
+                    </label>
+                    <input type="number" name="work_experience" class="form-control" placeholder="5" min="0" max="50" step="0.5" required>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label">
+                        결혼 여부
+                    </label>
+                    <div class="select-container">
+                        <select name="married" class="form-control">
+                            <option value="">선택해주세요</option>
+                            <option value="기혼">💑 기혼</option>
+                            <option value="미혼">🙋 미혼</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 작업 정보 섹션 -->
+            <div class="section-card" data-section="work_info">
+                <div class="section-header">
+                    <div class="section-icon">💼</div>
+                    <div>
+                        <div class="section-title">작업 정보</div>
+                        <div class="section-subtitle">현재 하고 계시는 일에 대해 알려주세요</div>
+                    </div>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label required tooltip" data-tooltip="소속 부서나 팀을 입력해주세요">
+                        작업 부서
+                    </label>
+                    <input type="text" name="department" class="form-control" placeholder="생산부, 품질관리팀" required>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label tooltip" data-tooltip="생산라인이나 작업라인명을 입력해주세요">
+                        라인
+                    </label>
+                    <input type="text" name="line" class="form-control" placeholder="A라인, 1호기">
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label tooltip" data-tooltip="담당하고 있는 작업의 종류를 입력해주세요">
+                        작업 종류
+                    </label>
+                    <input type="text" name="work_type" class="form-control" placeholder="조립작업, 검사업무">
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label tooltip" data-tooltip="현재 하고 계시는 구체적인 작업 내용을 설명해주세요">
+                        작업 내용 (자세히)
+                    </label>
+                    <textarea name="work_content" class="form-control" rows="4" placeholder="예: 컨베이어 벨트에서 부품을 조립하고, 하루에 200개 정도 제작합니다. 주로 서서 일하며, 손목과 어깨를 많이 사용합니다."></textarea>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label tooltip" data-tooltip="해당 작업을 시작한 시기부터 지금까지의 기간을 입력해주세요">
+                        작업 기간
+                    </label>
+                    <input type="text" name="work_period" class="form-control" placeholder="2년 3개월, 1.5년">
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label tooltip" data-tooltip="현재 작업을 년 단위로 입력해주세요">
+                        현재 작업 기간 (년)
+                    </label>
+                    <input type="number" name="current_work_period" class="form-control" placeholder="2.5" min="0" max="50" step="0.1">
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label tooltip" data-tooltip="점심시간을 포함한 총 근무시간을 입력해주세요">
+                        1일 근무시간
+                    </label>
+                    <input type="number" name="daily_work_hours" class="form-control" placeholder="8" min="1" max="24" step="0.5">
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label tooltip" data-tooltip="점심시간, 휴게시간의 총합을 시간 단위로 입력해주세요">
+                        휴식시간 (시간)
+                    </label>
+                    <input type="number" name="rest_time" class="form-control" placeholder="1" min="0" max="8" step="0.1">
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label tooltip" data-tooltip="현재 작업 이전에 했던 일이 있다면 설명해주세요">
+                        이전 작업 내용
+                    </label>
+                    <textarea name="previous_work_content" class="form-control" rows="3" placeholder="예: 포장 작업을 했습니다. 박스를 들고 나르는 일이 많았습니다."></textarea>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label tooltip" data-tooltip="이전 작업을 한 기간을 년 단위로 입력해주세요">
+                        이전 작업 기간 (년)
+                    </label>
+                    <input type="number" name="previous_work_period" class="form-control" placeholder="1.5" min="0" max="50" step="0.1">
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label tooltip" data-tooltip="취미나 여가 활동에 대해 자유롭게 적어주세요">
+                        여가 및 취미 활동
+                    </label>
+                    <textarea name="leisure_activity" class="form-control" rows="3" placeholder="예: 주말에 등산을 하고, 평일 저녁에는 헬스장에서 운동을 합니다."></textarea>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label tooltip" data-tooltip="집안일을 하는 시간과 종류를 적어주세요">
+                        하루 가사노동
+                    </label>
+                    <textarea name="household_work" class="form-control" rows="3" placeholder="예: 하루에 2시간 정도 요리, 청소, 빨래를 합니다."></textarea>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label tooltip" data-tooltip="의사로부터 진단받은 질병이나 증상이 있다면 적어주세요">
+                        의사 진단
+                    </label>
+                    <textarea name="medical_diagnosis" class="form-control" rows="3" placeholder="예: 목 디스크 (2023년 진단), 현재 물리치료 중"></textarea>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label tooltip" data-tooltip="현재 작업의 육체적 부담 정도를 선택해주세요">
+                        육체적 부담 정도
+                    </label>
+                    <div class="emoji-scale">
+                        <div class="emoji-option" data-value="매우 가벼움">
+                            <div class="emoji-face">😊</div>
+                            <div class="emoji-text">매우<br>가벼움</div>
+                        </div>
+                        <div class="emoji-option" data-value="가벼움">
+                            <div class="emoji-face">🙂</div>
+                            <div class="emoji-text">가벼움</div>
+                        </div>
+                        <div class="emoji-option" data-value="보통">
+                            <div class="emoji-face">😐</div>
+                            <div class="emoji-text">보통</div>
+                        </div>
+                        <div class="emoji-option" data-value="무거움">
+                            <div class="emoji-face">😟</div>
+                            <div class="emoji-text">무거움</div>
+                        </div>
+                        <div class="emoji-option" data-value="매우 무거움">
+                            <div class="emoji-face">😰</div>
+                            <div class="emoji-text">매우<br>무거움</div>
+                        </div>
+                    </div>
+                    <input type="hidden" name="physical_burden" id="physical_burden">
+                </div>
+            </div>
+
+            <!-- 목 부위 통증 평가 -->
+            <div class="section-card pain-section" data-section="pain_목">
+                <div class="section-header">
+                    <div class="section-icon">🦒</div>
+                    <div>
+                        <div class="section-title">목 부위 통증 평가</div>
+                        <div class="section-subtitle">목과 관련된 증상에 대해 답해주세요</div>
+                    </div>
+                </div>
+
+                <div class="body-part">
+                    <div class="pain-questions">
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">1</div>
+                                목 부위에 통증이 있나요?
+                            </div>
+                            <div class="pain-options">
+                                <div class="pain-option">
+                                    <input type="radio" name="목_1" value="없음" id="neck_1_none">
+                                    <label for="neck_1_none">😊 없음</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="목_1" value="있음" id="neck_1_yes">
+                                    <label for="neck_1_yes">😣 있음</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">2</div>
+                                통증이 얼마나 오래 지속되나요?
+                            </div>
+                            <div class="pain-options">
+                                <div class="pain-option">
+                                    <input type="radio" name="목_2" value="없음" id="neck_2_none">
+                                    <label for="neck_2_none">😊 없음</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="목_2" value="1주일 미만" id="neck_2_week">
+                                    <label for="neck_2_week">📅 1주일 미만</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="목_2" value="1주일 이상 지속" id="neck_2_long">
+                                    <label for="neck_2_long">📅 1주일 이상</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">3</div>
+                                통증의 강도는 어느 정도인가요?
+                            </div>
+                            <div class="emoji-scale">
+                                <div class="emoji-option" data-name="목_3" data-value="없음">
+                                    <div class="emoji-face">😊</div>
+                                    <div class="emoji-text">없음</div>
+                                </div>
+                                <div class="emoji-option" data-name="목_3" data-value="약한 통증">
+                                    <div class="emoji-face">🙂</div>
+                                    <div class="emoji-text">약함</div>
+                                </div>
+                                <div class="emoji-option" data-name="목_3" data-value="중간 정도">
+                                    <div class="emoji-face">😐</div>
+                                    <div class="emoji-text">보통</div>
+                                </div>
+                                <div class="emoji-option" data-name="목_3" data-value="심한 통증">
+                                    <div class="emoji-face">😢</div>
+                                    <div class="emoji-text">심함</div>
+                                </div>
+                                <div class="emoji-option" data-name="목_3" data-value="매우 심한 통증">
+                                    <div class="emoji-face">😭</div>
+                                    <div class="emoji-text">매우심함</div>
+                                </div>
+                            </div>
+                            <input type="hidden" name="목_3" id="목_3">
+                        </div>
+
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">4</div>
+                                통증이 얼마나 자주 발생하나요?
+                            </div>
+                            <div class="pain-options">
+                                <div class="pain-option">
+                                    <input type="radio" name="목_4" value="없음" id="neck_4_none">
+                                    <label for="neck_4_none">😊 없음</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="목_4" value="1달에 1회 미만" id="neck_4_month">
+                                    <label for="neck_4_month">📅 한달에 1회 미만</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="목_4" value="1달에 1-3회" id="neck_4_month3">
+                                    <label for="neck_4_month3">📅 한달에 1-3회</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="목_4" value="1주일에 1-2회" id="neck_4_week2">
+                                    <label for="neck_4_week2">📅 일주일에 1-2회</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="목_4" value="매일" id="neck_4_daily">
+                                    <label for="neck_4_daily">📅 매일</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">5</div>
+                                증상이 점점 심해지고 있나요?
+                            </div>
+                            <div class="pain-options">
+                                <div class="pain-option">
+                                    <input type="radio" name="목_5" value="아니오" id="neck_5_no">
+                                    <label for="neck_5_no">👍 아니요</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="목_5" value="예" id="neck_5_yes">
+                                    <label for="neck_5_yes">👎 예</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">6</div>
+                                기타 증상이 있나요?
+                            </div>
+                            <div class="pain-options">
+                                <div class="pain-option">
+                                    <input type="radio" name="목_6" value="없음" id="neck_6_none">
+                                    <label for="neck_6_none">😊 없음</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="목_6" value="있음" id="neck_6_yes">
+                                    <label for="neck_6_yes">😣 있음</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 어깨 부위 통증 평가 -->
+            <div class="section-card pain-section" data-section="pain_어깨">
+                <div class="section-header">
+                    <div class="section-icon">💪</div>
+                    <div>
+                        <div class="section-title">어깨 부위 통증 평가</div>
+                        <div class="section-subtitle">어깨와 관련된 증상에 대해 답해주세요</div>
+                    </div>
+                </div>
+
+                <div class="body-part">
+                    <div class="pain-questions">
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">1</div>
+                                어깨 부위에 통증이 있나요?
+                            </div>
+                            <div class="pain-options">
+                                <div class="pain-option">
+                                    <input type="radio" name="어깨_1" value="없음" id="shoulder_1_none">
+                                    <label for="shoulder_1_none">😊 없음</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="어깨_1" value="있음" id="shoulder_1_yes">
+                                    <label for="shoulder_1_yes">😣 있음</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">2</div>
+                                통증이 얼마나 오래 지속되나요?
+                            </div>
+                            <div class="pain-options">
+                                <div class="pain-option">
+                                    <input type="radio" name="어깨_2" value="없음" id="shoulder_2_none">
+                                    <label for="shoulder_2_none">😊 없음</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="어깨_2" value="1주일 미만" id="shoulder_2_week">
+                                    <label for="shoulder_2_week">📅 1주일 미만</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="어깨_2" value="1주일 이상 지속" id="shoulder_2_long">
+                                    <label for="shoulder_2_long">📅 1주일 이상</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">3</div>
+                                통증의 강도는 어느 정도인가요?
+                            </div>
+                            <div class="emoji-scale">
+                                <div class="emoji-option" data-name="어깨_3" data-value="없음">
+                                    <div class="emoji-face">😊</div>
+                                    <div class="emoji-text">없음</div>
+                                </div>
+                                <div class="emoji-option" data-name="어깨_3" data-value="약한 통증">
+                                    <div class="emoji-face">🙂</div>
+                                    <div class="emoji-text">약함</div>
+                                </div>
+                                <div class="emoji-option" data-name="어깨_3" data-value="중간 정도">
+                                    <div class="emoji-face">😐</div>
+                                    <div class="emoji-text">보통</div>
+                                </div>
+                                <div class="emoji-option" data-name="어깨_3" data-value="심한 통증">
+                                    <div class="emoji-face">😢</div>
+                                    <div class="emoji-text">심함</div>
+                                </div>
+                                <div class="emoji-option" data-name="어깨_3" data-value="매우 심한 통증">
+                                    <div class="emoji-face">😭</div>
+                                    <div class="emoji-text">매우심함</div>
+                                </div>
+                            </div>
+                            <input type="hidden" name="어깨_3" id="어깨_3">
+                        </div>
+
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">4</div>
+                                통증이 얼마나 자주 발생하나요?
+                            </div>
+                            <div class="pain-options">
+                                <div class="pain-option">
+                                    <input type="radio" name="어깨_4" value="없음" id="shoulder_4_none">
+                                    <label for="shoulder_4_none">😊 없음</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="어깨_4" value="1달에 1회 미만" id="shoulder_4_month">
+                                    <label for="shoulder_4_month">📅 한달에 1회 미만</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="어깨_4" value="1달에 1-3회" id="shoulder_4_month3">
+                                    <label for="shoulder_4_month3">📅 한달에 1-3회</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="어깨_4" value="1주일에 1-2회" id="shoulder_4_week2">
+                                    <label for="shoulder_4_week2">📅 일주일에 1-2회</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="어깨_4" value="매일" id="shoulder_4_daily">
+                                    <label for="shoulder_4_daily">📅 매일</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">5</div>
+                                증상이 점점 심해지고 있나요?
+                            </div>
+                            <div class="pain-options">
+                                <div class="pain-option">
+                                    <input type="radio" name="어깨_5" value="아니오" id="shoulder_5_no">
+                                    <label for="shoulder_5_no">👍 아니요</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="어깨_5" value="예" id="shoulder_5_yes">
+                                    <label for="shoulder_5_yes">👎 예</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">6</div>
+                                기타 증상이 있나요?
+                            </div>
+                            <div class="pain-options">
+                                <div class="pain-option">
+                                    <input type="radio" name="어깨_6" value="없음" id="shoulder_6_none">
+                                    <label for="shoulder_6_none">😊 없음</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="어깨_6" value="있음" id="shoulder_6_yes">
+                                    <label for="shoulder_6_yes">😣 있음</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 팔꿈치 부위 통증 평가 -->
+            <div class="section-card pain-section" data-section="pain_팔꿈치">
+                <div class="section-header">
+                    <div class="section-icon">🦾</div>
+                    <div>
+                        <div class="section-title">팔꿈치 부위 통증 평가</div>
+                        <div class="section-subtitle">팔꿈치와 관련된 증상에 대해 답해주세요</div>
+                    </div>
+                </div>
+
+                <div class="body-part">
+                    <div class="pain-questions">
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">1</div>
+                                팔꿈치 부위에 통증이 있나요?
+                            </div>
+                            <div class="pain-options">
+                                <div class="pain-option">
+                                    <input type="radio" name="팔꿈치_1" value="없음" id="elbow_1_none">
+                                    <label for="elbow_1_none">😊 없음</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="팔꿈치_1" value="있음" id="elbow_1_yes">
+                                    <label for="elbow_1_yes">😣 있음</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">2</div>
+                                통증이 얼마나 오래 지속되나요?
+                            </div>
+                            <div class="pain-options">
+                                <div class="pain-option">
+                                    <input type="radio" name="팔꿈치_2" value="없음" id="elbow_2_none">
+                                    <label for="elbow_2_none">😊 없음</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="팔꿈치_2" value="1주일 미만" id="elbow_2_week">
+                                    <label for="elbow_2_week">📅 1주일 미만</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="팔꿈치_2" value="1주일 이상 지속" id="elbow_2_long">
+                                    <label for="elbow_2_long">📅 1주일 이상</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">3</div>
+                                통증의 강도는 어느 정도인가요?
+                            </div>
+                            <div class="emoji-scale">
+                                <div class="emoji-option" data-name="팔꿈치_3" data-value="없음">
+                                    <div class="emoji-face">😊</div>
+                                    <div class="emoji-text">없음</div>
+                                </div>
+                                <div class="emoji-option" data-name="팔꿈치_3" data-value="약한 통증">
+                                    <div class="emoji-face">🙂</div>
+                                    <div class="emoji-text">약함</div>
+                                </div>
+                                <div class="emoji-option" data-name="팔꿈치_3" data-value="중간 정도">
+                                    <div class="emoji-face">😐</div>
+                                    <div class="emoji-text">보통</div>
+                                </div>
+                                <div class="emoji-option" data-name="팔꿈치_3" data-value="심한 통증">
+                                    <div class="emoji-face">😢</div>
+                                    <div class="emoji-text">심함</div>
+                                </div>
+                                <div class="emoji-option" data-name="팔꿈치_3" data-value="매우 심한 통증">
+                                    <div class="emoji-face">😭</div>
+                                    <div class="emoji-text">매우심함</div>
+                                </div>
+                            </div>
+                            <input type="hidden" name="팔꿈치_3" id="팔꿈치_3">
+                        </div>
+
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">4</div>
+                                통증이 얼마나 자주 발생하나요?
+                            </div>
+                            <div class="pain-options">
+                                <div class="pain-option">
+                                    <input type="radio" name="팔꿈치_4" value="없음" id="elbow_4_none">
+                                    <label for="elbow_4_none">😊 없음</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="팔꿈치_4" value="1달에 1회 미만" id="elbow_4_month">
+                                    <label for="elbow_4_month">📅 한달에 1회 미만</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="팔꿈치_4" value="1달에 1-3회" id="elbow_4_month3">
+                                    <label for="elbow_4_month3">📅 한달에 1-3회</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="팔꿈치_4" value="1주일에 1-2회" id="elbow_4_week2">
+                                    <label for="elbow_4_week2">📅 일주일에 1-2회</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="팔꿈치_4" value="매일" id="elbow_4_daily">
+                                    <label for="elbow_4_daily">📅 매일</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">5</div>
+                                증상이 점점 심해지고 있나요?
+                            </div>
+                            <div class="pain-options">
+                                <div class="pain-option">
+                                    <input type="radio" name="팔꿈치_5" value="아니오" id="elbow_5_no">
+                                    <label for="elbow_5_no">👍 아니요</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="팔꿈치_5" value="예" id="elbow_5_yes">
+                                    <label for="elbow_5_yes">👎 예</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">6</div>
+                                기타 증상이 있나요?
+                            </div>
+                            <div class="pain-options">
+                                <div class="pain-option">
+                                    <input type="radio" name="팔꿈치_6" value="없음" id="elbow_6_none">
+                                    <label for="elbow_6_none">😊 없음</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="팔꿈치_6" value="있음" id="elbow_6_yes">
+                                    <label for="elbow_6_yes">😣 있음</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 손목 부위 통증 평가 -->
+            <div class="section-card pain-section" data-section="pain_손목">
+                <div class="section-header">
+                    <div class="section-icon">👋</div>
+                    <div>
+                        <div class="section-title">손목 부위 통증 평가</div>
+                        <div class="section-subtitle">손목과 관련된 증상에 대해 답해주세요</div>
+                    </div>
+                </div>
+
+                <div class="body-part">
+                    <div class="pain-questions">
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">1</div>
+                                손목 부위에 통증이 있나요?
+                            </div>
+                            <div class="pain-options">
+                                <div class="pain-option">
+                                    <input type="radio" name="손목_1" value="없음" id="wrist_1_none">
+                                    <label for="wrist_1_none">😊 없음</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="손목_1" value="있음" id="wrist_1_yes">
+                                    <label for="wrist_1_yes">😣 있음</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">2</div>
+                                통증이 얼마나 오래 지속되나요?
+                            </div>
+                            <div class="pain-options">
+                                <div class="pain-option">
+                                    <input type="radio" name="손목_2" value="없음" id="wrist_2_none">
+                                    <label for="wrist_2_none">😊 없음</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="손목_2" value="1주일 미만" id="wrist_2_week">
+                                    <label for="wrist_2_week">📅 1주일 미만</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="손목_2" value="1주일 이상 지속" id="wrist_2_long">
+                                    <label for="wrist_2_long">📅 1주일 이상</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">3</div>
+                                통증의 강도는 어느 정도인가요?
+                            </div>
+                            <div class="emoji-scale">
+                                <div class="emoji-option" data-name="손목_3" data-value="없음">
+                                    <div class="emoji-face">😊</div>
+                                    <div class="emoji-text">없음</div>
+                                </div>
+                                <div class="emoji-option" data-name="손목_3" data-value="약한 통증">
+                                    <div class="emoji-face">🙂</div>
+                                    <div class="emoji-text">약함</div>
+                                </div>
+                                <div class="emoji-option" data-name="손목_3" data-value="중간 정도">
+                                    <div class="emoji-face">😐</div>
+                                    <div class="emoji-text">보통</div>
+                                </div>
+                                <div class="emoji-option" data-name="손목_3" data-value="심한 통증">
+                                    <div class="emoji-face">😢</div>
+                                    <div class="emoji-text">심함</div>
+                                </div>
+                                <div class="emoji-option" data-name="손목_3" data-value="매우 심한 통증">
+                                    <div class="emoji-face">😭</div>
+                                    <div class="emoji-text">매우심함</div>
+                                </div>
+                            </div>
+                            <input type="hidden" name="손목_3" id="손목_3">
+                        </div>
+
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">4</div>
+                                통증이 얼마나 자주 발생하나요?
+                            </div>
+                            <div class="pain-options">
+                                <div class="pain-option">
+                                    <input type="radio" name="손목_4" value="없음" id="wrist_4_none">
+                                    <label for="wrist_4_none">😊 없음</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="손목_4" value="1달에 1회 미만" id="wrist_4_month">
+                                    <label for="wrist_4_month">📅 한달에 1회 미만</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="손목_4" value="1달에 1-3회" id="wrist_4_month3">
+                                    <label for="wrist_4_month3">📅 한달에 1-3회</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="손목_4" value="1주일에 1-2회" id="wrist_4_week2">
+                                    <label for="wrist_4_week2">📅 일주일에 1-2회</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="손목_4" value="매일" id="wrist_4_daily">
+                                    <label for="wrist_4_daily">📅 매일</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">5</div>
+                                증상이 점점 심해지고 있나요?
+                            </div>
+                            <div class="pain-options">
+                                <div class="pain-option">
+                                    <input type="radio" name="손목_5" value="아니오" id="wrist_5_no">
+                                    <label for="wrist_5_no">👍 아니요</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="손목_5" value="예" id="wrist_5_yes">
+                                    <label for="wrist_5_yes">👎 예</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">6</div>
+                                기타 증상이 있나요?
+                            </div>
+                            <div class="pain-options">
+                                <div class="pain-option">
+                                    <input type="radio" name="손목_6" value="없음" id="wrist_6_none">
+                                    <label for="wrist_6_none">😊 없음</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="손목_6" value="있음" id="wrist_6_yes">
+                                    <label for="wrist_6_yes">😣 있음</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 허리 부위 통증 평가 -->
+            <div class="section-card pain-section" data-section="pain_허리">
+                <div class="section-header">
+                    <div class="section-icon">🦴</div>
+                    <div>
+                        <div class="section-title">허리 부위 통증 평가</div>
+                        <div class="section-subtitle">허리와 관련된 증상에 대해 답해주세요</div>
+                    </div>
+                </div>
+
+                <div class="body-part">
+                    <div class="pain-questions">
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">1</div>
+                                허리 부위에 통증이 있나요?
+                            </div>
+                            <div class="pain-options">
+                                <div class="pain-option">
+                                    <input type="radio" name="허리_1" value="없음" id="back_1_none">
+                                    <label for="back_1_none">😊 없음</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="허리_1" value="있음" id="back_1_yes">
+                                    <label for="back_1_yes">😣 있음</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">2</div>
+                                통증이 얼마나 오래 지속되나요?
+                            </div>
+                            <div class="pain-options">
+                                <div class="pain-option">
+                                    <input type="radio" name="허리_2" value="없음" id="back_2_none">
+                                    <label for="back_2_none">😊 없음</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="허리_2" value="1주일 미만" id="back_2_week">
+                                    <label for="back_2_week">📅 1주일 미만</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="허리_2" value="1주일 이상 지속" id="back_2_long">
+                                    <label for="back_2_long">📅 1주일 이상</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">3</div>
+                                통증의 강도는 어느 정도인가요?
+                            </div>
+                            <div class="emoji-scale">
+                                <div class="emoji-option" data-name="허리_3" data-value="없음">
+                                    <div class="emoji-face">😊</div>
+                                    <div class="emoji-text">없음</div>
+                                </div>
+                                <div class="emoji-option" data-name="허리_3" data-value="약한 통증">
+                                    <div class="emoji-face">🙂</div>
+                                    <div class="emoji-text">약함</div>
+                                </div>
+                                <div class="emoji-option" data-name="허리_3" data-value="중간 정도">
+                                    <div class="emoji-face">😐</div>
+                                    <div class="emoji-text">보통</div>
+                                </div>
+                                <div class="emoji-option" data-name="허리_3" data-value="심한 통증">
+                                    <div class="emoji-face">😢</div>
+                                    <div class="emoji-text">심함</div>
+                                </div>
+                                <div class="emoji-option" data-name="허리_3" data-value="매우 심한 통증">
+                                    <div class="emoji-face">😭</div>
+                                    <div class="emoji-text">매우심함</div>
+                                </div>
+                            </div>
+                            <input type="hidden" name="허리_3" id="허리_3">
+                        </div>
+
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">4</div>
+                                통증이 얼마나 자주 발생하나요?
+                            </div>
+                            <div class="pain-options">
+                                <div class="pain-option">
+                                    <input type="radio" name="허리_4" value="없음" id="back_4_none">
+                                    <label for="back_4_none">😊 없음</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="허리_4" value="1달에 1회 미만" id="back_4_month">
+                                    <label for="back_4_month">📅 한달에 1회 미만</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="허리_4" value="1달에 1-3회" id="back_4_month3">
+                                    <label for="back_4_month3">📅 한달에 1-3회</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="허리_4" value="1주일에 1-2회" id="back_4_week2">
+                                    <label for="back_4_week2">📅 일주일에 1-2회</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="허리_4" value="매일" id="back_4_daily">
+                                    <label for="back_4_daily">📅 매일</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">5</div>
+                                증상이 점점 심해지고 있나요?
+                            </div>
+                            <div class="pain-options">
+                                <div class="pain-option">
+                                    <input type="radio" name="허리_5" value="아니오" id="back_5_no">
+                                    <label for="back_5_no">👍 아니요</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="허리_5" value="예" id="back_5_yes">
+                                    <label for="back_5_yes">👎 예</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">6</div>
+                                기타 증상이 있나요?
+                            </div>
+                            <div class="pain-options">
+                                <div class="pain-option">
+                                    <input type="radio" name="허리_6" value="없음" id="back_6_none">
+                                    <label for="back_6_none">😊 없음</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="허리_6" value="있음" id="back_6_yes">
+                                    <label for="back_6_yes">😣 있음</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 다리 부위 통증 평가 -->
+            <div class="section-card pain-section" data-section="pain_다리">
+                <div class="section-header">
+                    <div class="section-icon">🦵</div>
+                    <div>
+                        <div class="section-title">다리 부위 통증 평가</div>
+                        <div class="section-subtitle">다리와 관련된 증상에 대해 답해주세요</div>
+                    </div>
+                </div>
+
+                <div class="body-part">
+                    <div class="pain-questions">
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">1</div>
+                                다리 부위에 통증이 있나요?
+                            </div>
+                            <div class="pain-options">
+                                <div class="pain-option">
+                                    <input type="radio" name="다리_1" value="없음" id="leg_1_none">
+                                    <label for="leg_1_none">😊 없음</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="다리_1" value="있음" id="leg_1_yes">
+                                    <label for="leg_1_yes">😣 있음</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">2</div>
+                                통증이 얼마나 오래 지속되나요?
+                            </div>
+                            <div class="pain-options">
+                                <div class="pain-option">
+                                    <input type="radio" name="다리_2" value="없음" id="leg_2_none">
+                                    <label for="leg_2_none">😊 없음</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="다리_2" value="1주일 미만" id="leg_2_week">
+                                    <label for="leg_2_week">📅 1주일 미만</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="다리_2" value="1주일 이상 지속" id="leg_2_long">
+                                    <label for="leg_2_long">📅 1주일 이상</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">3</div>
+                                통증의 강도는 어느 정도인가요?
+                            </div>
+                            <div class="emoji-scale">
+                                <div class="emoji-option" data-name="다리_3" data-value="없음">
+                                    <div class="emoji-face">😊</div>
+                                    <div class="emoji-text">없음</div>
+                                </div>
+                                <div class="emoji-option" data-name="다리_3" data-value="약한 통증">
+                                    <div class="emoji-face">🙂</div>
+                                    <div class="emoji-text">약함</div>
+                                </div>
+                                <div class="emoji-option" data-name="다리_3" data-value="중간 정도">
+                                    <div class="emoji-face">😐</div>
+                                    <div class="emoji-text">보통</div>
+                                </div>
+                                <div class="emoji-option" data-name="다리_3" data-value="심한 통증">
+                                    <div class="emoji-face">😢</div>
+                                    <div class="emoji-text">심함</div>
+                                </div>
+                                <div class="emoji-option" data-name="다리_3" data-value="매우 심한 통증">
+                                    <div class="emoji-face">😭</div>
+                                    <div class="emoji-text">매우심함</div>
+                                </div>
+                            </div>
+                            <input type="hidden" name="다리_3" id="다리_3">
+                        </div>
+
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">4</div>
+                                통증이 얼마나 자주 발생하나요?
+                            </div>
+                            <div class="pain-options">
+                                <div class="pain-option">
+                                    <input type="radio" name="다리_4" value="없음" id="leg_4_none">
+                                    <label for="leg_4_none">😊 없음</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="다리_4" value="1달에 1회 미만" id="leg_4_month">
+                                    <label for="leg_4_month">📅 한달에 1회 미만</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="다리_4" value="1달에 1-3회" id="leg_4_month3">
+                                    <label for="leg_4_month3">📅 한달에 1-3회</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="다리_4" value="1주일에 1-2회" id="leg_4_week2">
+                                    <label for="leg_4_week2">📅 일주일에 1-2회</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="다리_4" value="매일" id="leg_4_daily">
+                                    <label for="leg_4_daily">📅 매일</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">5</div>
+                                증상이 점점 심해지고 있나요?
+                            </div>
+                            <div class="pain-options">
+                                <div class="pain-option">
+                                    <input type="radio" name="다리_5" value="아니오" id="leg_5_no">
+                                    <label for="leg_5_no">👍 아니요</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="다리_5" value="예" id="leg_5_yes">
+                                    <label for="leg_5_yes">👎 예</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pain-question">
+                            <div class="question-label">
+                                <div class="question-number">6</div>
+                                기타 증상이 있나요?
+                            </div>
+                            <div class="pain-options">
+                                <div class="pain-option">
+                                    <input type="radio" name="다리_6" value="없음" id="leg_6_none">
+                                    <label for="leg_6_none">😊 없음</label>
+                                </div>
+                                <div class="pain-option">
+                                    <input type="radio" name="다리_6" value="있음" id="leg_6_yes">
+                                    <label for="leg_6_yes">😣 있음</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 액션 버튼들 -->
+            <div class="form-actions">
+                <div class="auto-save-status" id="autoSaveStatus">자동 저장 중...</div>
+                <div>
+                    <button type="button" class="btn btn-primary" onclick="saveProgress()">💾 저장하기</button>
+                    <button type="submit" class="btn btn-success">✅ 제출하기</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // 전역 변수
+        const totalSections = document.querySelectorAll('.section-card').length;
+        let autoSaveInterval;
+
+        // DOM 로드 시 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeForm();
+            setupEmojiSelectors();
+            createSectionNavigator();
+            startAutoSave();
+            updateProgress();
+        });
+
+        // 폼 초기화
+        function initializeForm() {
+            // 로컬 스토리지에서 저장된 데이터 불러오기
+            loadSavedData();
+
+            // 스크롤 이벤트로 진행률 업데이트
+            window.addEventListener('scroll', updateProgress);
+
+            // 폼 변경 감지
+            const form = document.getElementById('surveyForm');
+            form.addEventListener('change', function() {
+                updateProgress();
+                saveToLocalStorage();
+                updateSectionNavigator();
+            });
+
+            // 입력 필드 변경 감지
+            const inputs = form.querySelectorAll('input, select, textarea');
+            inputs.forEach(input => {
+                input.addEventListener('input', function() {
+                    updateProgress();
+                    saveToLocalStorage();
+                });
+            });
+        }
+
+        // 섹션 내비게이터 생성
+        function createSectionNavigator() {
+            const navigator = document.getElementById('sectionNavigator');
+            const sections = document.querySelectorAll('.section-card');
+
+            sections.forEach((section, index) => {
+                const dot = document.createElement('div');
+                dot.className = 'nav-dot';
+                dot.dataset.section = index;
+                dot.title = section.querySelector('.section-title').textContent;
+                dot.addEventListener('click', function() {
+                    section.scrollIntoView({ behavior: 'smooth' });
+                });
+                navigator.appendChild(dot);
+            });
+        }
+
+        // 섹션 내비게이터 업데이트
+        function updateSectionNavigator() {
+            const sections = document.querySelectorAll('.section-card');
+            const dots = document.querySelectorAll('.nav-dot');
+
+            sections.forEach((section, index) => {
+                const inputs = section.querySelectorAll('input, select, textarea');
+                let filledCount = 0;
+                let totalCount = 0;
+
+                inputs.forEach(input => {
+                    if (input.type === 'hidden') return;
+                    totalCount++;
+
+                    if (input.type === 'radio') {
+                        const radioGroup = section.querySelectorAll(`input[name="${input.name}"]`);
+                        if (Array.from(radioGroup).some(r => r.checked)) {
+                            filledCount++;
+                            // 같은 라디오 그룹의 다른 항목들은 건너뜀
+                            const sameName = Array.from(inputs).filter(i => i.name === input.name);
+                            sameName.forEach(sn => {
+                                if (sn !== input) {
+                                    const inputIndex = Array.from(inputs).indexOf(sn);
+                                    if (inputIndex > Array.from(inputs).indexOf(input)) {
+                                        totalCount--;
+                                    }
+                                }
+                            });
+                        }
+                    } else if (input.value.trim() !== '') {
+                        filledCount++;
+                    }
+                });
+
+                // 중복 제거를 위한 라디오 그룹 처리
+                const radioNames = new Set();
+                const adjustedInputs = Array.from(inputs).filter(input => {
+                    if (input.type === 'radio') {
+                        if (radioNames.has(input.name)) {
+                            return false;
+                        }
+                        radioNames.add(input.name);
+                    }
+                    return input.type !== 'hidden';
+                });
+
+                const adjustedTotal = adjustedInputs.length;
+                let adjustedFilled = 0;
+
+                adjustedInputs.forEach(input => {
+                    if (input.type === 'radio') {
+                        const radioGroup = section.querySelectorAll(`input[name="${input.name}"]`);
+                        if (Array.from(radioGroup).some(r => r.checked)) {
+                            adjustedFilled++;
+                        }
+                    } else if (input.value.trim() !== '') {
+                        adjustedFilled++;
+                    }
+                });
+
+                const completionRate = adjustedTotal > 0 ? adjustedFilled / adjustedTotal : 0;
+
+                if (completionRate === 1) {
+                    dots[index].classList.add('completed');
+                    dots[index].classList.remove('current');
+                } else if (completionRate > 0) {
+                    dots[index].classList.add('current');
+                    dots[index].classList.remove('completed');
+                } else {
+                    dots[index].classList.remove('completed', 'current');
+                }
+            });
+        }
+
+        // 이모지 선택기 설정
+        function setupEmojiSelectors() {
+            // 육체적 부담 정도 이모지 선택기
+            const physicalBurdenEmojis = document.querySelectorAll('#physicalBurden .emoji-option, [data-name="physical_burden"]');
+            physicalBurdenEmojis.forEach(emoji => {
+                emoji.addEventListener('click', function() {
+                    const container = this.closest('.emoji-scale');
+                    if (!container) return;
+
+                    const emojis = container.querySelectorAll('.emoji-option');
+                    const hiddenInput = document.getElementById('physical_burden');
+
+                    emojis.forEach(e => e.classList.remove('selected'));
+                    this.classList.add('selected');
+
+                    if (hiddenInput) {
+                        hiddenInput.value = this.dataset.value;
+                    }
+
+                    updateProgress();
+                    saveToLocalStorage();
+                });
+            });
+
+            // 통증 강도 이모지 선택기들
+            const painEmojis = document.querySelectorAll('[data-name]');
+            painEmojis.forEach(emoji => {
+                emoji.addEventListener('click', function() {
+                    const fieldName = this.dataset.name;
+                    const value = this.dataset.value;
+                    const container = this.closest('.emoji-scale');
+
+                    if (!container || !fieldName) return;
+
+                    const emojis = container.querySelectorAll('.emoji-option');
+                    const hiddenInput = document.getElementById(fieldName);
+
+                    emojis.forEach(e => e.classList.remove('selected'));
+                    this.classList.add('selected');
+
+                    if (hiddenInput) {
+                        hiddenInput.value = value;
+                    }
+
+                    updateProgress();
+                    saveToLocalStorage();
+                });
+            });
+        }
+
+        // 진행률 업데이트
+        function updateProgress() {
+            const form = document.getElementById('surveyForm');
+            const inputs = form.querySelectorAll('input, select, textarea');
+            const requiredInputs = form.querySelectorAll('input[required], select[required], textarea[required]');
+
+            // 라디오 버튼 그룹별로 정리
+            const radioGroups = new Map();
+            const otherInputs = [];
+
+            inputs.forEach(input => {
+                if (input.type === 'hidden') return;
+
+                if (input.type === 'radio') {
+                    if (!radioGroups.has(input.name)) {
+                        radioGroups.set(input.name, []);
+                    }
+                    radioGroups.get(input.name).push(input);
+                } else {
+                    otherInputs.push(input);
+                }
+            });
+
+            let filledInputs = 0;
+            let totalInputs = radioGroups.size + otherInputs.length;
+
+            // 라디오 그룹 체크
+            radioGroups.forEach((group, name) => {
+                if (group.some(radio => radio.checked)) {
+                    filledInputs++;
+                }
+            });
+
+            // 기타 입력 필드 체크
+            otherInputs.forEach(input => {
+                if (input.value.trim() !== '') {
+                    filledInputs++;
+                }
+            });
+
+            // 필수 항목 체크
+            let filledRequired = 0;
+            let totalRequired = requiredInputs.length;
+
+            requiredInputs.forEach(input => {
+                if (input.value.trim() !== '') {
+                    filledRequired++;
+                }
+            });
+
+            const progress = totalInputs > 0 ? Math.round((filledInputs / totalInputs) * 100) : 0;
+            const requiredProgress = totalRequired > 0 ? Math.round((filledRequired / totalRequired) * 100) : 100;
+
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+
+            progressFill.style.width = progress + '%';
+
+            if (progress === 100) {
+                progressText.textContent = `🎉 완료! (${progress}%)`;
+                progressText.style.color = '#28a745';
+            } else if (requiredProgress === 100) {
+                progressText.textContent = `✅ 필수항목 완료 (전체 ${progress}%)`;
+                progressText.style.color = '#007bff';
+            } else {
+                progressText.textContent = `진행중... (${progress}% | 필수 ${requiredProgress}%)`;
+                progressText.style.color = '#666';
+            }
+
+            updateSectionNavigator();
+        }
+
+        // 로컬 스토리지에 저장
+        function saveToLocalStorage() {
+            const form = document.getElementById('surveyForm');
+            const formData = new FormData(form);
+            const data = {};
+
+            for (let [key, value] of formData.entries()) {
+                if (data[key]) {
+                    if (Array.isArray(data[key])) {
+                        data[key].push(value);
+                    } else {
+                        data[key] = [data[key], value];
+                    }
+                } else {
+                    data[key] = value;
+                }
+            }
+
+            // 히든 필드 값들도 저장
+            const hiddenInputs = form.querySelectorAll('input[type="hidden"]');
+            hiddenInputs.forEach(input => {
+                if (input.value && input.name !== 'csrf_token') {
+                    data[input.name] = input.value;
+                }
+            });
+
+            localStorage.setItem('survey_002_data', JSON.stringify(data));
+
+            // 저장 상태 표시
+            const status = document.getElementById('autoSaveStatus');
+            status.textContent = '💾 자동 저장됨 (' + new Date().toLocaleTimeString() + ')';
+            status.style.color = '#28a745';
+        }
+
+        // 저장된 데이터 불러오기
+        function loadSavedData() {
+            const savedData = localStorage.getItem('survey_002_data');
+            if (!savedData) return;
+
+            try {
+                const data = JSON.parse(savedData);
+                const form = document.getElementById('surveyForm');
+
+                Object.keys(data).forEach(key => {
+                    const elements = form.querySelectorAll(`[name="${key}"]`);
+
+                    elements.forEach(element => {
+                        if (element.type === 'radio') {
+                            if (element.value === data[key]) {
+                                element.checked = true;
+                            }
+                        } else if (element.type === 'hidden') {
+                            element.value = data[key];
+
+                            // 이모지 선택 상태 복원
+                            const emojiOptions = form.querySelectorAll(`[data-name="${key}"]`);
+                            emojiOptions.forEach(option => {
+                                if (option.dataset.value === data[key]) {
+                                    option.classList.add('selected');
+                                }
+                            });
+                        } else {
+                            element.value = data[key];
+                        }
+                    });
+                });
+
+                updateProgress();
+                updateSectionNavigator();
+
+            } catch (e) {
+                console.error('저장된 데이터를 불러오는데 실패했습니다:', e);
+            }
+        }
+
+        // 자동 저장 시작
+        function startAutoSave() {
+            autoSaveInterval = setInterval(function() {
+                saveToLocalStorage();
+            }, 30000); // 30초마다 자동 저장
+        }
+
+        // 수동 저장
+        function saveProgress() {
+            saveToLocalStorage();
+            alert('💾 저장되었습니다!\n\n언제든지 돌아와서 이어서 작성하실 수 있어요.');
+        }
+
+        // 다크 모드 토글
+        function toggleTheme() {
+            const body = document.body;
+            const button = document.querySelector('.theme-toggle');
+
+            if (body.classList.contains('dark-mode')) {
+                body.classList.remove('dark-mode');
+                button.textContent = '🌙 다크모드';
+                localStorage.setItem('theme', 'light');
+            } else {
+                body.classList.add('dark-mode');
+                button.textContent = '☀️ 라이트모드';
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        // 테마 설정 불러오기
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-mode');
+                document.querySelector('.theme-toggle').textContent = '☀️ 라이트모드';
+            }
+        });
+
+        // 폼 제출 시 로컬 스토리지 정리
+        document.getElementById('surveyForm').addEventListener('submit', function() {
+            localStorage.removeItem('survey_002_data');
+        });
+
+        // 페이지 벗어날 때 경고
+        window.addEventListener('beforeunload', function(e) {
+            const form = document.getElementById('surveyForm');
+            const inputs = form.querySelectorAll('input, select, textarea');
+            let hasData = false;
+
+            inputs.forEach(input => {
+                if (input.value.trim() !== '' && input.type !== 'hidden' && input.name !== 'csrf_token') {
+                    hasData = true;
+                }
+            });
+
+            if (hasData) {
+                e.preventDefault();
+                e.returnValue = '작성 중인 내용이 있습니다. 정말 나가시겠습니까?';
+            }
+        });
+
+        // 접근성 개선: 키보드 내비게이션
+        document.addEventListener('keydown', function(e) {
+            // Ctrl + Enter로 폼 제출
+            if (e.ctrlKey && e.key === 'Enter') {
+                document.getElementById('surveyForm').submit();
+            }
+
+            // Ctrl + S로 저장
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                saveProgress();
+            }
+        });
+
+        // 스크롤 시 현재 섹션 하이라이트
+        window.addEventListener('scroll', function() {
+            const sections = document.querySelectorAll('.section-card');
+            const dots = document.querySelectorAll('.nav-dot');
+            const scrollPosition = window.scrollY + window.innerHeight / 2;
+
+            sections.forEach((section, index) => {
+                const sectionTop = section.offsetTop;
+                const sectionBottom = sectionTop + section.offsetHeight;
+
+                if (scrollPosition >= sectionTop && scrollPosition <= sectionBottom) {
+                    dots.forEach(dot => dot.classList.remove('current'));
+                    if (!dots[index].classList.contains('completed')) {
+                        dots[index].classList.add('current');
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
