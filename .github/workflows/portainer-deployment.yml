@@ -9,6 +9,7 @@ on:
       - 'redis/**'
       - 'docker-compose.yml'
       - '.github/workflows/**'
+  workflow_dispatch:
 
 env:
   REGISTRY: registry.jclee.me
