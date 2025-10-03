@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# Cloudflare Pages Build Ignore Script
+# This project uses Cloudflare Workers (not Pages)
+# Workers deployment is handled by GitHub Actions
+
+# Always skip Pages build
+exit 1
