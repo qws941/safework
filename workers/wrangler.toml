@@ -1,100 +1,40 @@
+# ============================================
+# SafeWork - Cloudflare Workers Configuration
+# ============================================
+
 name = "safework"
 main = "src/index.ts"
 compatibility_date = "2024-10-22"
-compatibility_flags = [
-  "nodejs_compat"
-]
+compatibility_flags = ["nodejs_compat"]
 account_id = "a8d9c67f586acdd15eebcc65ca3aa5bb"
 
-# KV Namespaces - CF Native Naming Convention
-# Development KV (uses SESSION_STORE for dev/preview)
-[[kv_namespaces]]
-binding = "SAFEWORK_KV"
-id = "51e576a5d32d48bbac9c8bad7cb26556"  # SESSION_STORE (used for dev/preview)
-
-# Cache layer: COMPUTED_DATA, STATISTICS, TEMP_RESPONSES
-[[kv_namespaces]]
-binding = "CACHE_LAYER"
-id = "5a30c645c88644068089f1733b2c81b9"
-
-# Authentication: JWT_TOKENS, API_KEYS, USER_SESSIONS
-[[kv_namespaces]]
-binding = "AUTH_STORE"
-id = "e6a6466f4c53466087f6fdd2cd6ca001"
-
-# Environment variables
-[vars]
-JWT_SECRET = "safework-jwt-secret-2024-production"
-ADMIN_USERNAME = "admin"
-BACKEND_URL = "https://safework.jclee.me"
-ENVIRONMENT = "production"
-
-# Routes
-[[routes]]
-pattern = "safework.jclee.me/*"
-zone_name = "jclee.me"
-
-# Cloudflare Analytics Engine for real-time metrics (disabled - Free plan)
-# [[analytics_engine_datasets]]
-# binding = "SAFEWORK_ANALYTICS"
-# dataset = "safework_usage_metrics"
-
-# Durable Objects for stateful operations (disabled - not needed for now)
-# [[durable_objects.bindings]]
-# name = "SURVEY_SESSION"
-# class_name = "SurveySession"
-# script_name = "safework"
-
-# AI Gateway for enhanced AI features
-[ai]
-binding = "AI"
-
-# R2 Object Storage for files, exports, and documents
-[[r2_buckets]]
-binding = "SAFEWORK_STORAGE"
-bucket_name = "safework-storage-prod"
-preview_bucket_name = "safework-storage-prod"
-
-# Cloudflare Queues for background job processing (Requires Paid Plan)
-# [[queues.producers]]
-# binding = "SAFEWORK_QUEUE"
-# queue = "safework-jobs"
-
-# [[queues.consumers]]
-# queue = "safework-jobs"
-# max_batch_size = 10
-# max_batch_timeout = 30
-# max_retries = 3
-# dead_letter_queue = "safework-jobs-dlq"
-
-# Hyperdrive for PostgreSQL acceleration (optional - for hybrid mode)
-# [[hyperdrive]]
-# binding = "HYPERDRIVE"
-# id = "your-hyperdrive-id"
-
-# Build configuration for CI/CD
+# Build configuration
 [build]
 command = "npm run build"
 cwd = "."
 watch_dir = "src"
 
-# Resource limits (disabled for Free plan)
-# [limits]
-# cpu_ms = 50  # Requires paid plan
-# memory_mb setting not available - Workers use fixed memory per plan tier
+# ============================================
+# Production Environment (Default)
+# ============================================
 
-# Rate limiting removed for Free plan
-
-# Development environment
-[env.development]
-name = "safework-dev"
-vars = { BACKEND_URL = "http://localhost:4545", DEBUG = "true", ENVIRONMENT = "development" }
-
-# Production environment
 [env.production]
 name = "safework"
 
-# KV Namespaces for production (override global config for production-specific namespaces)
+# Routes
+[[env.production.routes]]
+pattern = "safework.jclee.me/*"
+zone_name = "jclee.me"
+
+# Environment Variables
+[env.production.vars]
+JWT_SECRET = "safework-jwt-secret-2024-production"
+ADMIN_USERNAME = "admin"
+BACKEND_URL = "https://safework.jclee.me"
+DEBUG = "false"
+ENVIRONMENT = "production"
+
+# KV Namespaces
 [[env.production.kv_namespaces]]
 binding = "SAFEWORK_KV"
 id = "54cbaf6aeff64ebbab07adb7ac56f5c8"  # production-SAFEWORK_KV
@@ -107,29 +47,60 @@ id = "5a30c645c88644068089f1733b2c81b9"
 binding = "AUTH_STORE"
 id = "e6a6466f4c53466087f6fdd2cd6ca001"
 
-[env.production.vars]
-JWT_SECRET = "safework-jwt-secret-2024-production"
-ADMIN_USERNAME = "admin"
-BACKEND_URL = "https://safework.jclee.me"
-DEBUG = "false"
-ENVIRONMENT = "production"
-
-# D1 Database for production
+# D1 Database
 [[env.production.d1_databases]]
 binding = "PRIMARY_DB"
 database_name = "safework-primary"
 database_id = "d1db1d92-f598-415e-910f-1af511bc182f"
 
-# R2 Storage for production
+# R2 Object Storage
 [[env.production.r2_buckets]]
 binding = "SAFEWORK_STORAGE"
 bucket_name = "safework-storage-prod"
 
-# AI Gateway for production
+# AI Gateway
 [env.production.ai]
 binding = "AI"
 
-# Queue for production (Requires Paid Plan)
-# [[env.production.queues.producers]]
-# binding = "SAFEWORK_QUEUE"
-# queue = "safework-jobs-prod"
+# ============================================
+# Development Environment
+# ============================================
+
+[env.development]
+name = "safework-dev"
+
+# Environment Variables
+[env.development.vars]
+JWT_SECRET = "safework-jwt-secret-2024-dev"
+ADMIN_USERNAME = "admin"
+BACKEND_URL = "http://localhost:4545"
+DEBUG = "true"
+ENVIRONMENT = "development"
+
+# KV Namespaces (use same as production for dev)
+[[env.development.kv_namespaces]]
+binding = "SAFEWORK_KV"
+id = "51e576a5d32d48bbac9c8bad7cb26556"  # SESSION_STORE (dev)
+
+[[env.development.kv_namespaces]]
+binding = "CACHE_LAYER"
+id = "5a30c645c88644068089f1733b2c81b9"
+
+[[env.development.kv_namespaces]]
+binding = "AUTH_STORE"
+id = "e6a6466f4c53466087f6fdd2cd6ca001"
+
+# D1 Database (use same as production for dev)
+[[env.development.d1_databases]]
+binding = "PRIMARY_DB"
+database_name = "safework-primary"
+database_id = "d1db1d92-f598-415e-910f-1af511bc182f"
+
+# R2 Object Storage (use same as production for dev)
+[[env.development.r2_buckets]]
+binding = "SAFEWORK_STORAGE"
+bucket_name = "safework-storage-prod"
+
+# AI Gateway
+[env.development.ai]
+binding = "AI"
