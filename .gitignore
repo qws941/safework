@@ -121,3 +121,4 @@ data/workers/node_modules/
 
 # Claude Code conversations
 .claude/
+.claude/settings.local.json
