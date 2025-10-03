@@ -25,8 +25,7 @@ import queueHandler from './queue-handler';
 
 export interface Env {
   // KV Namespaces - CF Native Naming
-  SAFEWORK_KV: KVNamespace;
-  SESSION_STORE: KVNamespace;
+  SAFEWORK_KV: KVNamespace;  // Unified storage: sessions, forms, cache
   CACHE_LAYER: KVNamespace;
   AUTH_STORE: KVNamespace;
 
