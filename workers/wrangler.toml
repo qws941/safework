@@ -20,6 +20,7 @@ watch_dir = "src"
 
 [env.production]
 name = "safework"
+workers_dev = true
 
 # Routes
 [[env.production.routes]]
