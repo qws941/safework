@@ -19,6 +19,9 @@ import { admin002Routes } from './routes/admin-002';
 import { surveyD1Routes } from './routes/survey-d1';
 import { survey002D1Routes } from './routes/survey-002-d1';
 import { unifiedAdminRoutes } from './routes/admin-unified';
+import warningSignRoutes from './routes/warning-sign';
+import { nativeApiRoutes } from './routes/native-api';
+import queueHandler from './queue-handler';
 
 export interface Env {
   // KV Namespaces - CF Native Naming
@@ -30,6 +33,12 @@ export interface Env {
   // D1 Database
   SAFEWORK_DB?: D1Database;
   PRIMARY_DB: D1Database;
+
+  // R2 Object Storage
+  SAFEWORK_STORAGE: R2Bucket;
+
+  // Cloudflare Queues (Optional - Requires Paid Plan)
+  SAFEWORK_QUEUE?: Queue<any>;
 
   // Analytics Engine (disabled - Free plan)
   // SAFEWORK_ANALYTICS: AnalyticsEngineDataset;
@@ -97,6 +106,8 @@ app.route('/api/survey/d1/002', survey002D1Routes);  // D1 Native API (002)
 app.route('/api/excel', excelProcessorRoutes);
 app.route('/api/form/001', form001Routes);
 app.route('/api/form/002', form002Routes);
+app.route('/api/warning-sign', warningSignRoutes);  // Warning Sign Generator (Edge API)
+app.route('/api/native', nativeApiRoutes);  // Cloudflare Native Services (R2, Queue, AI)
 
 // Admin routes (temporarily public for testing - add JWT later)
 app.route('/api/admin', adminRoutes);  // 001 Admin API
@@ -727,4 +738,11 @@ app.onError((err, c) => {
   return c.json({ error: 'Internal Server Error' }, 500);
 });
 
-export default app;// Cloud Native UI Migration - 001 Form Update 2025. 09. 29. (월) 18:03:28 KST
+// Export both HTTP handler and Queue consumer
+export default {
+  fetch: app.fetch,
+  queue: queueHandler.queue,
+};
+
+// Cloud Native UI Migration - 001 Form Update 2025. 09. 29. (월) 18:03:28 KST
+// Cloudflare Native Architecture - R2, Queue, AI Integration 2025. 10. 02.

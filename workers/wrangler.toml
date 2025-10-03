@@ -50,15 +50,43 @@ zone_name = "jclee.me"
 # class_name = "SurveySession"
 # script_name = "safework"
 
-# AI Gateway for enhanced AI features (if needed)
+# AI Gateway for enhanced AI features
 [ai]
 binding = "AI"
+
+# R2 Object Storage for files, exports, and documents (disabled - bucket not created yet)
+# [[r2_buckets]]
+# binding = "SAFEWORK_STORAGE"
+# bucket_name = "safework-storage"
+# preview_bucket_name = "safework-storage-preview"
+
+# Cloudflare Queues for background job processing (Requires Paid Plan)
+# [[queues.producers]]
+# binding = "SAFEWORK_QUEUE"
+# queue = "safework-jobs"
+
+# [[queues.consumers]]
+# queue = "safework-jobs"
+# max_batch_size = 10
+# max_batch_timeout = 30
+# max_retries = 3
+# dead_letter_queue = "safework-jobs-dlq"
+
+# Hyperdrive for PostgreSQL acceleration (optional - for hybrid mode)
+# [[hyperdrive]]
+# binding = "HYPERDRIVE"
+# id = "your-hyperdrive-id"
 
 # Build configuration for CI/CD
 [build]
 command = "npm run build"
 cwd = "."
 watch_dir = "src"
+
+# Resource limits (disabled for Free plan)
+# [limits]
+# cpu_ms = 50  # Requires paid plan
+# memory_mb setting not available - Workers use fixed memory per plan tier
 
 # Rate limiting removed for Free plan
 
@@ -100,3 +128,13 @@ ENVIRONMENT = "production"
 binding = "PRIMARY_DB"
 database_name = "safework-primary"
 database_id = "d1db1d92-f598-415e-910f-1af511bc182f"
+
+# R2 Storage for production (disabled - bucket not created yet)
+# [[env.production.r2_buckets]]
+# binding = "SAFEWORK_STORAGE"
+# bucket_name = "safework-storage-prod"
+
+# Queue for production (Requires Paid Plan)
+# [[env.production.queues.producers]]
+# binding = "SAFEWORK_QUEUE"
+# queue = "safework-jobs-prod"

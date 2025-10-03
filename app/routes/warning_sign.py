@@ -4,7 +4,7 @@ Modern chemical warning sign generator with real-time preview
 """
 from flask import Blueprint, render_template, request, jsonify, send_file, current_app
 from app import db
-from app.models_warning_sign import (
+from models_warning_sign import (
     WarningSign, WarningSignTemplate, GHSPictogram,
     HazardStatement, PrecautionaryStatement
 )

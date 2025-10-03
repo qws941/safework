@@ -53,15 +53,40 @@ jobs:
 
           sleep 10  # Wait for propagation
 
-          # Test endpoints
-          for endpoint in "/" "/survey/001_musculoskeletal_symptom_survey" "/survey/002_musculoskeletal_symptom_program"; do
-            echo "🔍 Testing endpoint: $endpoint"
-            response=$(curl -s -m 10 "https://safework.jclee.me$endpoint" || echo "FAILED")
+          # Test health endpoints
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🏥 Health Checks"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-            if echo "$response" | grep -q -i "safework"; then
-              echo "✅ Endpoint $endpoint: OK"
+          health=$(curl -s https://safework.jclee.me/api/health)
+          if echo "$health" | grep -q "healthy"; then
+            echo "✅ Workers Health: OK"
+          else
+            echo "❌ Workers Health: FAILED"
+          fi
+
+          native_health=$(curl -s https://safework.jclee.me/api/native/native/health)
+          if echo "$native_health" | grep -q "d1"; then
+            echo "✅ Native Services Health: OK"
+            echo "$native_health" | jq -r '.services | to_entries[] | "  - \(.key): \(.value.status)"' || true
+          else
+            echo "⚠️ Native Services Health: Check required"
+          fi
+
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🌐 Endpoint Tests"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+          # Test main endpoints
+          for endpoint in "/" "/admin" "/api/native/files"; do
+            echo "🔍 Testing: $endpoint"
+            status=$(curl -s -o /dev/null -w "%{http_code}" -m 10 "https://safework.jclee.me$endpoint" || echo "000")
+
+            if [ "$status" = "200" ] || [ "$status" = "302" ]; then
+              echo "✅ $endpoint: HTTP $status"
             else
-              echo "⚠️ Endpoint $endpoint: Check required"
+              echo "⚠️ $endpoint: HTTP $status"
             fi
           done
 

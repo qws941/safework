@@ -229,6 +229,7 @@ def create_app(config_name=None):
     from routes.pdf_export import pdf_export_bp
     from routes.mobile_auth import mobile_auth_bp
     from routes.simple_ip import simple_ip_bp
+    from routes.warning_sign import warning_sign_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix="/auth")
@@ -241,6 +242,7 @@ def create_app(config_name=None):
     app.register_blueprint(health_bp)
     app.register_blueprint(document_bp, url_prefix="/documents")
     app.register_blueprint(document_admin_bp, url_prefix="/admin/documents")
+    app.register_blueprint(warning_sign_bp, url_prefix="/warning-sign")
 
     # SafeWork API routes (v2.0)
     try:
