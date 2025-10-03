@@ -54,11 +54,11 @@ zone_name = "jclee.me"
 [ai]
 binding = "AI"
 
-# R2 Object Storage for files, exports, and documents (disabled - bucket not created yet)
-# [[r2_buckets]]
-# binding = "SAFEWORK_STORAGE"
-# bucket_name = "safework-storage"
-# preview_bucket_name = "safework-storage-preview"
+# R2 Object Storage for files, exports, and documents
+[[r2_buckets]]
+binding = "SAFEWORK_STORAGE"
+bucket_name = "safework-storage-prod"
+preview_bucket_name = "safework-storage-prod"
 
 # Cloudflare Queues for background job processing (Requires Paid Plan)
 # [[queues.producers]]
@@ -129,10 +129,10 @@ binding = "PRIMARY_DB"
 database_name = "safework-primary"
 database_id = "d1db1d92-f598-415e-910f-1af511bc182f"
 
-# R2 Storage for production (disabled - bucket not created yet)
-# [[env.production.r2_buckets]]
-# binding = "SAFEWORK_STORAGE"
-# bucket_name = "safework-storage-prod"
+# R2 Storage for production
+[[env.production.r2_buckets]]
+binding = "SAFEWORK_STORAGE"
+bucket_name = "safework-storage-prod"
 
 # Queue for production (Requires Paid Plan)
 # [[env.production.queues.producers]]
