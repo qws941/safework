@@ -125,6 +125,10 @@ database_id = "d1db1d92-f598-415e-910f-1af511bc182f"
 binding = "SAFEWORK_STORAGE"
 bucket_name = "safework-storage-prod"
 
+# AI Gateway for production
+[env.production.ai]
+binding = "AI"
+
 # Queue for production (Requires Paid Plan)
 # [[env.production.queues.producers]]
 # binding = "SAFEWORK_QUEUE"
