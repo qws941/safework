@@ -608,7 +608,12 @@ app.get('/survey/:surveyType', async (c) => {
     console.log('✅ 002 Complete Form - 56 fields with pain assessment - CLOUDFLARE WORKERS NATIVE');
     return c.html(survey002FormTemplate);
   }
-  
+
+  if (surveyType === '002_new_employee_health_checkup') {
+    console.log('✅ 002 New Employee Health Checkup - CLOUDFLARE WORKERS NATIVE');
+    return c.html(survey002FormTemplate); // 동일한 템플릿 사용 (추후 별도 템플릿 가능)
+  }
+
   // Map survey types to template keys
   const formTemplates = {
     '001_musculoskeletal_symptom_survey': '001',
