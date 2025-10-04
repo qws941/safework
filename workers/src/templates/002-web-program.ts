@@ -446,93 +446,218 @@ export const form002WebProgram = `<!DOCTYPE html>
             const frequency = parseInt(document.getElementById(\`part_\${idx}_frequency\`)?.value) || 0;
             const intensity = parseInt(document.getElementById(\`part_\${idx}_intensity\`)?.value) || 0;
 
-            let status = '정상';
-            let badgeClass = 'bg-success';
-            let cardClass = '';
-
-            if (duration >= 2 && frequency >= 1 && intensity >= 3) {
-                status = '통증호소자';
-                badgeClass = 'bg-danger pain-complainant';
-                cardClass = 'has-pain';
-                painCount++;
-            } else if ((duration >= 2 || frequency >= 1) && intensity >= 2) {
-                status = '관리대상자';
-                badgeClass = 'bg-warning managed';
-                cardClass = 'needs-management';
-                managedCount++;
-            }
-
+            const assessment = assessPainStatus(duration, frequency, intensity);
             const badge = document.getElementById(\`badge_\${idx}\`);
             const card = document.getElementById(\`card_\${idx}\`);
 
-            if (badge && (duration > 0 || frequency > 0 || intensity > 0)) {
+            // 배지 업데이트
+            if (badge && assessment.score > 0) {
                 badge.style.display = 'inline-block';
-                badge.textContent = status;
-                badge.className = 'badge float-end ' + badgeClass;
+                badge.textContent = assessment.status;
+                badge.className = 'badge float-end bg-' + assessment.level;
             } else if (badge) {
                 badge.style.display = 'none';
             }
 
+            // 카드 스타일 업데이트
             if (card) {
-                card.className = 'card body-part-card ' + cardClass;
+                card.className = 'card body-part-card';
+                if (assessment.level === 'danger') {
+                    card.classList.add('has-pain');
+                    painCount++;
+                } else if (assessment.level === 'warning') {
+                    card.classList.add('needs-management');
+                    managedCount++;
+                } else if (assessment.level === 'success') {
+                    normalCount++;
+                }
             }
         });
 
-        // 상태 표시 업데이트
-        const realtimeStatus = document.getElementById('realtimeStatus');
-        const statusIndicator = document.getElementById('statusIndicator');
-        const statusText = document.getElementById('statusText');
+        // 실시간 상태 패널 업데이트
+        const statusPanel = document.getElementById('realtimeStatus');
+        const statusContent = document.getElementById('statusContent');
 
-        if (painCount > 0) {
-            realtimeStatus.style.display = 'block';
-            statusIndicator.className = 'status-indicator status-danger';
-            statusText.textContent = '통증호소자 발견';
-        } else if (managedCount > 0) {
-            realtimeStatus.style.display = 'block';
-            statusIndicator.className = 'status-indicator status-warning';
-            statusText.textContent = '관리대상자 있음';
-        } else if (painCount === 0 && managedCount === 0) {
-            const hasInput = bodyParts.some((_, idx) => {
-                const duration = parseInt(document.getElementById(\`part_\${idx}_duration\`)?.value) || 0;
-                return duration > 0;
-            });
-            if (hasInput) {
-                realtimeStatus.style.display = 'block';
-                statusIndicator.className = 'status-indicator status-success';
-                statusText.textContent = '정상 범위';
-            }
+        if (painCount + managedCount + normalCount > 0 && statusPanel && statusContent) {
+            statusPanel.style.display = 'block';
+            statusContent.innerHTML = \`
+                <div class="mb-2">
+                    <span class="status-indicator status-danger"></span>
+                    <strong>통증호소자:</strong> \${painCount}
+                </div>
+                <div class="mb-2">
+                    <span class="status-indicator status-warning"></span>
+                    <strong>관리대상자:</strong> \${managedCount}
+                </div>
+                <div>
+                    <span class="status-indicator status-success"></span>
+                    <strong>정상:</strong> \${normalCount}
+                </div>
+            \`;
         }
-
-        document.getElementById('painCount').textContent = \`통증호소자: \${painCount}\`;
-        document.getElementById('managedCount').textContent = \`관리대상자: \${managedCount}\`;
     }
 
-    // 진행률 업데이트
-    function updateProgress() {
-        const totalFields = 5 + 36; // 기본정보 5개 + 통증부위 36개 (6부위 x 6문항)
-        let filledFields = 0;
+    // 이벤트 리스너 등록
+    document.addEventListener('DOMContentLoaded', function() {
+        // 진행률 업데이트
+        document.querySelectorAll('input, select').forEach(field => {
+            field.addEventListener('change', updateProgress);
+            field.addEventListener('input', updateProgress);
+        });
 
-        // 기본 정보
-        if (document.getElementById('name')?.value) filledFields++;
-        if (document.getElementById('age')?.value) filledFields++;
-        if (document.getElementById('gender')?.value) filledFields++;
-        if (document.getElementById('work_experience')?.value) filledFields++;
-        if (document.getElementById('department')?.value) filledFields++;
-
-        // 통증부위
+        // 실시간 NIOSH 판정
         for (let i = 0; i < 6; i++) {
-            if (document.getElementById(\`part_\${i}_location\`)?.value) filledFields++;
-            if (document.getElementById(\`part_\${i}_duration\`)?.value) filledFields++;
-            if (document.getElementById(\`part_\${i}_intensity\`)?.value) filledFields++;
-            if (document.getElementById(\`part_\${i}_frequency\`)?.value) filledFields++;
-            if (document.getElementById(\`part_\${i}_worktime\`)?.value) filledFields++;
-            if (document.getElementById(\`part_\${i}_resttime\`)?.value) filledFields++;
+            ['duration', 'frequency', 'intensity'].forEach(field => {
+                const el = document.getElementById(\`part_\${i}_\${field}\`);
+                if (el) el.addEventListener('change', updateRealtimeStatus);
+            });
         }
 
-        const progress = Math.round((filledFields / totalFields) * 100);
-        document.getElementById('progressBar').style.width = progress + '%';
-        document.getElementById('progressPercent').textContent = progress;
-    }
+        updateProgress();
+    });
+
+    document.getElementById('symptomForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        // NIOSH Symptom Survey 기준 자동 판정
+        const bodyParts = ['목', '어깨', '팔/팔꿈치', '손/손목/손가락', '허리', '다리/발'];
+        const results = [];
+
+        bodyParts.forEach((part, idx) => {
+            const duration = parseInt(document.getElementById(\`part_\${idx}_duration\`).value) || 0;
+            const frequency = parseInt(document.getElementById(\`part_\${idx}_frequency\`).value) || 0;
+            const intensity = parseInt(document.getElementById(\`part_\${idx}_intensity\`).value) || 0;
+
+            const assessment = assessPainStatus(duration, frequency, intensity);
+            results.push({
+                part,
+                status: assessment.status,
+                score: assessment.score,
+                duration,
+                frequency,
+                intensity
+            });
+        });
+
+        // 데이터 수집
+        const formData = {
+            form_type: '002_musculoskeletal_symptom_program',
+            name: document.getElementById('name').value,
+            age: parseInt(document.getElementById('age').value),
+            gender: parseInt(document.getElementById('gender').value),
+            work_experience: parseFloat(document.getElementById('work_experience').value),
+            department: document.getElementById('department').value,
+            responses: {
+                line_name: document.getElementById('line_name').value,
+                task_desc: document.getElementById('task_desc').value,
+                body_parts_assessment: results,
+                pain_data: bodyParts.map((_, idx) => ({
+                    part: bodyParts[idx],
+                    location: document.getElementById(\`part_\${idx}_location\`).value,
+                    duration: document.getElementById(\`part_\${idx}_duration\`).value,
+                    intensity: document.getElementById(\`part_\${idx}_intensity\`).value,
+                    frequency: document.getElementById(\`part_\${idx}_frequency\`).value,
+                    worktime: document.getElementById(\`part_\${idx}_worktime\`).value,
+                    resttime: document.getElementById(\`part_\${idx}_resttime\`).value
+                })),
+                physical_burden: [1,2,3,4].map(i => document.getElementById(\`physical_burden_\${i}\`).value),
+                niosh_results: results
+            }
+        };
+
+        // API 전송
+        try {
+            const response = await fetch('/api/survey/d1/002/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                // 결과 탭으로 이동
+                const resultsTab = new bootstrap.Tab(document.querySelector('a[href="#result-view"]'));
+                resultsTab.show();
+
+                // 통계 계산
+                const painComplainants = results.filter(r => r.status === '통증호소자').length;
+                const managed = results.filter(r => r.status === '관리대상자').length;
+                const normal = results.filter(r => r.status === '정상').length;
+
+                // 결과 표시
+                document.getElementById('results').innerHTML = \`
+                    <h3 class="mb-4"><i class="bi bi-clipboard-data"></i> NIOSH Symptom Survey 판정 결과</h3>
+
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="card bg-danger text-white">
+                                <div class="card-body text-center">
+                                    <h2>\${painComplainants}</h2>
+                                    <p class="mb-0">통증호소자</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-warning text-dark">
+                                <div class="card-body text-center">
+                                    <h2>\${managed}</h2>
+                                    <p class="mb-0">관리대상자</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-success text-white">
+                                <div class="card-body text-center">
+                                    <h2>\${normal}</h2>
+                                    <p class="mb-0">정상</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h4 class="mb-3">신체부위별 평가 결과</h4>
+                    <div class="row">
+                        \${results.map(r => \`
+                            <div class="col-md-4 mb-3">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h5>\${r.part}</h5>
+                                        <span class="badge result-badge \${r.status === '통증호소자' ? 'pain-complainant' : r.status === '관리대상자' ? 'managed' : 'normal'}">
+                                            \${r.status}
+                                        </span>
+                                        <div class="mt-2 small text-muted">
+                                            <div>기간: \${r.duration === 1 ? '1주일미만' : r.duration === 2 ? '1주-1달' : r.duration === 3 ? '1-3달' : r.duration === 4 ? '3달이상' : '없음'}</div>
+                                            <div>빈도: \${r.frequency === 1 ? '1달1회' : r.frequency === 2 ? '1달2-3회' : r.frequency === 3 ? '주1회' : r.frequency === 4 ? '주2-6회' : r.frequency === 5 ? '매일' : '없음'}</div>
+                                            <div>강도: \${r.intensity === 1 ? '약함' : r.intensity === 2 ? '중간' : r.intensity === 3 ? '심함' : r.intensity === 4 ? '매우심함' : '없음'}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        \`).join('')}
+                    </div>
+
+                    <div class="alert alert-success mt-4">
+                        <i class="bi bi-check-circle"></i> 데이터가 성공적으로 저장되었습니다! (Survey ID: \${data.survey_id})
+                    </div>
+
+                    <div class="text-center mt-4">
+                        <button class="btn btn-outline-primary" onclick="location.reload()">
+                            <i class="bi bi-arrow-clockwise"></i> 새로운 데이터 입력
+                        </button>
+                        <a href="/admin" class="btn btn-outline-secondary">
+                            <i class="bi bi-clipboard-data"></i> 관리자 대시보드
+                        </a>
+                    </div>
+                \`;
+            } else {
+                alert('데이터 저장 실패: ' + (data.error || '알 수 없는 오류'));
+            }
+        } catch (error) {
+            console.error('Submit error:', error);
+            alert('데이터 전송 중 오류가 발생했습니다: ' + error.message);
+        }
+    });
 
     // 이벤트 리스너 등록
     document.addEventListener('DOMContentLoaded', () => {
