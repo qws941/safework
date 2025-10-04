@@ -14,6 +14,7 @@ import { form001CompleteTemplate } from './templates/001-complete';
 import { form001Dv06Template } from './templates/001-dv06-restore';
 import { survey002FormTemplate } from './templates/survey-002-form';
 import { form002WebProgram } from './templates/002-web-program';
+import { form002AnalysisTool } from './templates/002-analysis-tool';
 import { form001Routes } from './routes/form-001';
 import { form002Routes } from './routes/form-002';
 import { admin002Routes } from './routes/admin-002';
@@ -606,8 +607,8 @@ app.get('/survey/:surveyType', async (c) => {
   }
 
   if (surveyType === '002_musculoskeletal_symptom_program') {
-    console.log('✅ 002 Musculoskeletal Symptom Analysis Web Program - NIOSH Survey');
-    return c.html(form002WebProgram);
+    console.log('✅ 002 Analysis Tool - 001 Survey Data Analysis with NIOSH');
+    return c.html(form002AnalysisTool);
   }
 
   if (surveyType === '002_excel_download_legacy') {
