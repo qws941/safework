@@ -431,7 +431,7 @@ nativeApiRoutes.get('/native/health', async (c) => {
   }
 
   const allHealthy = Object.values(health.services).every(
-    (s: any) => s.status === 'healthy'
+    (s: any) => s.status === 'healthy' || s.status === 'unavailable'
   );
 
   return c.json({
