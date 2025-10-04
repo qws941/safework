@@ -136,7 +136,7 @@ export const form002AnalysisTool = `<!DOCTYPE html>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // NIOSH 판정 함수
+        // NIOSH 판정 함수 (엑셀 002 기준)
         function assessNIOSH(responses) {
             const bodyParts = ['목', '어깨', '팔/팔꿈치', '손/손목/손가락', '허리', '다리/발'];
             const assessments = [];
@@ -151,44 +151,45 @@ export const form002AnalysisTool = `<!DOCTYPE html>
                 let status = '정상';
                 let score = 0;
 
-                // NIOSH 기준 적용
-                // 기간: 1week_1month(2), 1month_3month(3), over3month(4)
-                // 강도: mild(1), moderate(2), severe(3), very_severe(4)
+                // 엑셀 002 기준 정확히 적용:
+                // duration: under1week(1), 1week_1month(2), 1month_3month(3), over3month(4)
+                // severity: mild(1), moderate(2), severe(3), very_severe(4)
 
-                const durationScore = duration === 'over3month' ? 4 :
-                                     duration === '1month_3month' ? 3 :
-                                     duration === '1week_1month' ? 2 : 1;
+                const durationWeek = duration === '1week_1month' || duration === '1month_3month' || duration === 'over3month';
+                const isMild = severity === 'mild';
+                const isModerate = severity === 'moderate';
+                const isSevere = severity === 'severe' || severity === 'very_severe';
 
-                const severityScore = severity === 'very_severe' ? 4 :
-                                     severity === 'severe' ? 3 :
-                                     severity === 'moderate' ? 2 : 1;
-
-                // 통증호소자: 기간>=2 AND 강도>=3
-                if (durationScore >= 2 && severityScore >= 3) {
+                // 통증호소자: 기간>=1주일(AND) + 강도>=심한통증
+                if (durationWeek && isSevere) {
                     status = '통증호소자';
                     score = 3;
                 }
-                // 관리대상자: 기간>=2 OR 강도>=2
-                else if (durationScore >= 2 || severityScore >= 2) {
-                    status = '관리대상자';
-                    score = 2;
+                // 관리대상자: 기간>=1주일(OR) + 강도>=중간정도
+                else if (durationWeek || isModerate || isSevere) {
+                    if (isModerate || isSevere) {
+                        status = '관리대상자';
+                        score = 2;
+                    }
                 }
-                else {
+                else if (duration || severity) {
                     status = '정상';
                     score = 1;
                 }
 
-                assessments.push({ part, status, score });
+                if (score > 0) {
+                    assessments.push({ part, status, score, duration, severity });
 
-                if (status === '통증호소자') maxSeverity = '통증호소자';
-                else if (status === '관리대상자' && maxSeverity !== '통증호소자') {
-                    maxSeverity = '관리대상자';
+                    if (status === '통증호소자') maxSeverity = '통증호소자';
+                    else if (status === '관리대상자' && maxSeverity !== '통증호소자') {
+                        maxSeverity = '관리대상자';
+                    }
                 }
             });
 
             return {
                 overall: maxSeverity,
-                parts: assessments.filter(a => a.score > 0)
+                parts: assessments
             };
         }
 
