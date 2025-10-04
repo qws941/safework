@@ -67,11 +67,112 @@ export const form002WebProgram = `<!DOCTYPE html>
             font-size: 0.85rem;
             font-weight: 500;
         }
+        /* 실시간 피드백 */
+        .realtime-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            min-width: 250px;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .status-danger { background: #ff6b6b; }
+        .status-warning { background: #ffa500; }
+        .status-success { background: #51cf66; }
+        .status-muted { background: #dee2e6; }
+        /* 진행률 표시 */
+        .progress-tracker {
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 999;
+            padding: 10px 0;
+            border-bottom: 2px solid #667eea;
+        }
+        .progress-bar-custom {
+            height: 8px;
+            background: linear-gradient(to right, #667eea, #764ba2);
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+        /* 입력 필드 상태 */
+        .input-danger { border-color: #ff6b6b; background-color: #fff5f5; }
+        .input-warning { border-color: #ffa500; background-color: #fff9f0; }
+        .input-success { border-color: #51cf66; background-color: #f0fff4; }
+        /* 카드 호버 효과 */
+        .body-part-card {
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        .body-part-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .body-part-card.has-pain {
+            border-color: #ff6b6b;
+            background-color: #fff5f5;
+        }
+        .body-part-card.needs-management {
+            border-color: #ffa500;
+            background-color: #fff9f0;
+        }
+        /* 애니메이션 */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .card {
+            animation: slideIn 0.5s ease;
+        }
     </style>
 </head>
 <body>
+    <!-- 실시간 상태 표시 -->
+    <div class="realtime-status" id="realtimeStatus" style="display: none;">
+        <div class="d-flex align-items-center mb-2">
+            <span class="status-indicator status-muted" id="statusIndicator"></span>
+            <strong id="statusText">입력 대기 중</strong>
+        </div>
+        <div class="small text-muted">
+            <div id="painCount">통증호소자: 0</div>
+            <div id="managedCount">관리대상자: 0</div>
+        </div>
+    </div>
+
     <div class="program-container">
-        <div class="text-center mb-4">
+        <!-- 진행률 표시 -->
+        <div class="progress-tracker">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <small class="text-muted">입력 진행률</small>
+                <small class="text-muted"><span id="progressPercent">0</span>%</small>
+            </div>
+            <div class="progress" style="height: 8px;">
+                <div class="progress-bar-custom" id="progressBar" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <div class="text-center mb-4 mt-4">
             <h1 class="display-5"><i class="bi bi-clipboard-pulse"></i> 002 근골격계질환 증상조사 프로그램</h1>
             <p class="lead text-muted">KOSHA GUIDE 기반 웹 분석 프로그램 (NIOSH Symptom Survey 적용)</p>
         </div>
@@ -88,6 +189,25 @@ export const form002WebProgram = `<!DOCTYPE html>
                 </a>
             </li>
         </ul>
+
+        <!-- 실시간 상태 표시 -->
+        <div id="realtimeStatus" class="realtime-status" style="display:none;">
+            <h6 class="mb-2"><i class="bi bi-activity"></i> 실시간 평가</h6>
+            <div id="statusContent">
+                <small class="text-muted">데이터 입력 시 자동 업데이트</small>
+            </div>
+        </div>
+
+        <!-- 진행률 표시 -->
+        <div class="progress-tracker">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <small class="text-muted">입력 진행률</small>
+                <small id="progressText" class="text-muted">0%</small>
+            </div>
+            <div class="progress" style="height: 8px;">
+                <div id="progressBar" class="progress-bar-custom" role="progressbar" style="width: 0%"></div>
+            </div>
+        </div>
 
         <div class="tab-content">
             <!-- 데이터 입력 탭 -->
@@ -161,9 +281,10 @@ export const form002WebProgram = `<!DOCTYPE html>
                         <div class="card-body">
                             <div class="body-part-grid">
                                 ${['목', '어깨', '팔/팔꿈치', '손/손목/손가락', '허리', '다리/발'].map((part, idx) => `
-                                <div class="card">
+                                <div class="card body-part-card" id="card_${idx}">
                                     <div class="card-header bg-light">
                                         <strong>${part}</strong>
+                                        <span class="badge float-end" id="badge_${idx}" style="display:none;">정상</span>
                                     </div>
                                     <div class="card-body p-3">
                                         <div class="row g-2">
@@ -276,6 +397,158 @@ export const form002WebProgram = `<!DOCTYPE html>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+    // NIOSH 판정 함수
+    function assessPainStatus(duration, frequency, intensity) {
+        if (duration >= 2 && frequency >= 1 && intensity >= 3) {
+            return { status: '통증호소자', level: 'danger', score: 3 };
+        } else if ((duration >= 2 || frequency >= 1) && intensity >= 2) {
+            return { status: '관리대상자', level: 'warning', score: 2 };
+        } else if (duration > 0 || frequency > 0 || intensity > 0) {
+            return { status: '정상', level: 'success', score: 1 };
+        }
+        return { status: '미입력', level: 'secondary', score: 0 };
+    }
+
+    // 진행률 업데이트
+    function updateProgress() {
+        const requiredFields = ['name', 'age', 'gender', 'work_experience', 'department'];
+        let filled = 0;
+        let total = requiredFields.length + 36; // 5 + 6부위x6항목
+
+        requiredFields.forEach(id => {
+            const el = document.getElementById(id);
+            if (el && el.value) filled++;
+        });
+
+        for (let i = 0; i < 6; i++) {
+            ['location', 'duration', 'intensity', 'frequency', 'worktime', 'resttime'].forEach(field => {
+                const el = document.getElementById(\`part_\${i}_\${field}\`);
+                if (el && el.value) filled++;
+            });
+        }
+
+        const percentage = Math.round((filled / total) * 100);
+        const bar = document.getElementById('progressBar');
+        const text = document.getElementById('progressText');
+        if (bar) bar.style.width = percentage + '%';
+        if (text) text.textContent = percentage + '%';
+    }
+
+    // 실시간 상태 업데이트
+    function updateRealtimeStatus() {
+        const bodyParts = ['목', '어깨', '팔/팔꿈치', '손/손목/손가락', '허리', '다리/발'];
+        let painCount = 0;
+        let managedCount = 0;
+        let normalCount = 0;
+
+        bodyParts.forEach((part, idx) => {
+            const duration = parseInt(document.getElementById(\`part_\${idx}_duration\`)?.value) || 0;
+            const frequency = parseInt(document.getElementById(\`part_\${idx}_frequency\`)?.value) || 0;
+            const intensity = parseInt(document.getElementById(\`part_\${idx}_intensity\`)?.value) || 0;
+
+            let status = '정상';
+            let badgeClass = 'bg-success';
+            let cardClass = '';
+
+            if (duration >= 2 && frequency >= 1 && intensity >= 3) {
+                status = '통증호소자';
+                badgeClass = 'bg-danger pain-complainant';
+                cardClass = 'has-pain';
+                painCount++;
+            } else if ((duration >= 2 || frequency >= 1) && intensity >= 2) {
+                status = '관리대상자';
+                badgeClass = 'bg-warning managed';
+                cardClass = 'needs-management';
+                managedCount++;
+            }
+
+            const badge = document.getElementById(\`badge_\${idx}\`);
+            const card = document.getElementById(\`card_\${idx}\`);
+
+            if (badge && (duration > 0 || frequency > 0 || intensity > 0)) {
+                badge.style.display = 'inline-block';
+                badge.textContent = status;
+                badge.className = 'badge float-end ' + badgeClass;
+            } else if (badge) {
+                badge.style.display = 'none';
+            }
+
+            if (card) {
+                card.className = 'card body-part-card ' + cardClass;
+            }
+        });
+
+        // 상태 표시 업데이트
+        const realtimeStatus = document.getElementById('realtimeStatus');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const statusText = document.getElementById('statusText');
+
+        if (painCount > 0) {
+            realtimeStatus.style.display = 'block';
+            statusIndicator.className = 'status-indicator status-danger';
+            statusText.textContent = '통증호소자 발견';
+        } else if (managedCount > 0) {
+            realtimeStatus.style.display = 'block';
+            statusIndicator.className = 'status-indicator status-warning';
+            statusText.textContent = '관리대상자 있음';
+        } else if (painCount === 0 && managedCount === 0) {
+            const hasInput = bodyParts.some((_, idx) => {
+                const duration = parseInt(document.getElementById(\`part_\${idx}_duration\`)?.value) || 0;
+                return duration > 0;
+            });
+            if (hasInput) {
+                realtimeStatus.style.display = 'block';
+                statusIndicator.className = 'status-indicator status-success';
+                statusText.textContent = '정상 범위';
+            }
+        }
+
+        document.getElementById('painCount').textContent = \`통증호소자: \${painCount}\`;
+        document.getElementById('managedCount').textContent = \`관리대상자: \${managedCount}\`;
+    }
+
+    // 진행률 업데이트
+    function updateProgress() {
+        const totalFields = 5 + 36; // 기본정보 5개 + 통증부위 36개 (6부위 x 6문항)
+        let filledFields = 0;
+
+        // 기본 정보
+        if (document.getElementById('name')?.value) filledFields++;
+        if (document.getElementById('age')?.value) filledFields++;
+        if (document.getElementById('gender')?.value) filledFields++;
+        if (document.getElementById('work_experience')?.value) filledFields++;
+        if (document.getElementById('department')?.value) filledFields++;
+
+        // 통증부위
+        for (let i = 0; i < 6; i++) {
+            if (document.getElementById(\`part_\${i}_location\`)?.value) filledFields++;
+            if (document.getElementById(\`part_\${i}_duration\`)?.value) filledFields++;
+            if (document.getElementById(\`part_\${i}_intensity\`)?.value) filledFields++;
+            if (document.getElementById(\`part_\${i}_frequency\`)?.value) filledFields++;
+            if (document.getElementById(\`part_\${i}_worktime\`)?.value) filledFields++;
+            if (document.getElementById(\`part_\${i}_resttime\`)?.value) filledFields++;
+        }
+
+        const progress = Math.round((filledFields / totalFields) * 100);
+        document.getElementById('progressBar').style.width = progress + '%';
+        document.getElementById('progressPercent').textContent = progress;
+    }
+
+    // 이벤트 리스너 등록
+    document.addEventListener('DOMContentLoaded', () => {
+        const form = document.getElementById('symptomForm');
+        if (form) {
+            form.addEventListener('input', () => {
+                updateRealtimeStatus();
+                updateProgress();
+            });
+            form.addEventListener('change', () => {
+                updateRealtimeStatus();
+                updateProgress();
+            });
+        }
+    });
+
     document.getElementById('symptomForm').addEventListener('submit', async (e) => {
         e.preventDefault();
 
