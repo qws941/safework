@@ -13,6 +13,7 @@ import { form001Template } from './templates/001';
 import { form001CompleteTemplate } from './templates/001-complete';
 import { form001Dv06Template } from './templates/001-dv06-restore';
 import { survey002FormTemplate } from './templates/survey-002-form';
+import { form002WebProgram } from './templates/002-web-program';
 import { form001Routes } from './routes/form-001';
 import { form002Routes } from './routes/form-002';
 import { admin002Routes } from './routes/admin-002';
@@ -605,8 +606,113 @@ app.get('/survey/:surveyType', async (c) => {
   }
 
   if (surveyType === '002_musculoskeletal_symptom_program') {
-    console.log('✅ 002 Complete Form - 56 fields with pain assessment - CLOUDFLARE WORKERS NATIVE');
-    return c.html(survey002FormTemplate);
+    console.log('✅ 002 Musculoskeletal Symptom Analysis Web Program - NIOSH Survey');
+    return c.html(form002WebProgram);
+  }
+
+  if (surveyType === '002_excel_download_legacy') {
+    console.log('✅ 002 Excel-based Hazard Assessment Tool - Download Page (LEGACY)');
+    const downloadPageHtml = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>002 근골격계부담작업 유해요인조사 - SafeWork</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+        .download-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .excel-icon {
+            font-size: 4rem;
+            color: #217346;
+        }
+        .btn-download {
+            background: #217346;
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            border-radius: 10px;
+        }
+        .btn-download:hover {
+            background: #1a5c37;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="download-container">
+        <div class="text-center mb-4">
+            <i class="bi bi-file-earmark-excel excel-icon"></i>
+            <h1 class="display-5 mt-3">002 근골격계부담작업 유해요인조사</h1>
+            <p class="lead text-muted">Excel 기반 평가 도구</p>
+        </div>
+
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i>
+            <strong>안내:</strong> 이 조사는 Excel 파일을 다운로드하여 작성하는 방식입니다.
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-clipboard-check"></i> 조사 내용</h5>
+                <ul class="mb-0">
+                    <li>작업 환경 평가</li>
+                    <li>신체 부담 요인 분석</li>
+                    <li>근골격계 질환 위험도 평가</li>
+                    <li>개선 방안 도출</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-download"></i> 다운로드</h5>
+                <p class="text-muted">Excel 파일을 다운로드하여 작성 후, 관리자에게 제출해주세요.</p>
+                <a href="/api/excel/download/002" class="btn btn-download w-100">
+                    <i class="bi bi-file-earmark-excel"></i> Excel 파일 다운로드 (1.8MB)
+                </a>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-question-circle"></i> 사용 안내</h5>
+                <ol>
+                    <li>Excel 파일을 다운로드합니다</li>
+                    <li>파일을 열어 각 항목을 작성합니다</li>
+                    <li>작성 완료 후 저장합니다</li>
+                    <li>관리자에게 파일을 제출합니다</li>
+                </ol>
+                <a href="/api/excel/download/002-guide" class="btn btn-outline-primary mt-2">
+                    <i class="bi bi-file-pdf"></i> 사용안내서 다운로드 (PDF)
+                </a>
+            </div>
+        </div>
+
+        <div class="text-center mt-4">
+            <a href="/" class="btn btn-secondary">
+                <i class="bi bi-house"></i> 메인으로 돌아가기
+            </a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>`;
+    return c.html(downloadPageHtml);
   }
 
   // Map survey types to template keys
