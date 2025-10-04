@@ -107,6 +107,48 @@ export const form002AnalysisTool = `<!DOCTYPE html>
                 </div>
             </div>
 
+            <!-- 상세 통계 분석 (엑셀 002 기능) -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h6 class="mb-0"><i class="bi bi-people"></i> 나이 통계</h6>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-sm">
+                                <tr><td>평균 연령</td><td id="avgAge" class="text-end">-</td></tr>
+                                <tr><td>최소</td><td id="minAge" class="text-end">-</td></tr>
+                                <tr><td>최대</td><td id="maxAge" class="text-end">-</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0"><i class="bi bi-gender-ambiguous"></i> 성별 분포</h6>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-sm">
+                                <tr><td>남성</td><td id="maleCount" class="text-end">0</td></tr>
+                                <tr><td>여성</td><td id="femaleCount" class="text-end">0</td></tr>
+                                <tr><td>미입력</td><td id="unknownGender" class="text-end">0</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header bg-warning text-dark">
+                            <h6 class="mb-0"><i class="bi bi-body-text"></i> 부위별 증상</h6>
+                        </div>
+                        <div class="card-body">
+                            <div id="bodyPartStats"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- 분석 결과 테이블 -->
             <div class="card">
                 <div class="card-header">
@@ -210,6 +252,16 @@ export const form002AnalysisTool = `<!DOCTYPE html>
                 let managedCount = 0;
                 let normalCount = 0;
 
+                // 통계 변수
+                const ages = [];
+                let maleCount = 0;
+                let femaleCount = 0;
+                let unknownGender = 0;
+                const bodyPartCounts = {
+                    '목': 0, '어깨': 0, '팔/팔꿈치': 0,
+                    '손/손목/손가락': 0, '허리': 0, '다리/발': 0
+                };
+
                 const tableBody = document.getElementById('analysisTableBody');
                 tableBody.innerHTML = '';
 
@@ -228,6 +280,21 @@ export const form002AnalysisTool = `<!DOCTYPE html>
                     if (assessment.overall === '통증호소자') painCount++;
                     else if (assessment.overall === '관리대상자') managedCount++;
                     else normalCount++;
+
+                    // 나이 통계
+                    if (survey.age) ages.push(survey.age);
+
+                    // 성별 통계
+                    if (survey.gender === '남' || survey.gender === '1') maleCount++;
+                    else if (survey.gender === '여' || survey.gender === '2') femaleCount++;
+                    else unknownGender++;
+
+                    // 부위별 통계
+                    assessment.parts.forEach(p => {
+                        if (bodyPartCounts[p.part] !== undefined) {
+                            bodyPartCounts[p.part]++;
+                        }
+                    });
 
                     // 테이블 행 추가
                     const badgeClass = assessment.overall === '통증호소자' ? 'badge-danger' :
@@ -252,11 +319,32 @@ export const form002AnalysisTool = `<!DOCTYPE html>
                     tableBody.innerHTML += row;
                 }
 
-                // 통계 업데이트
+                // 기본 통계 업데이트
                 document.getElementById('painCount').textContent = painCount;
                 document.getElementById('managedCount').textContent = managedCount;
                 document.getElementById('normalCount').textContent = normalCount;
                 document.getElementById('totalCount').textContent = data.responses.length;
+
+                // 나이 통계 업데이트
+                if (ages.length > 0) {
+                    const avgAge = Math.round(ages.reduce((a, b) => a + b, 0) / ages.length);
+                    const minAge = Math.min(...ages);
+                    const maxAge = Math.max(...ages);
+                    document.getElementById('avgAge').textContent = avgAge + '세';
+                    document.getElementById('minAge').textContent = minAge + '세';
+                    document.getElementById('maxAge').textContent = maxAge + '세';
+                }
+
+                // 성별 분포 업데이트
+                document.getElementById('maleCount').textContent = maleCount;
+                document.getElementById('femaleCount').textContent = femaleCount;
+                document.getElementById('unknownGender').textContent = unknownGender;
+
+                // 부위별 증상 업데이트
+                const bodyPartStatsHtml = Object.entries(bodyPartCounts)
+                    .map(([part, count]) => \`<div class="d-flex justify-content-between mb-1"><span>\${part}</span><span class="badge bg-secondary">\${count}</span></div>\`)
+                    .join('');
+                document.getElementById('bodyPartStats').innerHTML = bodyPartStatsHtml || '<small class="text-muted">데이터 없음</small>';
 
                 document.getElementById('loadingSpinner').style.display = 'none';
                 document.getElementById('analysisResults').style.display = 'block';
