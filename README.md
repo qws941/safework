@@ -152,8 +152,8 @@ wrangler d1 execute PRIMARY_DB --command="SELECT COUNT(*) FROM surveys" --remote
 | 🌐 **Workers.dev** | https://safework.jclee.workers.dev | Cloudflare 기본 도메인 |
 | 🔧 **API** | https://safework.jclee.me/api | RESTful API |
 | 👥 **관리자** | https://safework.jclee.me/admin | 통합 관리자 패널 |
-| 📋 **설문 001** | https://safework.jclee.me/survey/001_* | 근골격계 증상조사표 |
-| 📋 **설문 002** | https://safework.jclee.me/survey/002_* | 신규 입사자 건강검진 |
+| 📋 **설문 001** | https://safework.jclee.me/survey/001_musculoskeletal_symptom_survey | 근골격계 증상조사표 |
+| 📋 **설문 002** | https://safework.jclee.me/survey/002_musculoskeletal_symptom_program | 근골격계부담작업 유해요인조사 |
 | 📊 **D1 API** | https://safework.jclee.me/api/survey/d1/* | D1 Survey API |
 | ⚡ **Native API** | https://safework.jclee.me/api/native/* | R2, AI, Queue 서비스 |
 | 💚 **Health** | https://safework.jclee.me/api/health | Workers 상태 확인 |
