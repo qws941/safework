@@ -1,0 +1,117 @@
+name: Cloudflare Workers Deployment
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'workers/**'
+  workflow_dispatch:
+
+env:
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+jobs:
+  deploy-workers:
+    name: 🚀 Deploy Cloudflare Workers
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    defaults:
+      run:
+        working-directory: ./workers
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'workers/package-lock.json'
+
+      - name: 📦 Install Dependencies
+        run: npm ci
+
+      - name: 🔧 Setup Wrangler
+        run: npm install -g wrangler@latest
+
+      - name: 🚀 Deploy to Cloudflare Workers
+        run: |
+          echo "🚀 Deploying SafeWork Workers to Cloudflare..."
+
+          # Deploy to production
+          npx wrangler deploy --env production
+
+          echo "✅ Cloudflare Workers deployment completed"
+
+      - name: 🔍 Verify Deployment
+        run: |
+          echo "🔍 Verifying Workers deployment..."
+
+          sleep 10  # Wait for propagation
+
+          # Test health endpoints
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🏥 Health Checks"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+          health=$(curl -s https://safework.jclee.me/api/health)
+          if echo "$health" | grep -q "healthy"; then
+            echo "✅ Workers Health: OK"
+          else
+            echo "❌ Workers Health: FAILED"
+          fi
+
+          native_health=$(curl -s https://safework.jclee.me/api/native/native/health)
+          if echo "$native_health" | grep -q "d1"; then
+            echo "✅ Native Services Health: OK"
+            echo "$native_health" | jq -r '.services | to_entries[] | "  - \(.key): \(.value.status)"' || true
+          else
+            echo "⚠️ Native Services Health: Check required"
+          fi
+
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🌐 Endpoint Tests"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+          # Test main endpoints
+          for endpoint in "/" "/admin" "/api/native/files"; do
+            echo "🔍 Testing: $endpoint"
+            status=$(curl -s -o /dev/null -w "%{http_code}" -m 10 "https://safework.jclee.me$endpoint" || echo "000")
+
+            if [ "$status" = "200" ] || [ "$status" = "302" ]; then
+              echo "✅ $endpoint: HTTP $status"
+            else
+              echo "⚠️ $endpoint: HTTP $status"
+            fi
+          done
+
+      - name: 📊 Deployment Summary
+        if: always()
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📊 Cloudflare Workers Deployment Summary"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ Status: WORKERS DEPLOYMENT SUCCESSFUL"
+            echo "🌐 Workers URL: https://safework.jclee.me"
+            echo "📅 Deploy Time: $(date '+%Y-%m-%d %H:%M:%S UTC')"
+            echo "🚀 Method: Cloudflare Wrangler"
+            echo "🏗️ Build Number: ${{ github.run_number }}"
+            echo ""
+            echo "🔍 Key Endpoints:"
+            echo "  • 001 Survey: https://safework.jclee.me/survey/001_musculoskeletal_symptom_survey"
+            echo "  • 002 Admin Dashboard: https://safework.jclee.me/survey/002_musculoskeletal_symptom_program"
+            echo "  • Health: https://safework.jclee.me/api/health"
+          else
+            echo "❌ Status: WORKERS DEPLOYMENT FAILED"
+            echo "📅 Failure Time: $(date '+%Y-%m-%d %H:%M:%S UTC')"
+            echo "🔍 Check logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          fi
+
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
