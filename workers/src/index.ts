@@ -380,20 +380,20 @@ app.get('/', (c) => {
                                 </div>
                             </div>
                             
-                            <!-- 002 신규 입사자 건강검진 양식 -->
+                            <!-- 002 근골격계부담작업 유해요인조사 -->
                             <div class="col-lg-4 col-md-6">
                                 <div class="card h-100 border-info">
                                     <div class="card-header bg-info text-white">
-                                        <span class="badge bg-white text-info">002</span> 신규 입사자 건강검진
+                                        <span class="badge bg-white text-info">002</span> 근골격계부담작업 유해요인조사
                                     </div>
                                     <div class="card-body">
-                                        <p class="small">신규 입사자 건강 상태 확인</p>
+                                        <p class="small">근골격계부담작업 유해요인 조사</p>
                                         <ul class="small text-muted mb-3">
-                                            <li>기본 신체 정보</li>
-                                            <li>기존 질환 이력</li>
-                                            <li>생활 습관 조사</li>
+                                            <li>작업 환경 평가</li>
+                                            <li>신체 부담 요인 분석</li>
+                                            <li>개선 방안 도출</li>
                                         </ul>
-                                        <a href="/survey/002_new_employee_health_checkup" class="btn btn-info w-100">
+                                        <a href="/survey/002_musculoskeletal_symptom_program" class="btn btn-info w-100">
                                             <i class="bi bi-pencil-square"></i> 작성하기
                                         </a>
                                     </div>
@@ -607,11 +607,6 @@ app.get('/survey/:surveyType', async (c) => {
   if (surveyType === '002_musculoskeletal_symptom_program') {
     console.log('✅ 002 Complete Form - 56 fields with pain assessment - CLOUDFLARE WORKERS NATIVE');
     return c.html(survey002FormTemplate);
-  }
-
-  if (surveyType === '002_new_employee_health_checkup') {
-    console.log('✅ 002 New Employee Health Checkup - CLOUDFLARE WORKERS NATIVE');
-    return c.html(survey002FormTemplate); // 동일한 템플릿 사용 (추후 별도 템플릿 가능)
   }
 
   // Map survey types to template keys
