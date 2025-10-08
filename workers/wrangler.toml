@@ -78,29 +78,32 @@ BACKEND_URL = "http://localhost:4545"
 DEBUG = "true"
 ENVIRONMENT = "development"
 
-# KV Namespaces (use same as production for dev)
+# IMPORTANT: Create separate development resources in the Cloudflare dashboard
+# and replace the placeholder IDs below.
+
+# KV Namespaces (Development)
 [[env.development.kv_namespaces]]
 binding = "SAFEWORK_KV"
-id = "51e576a5d32d48bbac9c8bad7cb26556"  # SESSION_STORE (dev)
+id = "replace-with-your-dev-safework-kv-id"
 
 [[env.development.kv_namespaces]]
 binding = "CACHE_LAYER"
-id = "5a30c645c88644068089f1733b2c81b9"
+id = "replace-with-your-dev-cache-layer-kv-id"
 
 [[env.development.kv_namespaces]]
 binding = "AUTH_STORE"
-id = "e6a6466f4c53466087f6fdd2cd6ca001"
+id = "replace-with-your-dev-auth-store-kv-id"
 
-# D1 Database (use same as production for dev)
+# D1 Database (Development)
 [[env.development.d1_databases]]
 binding = "PRIMARY_DB"
-database_name = "safework-primary"
-database_id = "d1db1d92-f598-415e-910f-1af511bc182f"
+database_name = "safework-primary-dev"
+database_id = "replace-with-your-dev-d1-database-id"
 
-# R2 Object Storage (use same as production for dev)
+# R2 Object Storage (Development)
 [[env.development.r2_buckets]]
 binding = "SAFEWORK_STORAGE"
-bucket_name = "safework-storage-prod"
+bucket_name = "safework-storage-dev"
 
 # AI Gateway
 [env.development.ai]

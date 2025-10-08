@@ -1,117 +1,243 @@
-name: Cloudflare Workers Deployment
+# ==============================================================================
+# Gemini-Powered Cloudflare Workers CI/CD Pipeline
+# ==============================================================================
+# This workflow integrates Gemini AI to enhance the development process:
+# 1. AI Code Review: On every PR, Gemini reviews code changes for quality.
+# 2. Build & Test: Ensures code integrity with linting, type checks, and tests.
+# 3. Deploy to Staging: Automatically deploys to a staging environment.
+# 4. Deploy to Production: Deploys to production after manual approval.
+# 5. AI Release Notes: Automatically generates and publishes release notes
+#                       after a successful production deployment.
+# ==============================================================================
+
+name: Gemini-Powered Cloudflare Workers CI/CD
 
 on:
   push:
-    branches: [master]
+    branches: [master, staging]
+    paths:
+      - 'workers/**'
+  pull_request:
+    branches: [master, staging]
     paths:
       - 'workers/**'
   workflow_dispatch:
 
+# Grant permissions for AI review comments and release creation
+permissions:
+  contents: write
+  pull-requests: write
+
 env:
   CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
   CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  NODE_VERSION: '20'
 
 jobs:
-  deploy-workers:
-    name: 🚀 Deploy Cloudflare Workers
+  # ============================================
+  # 1. AI Code Review Job (on Pull Requests)
+  # ============================================
+  ai-code-review:
+    name: '🤖 AI Code Review'
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    defaults:
-      run:
-        working-directory: ./workers
-
     steps:
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4
-
-      - name: 📦 Setup Node.js
-        uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          fetch-depth: 0
+
+      - name: 🔍 Get Changed Files
+        id: changed-files
+        uses: tj-actions/changed-files@v41
+        with:
+          files: workers/**
+
+      - name: 🤖 Run Gemini Code Review
+        if: steps.changed-files.outputs.any_changed == 'true'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { repo, issue: { number: issue_number } } = github.context;
+            const changedFiles = `${{ steps.changed-files.outputs.all_changed_files }}`.split(' ').join('\n');
+            const diff_url = `${{ github.event.pull_request.diff_url }}`;
+
+            const response = await fetch(diff_url);
+            const diff = await response.text();
+
+            if (diff.length > 10000) {
+              console.log("Diff is too large, skipping AI review.");
+              return;
+            }
+
+            const geminiApiKey = "${{ secrets.GEMINI_API_KEY }}";
+            if (!geminiApiKey) {
+              console.log("GEMINI_API_KEY secret not found, skipping review.");
+              return;
+            }
+
+            const prompt = `
+              As a senior software engineer, please review the following code changes (git diff format) for the files listed below.
+              Focus on potential bugs, performance issues, security vulnerabilities, and adherence to best practices.
+              Provide specific, actionable feedback. If there are no issues, simply state "No issues found."
+
+              Changed Files:
+              ${changedFiles}
+
+              Git Diff:
+              \`\`\`diff
+              ${diff}
+              \`\`\`
+            `;
+
+            const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`;
+            const geminiResponse = await fetch(geminiApiUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+            });
+
+            const geminiData = await geminiResponse.json();
+            const review = geminiData.candidates[0].content.parts[0].text;
+
+            await github.rest.issues.createComment({
+              owner: repo.owner,
+              repo: repo.repo,
+              issue_number,
+              body: `### 🤖 Gemini AI Code Review\n\n${review}`
+            });
+
+  # ============================================
+  # 2. Build and Test Job
+  # ============================================
+  build-and-test:
+    name: '🏗️ Build & Test'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults: { run: { working-directory: ./workers } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: 'workers/package-lock.json'
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run type-check
+      - run: npm run test
 
-      - name: 📦 Install Dependencies
-        run: npm ci
+  # ============================================
+  # 3. Deploy to Staging Job
+  # ============================================
+  deploy-staging:
+    name: '🚀 Deploy to Staging'
+    needs: build-and-test
+    if: github.ref == 'refs/heads/staging' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults: { run: { working-directory: ./workers } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'workers/package-lock.json'
+      - run: npm ci
+      - name: 🚀 Deploy to Staging (CF Dev Env)
+        run: npx wrangler deploy --env development
 
-      - name: 🔧 Setup Wrangler
-        run: npm install -g wrangler@latest
-
-      - name: 🚀 Deploy to Cloudflare Workers
+  # ============================================
+  # 4. Deploy to Production Job
+  # ============================================
+  deploy-production:
+    name: '🚀 Deploy to Production'
+    needs: build-and-test
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: { name: production, url: https://safework.jclee.me }
+    defaults: { run: { working-directory: ./workers } }
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 } # Required to get commit history for release notes
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'workers/package-lock.json'
+      - run: npm ci
+      - name: 🚀 Deploy to Production
+        run: npx wrangler deploy --env production
+      - name: 🔍 Verify Production Deployment
         run: |
-          echo "🚀 Deploying SafeWork Workers to Cloudflare..."
+          sleep 15
+          health_status=$(curl -s -o /dev/null -w "%{http_code}" https://safework.jclee.me/api/health)
+          if [ "$health_status" -ne 200 ]; then
+            echo "❌ Health check FAILED with status $health_status."
+            exit 1
+          fi
+          echo "✅ Health check passed with status $health_status."
 
-          # Deploy to production
-          npx wrangler deploy --env production
-
-          echo "✅ Cloudflare Workers deployment completed"
-
-      - name: 🔍 Verify Deployment
+      # ============================================
+      # 5. AI Release Notes Generation
+      # ============================================
+      - name: 📚 Get Commit History
+        id: git-log
         run: |
-          echo "🔍 Verifying Workers deployment..."
+          # Get the latest tag, or the first commit if no tags exist
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)
+          echo "Latest tag: $LATEST_TAG"
+          # Get commit messages from the latest tag to HEAD
+          COMMIT_MESSAGES=$(git log $LATEST_TAG..HEAD --pretty=format:"- %s")
+          # Make the multiline string available to next steps
+          echo "commits<<EOF" >> $GITHUB_OUTPUT
+          echo "$COMMIT_MESSAGES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
-          sleep 10  # Wait for propagation
-
-          # Test health endpoints
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "🏥 Health Checks"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-          health=$(curl -s https://safework.jclee.me/api/health)
-          if echo "$health" | grep -q "healthy"; then
-            echo "✅ Workers Health: OK"
-          else
-            echo "❌ Workers Health: FAILED"
+      - name: 🤖 Generate Release Notes with Gemini
+        id: gemini-release-notes
+        if: steps.git-log.outputs.commits != ''
+        run: |
+          gemini_api_key="${{ secrets.GEMINI_API_KEY }}"
+          if [ -z "$gemini_api_key" ]; then
+            echo "GEMINI_API_KEY not found, using plain commit log for release notes."
+            echo "notes<<EOF" >> $GITHUB_OUTPUT
+            echo "${{ steps.git-log.outputs.commits }}" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            exit 0
           fi
 
-          native_health=$(curl -s https://safework.jclee.me/api/native/native/health)
-          if echo "$native_health" | grep -q "d1"; then
-            echo "✅ Native Services Health: OK"
-            echo "$native_health" | jq -r '.services | to_entries[] | "  - \(.key): \(.value.status)"' || true
-          else
-            echo "⚠️ Native Services Health: Check required"
-          fi
+          prompt="Based on the following commit messages, create a concise and user-friendly summary for a release note. Group related changes under headings like '✨ New Features', '🐛 Bug Fixes', and '🔨 Improvements'.\n\nCommits:\n${{ steps.git-log.outputs.commits }}"
 
-          echo ""
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "🌐 Endpoint Tests"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          # Using a heredoc for the JSON payload
+          json_payload=$(cat <<EOF
+          {
+            "contents": [{
+              "parts": [{
+                "text": "$prompt"
+              }]
+            }]
+          }
+          EOF
+          )
 
-          # Test main endpoints
-          for endpoint in "/" "/admin" "/api/native/files"; do
-            echo "🔍 Testing: $endpoint"
-            status=$(curl -s -o /dev/null -w "%{http_code}" -m 10 "https://safework.jclee.me$endpoint" || echo "000")
+          response=$(curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=$gemini_api_key" \
+            -H "Content-Type: application/json" \
+            -d "$json_payload")
 
-            if [ "$status" = "200" ] || [ "$status" = "302" ]; then
-              echo "✅ $endpoint: HTTP $status"
-            else
-              echo "⚠️ $endpoint: HTTP $status"
-            fi
-          done
+          release_notes=$(echo "$response" | jq -r '.candidates[0].content.parts[0].text')
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$release_notes" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: 📊 Deployment Summary
-        if: always()
+      - name: 📦 Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "📊 Cloudflare Workers Deployment Summary"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-          if [ "${{ job.status }}" == "success" ]; then
-            echo "✅ Status: WORKERS DEPLOYMENT SUCCESSFUL"
-            echo "🌐 Workers URL: https://safework.jclee.me"
-            echo "📅 Deploy Time: $(date '+%Y-%m-%d %H:%M:%S UTC')"
-            echo "🚀 Method: Cloudflare Wrangler"
-            echo "🏗️ Build Number: ${{ github.run_number }}"
-            echo ""
-            echo "🔍 Key Endpoints:"
-            echo "  • 001 Survey: https://safework.jclee.me/survey/001_musculoskeletal_symptom_survey"
-            echo "  • 002 Admin Dashboard: https://safework.jclee.me/survey/002_musculoskeletal_symptom_program"
-            echo "  • Health: https://safework.jclee.me/api/health"
-          else
-            echo "❌ Status: WORKERS DEPLOYMENT FAILED"
-            echo "📅 Failure Time: $(date '+%Y-%m-%d %H:%M:%S UTC')"
-            echo "🔍 Check logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          fi
-
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          TAG_NAME="release-$(date +%Y-%m-%d-%H%M%S)"
+          RELEASE_NOTES="${{ steps.gemini-release-notes.outputs.notes || steps.git-log.outputs.commits }}"
+          gh release create "$TAG_NAME" --title "Release $TAG_NAME" --notes "$RELEASE_NOTES"
+          echo "✅ Created GitHub Release: $TAG_NAME"
