@@ -1,29 +1,28 @@
 # ==============================================================================
-# Gemini-Powered Cloudflare Workers CI/CD Pipeline
+# Gemini-Powered Production CI/CD Pipeline
 # ==============================================================================
-# This workflow integrates Gemini AI to enhance the development process:
-# 1. AI Code Review: On every PR, Gemini reviews code changes for quality.
-# 2. Build & Test: Ensures code integrity with linting, type checks, and tests.
-# 3. Deploy to Staging: Automatically deploys to a staging environment.
-# 4. Deploy to Production: Deploys to production after manual approval.
-# 5. AI Release Notes: Automatically generates and publishes release notes
+# This simplified workflow focuses solely on the production environment:
+# 1. AI Code Review: On every PR to 'master', Gemini reviews code changes.
+# 2. Build & Test: Ensures code integrity before any deployment.
+# 3. Deploy to Production: Deploys to production after manual approval on
+#                       pushes to the 'master' branch.
+# 4. AI Release Notes: Automatically generates and publishes release notes
 #                       after a successful production deployment.
 # ==============================================================================
 
-name: Gemini-Powered Cloudflare Workers CI/CD
+name: Gemini-Powered Production CI/CD
 
 on:
   push:
-    branches: [master, staging]
+    branches: [master]
     paths:
       - 'workers/**'
   pull_request:
-    branches: [master, staging]
+    branches: [master]
     paths:
       - 'workers/**'
   workflow_dispatch:
 
-# Grant permissions for AI review comments and release creation
 permissions:
   contents: write
   pull-requests: write
@@ -35,7 +34,7 @@ env:
 
 jobs:
   # ============================================
-  # 1. AI Code Review Job (on Pull Requests)
+  # 1. AI Code Review Job (on Pull Requests to master)
   # ============================================
   ai-code-review:
     name: '🤖 AI Code Review'
@@ -54,44 +53,28 @@ jobs:
           files: workers/**
 
       - name: 🤖 Run Gemini Code Review
-        if: steps.changed-files.outputs.any_changed == 'true'
+        if: steps.changed-files.outputs.any_changed == 'true' && secrets.GEMINI_API_KEY
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const { repo, issue: { number: issue_number } } = github.context;
-            const changedFiles = `${{ steps.changed-files.outputs.all_changed_files }}`.split(' ').join('\n');
             const diff_url = `${{ github.event.pull_request.diff_url }}`;
-
             const response = await fetch(diff_url);
             const diff = await response.text();
 
-            if (diff.length > 10000) {
-              console.log("Diff is too large, skipping AI review.");
-              return;
-            }
+            if (diff.length > 10000) return; // Skip if diff is too large
 
-            const geminiApiKey = "${{ secrets.GEMINI_API_KEY }}";
-            if (!geminiApiKey) {
-              console.log("GEMINI_API_KEY secret not found, skipping review.");
-              return;
-            }
+            const prompt = `As a senior software engineer, please review the following code changes (git diff format). Focus on potential bugs, performance issues, and best practices. Provide specific, actionable feedback. If no issues, state "No issues found."
 
-            const prompt = `
-              As a senior software engineer, please review the following code changes (git diff format) for the files listed below.
-              Focus on potential bugs, performance issues, security vulnerabilities, and adherence to best practices.
-              Provide specific, actionable feedback. If there are no issues, simply state "No issues found."
+Git Diff:
 
-              Changed Files:
-              ${changedFiles}
+${diff}
+```diff
+${diff}
+````;
 
-              Git Diff:
-              \`\`\`diff
-              ${diff}
-              \`\`\`
-            `;
-
-            const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`;
+            const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${{ secrets.GEMINI_API_KEY }}`;
             const geminiResponse = await fetch(geminiApiUrl, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -101,12 +84,7 @@ jobs:
             const geminiData = await geminiResponse.json();
             const review = geminiData.candidates[0].content.parts[0].text;
 
-            await github.rest.issues.createComment({
-              owner: repo.owner,
-              repo: repo.repo,
-              issue_number,
-              body: `### 🤖 Gemini AI Code Review\n\n${review}`
-            });
+            await github.rest.issues.createComment({ ...repo, issue_number, body: `### 🤖 Gemini AI Code Review\n\n${review}` });
 
   # ============================================
   # 2. Build and Test Job
@@ -129,28 +107,7 @@ jobs:
       - run: npm run test
 
   # ============================================
-  # 3. Deploy to Staging Job
-  # ============================================
-  deploy-staging:
-    name: '🚀 Deploy to Staging'
-    needs: build-and-test
-    if: github.ref == 'refs/heads/staging' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    defaults: { run: { working-directory: ./workers } }
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: 'workers/package-lock.json'
-      - run: npm ci
-      - name: 🚀 Deploy to Staging (CF Dev Env)
-        run: npx wrangler deploy --env development
-
-  # ============================================
-  # 4. Deploy to Production Job
+  # 3. Deploy to Production Job
   # ============================================
   deploy-production:
     name: '🚀 Deploy to Production'
@@ -162,7 +119,7 @@ jobs:
     defaults: { run: { working-directory: ./workers } }
     steps:
       - uses: actions/checkout@v4
-        with: { fetch-depth: 0 } # Required to get commit history for release notes
+        with: { fetch-depth: 0 }
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -182,52 +139,24 @@ jobs:
           echo "✅ Health check passed with status $health_status."
 
       # ============================================
-      # 5. AI Release Notes Generation
+      # 4. AI Release Notes Generation
       # ============================================
       - name: 📚 Get Commit History
         id: git-log
         run: |
-          # Get the latest tag, or the first commit if no tags exist
           LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)
-          echo "Latest tag: $LATEST_TAG"
-          # Get commit messages from the latest tag to HEAD
           COMMIT_MESSAGES=$(git log $LATEST_TAG..HEAD --pretty=format:"- %s")
-          # Make the multiline string available to next steps
           echo "commits<<EOF" >> $GITHUB_OUTPUT
           echo "$COMMIT_MESSAGES" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: 🤖 Generate Release Notes with Gemini
         id: gemini-release-notes
-        if: steps.git-log.outputs.commits != ''
+        if: steps.git-log.outputs.commits != '' && secrets.GEMINI_API_KEY
         run: |
-          gemini_api_key="${{ secrets.GEMINI_API_KEY }}"
-          if [ -z "$gemini_api_key" ]; then
-            echo "GEMINI_API_KEY not found, using plain commit log for release notes."
-            echo "notes<<EOF" >> $GITHUB_OUTPUT
-            echo "${{ steps.git-log.outputs.commits }}" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
           prompt="Based on the following commit messages, create a concise and user-friendly summary for a release note. Group related changes under headings like '✨ New Features', '🐛 Bug Fixes', and '🔨 Improvements'.\n\nCommits:\n${{ steps.git-log.outputs.commits }}"
-
-          # Using a heredoc for the JSON payload
-          json_payload=$(cat <<EOF
-          {
-            "contents": [{
-              "parts": [{
-                "text": "$prompt"
-              }]
-            }]
-          }
-          EOF
-          )
-
-          response=$(curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=$gemini_api_key" \
-            -H "Content-Type: application/json" \
-            -d "$json_payload")
-
+          json_payload=$(jq -n --arg p "$prompt" '{contents: [{parts: [{text: $p}]}]}')
+          response=$(curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${{ secrets.GEMINI_API_KEY }}" -H "Content-Type: application/json" -d "$json_payload")
           release_notes=$(echo "$response" | jq -r '.candidates[0].content.parts[0].text')
           echo "notes<<EOF" >> $GITHUB_OUTPUT
           echo "$release_notes" >> $GITHUB_OUTPUT
