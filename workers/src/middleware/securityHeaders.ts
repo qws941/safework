@@ -85,13 +85,16 @@ const DEFAULT_CSP_DIRECTIVES = {
     "'self'",
     "'unsafe-inline'", // Required for inline scripts (should be removed in production)
     'https://cdn.jsdelivr.net',
-    'https://unpkg.com'
+    'https://unpkg.com',
+    'https://code.jquery.com',
+    'https://cdnjs.cloudflare.com'
   ],
   'style-src': [
     "'self'",
     "'unsafe-inline'", // Required for Bootstrap and inline styles
     'https://cdn.jsdelivr.net',
-    'https://fonts.googleapis.com'
+    'https://fonts.googleapis.com',
+    'https://cdnjs.cloudflare.com'
   ],
   'font-src': [
     "'self'",
