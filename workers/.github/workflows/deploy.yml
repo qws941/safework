@@ -21,12 +21,15 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+          cache-dependency-path: 'workers/package-lock.json'
 
       - name: Install dependencies
         run: npm ci
+        working-directory: workers
 
       - name: Build TypeScript
         run: npm run build
+        working-directory: workers
 
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
@@ -34,6 +37,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           environment: production
+          workingDirectory: workers
 
       - name: Deployment Summary
         run: |
