@@ -1,73 +1,71 @@
 import { Hono } from 'hono';
 import { sign } from 'hono/jwt';
 import { Env } from '../index';
-import * as bcrypt from 'bcryptjs';
+import { verifyPassword } from '../utils/password';
 
 export const authRoutes = new Hono<{ Bindings: Env }>();
 
-// Login endpoint
+// Login endpoint with rate limiting protection
+// NOTE: Rate limiting middleware should be applied in index.ts
 authRoutes.post('/login', async (c) => {
   const { username, password } = await c.req.json();
-  
+
   try {
-    // Check hardcoded admin credentials
-    if (username === 'admin' && password === 'bingogo1') {
-      const payload = {
-        sub: 'admin',
-        username: 'admin',
-        is_admin: true,
-        exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24), // 24 hours
-      };
-      
-      const token = await sign(payload, c.env.JWT_SECRET);
-      
-      return c.json({
-        success: true,
-        token,
-        user: {
-          username: 'admin',
-          is_admin: true,
-        },
-        redirect: '/api/admin/dashboard',
-      });
+    // Validate input
+    if (!username || !password) {
+      return c.json({ error: 'Username and password are required' }, 400);
     }
-    
-    // Check environment admin credentials as fallback
-    if (username === c.env.ADMIN_USERNAME && password === c.env.ADMIN_PASSWORD) {
-      const payload = {
-        sub: 'admin-env',
-        username: c.env.ADMIN_USERNAME,
-        is_admin: true,
-        exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24), // 24 hours
-      };
-      
-      const token = await sign(payload, c.env.JWT_SECRET);
-      
-      return c.json({
-        success: true,
-        token,
-        user: {
+
+    if (typeof username !== 'string' || typeof password !== 'string') {
+      return c.json({ error: 'Invalid credentials format' }, 400);
+    }
+
+    // Check environment admin credentials (stored in Cloudflare Secrets)
+    // SECURITY: ADMIN_PASSWORD_HASH should be a PBKDF2 hash stored in Cloudflare Secrets
+    if (username === c.env.ADMIN_USERNAME && c.env.ADMIN_PASSWORD_HASH) {
+      const isValid = await verifyPassword(password, c.env.ADMIN_PASSWORD_HASH);
+
+      if (isValid) {
+        const payload = {
+          sub: 'admin',
           username: c.env.ADMIN_USERNAME,
           is_admin: true,
-        },
-        redirect: '/api/admin/dashboard',
-      });
+          exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24), // 24 hours
+        };
+
+        const token = await sign(payload, c.env.JWT_SECRET);
+
+        // Log successful admin login
+        console.info(`Admin login successful: ${c.env.ADMIN_USERNAME}`);
+
+        return c.json({
+          success: true,
+          token,
+          user: {
+            username: c.env.ADMIN_USERNAME,
+            is_admin: true,
+          },
+          redirect: '/api/admin/dashboard',
+        });
+      }
     }
-    
+
     // Check database users
     const user = await c.env.SAFEWORK_DB.prepare(
       'SELECT id, username, password_hash, is_admin, is_active FROM users WHERE username = ?'
     ).bind(username).first();
-    
+
     if (!user || !user.is_active) {
+      // Log failed login attempt (for security monitoring)
+      console.warn(`Failed login attempt for username: ${username}`);
       return c.json({ error: 'Invalid credentials' }, 401);
     }
-    
-    // Verify password (simplified for D1 - in production use proper hashing)
-    // Note: bcrypt doesn't work in Workers, use Web Crypto API instead
+
+    // Verify password using PBKDF2 (with backward compatibility for SHA-256)
     const isValid = await verifyPassword(password, user.password_hash as string);
-    
+
     if (!isValid) {
+      console.warn(`Failed login attempt for user: ${username} (incorrect password)`);
       return c.json({ error: 'Invalid credentials' }, 401);
     }
     
@@ -117,26 +115,6 @@ authRoutes.get('/verify', async (c) => {
 // Logout (client-side token removal)
 authRoutes.post('/logout', (c) => {
   // In a stateless JWT system, logout is handled client-side
+  // NOTE: Consider implementing token blacklist in KV store for enhanced security
   return c.json({ success: true, message: 'Logged out successfully' });
 });
-
-// Simple password verification for D1 (Workers environment)
-async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  // For demo purposes - in production use Web Crypto API
-  // This is a simplified check
-  if (hash === 'no-login') return false;
-  
-  // For admin default password
-  if (password === 'safework2024' && hash.includes('pbkdf2')) {
-    return true;
-  }
-  
-  // Use Web Crypto API for actual password hashing in production
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  
-  return hash === hashHex;
-}

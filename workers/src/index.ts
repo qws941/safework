@@ -17,6 +17,10 @@ import { form002WebProgram } from './templates/002-web-program';
 import { form002AnalysisTool } from './templates/002-analysis-tool';
 import { form001Routes } from './routes/form-001';
 import { form002Routes } from './routes/form-002';
+import { form003Routes } from './routes/form-003';
+import { form004Routes } from './routes/form-004';
+import { form005Routes } from './routes/form-005';
+import { form006Routes } from './routes/form-006';
 import { admin002Routes } from './routes/admin-002';
 import { surveyD1Routes } from './routes/survey-d1';
 import { survey002D1Routes } from './routes/survey-002-d1';
@@ -24,6 +28,8 @@ import { unifiedAdminRoutes } from './routes/admin-unified';
 import warningSignRoutes from './routes/warning-sign';
 import { nativeApiRoutes } from './routes/native-api';
 import queueHandler from './queue-handler';
+import { securityHeaders, ProductionSecurityHeaders } from './middleware/securityHeaders';
+import { rateLimiter, RateLimitPresets } from './middleware/rateLimiter';
 
 export interface Env {
   // KV Namespaces - CF Native Naming
@@ -53,6 +59,7 @@ export interface Env {
   // Environment Variables
   JWT_SECRET: string;
   ADMIN_USERNAME: string;
+  ADMIN_PASSWORD_HASH: string; // PBKDF2 hash stored in Cloudflare Secrets
   BACKEND_URL: string;
   DEBUG: string;
   ENVIRONMENT: string;
@@ -93,10 +100,25 @@ app.use('*', async (c, next) => {
 
 // Standard middleware
 app.use('*', logger());
+
+// Security headers middleware (apply to all routes)
+app.use('*', securityHeaders(ProductionSecurityHeaders));
+
+// CORS middleware (apply to all API routes)
 app.use('/api/*', cors({
   origin: ['https://safework.jclee.me', 'http://localhost:3000'],
   credentials: true,
 }));
+
+// Rate limiting for authentication endpoints (strict)
+app.use('/api/auth/login', rateLimiter(RateLimitPresets.LOGIN));
+
+// Rate limiting for survey submissions (moderate)
+app.use('/api/survey/*/submit', rateLimiter(RateLimitPresets.SURVEY_SUBMISSION));
+app.use('/api/form/*/submit', rateLimiter(RateLimitPresets.SURVEY_SUBMISSION));
+
+// Rate limiting for admin operations (moderate)
+app.use('/api/admin/*', rateLimiter(RateLimitPresets.ADMIN_OPERATIONS));
 
 // Public routes
 app.route('/api/auth', authRoutes);
@@ -107,6 +129,10 @@ app.route('/api/survey/d1/002', survey002D1Routes);  // D1 Native API (002)
 app.route('/api/excel', excelProcessorRoutes);
 app.route('/api/form/001', form001Routes);
 app.route('/api/form/002', form002Routes);
+app.route('/api/form/003', form003Routes);
+app.route('/api/form/004', form004Routes);
+app.route('/api/form/005', form005Routes);
+app.route('/api/form/006', form006Routes);
 app.route('/api/warning-sign', warningSignRoutes);  // Warning Sign Generator (Edge API)
 app.route('/api/native', nativeApiRoutes);  // Cloudflare Native Services (R2, Queue, AI)
 
@@ -381,7 +407,7 @@ app.get('/', (c) => {
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <!-- 002 근골격계부담작업 유해요인조사 -->
                             <div class="col-lg-4 col-md-6">
                                 <div class="card h-100 border-info">
@@ -401,23 +427,83 @@ app.get('/', (c) => {
                                     </div>
                                 </div>
                             </div>
-                            
-                            <!-- 추가 양식을 위한 placeholder -->
+
+                            <!-- 003 근골격계질환 예방관리 프로그램 조사표 -->
                             <div class="col-lg-4 col-md-6">
-                                <div class="card h-100 border-secondary">
-                                    <div class="card-header bg-secondary text-white">
-                                        <span class="badge bg-white text-secondary">+</span> 추가 예정
+                                <div class="card h-100 border-success">
+                                    <div class="card-header bg-success text-white">
+                                        <span class="badge bg-white text-success">003</span> 근골격계질환 예방관리 프로그램 조사표
                                     </div>
                                     <div class="card-body">
-                                        <p class="small text-muted">더 많은 양식이 추가될 예정입니다</p>
+                                        <p class="small">근골격계 질환 예방 관리 프로그램</p>
                                         <ul class="small text-muted mb-3">
-                                            <li>작업환경측정 결과서</li>
-                                            <li>안전교육 이수증</li>
-                                            <li>건강검진 결과 보고서</li>
+                                            <li>신체 부위별 통증 조사</li>
+                                            <li>통증 강도 및 빈도 평가</li>
+                                            <li>일상생활 지장도 체크</li>
                                         </ul>
-                                        <button class="btn btn-secondary w-100" disabled>
-                                            <i class="bi bi-clock"></i> 준비중
-                                        </button>
+                                        <a href="/survey/003_musculoskeletal_program" class="btn btn-success w-100">
+                                            <i class="bi bi-pencil-square"></i> 작성하기
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 004 산업재해 실태조사표 -->
+                            <div class="col-lg-4 col-md-6">
+                                <div class="card h-100 border-danger">
+                                    <div class="card-header bg-danger text-white">
+                                        <span class="badge bg-white text-danger">004</span> 산업재해 실태조사표
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="small">산업재해 발생 현황 및 예방 실태조사</p>
+                                        <ul class="small text-muted mb-3">
+                                            <li>재해 발생 정보 기록</li>
+                                            <li>원인 분석 및 예방대책</li>
+                                            <li>피재자 정보 관리</li>
+                                        </ul>
+                                        <a href="/survey/004_industrial_accident_survey" class="btn btn-danger w-100">
+                                            <i class="bi bi-pencil-square"></i> 작성하기
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 005 유해요인 기본조사표 -->
+                            <div class="col-lg-4 col-md-6">
+                                <div class="card h-100 border-warning">
+                                    <div class="card-header bg-warning text-dark">
+                                        <span class="badge bg-white text-warning">005</span> 유해요인 기본조사표
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="small">작업환경 유해요인 기본조사 및 위험성 평가</p>
+                                        <ul class="small text-muted mb-3">
+                                            <li>물리적/화학적 유해요인</li>
+                                            <li>인간공학적 유해요인</li>
+                                            <li>심리사회적 유해요인</li>
+                                        </ul>
+                                        <a href="/survey/005_basic_hazard_factor_survey" class="btn btn-warning w-100">
+                                            <i class="bi bi-pencil-square"></i> 작성하기
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 006 고령근로자 작업투입 승인요청서 -->
+                            <div class="col-lg-4 col-md-6">
+                                <div class="card h-100 border-dark">
+                                    <div class="card-header bg-dark text-white">
+                                        <span class="badge bg-white text-dark">006</span> 고령근로자 작업투입 승인요청서
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="small">고령근로자 작업 배치 및 관리</p>
+                                        <ul class="small text-muted mb-3">
+                                            <li>고령근로자 건강상태 평가</li>
+                                            <li>작업 적합성 검토</li>
+                                            <li>안전관리 승인절차</li>
+                                        </ul>
+                                        <a href="/survey/006_elderly_worker_approval_form" class="btn btn-dark w-100">
+                                            <i class="bi bi-pencil-square"></i> 작성하기
+                                        </a>
                                     </div>
                                 </div>
                             </div>

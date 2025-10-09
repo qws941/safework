@@ -29,7 +29,12 @@ zone_name = "jclee.me"
 
 # Environment Variables
 [env.production.vars]
-JWT_SECRET = "safework-jwt-secret-2024-production"
+# SECURITY WARNING: DO NOT store secrets here!
+# JWT_SECRET and ADMIN_PASSWORD_HASH must be stored in Cloudflare Secrets
+# Use: wrangler secret put JWT_SECRET
+#      wrangler secret put ADMIN_PASSWORD_HASH
+# See: SECURITY_MIGRATION_GUIDE.md for instructions
+
 ADMIN_USERNAME = "admin"
 BACKEND_URL = "https://safework.jclee.me"
 DEBUG = "false"
