@@ -53,7 +53,7 @@ jobs:
           files: workers/**
 
       - name: 🤖 Run Gemini Code Review
-        if: steps.changed-files.outputs.any_changed == 'true' && secrets.GEMINI_API_KEY
+        if: steps.changed-files.outputs.any_changed == 'true'
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -152,7 +152,7 @@ ${diff}
 
       - name: 🤖 Generate Release Notes with Gemini
         id: gemini-release-notes
-        if: steps.git-log.outputs.commits != '' && secrets.GEMINI_API_KEY
+        if: steps.git-log.outputs.commits != ''
         run: |
           prompt="Based on the following commit messages, create a concise and user-friendly summary for a release note. Group related changes under headings like '✨ New Features', '🐛 Bug Fixes', and '🔨 Improvements'.\n\nCommits:\n${{ steps.git-log.outputs.commits }}"
           json_payload=$(jq -n --arg p "$prompt" '{contents: [{parts: [{text: $p}]}]}')
