@@ -1,1 +1,0 @@
-# SafeWork Database Migrations
