@@ -82,3 +82,10 @@ curl https://safework.jclee.me/api/form/006/structure
 **마지막 업데이트**: 2025-10-09
 **빌드 상태**: ✅ 준비 완료
 **Forms**: 001-006 (전체 구현 완료)
+# Deployment Log
+
+## 2025-10-09 22:21:03
+- Cleaned root directory structure
+- Removed legacy archived code (2.6MB)
+- Reorganized docs and scripts
+
