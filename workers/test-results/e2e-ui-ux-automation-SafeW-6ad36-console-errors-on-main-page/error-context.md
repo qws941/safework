@@ -1,0 +1,163 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e3]:
+      - link " SafeWork 안전보건 관리시스템" [ref=e4] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e5]: 
+        - text: SafeWork 안전보건 관리시스템
+      - list [ref=e7]:
+        - listitem [ref=e8]:
+          - button " 문서자료" [ref=e9] [cursor=pointer]:
+            - generic [ref=e10]: 
+            - text: 문서자료
+        - listitem [ref=e11]:
+          - link " 조사표 작성" [ref=e12] [cursor=pointer]:
+            - /url: /survey/new
+            - generic [ref=e13]: 
+            - text: 조사표 작성
+        - listitem [ref=e14]:
+          - link " 로그인" [ref=e15] [cursor=pointer]:
+            - /url: /auth/login
+            - generic [ref=e16]: 
+            - text: 로그인
+        - listitem [ref=e17]:
+          - link " 회원가입" [ref=e18] [cursor=pointer]:
+            - /url: /auth/register
+            - generic [ref=e19]: 
+            - text: 회원가입
+  - generic [ref=e21]:
+    - generic [ref=e22]:
+      - heading " 안전보건 관리 시스템" [level=1] [ref=e23]:
+        - generic [ref=e24]: 
+        - text: 안전보건 관리 시스템
+      - paragraph [ref=e25]: 직원 여러분의 건강하고 안전한 근무환경을 위한 통합 관리 시스템
+    - generic [ref=e28]:
+      - heading " 작성 가능한 양식" [level=4] [ref=e29]:
+        - generic [ref=e30]: 
+        - text: 작성 가능한 양식
+      - generic [ref=e31]:
+        - generic [ref=e33]:
+          - generic [ref=e34]:
+            - generic [ref=e35]: "001"
+            - text: 근골격계 증상조사표
+          - generic [ref=e36]:
+            - paragraph [ref=e37]: 근골격계 질환 예방을 위한 증상 조사
+            - list [ref=e38]:
+              - listitem [ref=e39]: 작업 자세 및 반복 동작 평가
+              - listitem [ref=e40]: 신체 부위별 증상 체크
+              - listitem [ref=e41]: 작업 환경 개선 자료
+            - link " 작성하기" [ref=e42] [cursor=pointer]:
+              - /url: /survey/001_musculoskeletal_symptom_survey
+              - generic [ref=e43]: 
+              - text: 작성하기
+        - generic [ref=e45]:
+          - generic [ref=e46]:
+            - generic [ref=e47]: "002"
+            - text: 근골격계부담작업 유해요인조사
+          - generic [ref=e48]:
+            - paragraph [ref=e49]: 근골격계부담작업 유해요인 조사
+            - list [ref=e50]:
+              - listitem [ref=e51]: 작업 환경 평가
+              - listitem [ref=e52]: 신체 부담 요인 분석
+              - listitem [ref=e53]: 개선 방안 도출
+            - link " 작성하기" [ref=e54] [cursor=pointer]:
+              - /url: /survey/002_musculoskeletal_symptom_program
+              - generic [ref=e55]: 
+              - text: 작성하기
+        - generic [ref=e57]:
+          - generic [ref=e58]:
+            - generic [ref=e59]: "003"
+            - text: 근골격계질환 예방관리 프로그램 조사표
+          - generic [ref=e60]:
+            - paragraph [ref=e61]: 근골격계 질환 예방 관리 프로그램
+            - list [ref=e62]:
+              - listitem [ref=e63]: 신체 부위별 통증 조사
+              - listitem [ref=e64]: 통증 강도 및 빈도 평가
+              - listitem [ref=e65]: 일상생활 지장도 체크
+            - link " 작성하기" [ref=e66] [cursor=pointer]:
+              - /url: /survey/003_musculoskeletal_program
+              - generic [ref=e67]: 
+              - text: 작성하기
+        - generic [ref=e69]:
+          - generic [ref=e70]:
+            - generic [ref=e71]: "004"
+            - text: 산업재해 실태조사표
+          - generic [ref=e72]:
+            - paragraph [ref=e73]: 산업재해 발생 현황 및 예방 실태조사
+            - list [ref=e74]:
+              - listitem [ref=e75]: 재해 발생 정보 기록
+              - listitem [ref=e76]: 원인 분석 및 예방대책
+              - listitem [ref=e77]: 피재자 정보 관리
+            - link " 작성하기" [ref=e78] [cursor=pointer]:
+              - /url: /survey/004_industrial_accident_survey
+              - generic [ref=e79]: 
+              - text: 작성하기
+        - generic [ref=e81]:
+          - generic [ref=e82]:
+            - generic [ref=e83]: "005"
+            - text: 유해요인 기본조사표
+          - generic [ref=e84]:
+            - paragraph [ref=e85]: 작업환경 유해요인 기본조사 및 위험성 평가
+            - list [ref=e86]:
+              - listitem [ref=e87]: 물리적/화학적 유해요인
+              - listitem [ref=e88]: 인간공학적 유해요인
+              - listitem [ref=e89]: 심리사회적 유해요인
+            - link " 작성하기" [ref=e90] [cursor=pointer]:
+              - /url: /survey/005_basic_hazard_factor_survey
+              - generic [ref=e91]: 
+              - text: 작성하기
+        - generic [ref=e93]:
+          - generic [ref=e94]:
+            - generic [ref=e95]: "006"
+            - text: 고령근로자 작업투입 승인요청서
+          - generic [ref=e96]:
+            - paragraph [ref=e97]: 고령근로자 작업 배치 및 관리
+            - list [ref=e98]:
+              - listitem [ref=e99]: 고령근로자 건강상태 평가
+              - listitem [ref=e100]: 작업 적합성 검토
+              - listitem [ref=e101]: 안전관리 승인절차
+            - link " 작성하기" [ref=e102] [cursor=pointer]:
+              - /url: /survey/006_elderly_worker_approval_form
+              - generic [ref=e103]: 
+              - text: 작성하기
+    - generic [ref=e107]:
+      - generic [ref=e108]:
+        - generic [ref=e109]: 
+        - heading "더 많은 기능을 이용하세요" [level=3] [ref=e110]
+        - paragraph [ref=e111]: 로그인하시면 제출 이력 확인 및 개인 맞춤 서비스를 이용하실 수 있습니다.
+      - generic [ref=e112]:
+        - generic [ref=e113]:
+          - link " 로그인" [ref=e114] [cursor=pointer]:
+            - /url: /auth/login
+            - generic [ref=e115]: 
+            - text: 로그인
+          - link " 회원가입" [ref=e116] [cursor=pointer]:
+            - /url: /auth/register
+            - generic [ref=e117]: 
+            - text: 회원가입
+        - paragraph [ref=e118]: 회원가입 후 모든 서비스를 무료로 이용하실 수 있습니다.
+    - generic [ref=e119]:
+      - heading " 조사 안내" [level=4] [ref=e120]:
+        - generic [ref=e121]: 
+        - text: 조사 안내
+      - generic [ref=e122]:
+        - generic [ref=e124]:
+          - generic [ref=e126]: "1"
+          - generic [ref=e127]:
+            - heading "정확한 정보 입력" [level=6] [ref=e128]
+            - paragraph [ref=e129]: 본인의 증상을 정확하게 체크해주세요
+        - generic [ref=e131]:
+          - generic [ref=e133]: "2"
+          - generic [ref=e134]:
+            - heading "개인정보 보호" [level=6] [ref=e135]
+            - paragraph [ref=e136]: 제출된 정보는 안전하게 관리됩니다
+        - generic [ref=e138]:
+          - generic [ref=e140]: "3"
+          - generic [ref=e141]:
+            - heading "건강관리 지원" [level=6] [ref=e142]
+            - paragraph [ref=e143]: 조사 결과를 바탕으로 개선방안을 마련합니다
+  - generic [ref=e145]: © 2024 SafeWork v1.0 - Powered by Cloudflare Workers
+```
