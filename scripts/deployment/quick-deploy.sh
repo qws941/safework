@@ -12,7 +12,9 @@ NC='\033[0m'
 echo -e "${BLUE}🚀 SafeWork 자동 배포 시작...${NC}\n"
 
 # 프로젝트 루트로 이동
-cd "$(dirname "$0")"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+cd "$PROJECT_ROOT"
 
 # 1. TypeScript 타입 체크
 echo -e "${BLUE}1. TypeScript 타입 체크...${NC}"
