@@ -1,124 +1,33 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
+# Dependencies
+node_modules/
+workers/node_modules/
+
+# Testing
+test-results/
+workers/test-results/
+coverage/
+
+# Build outputs
 dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
+build/
+.wrangler/
+workers/dist/
+workers/.wrangler/
 
-# Flask
-instance/
-.webassets-cache
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
+# Environment variables
+.env
+.env.local
 
 # IDE
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
+
+# OS
 .DS_Store
 
 # Logs
 *.log
-logs/
 
-# Testing
-.coverage
-.pytest_cache/
-htmlcov/
-
-# Virtual Environment
-venv/
-ENV/
-env/
-
-# Docker
-docker-compose.override.yml
-
-# Uploads
-uploads/
-*.pdf
-*.xlsx
-*.xls
-
-# Secrets and Environment Files
-.env
-.env.local
-.env.production
-.env.development
-.env.example
-.env.template
-.env.production.secure
-secrets/
-
-# Temporary files
-tmp/
-temp/
+# Temporary
 *.tmp
-cookies.txt
-processing_result.json
-
-# Backup files
-*backup*
-*.bak
-*-v2*
-*-copy*
-*-old*
-
-# Development guide (local only)
-CLAUDE.md
-
-# Cache
-cache/
-__pycache__/
-*.pyc
-
-# Serena MCP memory
-.serena/
-
-# Cloudflare Workers
-.wrangler/
-wrangler.toml.bak
-workers/.wrangler/
-cloudflare-workers/.wrangler/
-
-# Node.js
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-package-lock.json
-
-# Additional temporary files
-*.sqlite-shm
-*.sqlite-wal
-deploy_timestamp.txt
-*dns_backup*.json
-
-# Data directories (contain sensitive or large files)
-raw_data/
-data/workers/node_modules/
-
-# Claude Code conversations
-.claude/
-.claude/settings.local.json
+.cache/
