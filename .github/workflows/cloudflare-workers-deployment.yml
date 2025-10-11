@@ -65,14 +65,7 @@ jobs:
 
             if (diff.length > 10000) return; // Skip if diff is too large
 
-            const prompt = `As a senior software engineer, please review the following code changes (git diff format). Focus on potential bugs, performance issues, and best practices. Provide specific, actionable feedback. If no issues, state "No issues found."
-
-Git Diff:
-
-${diff}
-```diff
-${diff}
-````;
+            const prompt = "As a senior software engineer, please review the following code changes (git diff format). Focus on potential bugs, performance issues, and best practices. Provide specific, actionable feedback. If no issues, state 'No issues found.'\n\nGit Diff:\n\n" + diff;
 
             const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${{ secrets.GEMINI_API_KEY }}`;
             const geminiResponse = await fetch(geminiApiUrl, {
