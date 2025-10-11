@@ -167,7 +167,7 @@ describe('UI/UX Automation - SafeWork Admin Dashboard', () => {
 
     it('should have UTF-8 encoding for Korean text support', () => {
       const html = createFullWorkerHTML();
-      expect(html).toContain('charset=UTF-8');
+      expect(html).toContain('charset="UTF-8"');
     });
   });
 });
@@ -214,7 +214,7 @@ describe('Worker Integration - Complete Response Test', () => {
     const requiredElements = [
       '관리자 대시보드 (002) - SafeWork',
       'lang="ko"',
-      'charset=UTF-8',
+      'charset="UTF-8"',
       'viewport',
       'bootstrap@5.3.0',
       'bootstrap-icons',

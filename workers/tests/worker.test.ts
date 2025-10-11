@@ -20,7 +20,7 @@ const testWorker = {
   async fetch(request: Request, env: any, ctx: any) {
     const url = new URL(request.url);
 
-    if (url.pathname === '/api/health') {
+    if (url.pathname === '/api/health' && request.method === 'GET') {
       return new Response(JSON.stringify({
         status: 'ok',
         timestamp: new Date().toISOString(),
@@ -33,8 +33,19 @@ const testWorker = {
 
     if (url.pathname === '/survey/002_musculoskeletal_symptom_program') {
       return new Response(`<!DOCTYPE html>
-<html><head><title>관리자 대시보드 (002) - SafeWork</title></head>
-<body><h1>Admin Dashboard</h1></body></html>`, {
+<html lang="ko">
+<head>
+    <title>관리자 대시보드 (002) - SafeWork</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+</head>
+<body>
+    <h1>Admin Dashboard</h1>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>`, {
         headers: { 'Content-Type': 'text/html; charset=utf-8' }
       });
     }
@@ -107,7 +118,7 @@ describe('UI/UX Elements', () => {
     const html = await response.text();
 
     expect(html).toContain('lang="ko"');
-    expect(html).toContain('charset=UTF-8');
+    expect(html).toContain('charset="UTF-8"');
   });
 
   it('should be mobile responsive', async () => {
