@@ -11,6 +11,8 @@
     "deploy:dev": "wrangler deploy --env development",
     "tail": "wrangler tail",
     "test": "vitest",
+    "test:unit": "vitest run --exclude tests/post-deployment.test.ts",
+    "test:post-deploy": "vitest run tests/post-deployment.test.ts",
     "test:watch": "vitest --watch",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",

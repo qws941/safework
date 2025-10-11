@@ -1,13 +1,12 @@
 # ==============================================================================
 # Gemini-Powered Production CI/CD Pipeline
 # ==============================================================================
-# This simplified workflow focuses solely on the production environment:
+# This workflow implements a complete CI/CD pipeline for production:
 # 1. AI Code Review: On every PR to 'master', Gemini reviews code changes.
-# 2. Build & Test: Ensures code integrity before any deployment.
-# 3. Deploy to Production: Deploys to production after manual approval on
-#                       pushes to the 'master' branch.
-# 4. AI Release Notes: Automatically generates and publishes release notes
-#                       after a successful production deployment.
+# 2. Build & Test: Runs unit tests, linting, and type checking.
+# 3. Deploy to Production: Deploys to production on pushes to 'master' branch.
+# 4. AI Release Notes: Automatically generates and publishes release notes.
+# 5. Post-Deployment Tests: Runs integration tests against live production.
 # ==============================================================================
 
 name: Gemini-Powered Production CI/CD
@@ -82,7 +81,7 @@ jobs:
             await github.rest.issues.createComment({ ...repo, issue_number, body: `### 🤖 Gemini AI Code Review\n\n${review}` });
 
   # ============================================
-  # 2. Build and Test Job
+  # 2. Build and Test Job (Unit Tests Only)
   # ============================================
   build-and-test:
     name: '🏗️ Build & Test'
@@ -99,7 +98,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run type-check
-      - run: npm run test
+      - run: npm run test:unit
 
   # ============================================
   # 3. Deploy to Production Job
@@ -170,3 +169,26 @@ jobs:
           RELEASE_NOTES="${{ steps.gemini-release-notes.outputs.notes || steps.git-log.outputs.commits }}"
           gh release create "$TAG_NAME" --title "Release $TAG_NAME" --notes "$RELEASE_NOTES"
           echo "✅ Created GitHub Release: $TAG_NAME"
+
+  # ============================================
+  # 5. Post-Deployment Verification Tests
+  # ============================================
+  post-deployment-verification:
+    name: '🔍 Post-Deployment Tests'
+    needs: deploy-production
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults: { run: { working-directory: ./workers } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'workers/package-lock.json'
+      - run: npm ci
+      - name: 🧪 Run Post-Deployment Integration Tests
+        run: npm run test:post-deploy
+      - name: ✅ Verification Complete
+        run: echo "✅ All post-deployment tests passed successfully!"
