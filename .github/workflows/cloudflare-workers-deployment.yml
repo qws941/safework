@@ -17,10 +17,12 @@ on:
     branches: [master]
     paths:
       - 'workers/**'
+      - '.github/workflows/cloudflare-workers-deployment.yml'
   pull_request:
     branches: [master]
     paths:
       - 'workers/**'
+      - '.github/workflows/cloudflare-workers-deployment.yml'
   workflow_dispatch:
 
 permissions:
