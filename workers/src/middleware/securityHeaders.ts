@@ -99,7 +99,8 @@ const DEFAULT_CSP_DIRECTIVES = {
   'font-src': [
     "'self'",
     'https://cdn.jsdelivr.net',
-    'https://fonts.gstatic.com'
+    'https://fonts.gstatic.com',
+    'https://cdnjs.cloudflare.com'
   ],
   'img-src': [
     "'self'",
