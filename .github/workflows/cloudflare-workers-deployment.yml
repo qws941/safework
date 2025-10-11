@@ -127,7 +127,12 @@ ${diff}
           cache-dependency-path: 'workers/package-lock.json'
       - run: npm ci
       - name: 🚀 Deploy to Production
-        run: npx wrangler deploy --env production
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: workers
+          command: deploy --env production
       - name: 🔍 Verify Production Deployment
         run: |
           sleep 15
