@@ -119,7 +119,7 @@ async function handleExportJob(job: ExportJob, env: any): Promise<void> {
   let content: string;
   if (job.format === 'csv') {
     const headers = Object.keys(data[0] || {}).join(',');
-    const rows = data.map(row => Object.values(row).join(','));
+    const rows = data.map((row: Record<string, any>) => Object.values(row).join(','));
     content = [headers, ...rows].join('\n');
   } else {
     content = JSON.stringify(data, null, 2);

@@ -8,11 +8,12 @@
     "skipLibCheck": true,
     "noEmit": true,
     "allowJs": true,
+    // Gradual TypeScript strict mode adoption (Phase 1: noImplicitAny)
     "strict": false,
-    "noImplicitAny": false,
-    "strictNullChecks": false,
+    "noImplicitAny": true,  // ✅ ENABLED - Phase 1 of strict mode adoption
+    "strictNullChecks": false,  // TODO: Enable in Phase 2 (Week 2)
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": false,
+    "forceConsistentCasingInFileNames": true,  // ✅ ENABLED - Best practice
     "isolatedModules": true
   },
   "include": ["src/**/*"],

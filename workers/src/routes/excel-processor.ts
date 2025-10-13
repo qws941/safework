@@ -130,7 +130,7 @@ excelProcessorRoutes.get('/download/:fileId', async (c) => {
       headers: c.res.headers
     });
 
-  } catch (error) {
+  } catch {
     return c.json({ error: 'Failed to download file' }, 500);
   }
 });
@@ -149,7 +149,7 @@ excelProcessorRoutes.post('/validate-excel', async (c) => {
       fieldMapping: validation.fieldMapping
     });
 
-  } catch (error) {
+  } catch {
     return c.json({ error: 'Validation failed' }, 500);
   }
 });

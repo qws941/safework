@@ -18,7 +18,7 @@ healthRoutes.get('/', async (c) => {
     });
     const kvTest = await c.env.SAFEWORK_KV.get('health_check');
     checks.kv_storage = kvTest ? 'healthy' : 'degraded';
-  } catch (error) {
+  } catch {
     checks.kv_storage = 'unhealthy';
   }
 
@@ -27,7 +27,7 @@ healthRoutes.get('/', async (c) => {
     // The backend is accessed through the same domain which would cause a loop
     // Backend health is monitored separately through container health checks
     checks.backend = 'skipped'; // Backend check skipped to prevent routing loop
-  } catch (error) {
+  } catch {
     checks.backend = 'degraded';
   }
 
@@ -68,7 +68,7 @@ healthRoutes.get('/plans', async (c) => {
       plans: plans.results,
       total: plans.results.length,
     });
-  } catch (error) {
+  } catch {
     return c.json({ error: 'Failed to fetch health check plans' }, 500);
   }
 });
@@ -97,7 +97,7 @@ healthRoutes.post('/plans', async (c) => {
       plan_id: result.meta.last_row_id,
       message: '건강검진 계획이 생성되었습니다',
     });
-  } catch (error) {
+  } catch {
     return c.json({ error: 'Failed to create health check plan' }, 500);
   }
 });
@@ -132,7 +132,7 @@ healthRoutes.get('/targets/:workerId', async (c) => {
       targets: targets.results,
       total: targets.results.length,
     });
-  } catch (error) {
+  } catch {
     return c.json({ error: 'Failed to fetch health check targets' }, 500);
   }
 });

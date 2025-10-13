@@ -60,7 +60,7 @@ surveyRoutes.get('/form/:formId', async (c) => {
     }
     
     return c.json(formStructure);
-  } catch (error) {
+  } catch {
     return c.json({ error: 'Failed to fetch form' }, 500);
   }
 });
@@ -70,7 +70,7 @@ surveyRoutes.get('/:formId', async (c) => {
   const formId = c.req.param('formId');
 
   // Define form templates mapping
-  const formTemplates = {
+  const formTemplates: Record<string, string> = {
     '001_musculoskeletal_symptom_survey': '001',
     '001_musculoskeletal_symptom_survey_intuitive': '001_intuitive',
     '002_musculoskeletal_symptom_program': '002',
@@ -245,7 +245,7 @@ surveyRoutes.get('/stats', async (c) => {
       statistics: stats.results,
       total_surveys: stats.results.reduce((sum: number, s: any) => sum + (Number(s.count) || 0), 0),
     });
-  } catch (error) {
+  } catch {
     return c.json({ error: 'Failed to fetch statistics' }, 500);
   }
 });

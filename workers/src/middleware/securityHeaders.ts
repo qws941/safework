@@ -79,7 +79,7 @@ export interface SecurityHeadersConfig {
 /**
  * Default CSP directives for SafeWork application
  */
-const DEFAULT_CSP_DIRECTIVES = {
+const DEFAULT_CSP_DIRECTIVES: Record<string, string | string[]> = {
   'default-src': ["'self'"],
   'script-src': [
     "'self'",

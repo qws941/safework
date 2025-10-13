@@ -15,6 +15,10 @@ import { form001Dv06Template } from './templates/001-dv06-restore';
 import { survey002FormTemplate } from './templates/survey-002-form';
 import { form002WebProgram } from './templates/002-web-program';
 import { form002AnalysisTool } from './templates/002-analysis-tool';
+import { form003Template } from './templates/003';
+import { form004Template } from './templates/004';
+import { form005Template } from './templates/005';
+import { form006Template } from './templates/006';
 import { form001Routes } from './routes/form-001';
 import { form002Routes } from './routes/form-002';
 import { form003Routes } from './routes/form-003';
@@ -112,6 +116,8 @@ app.use('/api/*', cors({
 
 // Rate limiting for authentication endpoints (strict)
 app.use('/api/auth/login', rateLimiter(RateLimitPresets.LOGIN));
+app.use('/api/auth/register', rateLimiter(RateLimitPresets.LOGIN)); // Same as login: 5 req/15min
+app.use('/api/auth/refresh', rateLimiter(RateLimitPresets.ADMIN_OPERATIONS)); // 30 req/15min
 
 // Rate limiting for survey submissions (moderate)
 app.use('/api/survey/*/submit', rateLimiter(RateLimitPresets.SURVEY_SUBMISSION));
@@ -600,6 +606,468 @@ app.get('/', (c) => {
   return c.html(html);
 });
 
+// User login page
+app.get('/auth/login', (c) => {
+  const loginHtml = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>로그인 - SafeWork</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 min-h-screen">
+    <div class="min-h-screen flex items-center justify-center p-4">
+        <div class="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8">
+            <div class="text-center mb-8">
+                <i class="fas fa-user-circle text-5xl text-indigo-600 mb-4"></i>
+                <h1 class="text-3xl font-bold text-gray-800">로그인</h1>
+                <p class="text-gray-600 mt-2">SafeWork 안전보건 관리시스템</p>
+            </div>
+            
+            <div id="error-message" class="hidden mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                <i class="fas fa-exclamation-circle mr-2"></i>
+                <span id="error-text"></span>
+            </div>
+
+            <form id="login-form" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-user mr-1"></i> 사용자명
+                    </label>
+                    <input 
+                        type="text" 
+                        id="username" 
+                        required
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" 
+                        placeholder="사용자명을 입력하세요">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-lock mr-1"></i> 비밀번호
+                    </label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        required
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" 
+                        placeholder="비밀번호를 입력하세요">
+                </div>
+                
+                <button 
+                    type="submit" 
+                    id="submit-btn"
+                    class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-4 rounded-lg hover:from-indigo-700 hover:to-purple-700 transition duration-200 font-semibold shadow-lg">
+                    <i class="fas fa-sign-in-alt mr-2"></i> 로그인
+                </button>
+            </form>
+            
+            <div class="mt-6 text-center space-y-3">
+                <p class="text-gray-600">
+                    계정이 없으신가요? 
+                    <a href="/auth/register" class="text-indigo-600 hover:text-indigo-800 font-semibold">
+                        회원가입
+                    </a>
+                </p>
+                <a href="/" class="block text-gray-500 hover:text-gray-700 text-sm">
+                    <i class="fas fa-arrow-left mr-1"></i> 메인 페이지로 돌아가기
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('login-form');
+        const submitBtn = document.getElementById('submit-btn');
+        const errorMessage = document.getElementById('error-message');
+        const errorText = document.getElementById('error-text');
+
+        function showError(message) {
+            errorText.textContent = message;
+            errorMessage.classList.remove('hidden');
+        }
+
+        function hideError() {
+            errorMessage.classList.add('hidden');
+        }
+
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            hideError();
+
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            
+            if (!username || !password) {
+                showError('사용자명과 비밀번호를 입력해주세요.');
+                return;
+            }
+
+            // Disable button during request
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> 로그인 중...';
+            
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+                
+                if (data.success && data.token) {
+                    // Store token and user info
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    
+                    // Show success message
+                    submitBtn.innerHTML = '<i class="fas fa-check-circle mr-2"></i> 로그인 성공!';
+                    submitBtn.classList.remove('from-indigo-600', 'to-purple-600');
+                    submitBtn.classList.add('from-green-600', 'to-green-600');
+                    
+                    // Redirect after short delay
+                    setTimeout(() => {
+                        window.location.href = data.redirect || '/';
+                    }, 1000);
+                } else {
+                    showError(data.error || '로그인에 실패했습니다.');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i> 로그인';
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showError('로그인 중 오류가 발생했습니다. 다시 시도해주세요.');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i> 로그인';
+            }
+        });
+    </script>
+</body>
+</html>`;
+  
+  return c.html(loginHtml);
+});
+
+// User registration page
+app.get('/auth/register', (c) => {
+  const registerHtml = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>회원가입 - SafeWork</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 min-h-screen">
+    <div class="min-h-screen flex items-center justify-center p-4">
+        <div class="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8">
+            <div class="text-center mb-8">
+                <i class="fas fa-user-plus text-5xl text-indigo-600 mb-4"></i>
+                <h1 class="text-3xl font-bold text-gray-800">회원가입</h1>
+                <p class="text-gray-600 mt-2">SafeWork 안전보건 관리시스템</p>
+            </div>
+            
+            <div id="error-message" class="hidden mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                <i class="fas fa-exclamation-circle mr-2"></i>
+                <span id="error-text"></span>
+            </div>
+
+            <div id="success-message" class="hidden mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
+                <i class="fas fa-check-circle mr-2"></i>
+                <span id="success-text"></span>
+            </div>
+
+            <form id="register-form" class="space-y-5">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-user mr-1"></i> 사용자명 <span class="text-red-500">*</span>
+                    </label>
+                    <input 
+                        type="text" 
+                        id="username" 
+                        required
+                        pattern="[a-zA-Z0-9_-]{3,30}"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" 
+                        placeholder="3-30자 (영문, 숫자, _, -)">
+                    <p class="text-xs text-gray-500 mt-1">영문, 숫자, 언더스코어(_), 하이픈(-) 사용 가능</p>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-lock mr-1"></i> 비밀번호 <span class="text-red-500">*</span>
+                    </label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        required
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" 
+                        placeholder="비밀번호 (최소 12자)">
+                    <div class="mt-2 text-xs space-y-1">
+                        <p id="pw-length" class="text-gray-500"><i class="fas fa-circle text-xs mr-1"></i> 최소 12자 이상</p>
+                        <p id="pw-lower" class="text-gray-500"><i class="fas fa-circle text-xs mr-1"></i> 소문자 포함</p>
+                        <p id="pw-upper" class="text-gray-500"><i class="fas fa-circle text-xs mr-1"></i> 대문자 포함</p>
+                        <p id="pw-number" class="text-gray-500"><i class="fas fa-circle text-xs mr-1"></i> 숫자 포함</p>
+                        <p id="pw-special" class="text-gray-500"><i class="fas fa-circle text-xs mr-1"></i> 특수문자 포함</p>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-lock mr-1"></i> 비밀번호 확인 <span class="text-red-500">*</span>
+                    </label>
+                    <input 
+                        type="password" 
+                        id="password-confirm" 
+                        required
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" 
+                        placeholder="비밀번호를 다시 입력하세요">
+                    <p id="pw-match" class="text-xs text-gray-500 mt-1"></p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-envelope mr-1"></i> 이메일 (선택)
+                    </label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" 
+                        placeholder="example@domain.com">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-id-card mr-1"></i> 이름 (선택)
+                    </label>
+                    <input 
+                        type="text" 
+                        id="full_name" 
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" 
+                        placeholder="실명">
+                </div>
+                
+                <button 
+                    type="submit" 
+                    id="submit-btn"
+                    class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-4 rounded-lg hover:from-indigo-700 hover:to-purple-700 transition duration-200 font-semibold shadow-lg">
+                    <i class="fas fa-user-plus mr-2"></i> 회원가입
+                </button>
+            </form>
+            
+            <div class="mt-6 text-center space-y-3">
+                <p class="text-gray-600">
+                    이미 계정이 있으신가요? 
+                    <a href="/auth/login" class="text-indigo-600 hover:text-indigo-800 font-semibold">
+                        로그인
+                    </a>
+                </p>
+                <a href="/" class="block text-gray-500 hover:text-gray-700 text-sm">
+                    <i class="fas fa-arrow-left mr-1"></i> 메인 페이지로 돌아가기
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('register-form');
+        const submitBtn = document.getElementById('submit-btn');
+        const errorMessage = document.getElementById('error-message');
+        const errorText = document.getElementById('error-text');
+        const successMessage = document.getElementById('success-message');
+        const successText = document.getElementById('success-text');
+        const passwordInput = document.getElementById('password');
+        const passwordConfirmInput = document.getElementById('password-confirm');
+
+        function showError(message) {
+            errorText.textContent = message;
+            errorMessage.classList.remove('hidden');
+            successMessage.classList.add('hidden');
+        }
+
+        function showSuccess(message) {
+            successText.textContent = message;
+            successMessage.classList.remove('hidden');
+            errorMessage.classList.add('hidden');
+        }
+
+        function hideMessages() {
+            errorMessage.classList.add('hidden');
+            successMessage.classList.add('hidden');
+        }
+
+        // Real-time password validation
+        passwordInput.addEventListener('input', function() {
+            const password = this.value;
+            
+            // Length check
+            const lengthCheck = document.getElementById('pw-length');
+            if (password.length >= 12) {
+                lengthCheck.innerHTML = '<i class="fas fa-check-circle text-green-500 mr-1"></i> 최소 12자 이상';
+                lengthCheck.classList.remove('text-gray-500');
+                lengthCheck.classList.add('text-green-600');
+            } else {
+                lengthCheck.innerHTML = '<i class="fas fa-circle text-xs mr-1"></i> 최소 12자 이상';
+                lengthCheck.classList.remove('text-green-600');
+                lengthCheck.classList.add('text-gray-500');
+            }
+
+            // Lowercase check
+            const lowerCheck = document.getElementById('pw-lower');
+            if (/[a-z]/.test(password)) {
+                lowerCheck.innerHTML = '<i class="fas fa-check-circle text-green-500 mr-1"></i> 소문자 포함';
+                lowerCheck.classList.remove('text-gray-500');
+                lowerCheck.classList.add('text-green-600');
+            } else {
+                lowerCheck.innerHTML = '<i class="fas fa-circle text-xs mr-1"></i> 소문자 포함';
+                lowerCheck.classList.remove('text-green-600');
+                lowerCheck.classList.add('text-gray-500');
+            }
+
+            // Uppercase check
+            const upperCheck = document.getElementById('pw-upper');
+            if (/[A-Z]/.test(password)) {
+                upperCheck.innerHTML = '<i class="fas fa-check-circle text-green-500 mr-1"></i> 대문자 포함';
+                upperCheck.classList.remove('text-gray-500');
+                upperCheck.classList.add('text-green-600');
+            } else {
+                upperCheck.innerHTML = '<i class="fas fa-circle text-xs mr-1"></i> 대문자 포함';
+                upperCheck.classList.remove('text-green-600');
+                upperCheck.classList.add('text-gray-500');
+            }
+
+            // Number check
+            const numberCheck = document.getElementById('pw-number');
+            if (/[0-9]/.test(password)) {
+                numberCheck.innerHTML = '<i class="fas fa-check-circle text-green-500 mr-1"></i> 숫자 포함';
+                numberCheck.classList.remove('text-gray-500');
+                numberCheck.classList.add('text-green-600');
+            } else {
+                numberCheck.innerHTML = '<i class="fas fa-circle text-xs mr-1"></i> 숫자 포함';
+                numberCheck.classList.remove('text-green-600');
+                numberCheck.classList.add('text-gray-500');
+            }
+
+            // Special character check
+            const specialCheck = document.getElementById('pw-special');
+            if (/[^a-zA-Z0-9]/.test(password)) {
+                specialCheck.innerHTML = '<i class="fas fa-check-circle text-green-500 mr-1"></i> 특수문자 포함';
+                specialCheck.classList.remove('text-gray-500');
+                specialCheck.classList.add('text-green-600');
+            } else {
+                specialCheck.innerHTML = '<i class="fas fa-circle text-xs mr-1"></i> 특수문자 포함';
+                specialCheck.classList.remove('text-green-600');
+                specialCheck.classList.add('text-gray-500');
+            }
+        });
+
+        // Password match check
+        passwordConfirmInput.addEventListener('input', function() {
+            const password = passwordInput.value;
+            const confirmPassword = this.value;
+            const matchMessage = document.getElementById('pw-match');
+
+            if (confirmPassword === '') {
+                matchMessage.textContent = '';
+                return;
+            }
+
+            if (password === confirmPassword) {
+                matchMessage.innerHTML = '<i class="fas fa-check-circle text-green-500 mr-1"></i> 비밀번호가 일치합니다';
+                matchMessage.classList.remove('text-gray-500', 'text-red-500');
+                matchMessage.classList.add('text-green-600');
+            } else {
+                matchMessage.innerHTML = '<i class="fas fa-times-circle text-red-500 mr-1"></i> 비밀번호가 일치하지 않습니다';
+                matchMessage.classList.remove('text-gray-500', 'text-green-600');
+                matchMessage.classList.add('text-red-500');
+            }
+        });
+
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            hideMessages();
+
+            const username = document.getElementById('username').value.trim();
+            const password = passwordInput.value;
+            const passwordConfirm = passwordConfirmInput.value;
+            const email = document.getElementById('email').value.trim() || undefined;
+            const full_name = document.getElementById('full_name').value.trim() || undefined;
+            
+            // Client-side validation
+            if (!username || !password) {
+                showError('사용자명과 비밀번호를 입력해주세요.');
+                return;
+            }
+
+            if (password !== passwordConfirm) {
+                showError('비밀번호가 일치하지 않습니다.');
+                return;
+            }
+
+            // Disable button during request
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> 가입 중...';
+            
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        username, 
+                        password, 
+                        email, 
+                        full_name 
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success && data.token) {
+                    // Store token and user info
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    
+                    // Show success message
+                    showSuccess('회원가입이 완료되었습니다! 로그인되었습니다.');
+                    submitBtn.innerHTML = '<i class="fas fa-check-circle mr-2"></i> 가입 완료!';
+                    submitBtn.classList.remove('from-indigo-600', 'to-purple-600');
+                    submitBtn.classList.add('from-green-600', 'to-green-600');
+                    
+                    // Redirect after short delay
+                    setTimeout(() => {
+                        window.location.href = data.redirect || '/';
+                    }, 1500);
+                } else {
+                    // Show detailed error messages
+                    if (data.details && Array.isArray(data.details)) {
+                        showError(data.details.join(' '));
+                    } else {
+                        showError(data.error || '회원가입에 실패했습니다.');
+                    }
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-user-plus mr-2"></i> 회원가입';
+                }
+            } catch (error) {
+                console.error('Registration error:', error);
+                showError('회원가입 중 오류가 발생했습니다. 다시 시도해주세요.');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-user-plus mr-2"></i> 회원가입';
+            }
+        });
+    </script>
+</body>
+</html>`;
+  
+  return c.html(registerHtml);
+});
+
 // Admin panel route
 app.get('/admin', (c) => {
   const adminHtml = `<!DOCTYPE html>
@@ -695,6 +1163,26 @@ app.get('/survey/:surveyType', async (c) => {
   if (surveyType === '002_musculoskeletal_symptom_program') {
     console.log('✅ 002 Analysis Tool - 001 Survey Data Analysis with NIOSH');
     return c.html(form002AnalysisTool);
+  }
+
+  if (surveyType === '003_musculoskeletal_program') {
+    console.log('✅ 003 Musculoskeletal Disease Prevention Program Survey');
+    return c.html(form003Template);
+  }
+
+  if (surveyType === '004_industrial_accident_survey') {
+    console.log('✅ 004 Industrial Accident Survey');
+    return c.html(form004Template);
+  }
+
+  if (surveyType === '005_basic_hazard_factor_survey') {
+    console.log('✅ 005 Basic Hazard Factor Survey');
+    return c.html(form005Template);
+  }
+
+  if (surveyType === '006_elderly_worker_approval_form') {
+    console.log('✅ 006 Elderly Worker Assignment Approval Request Form');
+    return c.html(form006Template);
   }
 
   if (surveyType === '002_excel_download_legacy') {
@@ -803,7 +1291,7 @@ app.get('/survey/:surveyType', async (c) => {
   }
 
   // Map survey types to template keys
-  const formTemplates = {
+  const formTemplates: Record<string, string> = {
     '001_musculoskeletal_symptom_survey': '001',
     '002_musculoskeletal_symptom_program': '002',
     '003_cardiovascular_risk_assessment': '003',
@@ -811,7 +1299,7 @@ app.get('/survey/:surveyType', async (c) => {
     '005_basic_hazard_factor_survey': '005',
     '006_elderly_worker_approval_form': '006'
   };
-  
+
   const templateKey = formTemplates[surveyType];
   if (!templateKey) {
     return c.text('Form not found', 404);
@@ -826,9 +1314,9 @@ app.get('/survey/:surveyType', async (c) => {
     }
     
     // Fallback: Generate basic form if template not found
-    const surveyTitles = {
+    const surveyTitles: Record<string, string> = {
       '001_musculoskeletal_symptom_survey': '근골격계 증상조사표',
-      '002_musculoskeletal_symptom_program': '근골격계부담작업 유해요인조사', 
+      '002_musculoskeletal_symptom_program': '근골격계부담작업 유해요인조사',
       '003_cardiovascular_risk_assessment': '심뇌혈관질환 위험도평가',
       '004_industrial_accident_survey': '산업재해 실태조사표',
       '005_basic_hazard_factor_survey': '유해요인 기본조사표',

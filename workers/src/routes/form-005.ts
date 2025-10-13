@@ -96,7 +96,7 @@ form005Routes.get('/validation-rules', async (c) => {
  */
 form005Routes.post('/validate', async (c) => {
   try {
-    const formData = await c.req.json();
+    const formData: Record<string, any> = await c.req.json();
     const errors: string[] = [];
 
     // 필수 필드 검증
@@ -108,7 +108,9 @@ form005Routes.post('/validate', async (c) => {
 
     // 위험성 매트릭스 검증
     if (formData.hazard_severity && formData.exposure_probability) {
-      const expectedRisk = FORM_005_VALIDATION_RULES.riskMatrix[formData.hazard_severity]?.[formData.exposure_probability];
+      const severityKey = formData.hazard_severity as string;
+      const probabilityKey = formData.exposure_probability as string;
+      const expectedRisk = (FORM_005_VALIDATION_RULES.riskMatrix as Record<string, Record<string, string>>)[severityKey]?.[probabilityKey];
       if (expectedRisk && formData.risk_level !== expectedRisk) {
         errors.push(`위험수준이 올바르지 않습니다. 유해성정도 '${formData.hazard_severity}'와 노출가능성 '${formData.exposure_probability}'에 대한 위험수준은 '${expectedRisk}'이어야 합니다.`);
       }

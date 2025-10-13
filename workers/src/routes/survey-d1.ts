@@ -4,6 +4,7 @@
  */
 
 import { Hono } from 'hono';
+import { verify } from 'hono/jwt';
 import { D1Client, createD1Client } from '../db/d1-client';
 import {
   Survey,
@@ -18,10 +19,43 @@ interface SurveyEnv {
   PRIMARY_DB: D1Database;
   SAFEWORK_KV: KVNamespace;
   BACKEND_URL?: string;
+  JWT_SECRET?: string;
   [key: string]: unknown;
 }
 
 export const surveyD1Routes = new Hono<{ Bindings: SurveyEnv }>();
+
+/**
+ * Extract user_id from JWT token in Authorization header
+ * Falls back to anonymous user (id=1) if no valid token
+ */
+async function getUserIdFromAuth(c: any): Promise<number> {
+  try {
+    const authHeader = c.req.header('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return 1; // Anonymous user
+    }
+
+    const token = authHeader.substring(7);
+    const jwtSecret = c.env.JWT_SECRET;
+    
+    if (!jwtSecret) {
+      console.warn('JWT_SECRET not configured, defaulting to anonymous user');
+      return 1;
+    }
+
+    const payload = await verify(token, jwtSecret);
+    
+    if (payload && typeof payload.sub === 'number') {
+      return payload.sub as number;
+    }
+    return 1;
+  } catch (error) {
+    // JWT verification failed (expired, invalid signature, etc.)
+    console.warn('JWT verification failed:', error);
+    return 1; // Anonymous user
+  }
+}
 
 /**
  * Get all survey forms metadata
@@ -149,9 +183,12 @@ surveyD1Routes.post('/submit', async (c) => {
     const ip_address = c.req.header('CF-Connecting-IP') || 'unknown';
     const user_agent = c.req.header('User-Agent') || 'unknown';
 
+    // Get authenticated user_id from JWT or default to anonymous
+    const user_id = await getUserIdFromAuth(c);
+
     // Prepare survey data
     const surveyData: Record<string, unknown> = {
-      user_id: body.user_id || 1, // Default to anonymous user (id=1)
+      user_id,
       form_type: body.form_type,
       name: body.name || null,
       department: body.department || null,
@@ -185,7 +222,7 @@ surveyD1Routes.post('/submit', async (c) => {
 
     // Log to audit_logs
     await db.insert('audit_logs', {
-      user_id: body.user_id || 1,
+      user_id,
       action: 'survey_submission',
       details: JSON.stringify({
         form_type: body.form_type,
@@ -426,9 +463,12 @@ surveyD1Routes.delete('/response/:surveyId', async (c) => {
       throw new Error('Failed to delete survey');
     }
 
+    // Get authenticated user_id from JWT or default to anonymous
+    const user_id = await getUserIdFromAuth(c);
+
     // Log deletion
     await db.insert('audit_logs', {
-      user_id: 1, // TODO: Get from auth context
+      user_id,
       action: 'survey_deletion',
       details: JSON.stringify({ survey_id: surveyId }),
       created_at: new Date().toISOString(),

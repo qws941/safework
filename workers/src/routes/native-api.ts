@@ -411,7 +411,7 @@ nativeApiRoutes.get('/native/health', async (c) => {
   try {
     await c.env.SAFEWORK_STORAGE.head('health_check');
     health.services.r2 = { status: 'healthy' };
-  } catch (error) {
+  } catch {
     // R2 head returns null if not found, which is ok
     health.services.r2 = { status: 'healthy' };
   }

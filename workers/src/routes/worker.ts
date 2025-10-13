@@ -36,7 +36,7 @@ workerRoutes.get('/', async (c) => {
       limit,
       offset,
     });
-  } catch (error) {
+  } catch {
     return c.json({ error: 'Failed to fetch workers' }, 500);
   }
 });
@@ -60,7 +60,7 @@ workerRoutes.get('/:id', async (c) => {
     }
     
     return c.json(worker);
-  } catch (error) {
+  } catch {
     return c.json({ error: 'Failed to fetch worker' }, 500);
   }
 });
@@ -149,7 +149,7 @@ workerRoutes.put('/:id', async (c) => {
       success: true,
       message: '근로자 정보가 수정되었습니다',
     });
-  } catch (error) {
+  } catch {
     return c.json({ error: 'Failed to update worker' }, 500);
   }
 });
@@ -169,7 +169,7 @@ workerRoutes.delete('/:id', async (c) => {
       success: true,
       message: '근로자가 비활성화되었습니다',
     });
-  } catch (error) {
+  } catch {
     return c.json({ error: 'Failed to delete worker' }, 500);
   }
 });
@@ -198,7 +198,7 @@ workerRoutes.get('/:id/health-history', async (c) => {
       health_checks: results.results,
       medical_visits: visits.results,
     });
-  } catch (error) {
+  } catch {
     return c.json({ error: 'Failed to fetch health history' }, 500);
   }
 });
