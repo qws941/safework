@@ -34,6 +34,7 @@ import { nativeApiRoutes } from './routes/native-api';
 import queueHandler from './queue-handler';
 import { securityHeaders, ProductionSecurityHeaders } from './middleware/securityHeaders';
 import { rateLimiter, RateLimitPresets } from './middleware/rateLimiter';
+import { errorHandler, notFoundHandler } from './middleware/error-handler';
 
 export interface Env {
   // KV Namespaces - CF Native Naming
@@ -1376,47 +1377,11 @@ app.get('/survey/:surveyType', async (c) => {
   }
 });
 
-// 404 handler
-app.notFound((c) => {
-  const notFoundHtml = `<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>페이지를 찾을 수 없습니다 - SafeWork</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-</head>
-<body class="bg-gray-50 min-h-screen flex items-center justify-center">
-    <div class="text-center">
-        <div class="mb-8">
-            <i class="fas fa-hard-hat text-6xl text-gray-400 mb-4"></i>
-            <h1 class="text-6xl font-bold text-gray-800 mb-4">404</h1>
-            <h2 class="text-2xl font-semibold text-gray-600 mb-4">페이지를 찾을 수 없습니다</h2>
-            <p class="text-gray-500 mb-8">요청하신 페이지가 존재하지 않거나 이동되었습니다.</p>
-        </div>
-        
-        <div class="space-y-4">
-            <a href="/" class="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition duration-200">
-                <i class="fas fa-home mr-2"></i>메인 페이지로 이동
-            </a>
-            <br>
-            <a href="/api/health" class="inline-block bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition duration-200">
-                <i class="fas fa-heartbeat mr-2"></i>시스템 상태 확인
-            </a>
-        </div>
-    </div>
-</body>
-</html>`;
-  
-  return c.html(notFoundHtml, 404);
-});
+// Global Error Handler - Must be registered with app.onError()
+app.onError(errorHandler);
 
-// Error handler
-app.onError((err, c) => {
-  console.error(`Error: ${err}`);
-  return c.json({ error: 'Internal Server Error' }, 500);
-});
+// 404 Not Found Handler - Must be registered after all routes
+app.notFound(notFoundHandler);
 
 // Export both HTTP handler and Queue consumer
 export default {
