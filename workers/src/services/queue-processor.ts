@@ -3,9 +3,35 @@
  * Background job processing for reports, exports, and notifications
  */
 
+// Environment bindings interface
+interface QueueEnv {
+  PRIMARY_DB: D1Database;
+  SAFEWORK_KV: KVNamespace;
+  SAFEWORK_STORAGE: R2Bucket;
+  AI: Ai;
+}
+
+// Analysis result types
+interface AnalysisResult {
+  type: string;
+  result: string;
+}
+
+// Survey data record type
+interface SurveyRecord {
+  id?: number;
+  form_type?: string;
+  name?: string;
+  age?: number;
+  gender?: string;
+  department?: string;
+  submission_date?: string;
+  [key: string]: unknown;
+}
+
 export interface QueueMessage {
   type: 'export' | 'report' | 'notification' | 'analysis' | 'cleanup';
-  payload: Record<string, any>;
+  payload: Record<string, unknown>;
   timestamp: string;
   priority: 'low' | 'normal' | 'high' | 'urgent';
 }
@@ -14,7 +40,7 @@ export interface ExportJob {
   formType: string;
   format: 'xlsx' | 'csv' | 'pdf';
   dateRange?: { start: string; end: string };
-  filters?: Record<string, any>;
+  filters?: Record<string, unknown>;
   requestedBy?: string;
 }
 
@@ -30,7 +56,7 @@ export interface NotificationJob {
   recipients: string[];
   subject: string;
   message: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
 }
 
 export interface AnalysisJob {
@@ -56,19 +82,19 @@ export async function handleQueueMessage(
   try {
     switch (message.body.type) {
       case 'export':
-        await handleExportJob(message.body.payload as ExportJob, env);
+        await handleExportJob(message.body.payload as unknown as ExportJob, env);
         break;
 
       case 'report':
-        await handleReportJob(message.body.payload as ReportJob, env);
+        await handleReportJob(message.body.payload as unknown as ReportJob, env);
         break;
 
       case 'notification':
-        await handleNotificationJob(message.body.payload as NotificationJob, env);
+        await handleNotificationJob(message.body.payload as unknown as NotificationJob, env);
         break;
 
       case 'analysis':
-        await handleAnalysisJob(message.body.payload as AnalysisJob, env);
+        await handleAnalysisJob(message.body.payload as unknown as AnalysisJob, env);
         break;
 
       case 'cleanup':
@@ -91,7 +117,7 @@ export async function handleQueueMessage(
 /**
  * Handle export job
  */
-async function handleExportJob(job: ExportJob, env: any): Promise<void> {
+async function handleExportJob(job: ExportJob, env: QueueEnv): Promise<void> {
   console.log('Processing export job:', job);
 
   // Fetch survey data
@@ -119,7 +145,7 @@ async function handleExportJob(job: ExportJob, env: any): Promise<void> {
   let content: string;
   if (job.format === 'csv') {
     const headers = Object.keys(data[0] || {}).join(',');
-    const rows = data.map((row: Record<string, any>) => Object.values(row).join(','));
+    const rows = data.map((row: SurveyRecord) => Object.values(row).join(','));
     content = [headers, ...rows].join('\n');
   } else {
     content = JSON.stringify(data, null, 2);
@@ -151,11 +177,11 @@ async function handleExportJob(job: ExportJob, env: any): Promise<void> {
 /**
  * Handle report generation job
  */
-async function handleReportJob(job: ReportJob, env: any): Promise<void> {
+async function handleReportJob(job: ReportJob, env: QueueEnv): Promise<void> {
   console.log('Processing report job:', job);
 
   // Fetch data for all form types
-  const reportData: Record<string, any> = {};
+  const reportData: Record<string, SurveyRecord[]> = {};
 
   for (const formType of job.formTypes) {
     const result = await env.PRIMARY_DB.prepare(
@@ -195,7 +221,7 @@ Write in Korean.
     ],
   });
 
-  const report = (aiResponse as any).response || '보고서 생성 실패';
+  const report = (aiResponse as { response?: string }).response || '보고서 생성 실패';
 
   // Store report in R2
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -220,7 +246,7 @@ Write in Korean.
 /**
  * Handle notification job
  */
-async function handleNotificationJob(job: NotificationJob, env: any): Promise<void> {
+async function handleNotificationJob(job: NotificationJob, env: QueueEnv): Promise<void> {
   console.log('Processing notification job:', job);
 
   // For now, just log the notification
@@ -242,7 +268,7 @@ async function handleNotificationJob(job: NotificationJob, env: any): Promise<vo
 /**
  * Handle analysis job
  */
-async function handleAnalysisJob(job: AnalysisJob, env: any): Promise<void> {
+async function handleAnalysisJob(job: AnalysisJob, env: QueueEnv): Promise<void> {
   console.log('Processing analysis job:', job);
 
   // Fetch survey data
@@ -250,10 +276,10 @@ async function handleAnalysisJob(job: AnalysisJob, env: any): Promise<void> {
     `SELECT * FROM surveys WHERE id IN (${job.surveyIds.join(',')}) AND form_type = ?`
   ).bind(job.formType).all();
 
-  const data = surveys.results;
+  const data = surveys.results as SurveyRecord[];
 
   // Run AI analysis
-  let analysisResult: any;
+  let analysisResult: AnalysisResult;
 
   switch (job.analysisType) {
     case 'risk':
@@ -282,7 +308,7 @@ async function handleAnalysisJob(job: AnalysisJob, env: any): Promise<void> {
 /**
  * Handle cleanup job
  */
-async function handleCleanupJob(payload: any, env: any): Promise<void> {
+async function handleCleanupJob(payload: Record<string, unknown>, env: QueueEnv): Promise<void> {
   console.log('Processing cleanup job:', payload);
 
   // Clean up old exports
@@ -304,34 +330,34 @@ async function handleCleanupJob(payload: any, env: any): Promise<void> {
 
 // Helper functions for analysis
 
-async function analyzeRisk(data: any[], ai: Ai): Promise<any> {
+async function analyzeRisk(data: SurveyRecord[], ai: Ai): Promise<AnalysisResult> {
   const prompt = `Analyze health and safety risks from this data: ${JSON.stringify(data)}`;
   const response = await ai.run('@cf/meta/llama-3-8b-instruct', {
     messages: [{ role: 'user', content: prompt }],
   });
-  return { type: 'risk', result: (response as any).response };
+  return { type: 'risk', result: (response as { response?: string }).response || 'Analysis failed' };
 }
 
-async function analyzeTrends(data: any[], ai: Ai): Promise<any> {
+async function analyzeTrends(data: SurveyRecord[], ai: Ai): Promise<AnalysisResult> {
   const prompt = `Identify trends and patterns in this data: ${JSON.stringify(data)}`;
   const response = await ai.run('@cf/meta/llama-3-8b-instruct', {
     messages: [{ role: 'user', content: prompt }],
   });
-  return { type: 'trends', result: (response as any).response };
+  return { type: 'trends', result: (response as { response?: string }).response || 'Analysis failed' };
 }
 
-async function detectAnomalies(data: any[], ai: Ai): Promise<any> {
+async function detectAnomalies(data: SurveyRecord[], ai: Ai): Promise<AnalysisResult> {
   const prompt = `Detect anomalies in this data: ${JSON.stringify(data)}`;
   const response = await ai.run('@cf/meta/llama-3-8b-instruct', {
     messages: [{ role: 'user', content: prompt }],
   });
-  return { type: 'anomalies', result: (response as any).response };
+  return { type: 'anomalies', result: (response as { response?: string }).response || 'Analysis failed' };
 }
 
-async function generateInsights(data: any[], ai: Ai): Promise<any> {
+async function generateInsights(data: SurveyRecord[], ai: Ai): Promise<AnalysisResult> {
   const prompt = `Generate actionable insights from this data: ${JSON.stringify(data)}`;
   const response = await ai.run('@cf/meta/llama-3-8b-instruct', {
     messages: [{ role: 'user', content: prompt }],
   });
-  return { type: 'insights', result: (response as any).response };
+  return { type: 'insights', result: (response as { response?: string }).response || 'Analysis failed' };
 }
