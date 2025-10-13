@@ -11,6 +11,24 @@ type Bindings = {
   SAFEWORK_KV: KVNamespace;
 };
 
+interface SurveyRow {
+  id?: number;
+  submission_id?: number;
+  name?: string;
+  age?: number;
+  gender?: string;
+  department?: string | null;
+  work_experience?: string | number | null;
+  neck_pain?: string | null;
+  shoulder_pain?: string | null;
+  back_pain?: string | null;
+  neck_pain_exists?: string | null;
+  shoulder_pain_exists?: string | null;
+  back_pain_exists?: string | null;
+  submission_date?: string;
+  submitted_at?: string;
+}
+
 export const unifiedAdminRoutes = new Hono<{ Bindings: Bindings }>();
 
 /**
@@ -105,11 +123,12 @@ unifiedAdminRoutes.get('/stats', async (c) => {
     };
 
     return c.json(response);
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return c.json({
       success: false,
       error: 'Failed to fetch unified statistics',
-      details: error.message
+      details: errorMessage
     }, 500);
   }
 });
@@ -151,11 +170,12 @@ unifiedAdminRoutes.get('/recent', async (c) => {
       count: recentResult?.results?.length || 0,
       timestamp: new Date().toISOString()
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return c.json({
       success: false,
       error: 'Failed to fetch recent submissions',
-      details: error.message
+      details: errorMessage
     }, 500);
   }
 });
@@ -197,7 +217,7 @@ unifiedAdminRoutes.get('/export', async (c) => {
     const csvRows = [headers.join(',')];
 
     // Add 001 data
-    data001?.results?.forEach((row: any) => {
+    data001?.results?.forEach((row: SurveyRow) => {
       csvRows.push([
         'Form 001',
         row.submission_id || row.id,
@@ -214,7 +234,7 @@ unifiedAdminRoutes.get('/export', async (c) => {
     });
 
     // Add 002 data
-    data002?.results?.forEach((row: any) => {
+    data002?.results?.forEach((row: SurveyRow) => {
       csvRows.push([
         'Form 002',
         row.submission_id || row.id,
@@ -238,11 +258,12 @@ unifiedAdminRoutes.get('/export', async (c) => {
         'Content-Disposition': `attachment; filename="${filename}"`
       }
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return c.json({
       success: false,
       error: 'Failed to export unified data',
-      details: error.message
+      details: errorMessage
     }, 500);
   }
 });

@@ -3,6 +3,66 @@ import { Env } from '../index';
 
 export const excelProcessorRoutes = new Hono<{ Bindings: Env }>();
 
+// Type definitions
+interface SurveyQuestion {
+  id: string;
+  type: string;
+  label: string;
+  required: boolean;
+  options?: string[];
+}
+
+interface SurveySection {
+  id: string;
+  title: string;
+  fields: string[];
+  questions: SurveyQuestion[];
+}
+
+interface SurveyField {
+  id: string;
+  type: string;
+  label: string;
+  required: boolean;
+  section: string;
+  options?: string[];
+}
+
+interface SurveyStructure {
+  formId: string;
+  title: string;
+  description: string;
+  sections: SurveySection[];
+  fields: SurveyField[];
+}
+
+interface SurveyResponse {
+  id: number;
+  form_type: string;
+  response_data: string;
+  submitted_at: string;
+  worker_id?: number;
+  department_id?: number;
+}
+
+interface ExcelSheet {
+  name: string;
+  data: Record<string, unknown>[];
+}
+
+interface ExcelData {
+  fileName: string;
+  sheets: ExcelSheet[];
+  buffer: string | ArrayBuffer;
+}
+
+interface ValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+  fieldMapping: Record<string, string>;
+}
+
 /**
  * Worker for processing 002_musculoskeletal_symptom_program.xls
  * Handles Excel file parsing and data extraction for survey form 002
@@ -78,14 +138,14 @@ excelProcessorRoutes.get('/form-structure/:formId', async (c) => {
 // Export survey responses to Excel format
 excelProcessorRoutes.post('/export-to-excel', async (c) => {
   try {
-    const { formType, responses, format = 'xlsx' } = await c.req.json();
+    const { formType, format = 'xlsx' } = await c.req.json();
 
     if (formType !== '002_musculoskeletal_symptom_program') {
       return c.json({ error: 'Unsupported form type' }, 400);
     }
 
     // Get survey responses from database
-    const surveyResponses = await getSurveyResponses(c.env.SAFEWORK_DB, formType);
+    const surveyResponses = await getSurveyResponses(c.env.PRIMARY_DB, formType);
 
     // Convert to Excel format
     const excelData = await convertResponsesToExcel(surveyResponses, format);
@@ -123,10 +183,11 @@ excelProcessorRoutes.get('/download/:fileId', async (c) => {
     }
 
     // Set appropriate headers for Excel download
+    const excelFile = fileData as unknown as ExcelData;
     c.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    c.header('Content-Disposition', `attachment; filename="${(fileData as any).fileName}"`);
+    c.header('Content-Disposition', `attachment; filename="${excelFile.fileName}"`);
 
-    return new Response((fileData as any).buffer, {
+    return new Response(excelFile.buffer, {
       headers: c.res.headers
     });
 
@@ -156,7 +217,7 @@ excelProcessorRoutes.post('/validate-excel', async (c) => {
 
 // Helper functions
 
-async function parseExcelToSurveyStructure(fileData: string): Promise<any> {
+async function parseExcelToSurveyStructure(fileData: string): Promise<SurveyStructure> {
   // Enhanced structure based on actual Excel analysis
   return {
     formId: '002_musculoskeletal_symptom_program',
@@ -263,7 +324,7 @@ async function parseExcelToSurveyStructure(fileData: string): Promise<any> {
   };
 }
 
-async function getSurveyResponses(db: any, formType: string): Promise<any[]> {
+async function getSurveyResponses(db: D1Database, formType: string): Promise<SurveyResponse[]> {
   if (!db) return [];
 
   try {
@@ -280,14 +341,14 @@ async function getSurveyResponses(db: any, formType: string): Promise<any[]> {
       ORDER BY submitted_at DESC
     `).bind(formType).all();
 
-    return result.results || [];
+    return (result.results as unknown as SurveyResponse[]) || [];
   } catch (error) {
     console.error('Database query error:', error);
     return [];
   }
 }
 
-async function convertResponsesToExcel(responses: any[], format: string): Promise<any> {
+async function convertResponsesToExcel(responses: SurveyResponse[], format: string): Promise<ExcelData> {
   // Mock Excel conversion - in real implementation would use xlsx library
   const excelData = {
     fileName: `002_survey_responses_${new Date().toISOString().split('T')[0]}.${format}`,
@@ -309,7 +370,7 @@ async function convertResponsesToExcel(responses: any[], format: string): Promis
   return excelData;
 }
 
-async function validateExcelStructure(fileData: string, expectedFields: string[]): Promise<any> {
+async function validateExcelStructure(fileData: string, expectedFields: string[]): Promise<ValidationResult> {
   // Mock validation - in real implementation would parse Excel and validate structure
   return {
     isValid: true,
