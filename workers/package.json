@@ -19,7 +19,8 @@
     "lint:fix": "eslint src/**/*.ts --fix",
     "type-check": "tsc --noEmit",
     "deploy:bypass": "wrangler deploy --no-bundle --compatibility-date=2024-01-01",
-    "build:lenient": "tsc --noEmit false --skipLibCheck true"
+    "build:lenient": "tsc --noEmit false --skipLibCheck true",
+    "generate:summaries": "node scripts/generate-musculoskeletal-summaries.js"
   },
   "keywords": [
     "cloudflare-workers",
@@ -37,6 +38,7 @@
     "@typescript-eslint/eslint-plugin": "^8.46.0",
     "@typescript-eslint/parser": "^8.46.0",
     "eslint": "^9.37.0",
+    "exceljs": "^4.4.0",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4",
     "wrangler": "^4.42.2"
