@@ -9,9 +9,16 @@ export const unifiedAdminDashboardTemplate = `
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="SafeWork 통합 관리자 대시보드 - 근골격계 증상조사 통합 관리 시스템">
   <title>SafeWork 통합 관리자 대시보드</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+
+  <!-- Performance: Preconnect to CDN origins -->
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+
+  <!-- Stylesheets -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet" crossorigin="anonymous">
   <style>
     :root {
       --primary: #667eea;
@@ -364,20 +371,20 @@ export const unifiedAdminDashboardTemplate = `
     <div class="loading-spinner"></div>
   </div>
 
-  <div class="dashboard-container">
+  <div class="dashboard-container" role="main" aria-label="관리자 대시보드 메인 컨텐츠">
     <!-- Header -->
-    <div class="header-section">
-      <h1><i class="bi bi-speedometer2"></i> SafeWork 통합 관리자 대시보드</h1>
+    <header class="header-section" role="banner" aria-label="대시보드 헤더">
+      <h1><i class="bi bi-speedometer2" aria-hidden="true"></i> SafeWork 통합 관리자 대시보드</h1>
       <p>근골격계 증상조사 통합 관리 시스템</p>
-      <div class="mt-3">
-        <span class="badge bg-primary">Form 001</span>
-        <span class="badge bg-success">Form 002</span>
-        <span class="badge bg-secondary">실시간 업데이트</span>
+      <div class="mt-3" role="group" aria-label="양식 유형 표시">
+        <span class="badge bg-primary" role="status">Form 001</span>
+        <span class="badge bg-success" role="status">Form 002</span>
+        <span class="badge bg-secondary" role="status" aria-live="polite">실시간 업데이트</span>
       </div>
-    </div>
+    </header>
 
     <!-- Statistics Cards -->
-    <div class="stats-grid">
+    <section class="stats-grid" role="region" aria-label="통계 카드"">
       <div class="stat-card primary">
         <div class="stat-icon">
           <i class="bi bi-file-earmark-text"></i>
@@ -435,9 +442,9 @@ export const unifiedAdminDashboardTemplate = `
     </div>
 
     <!-- Search Panel -->
-    <div class="search-panel">
+    <section class="search-panel" role="search" aria-label="제출 내역 검색">
       <div class="input-group input-group-lg">
-        <span class="input-group-text">
+        <span class="input-group-text" aria-hidden="true">
           <i class="bi bi-search"></i>
         </span>
         <input
@@ -446,9 +453,10 @@ export const unifiedAdminDashboardTemplate = `
           class="form-control"
           placeholder="ID, 이름, 부서로 검색..."
           autocomplete="off"
+          aria-label="제출 내역 검색 입력"
         >
-        <button class="btn btn-outline-secondary" id="clear-search">
-          <i class="bi bi-x"></i>
+        <button class="btn btn-outline-secondary" id="clear-search" aria-label="검색어 지우기">
+          <i class="bi bi-x" aria-hidden="true"></i>
         </button>
       </div>
       <small id="search-results-count" class="text-muted d-block mt-2">
@@ -457,8 +465,8 @@ export const unifiedAdminDashboardTemplate = `
     </div>
 
     <!-- Filter Panel -->
-    <div class="filter-panel">
-      <h5><i class="bi bi-funnel"></i> 필터</h5>
+    <section class="filter-panel" role="region" aria-label="데이터 필터">
+      <h5><i class="bi bi-funnel" aria-hidden="true"></i> 필터</h5>
       <div class="row g-3">
         <div class="col-md-3">
           <label class="form-label">부서</label>
@@ -492,9 +500,9 @@ export const unifiedAdminDashboardTemplate = `
     </div>
 
     <!-- Quick Actions -->
-    <div class="quick-actions">
-      <h3><i class="bi bi-lightning"></i> 빠른 액세스</h3>
-      <div class="action-grid">
+    <nav class="quick-actions" role="navigation" aria-label="빠른 액세스 메뉴">
+      <h3><i class="bi bi-lightning" aria-hidden="true"></i> 빠른 액세스</h3>
+      <div class="action-grid" role="list">
         <a href="/admin/001" class="action-btn">
           <i class="bi bi-clipboard-data"></i>
           <span>Form 001 관리</span>
@@ -523,37 +531,37 @@ export const unifiedAdminDashboardTemplate = `
     </div>
 
     <!-- Charts Section -->
-    <div class="row">
+    <div class="row" role="region" aria-label="통계 차트">
       <div class="col-lg-6 mb-4">
-        <div class="chart-section">
-          <h3><i class="bi bi-pie-chart"></i> 부위별 통증 분포</h3>
+        <section class="chart-section" role="region" aria-label="부위별 통증 분포 차트">
+          <h3><i class="bi bi-pie-chart" aria-hidden="true"></i> 부위별 통증 분포</h3>
           <div class="chart-container">
-            <canvas id="painDistributionChart"></canvas>
+            <canvas id="painDistributionChart" role="img" aria-label="부위별 통증 분포를 나타내는 도넛 차트"></canvas>
           </div>
-        </div>
+        </section>
       </div>
 
       <div class="col-lg-6 mb-4">
-        <div class="chart-section">
-          <h3><i class="bi bi-bar-chart"></i> 부서별 제출 현황</h3>
+        <section class="chart-section" role="region" aria-label="부서별 제출 현황 차트">
+          <h3><i class="bi bi-bar-chart" aria-hidden="true"></i> 부서별 제출 현황</h3>
           <div class="chart-container">
-            <canvas id="departmentChart"></canvas>
+            <canvas id="departmentChart" role="img" aria-label="부서별 제출 현황을 나타내는 막대 차트"></canvas>
           </div>
-        </div>
+        </section>
       </div>
 
       <div class="col-lg-12 mb-4">
-        <div class="chart-section">
-          <h3><i class="bi bi-graph-up"></i> 시간대별 제출 추이</h3>
+        <section class="chart-section" role="region" aria-label="시간대별 제출 추이 차트">
+          <h3><i class="bi bi-graph-up" aria-hidden="true"></i> 시간대별 제출 추이</h3>
           <div class="chart-container" style="height: 250px;">
-            <canvas id="timelineChart"></canvas>
+            <canvas id="timelineChart" role="img" aria-label="최근 7일간 시간대별 제출 추이를 나타내는 선형 차트"></canvas>
           </div>
-        </div>
+        </section>
       </div>
     </div>
 
     <!-- Recent Submissions -->
-    <div class="recent-submissions">
+    <section class="recent-submissions" role="region" aria-label="최근 제출 내역">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <h3 class="mb-0"><i class="bi bi-clock-history"></i> 최근 제출 내역</h3>
         <div class="refresh-controls">
@@ -578,8 +586,8 @@ export const unifiedAdminDashboardTemplate = `
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" crossorigin="anonymous"></script>
   <script>
     let charts = {};
     let allSubmissions = [];
