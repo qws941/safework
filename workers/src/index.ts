@@ -143,18 +143,14 @@ app.route('/api/form/006', form006Routes);
 app.route('/api/warning-sign', warningSignRoutes);  // Warning Sign Generator (Edge API)
 app.route('/api/native', nativeApiRoutes);  // Cloudflare Native Services (R2, Queue, AI)
 
-// Admin routes (temporarily public for testing - add JWT later)
-app.route('/api/admin', adminRoutes);  // 001 Admin API
-// app.route('/admin', adminRoutes);  // OLD - 001 Admin dashboard pages (disabled for unified)
+// Admin routes - Unified Dashboard (Phase 1 improvements)
+app.route('/admin', unifiedAdminRoutes);  // Unified Admin dashboard pages
+app.route('/api/admin', unifiedAdminRoutes);  // Unified Admin API
 
-app.route('/api/admin/002', admin002Routes);  // 002 Admin API
-app.route('/admin/002', admin002Routes);  // 002 Admin dashboard pages
-
-app.route('/api/admin/unified', unifiedAdminRoutes);  // Unified Admin API
-app.route('/admin', unifiedAdminRoutes);  // NEW Unified Admin dashboard (Phase 1 improvements)
-
-// Keep specific admin pages
-app.route('/admin/001', adminRoutes);  // 001-specific admin pages
+// Legacy admin routes (deprecated - redirecting to unified)
+app.route('/admin/001', adminRoutes);  // 001-specific admin pages (deprecated)
+app.route('/admin/002', admin002Routes);  // 002-specific admin pages (deprecated)
+app.route('/api/admin/002', admin002Routes);  // 002 Admin API (deprecated)
 
 // Protected routes (require JWT)
 app.use('/api/workers/*', async (c, next) => {
@@ -228,14 +224,23 @@ app.get('/', (c) => {
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
+    <meta name="description" content="SafeWork 안전보건 관리시스템 - 근골격계 증상조사 및 산업재해 예방 통합 플랫폼">
     <title>홈 - SafeWork 안전보건 관리시스템</title>
-    
+
+    <!-- Performance: Preconnect to CDN origins -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+    <link rel="preconnect" href="https://code.jquery.com" crossorigin>
+    <link rel="dns-prefetch" href="https://code.jquery.com">
+
     <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
     <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" crossorigin="anonymous">
     <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
     <!-- Custom CSS -->
     <style>
         :root {
@@ -336,40 +341,40 @@ app.get('/', (c) => {
 </head>
 <body>
     <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-custom">
+    <nav class="navbar navbar-expand-lg navbar-custom" role="navigation" aria-label="주 내비게이션">
         <div class="container-fluid">
-            <a class="navbar-brand" href="/">
-                <i class="bi bi-hospital"></i> SafeWork 안전보건 관리시스템
+            <a class="navbar-brand" href="/" aria-label="SafeWork 홈페이지로 이동">
+                <i class="bi bi-hospital" aria-hidden="true"></i> SafeWork 안전보건 관리시스템
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="메뉴 토글">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
+                <ul class="navbar-nav ms-auto" role="list">
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-file-text"></i> 문서자료
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="문서자료 메뉴">
+                            <i class="bi bi-file-text" aria-hidden="true"></i> 문서자료
                         </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="/document">문서 목록</a></li>
-                            <li><a class="dropdown-item" href="/document/templates">템플릿 양식</a></li>
-                            <li><a class="dropdown-item" href="/document/search">문서 검색</a></li>
+                        <ul class="dropdown-menu" role="menu">
+                            <li role="presentation"><a class="dropdown-item" href="/document" role="menuitem">문서 목록</a></li>
+                            <li role="presentation"><a class="dropdown-item" href="/document/templates" role="menuitem">템플릿 양식</a></li>
+                            <li role="presentation"><a class="dropdown-item" href="/document/search" role="menuitem">문서 검색</a></li>
                         </ul>
                     </li>
-                    
+
                     <li class="nav-item">
-                        <a class="nav-link" href="/survey/new">
-                            <i class="bi bi-pencil-square"></i> 조사표 작성
+                        <a class="nav-link" href="/survey/new" aria-label="조사표 작성">
+                            <i class="bi bi-pencil-square" aria-hidden="true"></i> 조사표 작성
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/auth/login">
-                            <i class="bi bi-box-arrow-in-right"></i> 로그인
+                        <a class="nav-link" href="/auth/login" aria-label="로그인 페이지로 이동">
+                            <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> 로그인
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/auth/register">
-                            <i class="bi bi-person-plus"></i> 회원가입
+                        <a class="nav-link" href="/auth/register" aria-label="회원가입 페이지로 이동">
+                            <i class="bi bi-person-plus" aria-hidden="true"></i> 회원가입
                         </a>
                     </li>
                 </ul>
@@ -379,27 +384,27 @@ app.get('/', (c) => {
 
     <!-- Main Content -->
     <div class="container-fluid">
-        <div class="main-container">
-            <div class="text-center mb-5">
+        <div class="main-container" role="main" aria-label="메인 컨텐츠">
+            <header class="text-center mb-5" role="banner">
                 <h1 class="display-4 fw-bold mb-4">
-                    <i class="bi bi-clipboard2-pulse"></i><br>
+                    <i class="bi bi-clipboard2-pulse" aria-hidden="true"></i><br>
                     안전보건 관리 시스템
                 </h1>
                 <p class="lead text-muted">직원 여러분의 건강하고 안전한 근무환경을 위한 통합 관리 시스템</p>
-            </div>
+            </header>
 
             <div class="row g-4 mb-4">
                 <div class="col-12">
-                    <div class="section-card">
+                    <section class="section-card" role="region" aria-label="작성 가능한 양식 목록">
                         <h4 class="section-title mb-4">
-                            <i class="bi bi-file-text"></i> 작성 가능한 양식
+                            <i class="bi bi-file-text" aria-hidden="true"></i> 작성 가능한 양식
                         </h4>
-                        <div class="row g-3">
+                        <div class="row g-3" role="list">
                             <!-- 001 근골격계 증상조사표 -->
-                            <div class="col-lg-4 col-md-6">
-                                <div class="card h-100 border-primary">
+                            <div class="col-lg-4 col-md-6" role="listitem">
+                                <article class="card h-100 border-primary">
                                     <div class="card-header bg-primary text-white">
-                                        <span class="badge bg-white text-primary">001</span> 근골격계 증상조사표
+                                        <span class="badge bg-white text-primary" role="status">001</span> 근골격계 증상조사표
                                     </div>
                                     <div class="card-body">
                                         <p class="small">근골격계 질환 예방을 위한 증상 조사</p>
@@ -408,18 +413,18 @@ app.get('/', (c) => {
                                             <li>신체 부위별 증상 체크</li>
                                             <li>작업 환경 개선 자료</li>
                                         </ul>
-                                        <a href="/survey/001_musculoskeletal_symptom_survey" class="btn btn-primary w-100">
-                                            <i class="bi bi-pencil-square"></i> 작성하기
+                                        <a href="/survey/001_musculoskeletal_symptom_survey" class="btn btn-primary w-100" aria-label="001 근골격계 증상조사표 작성하기">
+                                            <i class="bi bi-pencil-square" aria-hidden="true"></i> 작성하기
                                         </a>
                                     </div>
-                                </div>
+                                </article>
                             </div>
 
                             <!-- 002 근골격계부담작업 유해요인조사 -->
-                            <div class="col-lg-4 col-md-6">
-                                <div class="card h-100 border-info">
+                            <div class="col-lg-4 col-md-6" role="listitem">
+                                <article class="card h-100 border-info">
                                     <div class="card-header bg-info text-white">
-                                        <span class="badge bg-white text-info">002</span> 근골격계부담작업 유해요인조사
+                                        <span class="badge bg-white text-info" role="status">002</span> 근골격계부담작업 유해요인조사
                                     </div>
                                     <div class="card-body">
                                         <p class="small">근골격계부담작업 유해요인 조사</p>
@@ -428,18 +433,18 @@ app.get('/', (c) => {
                                             <li>신체 부담 요인 분석</li>
                                             <li>개선 방안 도출</li>
                                         </ul>
-                                        <a href="/survey/002_musculoskeletal_symptom_program" class="btn btn-info w-100">
-                                            <i class="bi bi-pencil-square"></i> 작성하기
+                                        <a href="/survey/002_musculoskeletal_symptom_program" class="btn btn-info w-100" aria-label="002 근골격계부담작업 유해요인조사 작성하기">
+                                            <i class="bi bi-pencil-square" aria-hidden="true"></i> 작성하기
                                         </a>
                                     </div>
-                                </div>
+                                </article>
                             </div>
 
                             <!-- 003 근골격계질환 예방관리 프로그램 조사표 -->
-                            <div class="col-lg-4 col-md-6">
-                                <div class="card h-100 border-success">
+                            <div class="col-lg-4 col-md-6" role="listitem">
+                                <article class="card h-100 border-success">
                                     <div class="card-header bg-success text-white">
-                                        <span class="badge bg-white text-success">003</span> 근골격계질환 예방관리 프로그램 조사표
+                                        <span class="badge bg-white text-success" role="status">003</span> 근골격계질환 예방관리 프로그램 조사표
                                     </div>
                                     <div class="card-body">
                                         <p class="small">근골격계 질환 예방 관리 프로그램</p>
@@ -448,18 +453,18 @@ app.get('/', (c) => {
                                             <li>통증 강도 및 빈도 평가</li>
                                             <li>일상생활 지장도 체크</li>
                                         </ul>
-                                        <a href="/survey/003_musculoskeletal_program" class="btn btn-success w-100">
-                                            <i class="bi bi-pencil-square"></i> 작성하기
+                                        <a href="/survey/003_musculoskeletal_program" class="btn btn-success w-100" aria-label="003 근골격계질환 예방관리 프로그램 조사표 작성하기">
+                                            <i class="bi bi-pencil-square" aria-hidden="true"></i> 작성하기
                                         </a>
                                     </div>
-                                </div>
+                                </article>
                             </div>
 
                             <!-- 004 산업재해 실태조사표 -->
-                            <div class="col-lg-4 col-md-6">
-                                <div class="card h-100 border-danger">
+                            <div class="col-lg-4 col-md-6" role="listitem">
+                                <article class="card h-100 border-danger">
                                     <div class="card-header bg-danger text-white">
-                                        <span class="badge bg-white text-danger">004</span> 산업재해 실태조사표
+                                        <span class="badge bg-white text-danger" role="status">004</span> 산업재해 실태조사표
                                     </div>
                                     <div class="card-body">
                                         <p class="small">산업재해 발생 현황 및 예방 실태조사</p>
@@ -468,18 +473,18 @@ app.get('/', (c) => {
                                             <li>원인 분석 및 예방대책</li>
                                             <li>피재자 정보 관리</li>
                                         </ul>
-                                        <a href="/survey/004_industrial_accident_survey" class="btn btn-danger w-100">
-                                            <i class="bi bi-pencil-square"></i> 작성하기
+                                        <a href="/survey/004_industrial_accident_survey" class="btn btn-danger w-100" aria-label="004 산업재해 실태조사표 작성하기">
+                                            <i class="bi bi-pencil-square" aria-hidden="true"></i> 작성하기
                                         </a>
                                     </div>
-                                </div>
+                                </article>
                             </div>
 
                             <!-- 005 유해요인 기본조사표 -->
-                            <div class="col-lg-4 col-md-6">
-                                <div class="card h-100 border-warning">
+                            <div class="col-lg-4 col-md-6" role="listitem">
+                                <article class="card h-100 border-warning">
                                     <div class="card-header bg-warning text-dark">
-                                        <span class="badge bg-white text-warning">005</span> 유해요인 기본조사표
+                                        <span class="badge bg-white text-warning" role="status">005</span> 유해요인 기본조사표
                                     </div>
                                     <div class="card-body">
                                         <p class="small">작업환경 유해요인 기본조사 및 위험성 평가</p>
@@ -488,18 +493,18 @@ app.get('/', (c) => {
                                             <li>인간공학적 유해요인</li>
                                             <li>심리사회적 유해요인</li>
                                         </ul>
-                                        <a href="/survey/005_basic_hazard_factor_survey" class="btn btn-warning w-100">
-                                            <i class="bi bi-pencil-square"></i> 작성하기
+                                        <a href="/survey/005_basic_hazard_factor_survey" class="btn btn-warning w-100" aria-label="005 유해요인 기본조사표 작성하기">
+                                            <i class="bi bi-pencil-square" aria-hidden="true"></i> 작성하기
                                         </a>
                                     </div>
-                                </div>
+                                </article>
                             </div>
 
                             <!-- 006 고령근로자 작업투입 승인요청서 -->
-                            <div class="col-lg-4 col-md-6">
-                                <div class="card h-100 border-dark">
+                            <div class="col-lg-4 col-md-6" role="listitem">
+                                <article class="card h-100 border-dark">
                                     <div class="card-header bg-dark text-white">
-                                        <span class="badge bg-white text-dark">006</span> 고령근로자 작업투입 승인요청서
+                                        <span class="badge bg-white text-dark" role="status">006</span> 고령근로자 작업투입 승인요청서
                                     </div>
                                     <div class="card-body">
                                         <p class="small">고령근로자 작업 배치 및 관리</p>
@@ -508,11 +513,11 @@ app.get('/', (c) => {
                                             <li>작업 적합성 검토</li>
                                             <li>안전관리 승인절차</li>
                                         </ul>
-                                        <a href="/survey/006_elderly_worker_approval_form" class="btn btn-dark w-100">
-                                            <i class="bi bi-pencil-square"></i> 작성하기
+                                        <a href="/survey/006_elderly_worker_approval_form" class="btn btn-dark w-100" aria-label="006 고령근로자 작업투입 승인요청서 작성하기">
+                                            <i class="bi bi-pencil-square" aria-hidden="true"></i> 작성하기
                                         </a>
                                     </div>
-                                </div>
+                                </article>
                             </div>
                         </div>
                     </div>
@@ -522,40 +527,40 @@ app.get('/', (c) => {
             <div class="row g-4">
                 <!-- 로그인/회원가입 섹션 -->
                 <div class="col-12">
-                    <div class="section-card">
+                    <section class="section-card" role="region" aria-label="회원 서비스 안내">
                         <div class="row align-items-center">
                             <div class="col-md-6 text-center mb-4 mb-md-0">
-                                <i class="bi bi-person-circle" style="font-size: 4rem; color: var(--primary-color);"></i>
+                                <i class="bi bi-person-circle" style="font-size: 4rem; color: var(--primary-color);" aria-hidden="true"></i>
                                 <h3 class="mt-3">더 많은 기능을 이용하세요</h3>
                                 <p class="text-muted">로그인하시면 제출 이력 확인 및 개인 맞춤 서비스를 이용하실 수 있습니다.</p>
                             </div>
                             <div class="col-md-6">
-                                <div class="d-grid gap-2">
-                                    <a href="/auth/login" class="btn btn-primary btn-lg">
-                                        <i class="bi bi-box-arrow-in-right"></i> 로그인
+                                <nav class="d-grid gap-2" role="navigation" aria-label="회원 서비스">
+                                    <a href="/auth/login" class="btn btn-primary btn-lg" aria-label="로그인 페이지로 이동">
+                                        <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> 로그인
                                     </a>
-                                    <a href="/auth/register" class="btn btn-outline-primary btn-lg">
-                                        <i class="bi bi-person-plus"></i> 회원가입
+                                    <a href="/auth/register" class="btn btn-outline-primary btn-lg" aria-label="회원가입 페이지로 이동">
+                                        <i class="bi bi-person-plus" aria-hidden="true"></i> 회원가입
                                     </a>
-                                </div>
+                                </nav>
                                 <p class="text-center mt-3 text-muted small">
                                     회원가입 후 모든 서비스를 무료로 이용하실 수 있습니다.
                                 </p>
                             </div>
                         </div>
-                    </div>
+                    </section>
                 </div>
             </div>
 
-            <div class="section-card mt-4">
+            <section class="section-card mt-4" role="region" aria-label="조사 안내">
                 <h4 class="section-title">
-                    <i class="bi bi-info-circle"></i> 조사 안내
+                    <i class="bi bi-info-circle" aria-hidden="true"></i> 조사 안내
                 </h4>
                 <div class="row">
                     <div class="col-md-4 mb-3">
                         <div class="d-flex align-items-start">
                             <div class="flex-shrink-0">
-                                <span class="badge bg-primary rounded-circle p-2">1</span>
+                                <span class="badge bg-primary rounded-circle p-2" role="status">1</span>
                             </div>
                             <div class="flex-grow-1 ms-3">
                                 <h6>정확한 정보 입력</h6>
@@ -566,7 +571,7 @@ app.get('/', (c) => {
                     <div class="col-md-4 mb-3">
                         <div class="d-flex align-items-start">
                             <div class="flex-shrink-0">
-                                <span class="badge bg-primary rounded-circle p-2">2</span>
+                                <span class="badge bg-primary rounded-circle p-2" role="status">2</span>
                             </div>
                             <div class="flex-grow-1 ms-3">
                                 <h6>개인정보 보호</h6>
@@ -577,7 +582,7 @@ app.get('/', (c) => {
                     <div class="col-md-4 mb-3">
                         <div class="d-flex align-items-start">
                             <div class="flex-shrink-0">
-                                <span class="badge bg-primary rounded-circle p-2">3</span>
+                                <span class="badge bg-primary rounded-circle p-2" role="status">3</span>
                             </div>
                             <div class="flex-grow-1 ms-3">
                                 <h6>건강관리 지원</h6>
@@ -586,21 +591,21 @@ app.get('/', (c) => {
                         </div>
                     </div>
                 </div>
-            </div>
+            </section>
         </div>
     </div>
 
     <!-- Footer -->
-    <div class="footer">
+    <footer class="footer" role="contentinfo" aria-label="사이트 푸터">
         <div class="container text-center">
             <small class="text-muted">© 2024 SafeWork v1.0 - Powered by Cloudflare Workers</small>
         </div>
-    </div>
+    </footer>
 
     <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
     <!-- jQuery -->
-    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js" crossorigin="anonymous"></script>
 </body>
 </html>`;
   
@@ -1067,88 +1072,6 @@ app.get('/auth/register', (c) => {
 </html>`;
   
   return c.html(registerHtml);
-});
-
-// Admin panel route
-app.get('/admin', (c) => {
-  const adminHtml = `<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SafeWork 관리자 패널</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-</head>
-<body class="bg-gray-100 min-h-screen">
-    <div class="min-h-screen flex items-center justify-center">
-        <div class="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
-            <div class="text-center mb-8">
-                <i class="fas fa-shield-alt text-4xl text-blue-600 mb-4"></i>
-                <h1 class="text-2xl font-bold text-gray-800">관리자 로그인</h1>
-                <p class="text-gray-600 mt-2">SafeWork 관리 시스템에 접속합니다</p>
-            </div>
-            
-            <form id="admin-form" class="space-y-6">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">사용자명</label>
-                    <input type="text" id="username" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="관리자 아이디를 입력하세요">
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">비밀번호</label>
-                    <input type="password" id="password" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="비밀번호를 입력하세요">
-                </div>
-                
-                <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-200">
-                    로그인
-                </button>
-            </form>
-            
-            <div class="mt-6 text-center">
-                <a href="/" class="text-blue-600 hover:text-blue-800 text-sm">← 메인 페이지로 돌아가기</a>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        document.getElementById('admin-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            
-            // Call login API
-            fetch('/api/auth/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ username, password })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Store token
-                    localStorage.setItem('token', data.token);
-                    localStorage.setItem('user', JSON.stringify(data.user));
-                    
-                    alert('관리자 로그인 성공!');
-                    // Redirect to admin dashboard
-                    window.location.href = data.redirect || '/api/admin/dashboard';
-                } else {
-                    alert('잘못된 인증 정보입니다.');
-                }
-            })
-            .catch(error => {
-                console.error('Login error:', error);
-                alert('로그인 중 오류가 발생했습니다.');
-            });
-        });
-    </script>
-</body>
-</html>`;
-  
-  return c.html(adminHtml);
 });
 
 // Survey form route - using actual form templates
