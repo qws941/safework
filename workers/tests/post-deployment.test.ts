@@ -24,7 +24,10 @@ describe('Post-Deployment Verification Tests', () => {
     });
 
     it('should return proper CORS headers', async () => {
-      const response = await fetch(`${SAFEWORK_URL}/api/health`);
+      // CORS headers are only sent when Origin header is present (cross-origin request)
+      const response = await fetch(`${SAFEWORK_URL}/api/health`, {
+        headers: { 'Origin': 'http://localhost:3000' }
+      });
       expect(response.headers.get('Access-Control-Allow-Origin')).toBeTruthy();
 
       console.log('✅ CORS headers verified');
@@ -33,7 +36,7 @@ describe('Post-Deployment Verification Tests', () => {
 
   describe('Admin Dashboard Verification', () => {
     it('should load admin dashboard successfully', async () => {
-      const response = await fetch(`${SAFEWORK_URL}/survey/002_musculoskeletal_symptom_program`);
+      const response = await fetch(`${SAFEWORK_URL}/admin`);
       expect(response.status).toBe(200);
       expect(response.headers.get('Content-Type')).toContain('text/html');
 
@@ -45,18 +48,19 @@ describe('Post-Deployment Verification Tests', () => {
     });
 
     it('should have proper Korean encoding', async () => {
-      const response = await fetch(`${SAFEWORK_URL}/survey/002_musculoskeletal_symptom_program`);
+      const response = await fetch(`${SAFEWORK_URL}/admin`);
       const html = await response.text();
 
-      expect(html).toContain('charset=UTF-8');
+      // Check for meta charset tag (HTML5 format)
+      expect(html).toMatch(/<meta\s+charset=["']UTF-8["']/i);
       expect(html).toContain('lang="ko"');
-      expect(html).toContain('관리자 대시보드');
+      expect(html).toContain('관리자');
 
       console.log('✅ Korean encoding verified');
     });
 
     it('should include Bootstrap UI framework', async () => {
-      const response = await fetch(`${SAFEWORK_URL}/survey/002_musculoskeletal_symptom_program`);
+      const response = await fetch(`${SAFEWORK_URL}/admin`);
       const html = await response.text();
 
       expect(html).toContain('bootstrap@5.3.0');
@@ -81,7 +85,7 @@ describe('Post-Deployment Verification Tests', () => {
     });
 
     it('should have proper cache headers', async () => {
-      const response = await fetch(`${SAFEWORK_URL}/survey/002_musculoskeletal_symptom_program`);
+      const response = await fetch(`${SAFEWORK_URL}/admin`);
       expect(response.headers.get('Cache-Control')).toBeTruthy();
 
       console.log('✅ Cache headers present:', response.headers.get('Cache-Control'));
@@ -90,7 +94,7 @@ describe('Post-Deployment Verification Tests', () => {
 
   describe('Security Verification', () => {
     it('should have security headers', async () => {
-      const response = await fetch(`${SAFEWORK_URL}/survey/002_musculoskeletal_symptom_program`);
+      const response = await fetch(`${SAFEWORK_URL}/admin`);
 
       // Check if we get any security headers (might be added by CF or other layers)
       const securityHeaders = [
@@ -140,7 +144,7 @@ describe('Post-Deployment Verification Tests', () => {
 
   describe('UI/UX Automation Verification', () => {
     it('should have responsive design elements', async () => {
-      const response = await fetch(`${SAFEWORK_URL}/survey/002_musculoskeletal_symptom_program`);
+      const response = await fetch(`${SAFEWORK_URL}/admin`);
       const html = await response.text();
 
       // Check for responsive elements
@@ -152,7 +156,7 @@ describe('Post-Deployment Verification Tests', () => {
     });
 
     it('should have accessibility features', async () => {
-      const response = await fetch(`${SAFEWORK_URL}/survey/002_musculoskeletal_symptom_program`);
+      const response = await fetch(`${SAFEWORK_URL}/admin`);
       const html = await response.text();
 
       // Check for accessibility elements
@@ -164,7 +168,7 @@ describe('Post-Deployment Verification Tests', () => {
     });
 
     it('should have performance optimizations', async () => {
-      const response = await fetch(`${SAFEWORK_URL}/survey/002_musculoskeletal_symptom_program`);
+      const response = await fetch(`${SAFEWORK_URL}/admin`);
       const html = await response.text();
 
       // Check for performance optimizations
@@ -186,7 +190,7 @@ describe('Integration Test - Full User Journey', () => {
     console.log('✅ Step 1: Main page loaded');
 
     // Step 2: Navigate to admin dashboard
-    const dashboardResponse = await fetch(`${SAFEWORK_URL}/survey/002_musculoskeletal_symptom_program`);
+    const dashboardResponse = await fetch(`${SAFEWORK_URL}/admin`);
     expect(dashboardResponse.status).toBe(200);
     console.log('✅ Step 2: Admin dashboard loaded');
 

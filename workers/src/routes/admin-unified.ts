@@ -18,7 +18,9 @@ export const unifiedAdminRoutes = new Hono<{ Bindings: Bindings }>();
  * 통합 관리자 대시보드 페이지
  */
 unifiedAdminRoutes.get('/', async (c) => {
-  return c.html(unifiedAdminDashboardTemplate);
+  const response = c.html(unifiedAdminDashboardTemplate);
+  response.headers.set('Cache-Control', 'public, max-age=300'); // Cache for 5 minutes
+  return response;
 });
 
 /**

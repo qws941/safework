@@ -38,6 +38,7 @@ healthRoutes.get('/', async (c) => {
     status: isHealthy ? 'healthy' : (checks.kv_storage === 'unhealthy' ? 'unhealthy' : 'degraded'),
     checks,
     timestamp: new Date().toISOString(),
+    version: '1.0.0',
     platform: 'Cloudflare Workers',
     environment: c.env.ENVIRONMENT || 'production',
     region: c.req.header('CF-Ray')?.split('-')[1] || 'unknown',

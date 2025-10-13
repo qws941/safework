@@ -1409,7 +1409,7 @@ app.notFound((c) => {
 </body>
 </html>`;
   
-  return c.html(notFoundHtml);
+  return c.html(notFoundHtml, 404);
 });
 
 // Error handler
