@@ -123,9 +123,9 @@ surveyRoutes.post('/submit', async (c) => {
     const ip_address = c.req.header('CF-Connecting-IP') || 'unknown';
     const user_agent = c.req.header('User-Agent') || 'unknown';
     
-    if (c.env.SAFEWORK_DB) {
+    if (c.env.PRIMARY_DB) {
       // Insert into D1 database
-      const result = await c.env.SAFEWORK_DB.prepare(`
+      const result = await c.env.PRIMARY_DB.prepare(`
         INSERT INTO surveys (
           form_type, 
           user_id,
@@ -190,8 +190,8 @@ surveyRoutes.get('/responses/:formType', async (c) => {
   const offset = parseInt(c.req.query('offset') || '0');
   
   try {
-    if (c.env.SAFEWORK_DB) {
-      const result = await c.env.SAFEWORK_DB.prepare(`
+    if (c.env.PRIMARY_DB) {
+      const result = await c.env.PRIMARY_DB.prepare(`
         SELECT 
           id, 
           form_type, 
@@ -231,7 +231,7 @@ surveyRoutes.get('/responses/:formType', async (c) => {
 // Get survey statistics
 surveyRoutes.get('/stats', async (c) => {
   try {
-    const stats = await c.env.SAFEWORK_DB.prepare(`
+    const stats = await c.env.PRIMARY_DB.prepare(`
       SELECT 
         form_type,
         COUNT(*) as count,

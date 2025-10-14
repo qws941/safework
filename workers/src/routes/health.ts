@@ -49,7 +49,7 @@ healthRoutes.get('/', async (c) => {
 healthRoutes.get('/plans', async (c) => {
   try {
     // D1 database not configured in Free plan
-    if (!c.env.SAFEWORK_DB) {
+    if (!c.env.PRIMARY_DB) {
       return c.json({
         error: 'Database not configured',
         message: 'D1 database requires paid Cloudflare plan',
@@ -58,7 +58,7 @@ healthRoutes.get('/plans', async (c) => {
 
     const year = c.req.query('year') || new Date().getFullYear();
 
-    const plans = await c.env.SAFEWORK_DB.prepare(`
+    const plans = await c.env.PRIMARY_DB.prepare(`
       SELECT * FROM health_check_plans
       WHERE year = ?
       ORDER BY created_at DESC
@@ -77,7 +77,7 @@ healthRoutes.get('/plans', async (c) => {
 // Create health check plan
 healthRoutes.post('/plans', async (c) => {
   // D1 database not configured in Free plan
-  if (!c.env.SAFEWORK_DB) {
+  if (!c.env.PRIMARY_DB) {
     return c.json({
       error: 'Database not configured',
       message: 'D1 database requires paid Cloudflare plan',
@@ -88,7 +88,7 @@ healthRoutes.post('/plans', async (c) => {
   const { year, plan_type, description, target_count } = body;
 
   try {
-    const result = await c.env.SAFEWORK_DB.prepare(`
+    const result = await c.env.PRIMARY_DB.prepare(`
       INSERT INTO health_check_plans (year, plan_type, description, target_count, status)
       VALUES (?, ?, ?, ?, 'planned')
     `).bind(year, plan_type, description, target_count).run();
@@ -108,7 +108,7 @@ healthRoutes.get('/targets/:workerId', async (c) => {
   const workerId = c.req.param('workerId');
 
   // D1 database not configured in Free plan
-  if (!c.env.SAFEWORK_DB) {
+  if (!c.env.PRIMARY_DB) {
     return c.json({
       error: 'Database not configured',
       message: 'D1 database requires paid Cloudflare plan',
@@ -116,7 +116,7 @@ healthRoutes.get('/targets/:workerId', async (c) => {
   }
 
   try {
-    const targets = await c.env.SAFEWORK_DB.prepare(`
+    const targets = await c.env.PRIMARY_DB.prepare(`
       SELECT 
         hct.*,
         hcp.year,
@@ -141,7 +141,7 @@ healthRoutes.get('/targets/:workerId', async (c) => {
 // Submit health check result
 healthRoutes.post('/results', async (c) => {
   // D1 database not configured in Free plan
-  if (!c.env.SAFEWORK_DB) {
+  if (!c.env.PRIMARY_DB) {
     return c.json({
       error: 'Database not configured',
       message: 'D1 database requires paid Cloudflare plan',
@@ -164,9 +164,9 @@ healthRoutes.post('/results', async (c) => {
     result_summary,
     recommendations,
   } = body;
-  
+
   try {
-    const result = await c.env.SAFEWORK_DB.prepare(`
+    const result = await c.env.PRIMARY_DB.prepare(`
       INSERT INTO health_check_results (
         target_id, worker_id, check_date,
         height, weight, blood_pressure_sys, blood_pressure_dia,
@@ -179,9 +179,9 @@ healthRoutes.post('/results', async (c) => {
       vision_left, vision_right, blood_sugar, cholesterol_total,
       result_summary, recommendations
     ).run();
-    
+
     // Update target status
-    await c.env.SAFEWORK_DB.prepare(`
+    await c.env.PRIMARY_DB.prepare(`
       UPDATE health_check_targets 
       SET status = 'completed' 
       WHERE id = ?

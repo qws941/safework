@@ -51,7 +51,7 @@ authRoutes.post('/login', async (c) => {
     }
 
     // Check database users
-    const user = await c.env.SAFEWORK_DB.prepare(
+    const user = await c.env.PRIMARY_DB.prepare(
       'SELECT id, username, password_hash, is_admin, is_active FROM users WHERE username = ?'
     ).bind(username).first();
 

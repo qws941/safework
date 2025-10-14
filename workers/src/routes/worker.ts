@@ -28,7 +28,7 @@ workerRoutes.get('/', async (c) => {
     query += ' ORDER BY w.name ASC LIMIT ? OFFSET ?';
     bindings.push(limit, offset);
     
-    const result = await c.env.SAFEWORK_DB.prepare(query).bind(...bindings).all();
+    const result = await c.env.PRIMARY_DB.prepare(query).bind(...bindings).all();
     
     return c.json({
       workers: result.results,
@@ -46,7 +46,7 @@ workerRoutes.get('/:id', async (c) => {
   const workerId = c.req.param('id');
   
   try {
-    const worker = await c.env.SAFEWORK_DB.prepare(`
+    const worker = await c.env.PRIMARY_DB.prepare(`
       SELECT 
         w.*,
         d.name as department_name
@@ -82,7 +82,7 @@ workerRoutes.post('/', async (c) => {
   
   try {
     // Check if employee number already exists
-    const existing = await c.env.SAFEWORK_DB.prepare(
+    const existing = await c.env.PRIMARY_DB.prepare(
       'SELECT id FROM workers WHERE employee_number = ?'
     ).bind(employee_number).first();
     
@@ -90,7 +90,7 @@ workerRoutes.post('/', async (c) => {
       return c.json({ error: '이미 존재하는 사원번호입니다' }, 400);
     }
     
-    const result = await c.env.SAFEWORK_DB.prepare(`
+    const result = await c.env.PRIMARY_DB.prepare(`
       INSERT INTO workers (
         employee_number, name, department_id, position,
         hire_date, birth_date, gender, phone, email, is_active
@@ -139,7 +139,7 @@ workerRoutes.put('/:id', async (c) => {
     
     values.push(workerId);
     
-    await c.env.SAFEWORK_DB.prepare(`
+    await c.env.PRIMARY_DB.prepare(`
       UPDATE workers 
       SET ${fields.join(', ')}, updated_at = datetime('now')
       WHERE id = ?
@@ -159,7 +159,7 @@ workerRoutes.delete('/:id', async (c) => {
   const workerId = c.req.param('id');
   
   try {
-    await c.env.SAFEWORK_DB.prepare(`
+    await c.env.PRIMARY_DB.prepare(`
       UPDATE workers 
       SET is_active = 0, updated_at = datetime('now')
       WHERE id = ?
@@ -179,14 +179,14 @@ workerRoutes.get('/:id/health-history', async (c) => {
   const workerId = c.req.param('id');
   
   try {
-    const results = await c.env.SAFEWORK_DB.prepare(`
+    const results = await c.env.PRIMARY_DB.prepare(`
       SELECT * FROM health_check_results
       WHERE worker_id = ?
       ORDER BY check_date DESC
       LIMIT 10
     `).bind(workerId).all();
     
-    const visits = await c.env.SAFEWORK_DB.prepare(`
+    const visits = await c.env.PRIMARY_DB.prepare(`
       SELECT * FROM medical_visits
       WHERE worker_id = ?
       ORDER BY visit_date DESC

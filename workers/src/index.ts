@@ -3,7 +3,6 @@ import { cors } from 'hono/cors';
 import { jwt } from 'hono/jwt';
 import { logger } from 'hono/logger';
 import { surveyRoutes } from './routes/survey';
-import { adminRoutes } from './routes/admin';
 import { authRoutes } from './routes/auth';
 import { healthRoutes } from './routes/health';
 import { workerRoutes } from './routes/worker';
@@ -25,7 +24,6 @@ import { form003Routes } from './routes/form-003';
 import { form004Routes } from './routes/form-004';
 import { form005Routes } from './routes/form-005';
 import { form006Routes } from './routes/form-006';
-import { admin002Routes } from './routes/admin-002';
 import { surveyD1Routes } from './routes/survey-d1';
 import { survey002D1Routes } from './routes/survey-002-d1';
 import { unifiedAdminRoutes } from './routes/admin-unified';
@@ -43,7 +41,6 @@ export interface Env {
   AUTH_STORE: KVNamespace;
 
   // D1 Database
-  SAFEWORK_DB?: D1Database;
   PRIMARY_DB: D1Database;
 
   // R2 Object Storage
@@ -143,14 +140,9 @@ app.route('/api/form/006', form006Routes);
 app.route('/api/warning-sign', warningSignRoutes);  // Warning Sign Generator (Edge API)
 app.route('/api/native', nativeApiRoutes);  // Cloudflare Native Services (R2, Queue, AI)
 
-// Admin routes - Unified Dashboard (Phase 1 improvements)
+// Admin routes - Unified Dashboard (all forms 001-006)
 app.route('/admin', unifiedAdminRoutes);  // Unified Admin dashboard pages
 app.route('/api/admin', unifiedAdminRoutes);  // Unified Admin API
-
-// Legacy admin routes (deprecated - redirecting to unified)
-app.route('/admin/001', adminRoutes);  // 001-specific admin pages (deprecated)
-app.route('/admin/002', admin002Routes);  // 002-specific admin pages (deprecated)
-app.route('/api/admin/002', admin002Routes);  // 002 Admin API (deprecated)
 
 // Protected routes (require JWT)
 app.use('/api/workers/*', async (c, next) => {
