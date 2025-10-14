@@ -493,6 +493,18 @@ export const unifiedAdminDashboardTemplate = `
           <i class="bi bi-file-earmark-plus"></i>
           <span>001 설문 작성</span>
         </a>
+        <a href="/admin/analysis/002" class="action-btn">
+          <i class="bi bi-graph-up-arrow"></i>
+          <span>002 NIOSH 작업부담 분석</span>
+        </a>
+        <a href="/admin/analysis/003" class="action-btn">
+          <i class="bi bi-clipboard2-pulse"></i>
+          <span>003 설문 요약 보고서</span>
+        </a>
+        <a href="/admin/analysis/004" class="action-btn">
+          <i class="bi bi-bar-chart-line"></i>
+          <span>004 통계 분석 보고서</span>
+        </a>
         <a href="#" onclick="exportAllData(); return false;" class="action-btn">
           <i class="bi bi-download"></i>
           <span>전체 데이터 내보내기</span>

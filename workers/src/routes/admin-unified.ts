@@ -5,10 +5,14 @@
 
 import { Hono } from 'hono';
 import { unifiedAdminDashboardTemplate } from '../templates/admin-unified-dashboard';
+import { analysis002Template } from '../templates/analysis-002-niosh';
+import { analysis003Template } from '../templates/analysis-003-questionnaire';
+import { analysis004Template } from '../templates/analysis-004-statistics';
 
 type Bindings = {
   PRIMARY_DB: D1Database;
   SAFEWORK_KV: KVNamespace;
+  BACKEND_URL?: string;
 };
 
 interface SurveyRow {
@@ -265,5 +269,98 @@ unifiedAdminRoutes.get('/export', async (c) => {
       error: 'Failed to export unified data',
       details: errorMessage
     }, 500);
+  }
+});
+
+/**
+ * GET /admin/analysis/002
+ * NIOSH 작업부담 분석 HTML 보고서
+ */
+unifiedAdminRoutes.get('/analysis/002', async (c) => {
+  try {
+    // Fetch analysis data from API
+    const backendUrl = c.env.BACKEND_URL || 'https://safework.jclee.me';
+    const response = await fetch(`${backendUrl}/api/analysis/002/niosh`);
+    const data = await response.json() as { success: boolean; error?: string; analysis?: any };
+
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to load NIOSH analysis');
+    }
+
+    return c.html(analysis002Template(data.analysis!));
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return c.html(`
+      <html>
+        <head><title>오류</title></head>
+        <body style="font-family: sans-serif; padding: 40px; text-align: center;">
+          <h1>분석 보고서 로드 실패</h1>
+          <p>오류: ${errorMessage}</p>
+          <a href="/admin">대시보드로 돌아가기</a>
+        </body>
+      </html>
+    `, 500);
+  }
+});
+
+/**
+ * GET /admin/analysis/003
+ * 설문 요약 보고서 HTML
+ */
+unifiedAdminRoutes.get('/analysis/003', async (c) => {
+  try {
+    // Fetch analysis data from API
+    const backendUrl = c.env.BACKEND_URL || 'https://safework.jclee.me';
+    const response = await fetch(`${backendUrl}/api/analysis/003/questionnaire-summary`);
+    const data = await response.json() as { success: boolean; error?: string; summary?: any };
+
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to load questionnaire summary');
+    }
+
+    return c.html(analysis003Template(data.summary!));
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return c.html(`
+      <html>
+        <head><title>오류</title></head>
+        <body style="font-family: sans-serif; padding: 40px; text-align: center;">
+          <h1>설문 요약 보고서 로드 실패</h1>
+          <p>오류: ${errorMessage}</p>
+          <a href="/admin">대시보드로 돌아가기</a>
+        </body>
+      </html>
+    `, 500);
+  }
+});
+
+/**
+ * GET /admin/analysis/004
+ * 통계 분석 보고서 HTML
+ */
+unifiedAdminRoutes.get('/analysis/004', async (c) => {
+  try {
+    // Fetch analysis data from API
+    const backendUrl = c.env.BACKEND_URL || 'https://safework.jclee.me';
+    const response = await fetch(`${backendUrl}/api/analysis/004/statistics-summary`);
+    const data = await response.json() as { success: boolean; error?: string; statistics?: any };
+
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to load statistics summary');
+    }
+
+    return c.html(analysis004Template(data.statistics!));
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return c.html(`
+      <html>
+        <head><title>오류</title></head>
+        <body style="font-family: sans-serif; padding: 40px; text-align: center;">
+          <h1>통계 분석 보고서 로드 실패</h1>
+          <p>오류: ${errorMessage}</p>
+          <a href="/admin">대시보드로 돌아가기</a>
+        </body>
+      </html>
+    `, 500);
   }
 });
