@@ -46,7 +46,7 @@ unifiedAdminRoutes.get('/', async (c) => {
 });
 
 /**
- * GET /api/admin/unified/stats
+ * GET /api/admin/stats
  * 통합 통계 API
  */
 unifiedAdminRoutes.get('/stats', async (c) => {
@@ -138,7 +138,7 @@ unifiedAdminRoutes.get('/stats', async (c) => {
 });
 
 /**
- * GET /api/admin/unified/recent
+ * GET /api/admin/recent
  * 최근 제출 내역 (001 + 002 통합)
  */
 unifiedAdminRoutes.get('/recent', async (c) => {
@@ -185,7 +185,7 @@ unifiedAdminRoutes.get('/recent', async (c) => {
 });
 
 /**
- * GET /api/admin/unified/export
+ * GET /api/admin/export
  * 전체 데이터 통합 내보내기 (ZIP 또는 통합 CSV)
  */
 unifiedAdminRoutes.get('/export', async (c) => {
