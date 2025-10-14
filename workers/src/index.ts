@@ -7,25 +7,19 @@ import { authRoutes } from './routes/auth';
 import { healthRoutes } from './routes/health';
 import { workerRoutes } from './routes/worker';
 import { excelProcessorRoutes } from './routes/excel-processor';
-import { form002Template } from './templates/002';
 import { form001Template } from './templates/001';
 import { form001CompleteTemplate } from './templates/001-complete';
 import { form001Dv06Template } from './templates/001-dv06-restore';
-import { survey002FormTemplate } from './templates/survey-002-form';
-import { form002WebProgram } from './templates/002-web-program';
-import { form002AnalysisTool } from './templates/002-analysis-tool';
 import { form003Template } from './templates/003';
 import { form004Template } from './templates/004';
 import { form005Template } from './templates/005';
 import { form006Template } from './templates/006';
 import { form001Routes } from './routes/form-001';
-import { form002Routes } from './routes/form-002';
 import { form003Routes } from './routes/form-003';
 import { form004Routes } from './routes/form-004';
 import { form005Routes } from './routes/form-005';
 import { form006Routes } from './routes/form-006';
 import { surveyD1Routes } from './routes/survey-d1';
-import { survey002D1Routes } from './routes/survey-002-d1';
 import { unifiedAdminRoutes } from './routes/admin-unified';
 import warningSignRoutes from './routes/warning-sign';
 import { nativeApiRoutes } from './routes/native-api';
@@ -129,10 +123,8 @@ app.route('/api/auth', authRoutes);
 app.route('/api/health', healthRoutes);
 app.route('/api/survey', surveyRoutes);
 app.route('/api/survey/d1', surveyD1Routes);  // D1 Native API (001)
-app.route('/api/survey/d1/002', survey002D1Routes);  // D1 Native API (002)
 app.route('/api/excel', excelProcessorRoutes);
 app.route('/api/form/001', form001Routes);
-app.route('/api/form/002', form002Routes);
 app.route('/api/form/003', form003Routes);
 app.route('/api/form/004', form004Routes);
 app.route('/api/form/005', form005Routes);
@@ -406,26 +398,6 @@ app.get('/', (c) => {
                                             <li>작업 환경 개선 자료</li>
                                         </ul>
                                         <a href="/survey/001_musculoskeletal_symptom_survey" class="btn btn-primary w-100" aria-label="001 근골격계 증상조사표 작성하기">
-                                            <i class="bi bi-pencil-square" aria-hidden="true"></i> 작성하기
-                                        </a>
-                                    </div>
-                                </article>
-                            </div>
-
-                            <!-- 002 근골격계부담작업 유해요인조사 -->
-                            <div class="col-lg-4 col-md-6" role="listitem">
-                                <article class="card h-100 border-info">
-                                    <div class="card-header bg-info text-white">
-                                        <span class="badge bg-white text-info" role="status">002</span> 근골격계부담작업 유해요인조사
-                                    </div>
-                                    <div class="card-body">
-                                        <p class="small">근골격계부담작업 유해요인 조사</p>
-                                        <ul class="small text-muted mb-3">
-                                            <li>작업 환경 평가</li>
-                                            <li>신체 부담 요인 분석</li>
-                                            <li>개선 방안 도출</li>
-                                        </ul>
-                                        <a href="/survey/002_musculoskeletal_symptom_program" class="btn btn-info w-100" aria-label="002 근골격계부담작업 유해요인조사 작성하기">
                                             <i class="bi bi-pencil-square" aria-hidden="true"></i> 작성하기
                                         </a>
                                     </div>
@@ -1076,11 +1048,6 @@ app.get('/survey/:surveyType', async (c) => {
     return c.html(form001Dv06Template);
   }
 
-  if (surveyType === '002_musculoskeletal_symptom_program') {
-    console.log('✅ 002 Analysis Tool - 001 Survey Data Analysis with NIOSH');
-    return c.html(form002AnalysisTool);
-  }
-
   if (surveyType === '003_musculoskeletal_program') {
     console.log('✅ 003 Musculoskeletal Disease Prevention Program Survey');
     return c.html(form003Template);
@@ -1101,115 +1068,9 @@ app.get('/survey/:surveyType', async (c) => {
     return c.html(form006Template);
   }
 
-  if (surveyType === '002_excel_download_legacy') {
-    console.log('✅ 002 Excel-based Hazard Assessment Tool - Download Page (LEGACY)');
-    const downloadPageHtml = `<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>002 근골격계부담작업 유해요인조사 - SafeWork</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <style>
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px 0;
-        }
-        .download-container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 40px;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
-        .excel-icon {
-            font-size: 4rem;
-            color: #217346;
-        }
-        .btn-download {
-            background: #217346;
-            color: white;
-            border: none;
-            padding: 15px 40px;
-            font-size: 1.2rem;
-            border-radius: 10px;
-        }
-        .btn-download:hover {
-            background: #1a5c37;
-            color: white;
-        }
-    </style>
-</head>
-<body>
-    <div class="download-container">
-        <div class="text-center mb-4">
-            <i class="bi bi-file-earmark-excel excel-icon"></i>
-            <h1 class="display-5 mt-3">002 근골격계부담작업 유해요인조사</h1>
-            <p class="lead text-muted">Excel 기반 평가 도구</p>
-        </div>
-
-        <div class="alert alert-info">
-            <i class="bi bi-info-circle"></i>
-            <strong>안내:</strong> 이 조사는 Excel 파일을 다운로드하여 작성하는 방식입니다.
-        </div>
-
-        <div class="card mb-4">
-            <div class="card-body">
-                <h5 class="card-title"><i class="bi bi-clipboard-check"></i> 조사 내용</h5>
-                <ul class="mb-0">
-                    <li>작업 환경 평가</li>
-                    <li>신체 부담 요인 분석</li>
-                    <li>근골격계 질환 위험도 평가</li>
-                    <li>개선 방안 도출</li>
-                </ul>
-            </div>
-        </div>
-
-        <div class="card mb-4">
-            <div class="card-body">
-                <h5 class="card-title"><i class="bi bi-download"></i> 다운로드</h5>
-                <p class="text-muted">Excel 파일을 다운로드하여 작성 후, 관리자에게 제출해주세요.</p>
-                <a href="/api/excel/download/002" class="btn btn-download w-100">
-                    <i class="bi bi-file-earmark-excel"></i> Excel 파일 다운로드 (1.8MB)
-                </a>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title"><i class="bi bi-question-circle"></i> 사용 안내</h5>
-                <ol>
-                    <li>Excel 파일을 다운로드합니다</li>
-                    <li>파일을 열어 각 항목을 작성합니다</li>
-                    <li>작성 완료 후 저장합니다</li>
-                    <li>관리자에게 파일을 제출합니다</li>
-                </ol>
-                <a href="/api/excel/download/002-guide" class="btn btn-outline-primary mt-2">
-                    <i class="bi bi-file-pdf"></i> 사용안내서 다운로드 (PDF)
-                </a>
-            </div>
-        </div>
-
-        <div class="text-center mt-4">
-            <a href="/" class="btn btn-secondary">
-                <i class="bi bi-house"></i> 메인으로 돌아가기
-            </a>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>`;
-    return c.html(downloadPageHtml);
-  }
-
   // Map survey types to template keys
   const formTemplates: Record<string, string> = {
     '001_musculoskeletal_symptom_survey': '001',
-    '002_musculoskeletal_symptom_program': '002',
     '003_cardiovascular_risk_assessment': '003',
     '004_industrial_accident_survey': '004',
     '005_basic_hazard_factor_survey': '005',
@@ -1232,7 +1093,6 @@ app.get('/survey/:surveyType', async (c) => {
     // Fallback: Generate basic form if template not found
     const surveyTitles: Record<string, string> = {
       '001_musculoskeletal_symptom_survey': '근골격계 증상조사표',
-      '002_musculoskeletal_symptom_program': '근골격계부담작업 유해요인조사',
       '003_cardiovascular_risk_assessment': '심뇌혈관질환 위험도평가',
       '004_industrial_accident_survey': '산업재해 실태조사표',
       '005_basic_hazard_factor_survey': '유해요인 기본조사표',

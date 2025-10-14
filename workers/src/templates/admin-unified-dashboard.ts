@@ -1,6 +1,6 @@
 /**
  * SafeWork Unified Admin Dashboard
- * 001 + 002 통합 관리자 대시보드 with Chart.js
+ * 통합 관리자 대시보드 with Chart.js
  */
 
 export const unifiedAdminDashboardTemplate = `
@@ -253,11 +253,6 @@ export const unifiedAdminDashboardTemplate = `
       color: white;
     }
 
-    .form-badge.form-002 {
-      background: linear-gradient(135deg, #10b981, #059669);
-      color: white;
-    }
-
     .loading-overlay {
       position: fixed;
       top: 0;
@@ -378,7 +373,6 @@ export const unifiedAdminDashboardTemplate = `
       <p>근골격계 증상조사 통합 관리 시스템</p>
       <div class="mt-3" role="group" aria-label="양식 유형 표시">
         <span class="badge bg-primary" role="status">Form 001</span>
-        <span class="badge bg-success" role="status">Form 002</span>
         <span class="badge bg-secondary" role="status" aria-live="polite">실시간 업데이트</span>
       </div>
     </header>
@@ -402,17 +396,6 @@ export const unifiedAdminDashboardTemplate = `
         </div>
         <div class="stat-value" id="form-001-count">-</div>
         <div class="stat-label">Form 001 제출</div>
-        <div class="stat-change">
-          <i class="bi bi-clock-history"></i> 최근 7일
-        </div>
-      </div>
-
-      <div class="stat-card info">
-        <div class="stat-icon">
-          <i class="bi bi-clipboard-data"></i>
-        </div>
-        <div class="stat-value" id="form-002-count">-</div>
-        <div class="stat-label">Form 002 제출</div>
         <div class="stat-change">
           <i class="bi bi-clock-history"></i> 최근 7일
         </div>
@@ -479,7 +462,6 @@ export const unifiedAdminDashboardTemplate = `
           <select id="filter-formType" class="form-select">
             <option value="all">전체</option>
             <option value="001">Form 001</option>
-            <option value="002">Form 002</option>
           </select>
         </div>
         <div class="col-md-3">
@@ -507,17 +489,9 @@ export const unifiedAdminDashboardTemplate = `
           <i class="bi bi-clipboard-data"></i>
           <span>Form 001 관리</span>
         </a>
-        <a href="/admin/002" class="action-btn">
-          <i class="bi bi-clipboard-heart"></i>
-          <span>Form 002 관리</span>
-        </a>
         <a href="/survey/001_musculoskeletal_symptom_survey" class="action-btn">
           <i class="bi bi-file-earmark-plus"></i>
           <span>001 설문 작성</span>
-        </a>
-        <a href="/survey/002_musculoskeletal_symptom_program" class="action-btn">
-          <i class="bi bi-file-earmark-medical"></i>
-          <span>002 설문 작성</span>
         </a>
         <a href="#" onclick="exportAllData(); return false;" class="action-btn">
           <i class="bi bi-download"></i>
@@ -676,7 +650,6 @@ export const unifiedAdminDashboardTemplate = `
         if (currentFilters.formType !== 'all') {
           const isForm001 = sub.form_type?.includes('001');
           if (currentFilters.formType === '001' && !isForm001) return false;
-          if (currentFilters.formType === '002' && isForm001) return false;
         }
 
         // 증상 필터
@@ -782,7 +755,6 @@ export const unifiedAdminDashboardTemplate = `
         const totalSubmissions = stats.total || 0;
         const todaySubmissions = stats.todayTotal || 0;
         const total001 = stats.form001 || 0;
-        const total002 = stats.form002 || 0;
         const avgAge = Math.round(stats.avgAge || 0);
         const totalPain = stats.symptomsTotal || 0;
         const painPercentage = totalSubmissions > 0 ? Math.round((totalPain / totalSubmissions) * 100) : 0;
@@ -791,7 +763,6 @@ export const unifiedAdminDashboardTemplate = `
         document.getElementById('total-submissions').textContent = totalSubmissions.toLocaleString();
         document.getElementById('today-submissions').textContent = todaySubmissions;
         document.getElementById('form-001-count').textContent = total001.toLocaleString();
-        document.getElementById('form-002-count').textContent = total002.toLocaleString();
         document.getElementById('avg-age').textContent = avgAge ? avgAge + '세' : '-';
         document.getElementById('pain-patients').textContent = totalPain.toLocaleString();
         document.getElementById('pain-percentage').textContent = painPercentage;
@@ -999,10 +970,8 @@ export const unifiedAdminDashboardTemplate = `
       document.getElementById('loading').style.display = 'flex';
 
       try {
-        // Download both CSVs
+        // Download Form 001 CSV
         window.open('/api/admin/001/export/csv', '_blank');
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        window.open('/api/admin/002/export/csv', '_blank');
 
         document.getElementById('loading').style.display = 'none';
       } catch (error) {
