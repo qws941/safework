@@ -218,17 +218,19 @@ app.get('/', (c) => {
     <!-- Custom CSS -->
     <style>
         :root {
-            --primary-color: #2563eb;
-            --secondary-color: #64748b;
+            --primary-color: #667eea;
+            --primary-dark: #5568d3;
+            --secondary-color: #764ba2;
             --success-color: #10b981;
             --danger-color: #ef4444;
             --warning-color: #f59e0b;
             --info-color: #3b82f6;
+            --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--gradient-primary);
             min-height: 100vh;
             padding-bottom: 60px;
         }
@@ -250,7 +252,7 @@ app.get('/', (c) => {
         }
         
         .navbar-custom {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--gradient-primary);
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
         
@@ -260,7 +262,7 @@ app.get('/', (c) => {
         }
         
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--gradient-primary);
             border: none;
             border-radius: 10px;
             padding: 12px 30px;
@@ -282,7 +284,7 @@ app.get('/', (c) => {
         
         .form-control:focus, .form-select:focus {
             border-color: var(--primary-color);
-            box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25);
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
         }
         
         .section-card {
@@ -495,67 +497,115 @@ app.get('/auth/login', (c) => {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>로그인 - SafeWork</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #667eea;
+            --primary-dark: #5568d3;
+            --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        body {
+            background: var(--gradient-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .login-container {
+            max-width: 450px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+        }
+        .icon-circle {
+            width: 80px;
+            height: 80px;
+            background: var(--gradient-primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+        .btn-primary {
+            background: var(--gradient-primary);
+            border: none;
+            padding: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
+        }
+    </style>
 </head>
-<body class="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 min-h-screen">
-    <div class="min-h-screen flex items-center justify-center p-4">
-        <div class="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8">
-            <div class="text-center mb-8">
-                <i class="fas fa-user-circle text-5xl text-indigo-600 mb-4"></i>
-                <h1 class="text-3xl font-bold text-gray-800">로그인</h1>
-                <p class="text-gray-600 mt-2">SafeWork 안전보건 관리시스템</p>
+<body>
+    <div class="login-container">
+        <div class="text-center mb-4">
+            <div class="icon-circle">
+                <i class="fas fa-user-circle text-white" style="font-size: 2.5rem;"></i>
             </div>
-            
-            <div id="error-message" class="hidden mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                <i class="fas fa-exclamation-circle mr-2"></i>
-                <span id="error-text"></span>
+            <h1 class="h3 fw-bold text-dark mb-2">로그인</h1>
+            <p class="text-muted">SafeWork 안전보건 관리시스템</p>
+        </div>
+
+        <div id="error-message" class="alert alert-danger d-none" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            <span id="error-text"></span>
+        </div>
+
+        <form id="login-form">
+            <div class="mb-3">
+                <label for="username" class="form-label fw-semibold">
+                    <i class="fas fa-user me-1"></i> 사용자명
+                </label>
+                <input
+                    type="text"
+                    class="form-control form-control-lg"
+                    id="username"
+                    required
+                    placeholder="사용자명을 입력하세요">
             </div>
 
-            <form id="login-form" class="space-y-6">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-user mr-1"></i> 사용자명
-                    </label>
-                    <input 
-                        type="text" 
-                        id="username" 
-                        required
-                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" 
-                        placeholder="사용자명을 입력하세요">
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-lock mr-1"></i> 비밀번호
-                    </label>
-                    <input 
-                        type="password" 
-                        id="password" 
-                        required
-                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" 
-                        placeholder="비밀번호를 입력하세요">
-                </div>
-                
-                <button 
-                    type="submit" 
-                    id="submit-btn"
-                    class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-4 rounded-lg hover:from-indigo-700 hover:to-purple-700 transition duration-200 font-semibold shadow-lg">
-                    <i class="fas fa-sign-in-alt mr-2"></i> 로그인
-                </button>
-            </form>
-            
-            <div class="mt-6 text-center space-y-3">
-                <p class="text-gray-600">
-                    계정이 없으신가요? 
-                    <a href="/auth/register" class="text-indigo-600 hover:text-indigo-800 font-semibold">
-                        회원가입
-                    </a>
-                </p>
-                <a href="/" class="block text-gray-500 hover:text-gray-700 text-sm">
-                    <i class="fas fa-arrow-left mr-1"></i> 메인 페이지로 돌아가기
-                </a>
+            <div class="mb-4">
+                <label for="password" class="form-label fw-semibold">
+                    <i class="fas fa-lock me-1"></i> 비밀번호
+                </label>
+                <input
+                    type="password"
+                    class="form-control form-control-lg"
+                    id="password"
+                    required
+                    placeholder="비밀번호를 입력하세요">
             </div>
+
+            <button
+                type="submit"
+                id="submit-btn"
+                class="btn btn-primary btn-lg w-100">
+                <i class="fas fa-sign-in-alt me-2"></i> 로그인
+            </button>
+        </form>
+
+        <div class="mt-4 text-center">
+            <p class="text-muted mb-2">
+                계정이 없으신가요?
+                <a href="/auth/register" class="text-decoration-none fw-semibold" style="color: var(--primary-color);">
+                    회원가입
+                </a>
+            </p>
+            <a href="/" class="text-muted text-decoration-none small">
+                <i class="fas fa-arrow-left me-1"></i> 메인 페이지로 돌아가기
+            </a>
         </div>
     </div>
 
@@ -567,11 +617,11 @@ app.get('/auth/login', (c) => {
 
         function showError(message) {
             errorText.textContent = message;
-            errorMessage.classList.remove('hidden');
+            errorMessage.classList.remove('d-none');
         }
 
         function hideError() {
-            errorMessage.classList.add('hidden');
+            errorMessage.classList.add('d-none');
         }
 
         form.addEventListener('submit', async function(e) {
@@ -607,9 +657,9 @@ app.get('/auth/login', (c) => {
                     localStorage.setItem('user', JSON.stringify(data.user));
                     
                     // Show success message
-                    submitBtn.innerHTML = '<i class="fas fa-check-circle mr-2"></i> 로그인 성공!';
-                    submitBtn.classList.remove('from-indigo-600', 'to-purple-600');
-                    submitBtn.classList.add('from-green-600', 'to-green-600');
+                    submitBtn.innerHTML = '<i class="fas fa-check-circle me-2"></i> 로그인 성공!';
+                    submitBtn.classList.add('btn-success');
+                    submitBtn.classList.remove('btn-primary');
                     
                     // Redirect after short delay
                     setTimeout(() => {
@@ -618,16 +668,17 @@ app.get('/auth/login', (c) => {
                 } else {
                     showError(data.error || '로그인에 실패했습니다.');
                     submitBtn.disabled = false;
-                    submitBtn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i> 로그인';
+                    submitBtn.innerHTML = '<i class="fas fa-sign-in-alt me-2"></i> 로그인';
                 }
             } catch (error) {
                 console.error('Login error:', error);
                 showError('로그인 중 오류가 발생했습니다. 다시 시도해주세요.');
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i> 로그인';
+                submitBtn.innerHTML = '<i class="fas fa-sign-in-alt me-2"></i> 로그인';
             }
         });
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>`;
   
@@ -642,10 +693,68 @@ app.get('/auth/register', (c) => {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>회원가입 - SafeWork</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #667eea;
+            --primary-dark: #5568d3;
+            --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        body {
+            background: var(--gradient-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .register-container {
+            max-width: 500px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+        }
+        .icon-circle {
+            width: 80px;
+            height: 80px;
+            background: var(--gradient-primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+        .btn-primary {
+            background: var(--gradient-primary);
+            border: none;
+            padding: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
+        }
+        .password-requirement {
+            font-size: 0.875rem;
+            padding: 4px 0;
+        }
+        .password-requirement.valid {
+            color: #10b981;
+        }
+        .password-requirement.invalid {
+            color: #6b7280;
+        }
+    </style>
 </head>
-<body class="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 min-h-screen">
+<body>
     <div class="min-h-screen flex items-center justify-center p-4">
         <div class="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8">
             <div class="text-center mb-8">
