@@ -7,6 +7,7 @@ main = "src/index.ts"
 compatibility_date = "2024-10-22"
 compatibility_flags = ["nodejs_compat"]
 account_id = "a8d9c67f586acdd15eebcc65ca3aa5bb"
+workers_dev = true
 
 # Build configuration
 [build]
@@ -15,20 +16,16 @@ cwd = "."
 watch_dir = "src"
 
 # ============================================
-# Production Environment (Default)
+# Production Routes
 # ============================================
-
-[env.production]
-name = "safework"
-workers_dev = true
-
-# Routes
-[[env.production.routes]]
+[[routes]]
 pattern = "safework.jclee.me/*"
 zone_name = "jclee.me"
 
-# Environment Variables
-[env.production.vars]
+# ============================================
+# Environment Variables (Production)
+# ============================================
+[vars]
 # SECURITY WARNING: DO NOT store secrets here!
 # JWT_SECRET and ADMIN_PASSWORD_HASH must be stored in Cloudflare Secrets
 # Use: wrangler secret put JWT_SECRET
@@ -40,30 +37,38 @@ BACKEND_URL = "https://safework.jclee.me"
 DEBUG = "false"
 ENVIRONMENT = "production"
 
-# KV Namespaces
-[[env.production.kv_namespaces]]
+# ============================================
+# KV Namespaces (Production)
+# ============================================
+[[kv_namespaces]]
 binding = "SAFEWORK_KV"
 id = "54cbaf6aeff64ebbab07adb7ac56f5c8"  # production-SAFEWORK_KV
 
-[[env.production.kv_namespaces]]
+[[kv_namespaces]]
 binding = "CACHE_LAYER"
 id = "5a30c645c88644068089f1733b2c81b9"
 
-[[env.production.kv_namespaces]]
+[[kv_namespaces]]
 binding = "AUTH_STORE"
 id = "e6a6466f4c53466087f6fdd2cd6ca001"
 
-# D1 Database
-[[env.production.d1_databases]]
+# ============================================
+# D1 Database (Production)
+# ============================================
+[[d1_databases]]
 binding = "PRIMARY_DB"
 database_name = "safework-primary"
 database_id = "d1db1d92-f598-415e-910f-1af511bc182f"
 
-# R2 Object Storage
-[[env.production.r2_buckets]]
+# ============================================
+# R2 Object Storage (Production)
+# ============================================
+[[r2_buckets]]
 binding = "SAFEWORK_STORAGE"
 bucket_name = "safework-storage-prod"
 
-# AI Gateway
-[env.production.ai]
+# ============================================
+# AI Gateway (Production)
+# ============================================
+[ai]
 binding = "AI"

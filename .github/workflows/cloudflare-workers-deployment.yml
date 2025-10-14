@@ -126,7 +126,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: workers
-          command: deploy --env production
+          command: deploy
       - name: 🔍 Verify Production Deployment
         run: |
           sleep 15
