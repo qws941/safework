@@ -764,8 +764,8 @@ export const unifiedAdminDashboardTemplate = `
 
         // Fetch unified statistics from D1 API
         const [statsResponse, recentResponse] = await Promise.all([
-          fetch('/api/admin/unified/stats').then(r => r.json()),
-          fetch('/api/admin/unified/recent?limit=10').then(r => r.json())
+          fetch('/api/admin/stats').then(r => r.json()),
+          fetch('/api/admin/recent?limit=10').then(r => r.json())
         ]);
 
         if (!statsResponse.success) {
@@ -830,7 +830,8 @@ export const unifiedAdminDashboardTemplate = `
       } catch (error) {
         console.error('Dashboard loading error:', error);
         document.getElementById('loading').style.display = 'none';
-        alert('데이터 로드 중 오류가 발생했습니다: ' + error.message);
+        const errorMsg = error instanceof Error ? error.message : JSON.stringify(error);
+        alert('데이터 로드 중 오류가 발생했습니다: ' + errorMsg);
       }
     }
 
