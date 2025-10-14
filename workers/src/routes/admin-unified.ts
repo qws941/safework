@@ -1,6 +1,6 @@
 /**
- * SafeWork Unified Admin Routes
- * 001 + 002 통합 관리자 대시보드
+ * SafeWork Health Manager Web Console Routes
+ * 보건관리자 웹콘솔 - 모든 업무 통합
  */
 
 import { Hono } from 'hono';
@@ -37,7 +37,7 @@ export const unifiedAdminRoutes = new Hono<{ Bindings: Bindings }>();
 
 /**
  * GET /admin
- * 통합 관리자 대시보드 페이지
+ * 보건관리자 웹콘솔 페이지
  */
 unifiedAdminRoutes.get('/', async (c) => {
   const response = c.html(unifiedAdminDashboardTemplate);

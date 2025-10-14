@@ -2,7 +2,6 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { jwt } from 'hono/jwt';
 import { logger } from 'hono/logger';
-import { surveyRoutes } from './routes/survey';
 import { authRoutes } from './routes/auth';
 import { healthRoutes } from './routes/health';
 import { workerRoutes } from './routes/worker';
@@ -112,7 +111,6 @@ app.use('/api/admin/*', rateLimiter(RateLimitPresets.ADMIN_OPERATIONS));
 // Public routes
 app.route('/api/auth', authRoutes);
 app.route('/api/health', healthRoutes);
-app.route('/api/survey', surveyRoutes);
 app.route('/api/survey/d1', surveyD1Routes);  // D1 Native API (001)
 app.route('/api/excel', excelProcessorRoutes);
 app.route('/api/form/001', form001Routes);
@@ -187,303 +185,114 @@ app.get('/api/analytics/dashboard', async (c) => {
   }
 });
 
-// SafeWork Main UI - Using Original Flask UI Design
+// SafeWork Main UI - Simplified to 2 main actions
 app.get('/', (c) => {
   const html = `<!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="description" content="SafeWork 안전보건 관리시스템 - 근골격계 증상조사 및 산업재해 예방 통합 플랫폼">
-    <title>홈 - SafeWork 안전보건 관리시스템</title>
-
-    <!-- Performance: Preconnect to CDN origins -->
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
-    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
-    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
-    <link rel="preconnect" href="https://code.jquery.com" crossorigin>
-    <link rel="dns-prefetch" href="https://code.jquery.com">
-
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" crossorigin="anonymous">
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
-    <!-- Custom CSS -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeWork 안전보건 관리시스템</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
         :root {
-            --primary-color: #667eea;
-            --primary-dark: #5568d3;
-            --secondary-color: #764ba2;
-            --success-color: #10b981;
-            --danger-color: #ef4444;
-            --warning-color: #f59e0b;
-            --info-color: #3b82f6;
             --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
-        
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             background: var(--gradient-primary);
             min-height: 100vh;
-            padding-bottom: 60px;
-        }
-        
-        .main-container {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            margin: 20px;
-            padding: 30px;
-        }
-        
-        @media (max-width: 768px) {
-            .main-container {
-                margin: 10px;
-                padding: 20px;
-                border-radius: 15px;
-            }
-        }
-        
-        .navbar-custom {
-            background: var(--gradient-primary);
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        
-        .navbar-custom .navbar-brand,
-        .navbar-custom .nav-link {
-            color: white !important;
-        }
-        
-        .btn-primary {
-            background: var(--gradient-primary);
-            border: none;
-            border-radius: 10px;
-            padding: 12px 30px;
-            font-weight: 600;
-            transition: transform 0.2s;
-        }
-        
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-        }
-        
-        .form-control, .form-select {
-            border-radius: 10px;
-            border: 2px solid #e2e8f0;
-            padding: 12px;
-            font-size: 16px;
-        }
-        
-        .form-control:focus, .form-select:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
-        }
-        
-        .section-card {
-            background: white;
-            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
         }
-        
-        .section-title {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: #1f2937;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #e5e7eb;
-        }
-        
-        .footer {
-            position: fixed;
-            bottom: 0;
+        .main-container {
+            max-width: 600px;
             width: 100%;
-            background: white;
-            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
-            padding: 10px 0;
-            z-index: 1000;
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 20px;
+            padding: 60px 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+        .logo {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: #1f2937;
+        }
+        .subtitle {
+            color: #6b7280;
+            margin-bottom: 3rem;
+        }
+        .action-btn {
+            width: 100%;
+            padding: 20px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 12px;
+            border: none;
+            transition: all 0.3s ease;
+            margin-bottom: 1rem;
+        }
+        .btn-survey {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+        .btn-survey:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(16, 185, 129, 0.4);
+            color: white;
+        }
+        .btn-admin {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+        }
+        .btn-admin:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(59, 130, 246, 0.4);
+            color: white;
+        }
+        .icon-large {
+            font-size: 2rem;
+            margin-right: 0.5rem;
         }
     </style>
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-custom" role="navigation" aria-label="주 내비게이션">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/" aria-label="SafeWork 홈페이지로 이동">
-                <i class="bi bi-hospital" aria-hidden="true"></i> SafeWork 안전보건 관리시스템
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="메뉴 토글">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto" role="list">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="문서자료 메뉴">
-                            <i class="bi bi-file-text" aria-hidden="true"></i> 문서자료
-                        </a>
-                        <ul class="dropdown-menu" role="menu">
-                            <li role="presentation"><a class="dropdown-item" href="/document" role="menuitem">문서 목록</a></li>
-                            <li role="presentation"><a class="dropdown-item" href="/document/templates" role="menuitem">템플릿 양식</a></li>
-                            <li role="presentation"><a class="dropdown-item" href="/document/search" role="menuitem">문서 검색</a></li>
-                        </ul>
-                    </li>
-
-                    <li class="nav-item">
-                        <a class="nav-link" href="/survey/new" aria-label="조사표 작성">
-                            <i class="bi bi-pencil-square" aria-hidden="true"></i> 조사표 작성
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/auth/login" aria-label="로그인 페이지로 이동">
-                            <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> 로그인
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/auth/register" aria-label="회원가입 페이지로 이동">
-                            <i class="bi bi-person-plus" aria-hidden="true"></i> 회원가입
-                        </a>
-                    </li>
-                </ul>
-            </div>
+    <div class="main-container">
+        <div class="logo">
+            <i class="bi bi-hospital text-primary"></i>
         </div>
-    </nav>
+        <h1>SafeWork</h1>
+        <p class="subtitle">안전보건 관리시스템</p>
 
-    <!-- Main Content -->
-    <div class="container-fluid">
-        <div class="main-container" role="main" aria-label="메인 컨텐츠">
-            <header class="text-center mb-5" role="banner">
-                <h1 class="display-4 fw-bold mb-4">
-                    <i class="bi bi-clipboard2-pulse" aria-hidden="true"></i><br>
-                    안전보건 관리 시스템
-                </h1>
-                <p class="lead text-muted">직원 여러분의 건강하고 안전한 근무환경을 위한 통합 관리 시스템</p>
-            </header>
+        <div class="d-grid gap-3">
+            <a href="/survey/001_musculoskeletal_symptom_survey" class="btn btn-survey action-btn">
+                <i class="bi bi-pencil-square icon-large"></i>
+                근골격계 증상조사표 작성
+            </a>
 
-            <div class="row g-4 mb-4">
-                <div class="col-12">
-                    <section class="section-card" role="region" aria-label="작성 가능한 양식 목록">
-                        <h4 class="section-title mb-4">
-                            <i class="bi bi-file-text" aria-hidden="true"></i> 작성 가능한 양식
-                        </h4>
-                        <div class="row g-3" role="list">
-                            <!-- 001 근골격계 증상조사표 -->
-                            <div class="col-lg-4 col-md-6" role="listitem">
-                                <article class="card h-100 border-primary">
-                                    <div class="card-header bg-primary text-white">
-                                        <span class="badge bg-white text-primary" role="status">001</span> 근골격계 증상조사표
-                                    </div>
-                                    <div class="card-body">
-                                        <p class="small">근골격계 질환 예방을 위한 증상 조사</p>
-                                        <ul class="small text-muted mb-3">
-                                            <li>작업 자세 및 반복 동작 평가</li>
-                                            <li>신체 부위별 증상 체크</li>
-                                            <li>작업 환경 개선 자료</li>
-                                        </ul>
-                                        <a href="/survey/001_musculoskeletal_symptom_survey" class="btn btn-primary w-100" aria-label="001 근골격계 증상조사표 작성하기">
-                                            <i class="bi bi-pencil-square" aria-hidden="true"></i> 작성하기
-                                        </a>
-                                    </div>
-                                </article>
-                            </div>
+            <a href="/admin" class="btn btn-admin action-btn">
+                <i class="bi bi-speedometer2 icon-large"></i>
+                보건관리자 웹콘솔
+            </a>
+        </div>
 
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row g-4">
-                <!-- 로그인/회원가입 섹션 -->
-                <div class="col-12">
-                    <section class="section-card" role="region" aria-label="회원 서비스 안내">
-                        <div class="row align-items-center">
-                            <div class="col-md-6 text-center mb-4 mb-md-0">
-                                <i class="bi bi-person-circle" style="font-size: 4rem; color: var(--primary-color);" aria-hidden="true"></i>
-                                <h3 class="mt-3">더 많은 기능을 이용하세요</h3>
-                                <p class="text-muted">로그인하시면 제출 이력 확인 및 개인 맞춤 서비스를 이용하실 수 있습니다.</p>
-                            </div>
-                            <div class="col-md-6">
-                                <nav class="d-grid gap-2" role="navigation" aria-label="회원 서비스">
-                                    <a href="/auth/login" class="btn btn-primary btn-lg" aria-label="로그인 페이지로 이동">
-                                        <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> 로그인
-                                    </a>
-                                    <a href="/auth/register" class="btn btn-outline-primary btn-lg" aria-label="회원가입 페이지로 이동">
-                                        <i class="bi bi-person-plus" aria-hidden="true"></i> 회원가입
-                                    </a>
-                                </nav>
-                                <p class="text-center mt-3 text-muted small">
-                                    회원가입 후 모든 서비스를 무료로 이용하실 수 있습니다.
-                                </p>
-                            </div>
-                        </div>
-                    </section>
-                </div>
-            </div>
-
-            <section class="section-card mt-4" role="region" aria-label="조사 안내">
-                <h4 class="section-title">
-                    <i class="bi bi-info-circle" aria-hidden="true"></i> 조사 안내
-                </h4>
-                <div class="row">
-                    <div class="col-md-4 mb-3">
-                        <div class="d-flex align-items-start">
-                            <div class="flex-shrink-0">
-                                <span class="badge bg-primary rounded-circle p-2" role="status">1</span>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6>정확한 정보 입력</h6>
-                                <p class="text-muted small">본인의 증상을 정확하게 체크해주세요</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <div class="d-flex align-items-start">
-                            <div class="flex-shrink-0">
-                                <span class="badge bg-primary rounded-circle p-2" role="status">2</span>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6>개인정보 보호</h6>
-                                <p class="text-muted small">제출된 정보는 안전하게 관리됩니다</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <div class="d-flex align-items-start">
-                            <div class="flex-shrink-0">
-                                <span class="badge bg-primary rounded-circle p-2" role="status">3</span>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6>건강관리 지원</h6>
-                                <p class="text-muted small">조사 결과를 바탕으로 개선방안을 마련합니다</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
+        <div class="mt-4 pt-4 border-top">
+            <small class="text-muted">
+                © 2024 SafeWork v2.0 - Powered by Cloudflare Workers
+            </small>
         </div>
     </div>
-
-    <!-- Footer -->
-    <footer class="footer" role="contentinfo" aria-label="사이트 푸터">
-        <div class="container text-center">
-            <small class="text-muted">© 2024 SafeWork v1.0 - Powered by Cloudflare Workers</small>
-        </div>
-    </footer>
-
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
-    <!-- jQuery -->
-    <script src="https://code.jquery.com/jquery-3.7.0.min.js" crossorigin="anonymous"></script>
 </body>
 </html>`;
-  
+
   return c.html(html);
 });
 

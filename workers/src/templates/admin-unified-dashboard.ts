@@ -1,6 +1,6 @@
 /**
- * SafeWork Unified Admin Dashboard v2.0
- * 통합 관리자 대시보드 with Enhanced UI/UX
+ * SafeWork Health Manager Web Console v2.0
+ * 보건관리자 웹콘솔 with Enhanced UI/UX
  *
  * Features:
  * - Toast notification system (Bootstrap Toast)
@@ -18,8 +18,8 @@ export const unifiedAdminDashboardTemplate = `
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="SafeWork 통합 관리자 대시보드 - 근골격계 증상조사 통합 관리 시스템">
-  <title>SafeWork 통합 관리자 대시보드 v2.0</title>
+  <meta name="description" content="SafeWork 보건관리자 웹콘솔 - 근골격계 증상조사 및 산업보건 통합 관리">
+  <title>SafeWork 보건관리자 웹콘솔 v2.0</title>
 
   <!-- Performance: Preconnect to CDN origins -->
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -538,15 +538,15 @@ export const unifiedAdminDashboardTemplate = `
 
   <div class="dashboard-container" role="main" aria-label="관리자 대시보드 메인 컨텐츠">
     <!-- Header -->
-    <header class="header-section" role="banner" aria-label="대시보드 헤더">
+    <header class="header-section" role="banner" aria-label="웹콘솔 헤더">
       <div class="d-flex justify-content-between align-items-center">
         <div>
-          <h1><i class="bi bi-speedometer2" aria-hidden="true"></i> SafeWork 통합 관리자 대시보드</h1>
-          <p>근골격계 증상조사 통합 관리 시스템 v2.0</p>
-          <div class="mt-3" role="group" aria-label="양식 유형 표시">
-            <span class="badge bg-primary" role="status">Form 001</span>
-            <span class="badge bg-success" role="status">Enhanced UI</span>
-            <span class="badge bg-secondary" role="status" aria-live="polite">실시간 업데이트</span>
+          <h1><i class="bi bi-terminal" aria-hidden="true"></i> SafeWork 보건관리자 웹콘솔</h1>
+          <p>근골격계 증상조사 및 산업보건 통합 관리 v2.0</p>
+          <div class="mt-3" role="group" aria-label="기능 표시">
+            <span class="badge bg-primary" role="status">통합 관리</span>
+            <span class="badge bg-success" role="status">실시간 모니터링</span>
+            <span class="badge bg-secondary" role="status" aria-live="polite">자동 업데이트</span>
           </div>
         </div>
         <div>
@@ -1617,7 +1617,7 @@ export const unifiedAdminDashboardTemplate = `
       setTimeout(() => {
         showToast(
           '환영합니다!',
-          'SafeWork 통합 관리자 대시보드 v2.0에 오신 것을 환영합니다.',
+          'SafeWork 보건관리자 웹콘솔 v2.0에 오신 것을 환영합니다.',
           'success'
         );
       }, 500);
