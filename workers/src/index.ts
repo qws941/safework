@@ -7,8 +7,6 @@ import { authRoutes } from './routes/auth';
 import { healthRoutes } from './routes/health';
 import { workerRoutes } from './routes/worker';
 import { excelProcessorRoutes } from './routes/excel-processor';
-import { form001Template } from './templates/001';
-import { form001CompleteTemplate } from './templates/001-complete';
 import { form001Dv06Template } from './templates/001-dv06-restore';
 import { form001Routes } from './routes/form-001';
 import { surveyD1Routes } from './routes/survey-d1';
