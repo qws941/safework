@@ -4,7 +4,7 @@
  */
 
 import { Hono } from 'hono';
-import { unifiedAdminDashboardTemplate } from '../templates/admin-unified-dashboard';
+import { workSystemTemplate } from '../templates/work-system';
 import { analysis002Template } from '../templates/analysis-002-niosh';
 import { analysis003Template } from '../templates/analysis-003-questionnaire';
 import { analysis004Template } from '../templates/analysis-004-statistics';
@@ -37,10 +37,10 @@ export const unifiedAdminRoutes = new Hono<{ Bindings: Bindings }>();
 
 /**
  * GET /admin
- * 보건관리자 웹콘솔 페이지
+ * 보건관리자 웹콘솔 페이지 (모듈식 업무시스템)
  */
 unifiedAdminRoutes.get('/', async (c) => {
-  const response = c.html(unifiedAdminDashboardTemplate);
+  const response = c.html(workSystemTemplate);
   response.headers.set('Cache-Control', 'public, max-age=300'); // Cache for 5 minutes
   return response;
 });
