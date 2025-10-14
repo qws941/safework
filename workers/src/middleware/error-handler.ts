@@ -4,7 +4,7 @@
  */
 
 import { Context } from 'hono';
-import { AppError, isAppError, getErrorMessage, ValidationError, DatabaseError } from '../errors/custom-errors';
+import { isAppError, getErrorMessage, ValidationError, DatabaseError } from '../errors/custom-errors';
 import { logError, extractRequestContext } from '../utils/error-logger';
 import { Env } from '../index';
 
@@ -104,12 +104,7 @@ export function asyncHandler<T>(
   fn: (c: Context<{ Bindings: Env }>) => Promise<T>
 ) {
   return async (c: Context<{ Bindings: Env }>) => {
-    try {
-      return await fn(c);
-    } catch (error) {
-      // Pass error to global error handler
-      throw error;
-    }
+    return await fn(c);
   };
 }
 
