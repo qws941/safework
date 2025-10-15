@@ -67,7 +67,8 @@ describe('Post-Deployment Verification Tests', () => {
 
       expect(html).toContain('bootstrap@5.3.0');
       expect(html).toContain('bootstrap-icons');
-      expect(html).toContain('btn btn-primary');
+      // New modular work system uses btn btn-outline-primary, not btn-primary
+      expect(html).toMatch(/btn btn-(outline-)?primary/);
 
       console.log('✅ Bootstrap UI framework verified');
     });
@@ -160,7 +161,8 @@ describe('Post-Deployment Verification Tests', () => {
 
       // Check for responsive elements
       expect(html).toContain('viewport');
-      expect(html).toContain('col-md-');
+      // New modular work system uses CSS Grid (modules-grid), not Bootstrap grid (col-md-)
+      expect(html).toMatch(/modules-grid|col-md-/);
       expect(html).toContain('@media');
 
       console.log('✅ Responsive design elements verified');
