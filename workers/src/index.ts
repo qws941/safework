@@ -13,8 +13,10 @@ import { analysisRoutes } from './routes/analysis';
 import { unifiedAdminRoutes } from './routes/admin-unified';
 import warningSignRoutes from './routes/warning-sign';
 import { nativeApiRoutes } from './routes/native-api';
+import metricsRoutes from './routes/metrics';
 import queueHandler from './queue-handler';
 import { securityHeaders, ProductionSecurityHeaders } from './middleware/securityHeaders';
+import { logRequest } from './utils/loki-logger';
 import { rateLimiter, RateLimitPresets } from './middleware/rateLimiter';
 import { errorHandler, notFoundHandler } from './middleware/error-handler';
 
@@ -55,11 +57,33 @@ export interface Env {
 
 const app = new Hono<{ Bindings: Env }>();
 
-// Cloudflare Native Analytics Middleware
+// Observability Middleware - Loki Logging + Performance Tracking
+// CLAUDE.md Compliance: Constitutional Framework v11.11
 app.use('*', async (c, next) => {
   const start = Date.now();
 
   await next();
+
+  const duration = Date.now() - start;
+
+  // Log to Grafana Loki (fail-open, non-blocking)
+  try {
+    await logRequest(
+      c.env,
+      c.req.method,
+      c.req.path,
+      c.res.status,
+      duration,
+      {
+        user_agent: c.req.header('User-Agent') || 'unknown',
+        cf_ray: c.req.header('CF-Ray') || 'unknown',
+        ...(c.req.header('Authorization') && { authenticated: true })
+      }
+    );
+  } catch (error) {
+    // Fail-open: Don't block request if logging fails
+    console.warn('Loki logging failed (non-blocking):', error);
+  }
 
   // Track request metrics with Analytics Engine (disabled - Free plan)
   // if (c.env.SAFEWORK_ANALYTICS) {
@@ -111,6 +135,7 @@ app.use('/api/admin/*', rateLimiter(RateLimitPresets.ADMIN_OPERATIONS));
 // Public routes
 app.route('/api/auth', authRoutes);
 app.route('/api/health', healthRoutes);
+app.route('/metrics', metricsRoutes);  // Prometheus metrics endpoint (CLAUDE.md compliance)
 app.route('/api/survey/d1', surveyD1Routes);  // D1 Native API (001)
 app.route('/api/excel', excelProcessorRoutes);
 app.route('/api/form/001', form001Routes);

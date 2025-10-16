@@ -3,7 +3,7 @@
  * Complete migration from Flask to Cloudflare Workers with D1
  */
 
-import { Hono } from 'hono';
+import { Hono, Context } from 'hono';
 import { verify } from 'hono/jwt';
 import { D1Client, createD1Client } from '../db/d1-client';
 import {
@@ -29,7 +29,7 @@ export const surveyD1Routes = new Hono<{ Bindings: SurveyEnv }>();
  * Extract user_id from JWT token in Authorization header
  * Falls back to anonymous user (id=1) if no valid token
  */
-async function getUserIdFromAuth(c: any): Promise<number> {
+async function getUserIdFromAuth(c: Context<{ Bindings: SurveyEnv }>): Promise<number> {
   try {
     const authHeader = c.req.header('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {

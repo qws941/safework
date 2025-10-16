@@ -605,3 +605,123 @@ All route handlers should use `Context<{ Bindings: Env }>` from Hono.
 ```
 
 **Security**: Zero vulnerabilities ✅ (verified with `npm audit`)
+## Infrastructure Integration
+
+### Observability Stack (Synology NAS)
+
+All projects integrate with centralized monitoring on grafana.jclee.me:
+
+```yaml
+grafana: https://grafana.jclee.me
+  dashboards: Project-specific dashboards for metrics visualization
+  loki: Centralized logging (all docker logs → promtail → Loki)
+  prometheus: Metrics collection and alerting
+
+n8n: https://n8n.jclee.me
+  workflows: Automated CI/CD, notifications, integrations
+  webhooks: Event-driven automation triggers
+
+slack: Team notifications
+  channels: #alerts, #deployments, #monitoring
+  integration: Via n8n workflows and direct API
+```
+
+**Health Checks**:
+```bash
+# Verify infrastructure connectivity
+curl -sf https://grafana.jclee.me/api/health
+curl -sf https://n8n.jclee.me/healthz
+```
+
+### Common Libraries (v1.0.0)
+
+Centralized bash libraries eliminate code duplication:
+
+```bash
+# Load common libraries in scripts
+source "${HOME}/.claude/lib/bash/colors.sh"    # Color definitions, output functions
+source "${HOME}/.claude/lib/bash/logging.sh"   # Loki logging functions
+source "${HOME}/.claude/lib/bash/ids.sh"       # Task ID generation
+source "${HOME}/.claude/lib/bash/api-clients.sh" # Grafana, n8n, Slack APIs
+source "${HOME}/.claude/lib/bash/errors.sh"    # Error handling, retries
+
+# Example usage
+TASK_ID=$(generate_task_id "deploy")
+log_info "Starting deployment: $TASK_ID"
+log_to_loki "my-project" "Deployment started" "INFO"
+```
+
+**Key Functions**:
+- `log_to_loki(job, message, level)` - Send logs to Grafana Loki
+- `generate_task_id(prefix)` - Create UUID-based task IDs
+- `grafana_query(endpoint, method, data)` - Query Grafana API
+- `n8n_webhook(webhook_id, data)` - Trigger n8n workflows
+- `slack_message(channel, text)` - Send Slack notifications
+- `retry_with_backoff(attempts, delay, max_delay, cmd)` - Retry with exponential backoff
+- `require_command(cmd, package)` - Check dependencies
+- `require_env(var)` - Validate environment variables
+
+**Documentation**: `~/.claude/lib/README.md`
+
+### Deployment Standards
+
+All projects follow Constitutional Framework v11.11:
+
+```yaml
+mandatory_structure:
+  - /resume/ (architecture, api, deployment, troubleshooting)
+  - /demo/ (screenshots/, videos/, examples/)
+  - docker-compose.yml (with health checks and Traefik labels)
+  - .env.example (template for required env vars)
+
+observability_requirements:
+  - Metrics endpoint: /{service}/metrics (Prometheus format)
+  - Health endpoint: /{service}/health (JSON response)
+  - Docker logs: Automatically sent to Loki via promtail
+
+prohibited:
+  - Local Grafana/Prometheus/Loki instances (ports 3000/9090/3100)
+  - Backup files (*.backup, *.bak, *.old) - Use git only
+  - Root directory clutter - Use structured subdirectories
+```
+
+### Testing Requirements
+
+```bash
+# Pre-deployment checklist
+npm test                    # All unit tests must pass
+npm run test:coverage       # Coverage ≥ 80%
+npm run lint                # No linting errors
+docker-compose up -d        # Deploy
+sleep 5
+curl http://localhost:PORT/health  # Verify health endpoint
+
+# Grafana verification (mandatory)
+# 1. Check service is UP in Prometheus
+# 2. Verify error_rate == 0
+# 3. Confirm logs flowing to Loki
+```
+
+### Environment Variables
+
+Required environment variables for infrastructure integration:
+
+```bash
+# Grafana/Loki/Prometheus
+LOKI_URL=https://grafana.jclee.me
+GRAFANA_URL=https://grafana.jclee.me
+PROMETHEUS_URL=https://prometheus.jclee.me
+
+# n8n
+N8N_URL=https://n8n.jclee.me
+N8N_API_KEY=<from ~/.env>
+
+# Slack
+SLACK_BOT_TOKEN=<from ~/.env>
+SLACK_WEBHOOK_URL=<from ~/.env>
+
+# Service-specific
+SERVICE_NAME=<project-name>
+LOG_LEVEL=info
+TZ=Asia/Seoul
+```
