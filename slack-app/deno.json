@@ -1,0 +1,9 @@
+{
+  "importMap": "import_map.json",
+  "tasks": {
+    "start": "slack run",
+    "deploy": "slack deploy",
+    "test": "deno test --allow-env --allow-net"
+  },
+  "exclude": ["node_modules"]
+}

@@ -1,0 +1,4 @@
+{
+  "get-manifest": "/home/jclee/.deno/bin/deno run -q --allow-read --allow-net manifest.ts",
+  "get-hooks": "/home/jclee/.deno/bin/deno run -q --allow-read --allow-net https://deno.land/x/deno_slack_hooks@1.0.0/mod.ts"
+}

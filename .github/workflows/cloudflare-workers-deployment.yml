@@ -98,7 +98,58 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run type-check
-      - run: npm run test:unit
+      - name: 🧪 Run Unit Tests
+        id: test
+        run: npm run test:unit
+
+      - name: 📢 Slack - Test Results
+        if: always()
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "${{ steps.test.outcome == 'success' && '✅' || '❌' }} SafeWork 테스트 결과",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "${{ steps.test.outcome == 'success' && '✅ 테스트 통과' || '❌ 테스트 실패' }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*브랜치:*\n${{ github.ref_name }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*커밋:*\n`${{ github.sha }}`.substring(0, 7)
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*트리거:*\n${{ github.event_name }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*작성자:*\n${{ github.actor }}"
+                    }
+                  ]
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|워크플로우 로그 보기>"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
 
   # ============================================
   # 3. Deploy to Production Job
@@ -120,14 +171,68 @@ jobs:
           cache: 'npm'
           cache-dependency-path: 'workers/package-lock.json'
       - run: npm ci
+      - name: 📢 Slack - Deployment Started
+        if: always()
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "🚀 SafeWork 배포 시작",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "🚀 SafeWork 배포 시작"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*환경:*\nProduction"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*배포자:*\n${{ github.actor }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*브랜치:*\n${{ github.ref_name }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*커밋:*\n<${{ github.event.head_commit.url }}|${{ github.sha }}>".substring(0, 50)
+                    }
+                  ]
+                },
+                {
+                  "type": "context",
+                  "elements": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "📝 메시지: ${{ github.event.head_commit.message }}"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+
       - name: 🚀 Deploy to Production
+        id: deploy
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: workers
           command: deploy
+
       - name: 🔍 Verify Production Deployment
+        id: health-check
         run: |
           sleep 15
           health_status=$(curl -s -o /dev/null -w "%{http_code}" https://safework.jclee.me/api/health)
@@ -136,6 +241,120 @@ jobs:
             exit 1
           fi
           echo "✅ Health check passed with status $health_status."
+
+      - name: 📢 Slack - Deployment Success
+        if: success()
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "✅ SafeWork 배포 성공",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "✅ 배포 성공"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*환경:*\nProduction"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*배포자:*\n${{ github.actor }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*브랜치:*\n${{ github.ref_name }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*커밋:*\n`${{ github.sha }}`.substring(0, 7)
+                    }
+                  ]
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*URL:* <https://safework.jclee.me|https://safework.jclee.me>"
+                  }
+                },
+                {
+                  "type": "context",
+                  "elements": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "🎉 Health check 통과 | ⏱️ 배포 완료"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+
+      - name: 📢 Slack - Deployment Failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "❌ SafeWork 배포 실패",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "❌ 배포 실패"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*환경:*\nProduction"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*배포자:*\n@${{ github.actor }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*브랜치:*\n${{ github.ref_name }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*워크플로우:*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|실패 로그 확인>"
+                    }
+                  ]
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "⚠️ 즉시 확인이 필요합니다!"
+                  }
+                }
+              ],
+              "attachments": [
+                {
+                  "color": "danger",
+                  "footer": "SafeWork CI/CD",
+                  "ts": ${{ github.event.repository.pushed_at }}
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
 
       # ============================================
       # 4. AI Release Notes Generation

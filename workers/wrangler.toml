@@ -27,15 +27,22 @@ zone_name = "jclee.me"
 # ============================================
 [vars]
 # SECURITY WARNING: DO NOT store secrets here!
-# JWT_SECRET and ADMIN_PASSWORD_HASH must be stored in Cloudflare Secrets
+# JWT_SECRET, ADMIN_PASSWORD_HASH, and SLACK_WEBHOOK_URL must be stored in Cloudflare Secrets
 # Use: wrangler secret put JWT_SECRET
 #      wrangler secret put ADMIN_PASSWORD_HASH
+#      wrangler secret put SLACK_WEBHOOK_URL
+#      wrangler secret put SLACK_BOT_TOKEN (optional, for advanced features)
 # See: SECURITY_MIGRATION_GUIDE.md for instructions
 
 ADMIN_USERNAME = "admin"
 BACKEND_URL = "https://safework.jclee.me"
 DEBUG = "false"
 ENVIRONMENT = "production"
+
+# Slack Integration (URLs stored as secrets)
+# Get webhook URL from: https://n8n.jclee.me or Slack App settings
+# SLACK_WEBHOOK_URL = (stored as secret)
+# SLACK_BOT_TOKEN = (stored as secret, optional)
 
 # ============================================
 # KV Namespaces (Production)

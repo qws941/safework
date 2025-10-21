@@ -52,6 +52,10 @@ export interface Env {
   DEBUG: string;
   ENVIRONMENT: string;
 
+  // Slack Integration (stored as secrets)
+  SLACK_WEBHOOK_URL?: string; // Incoming webhook URL from n8n or Slack
+  SLACK_BOT_TOKEN?: string;   // Bot User OAuth Token (optional, for advanced features)
+
   [key: string]: any;
 }
 

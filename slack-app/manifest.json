@@ -1,0 +1,56 @@
+{
+  "display_information": {
+    "name": "SafeWork Notifier",
+    "description": "SafeWork 산업안전보건 관리 시스템 통합 알림 봇",
+    "background_color": "#2c3e50",
+    "long_description": "SafeWork Cloudflare Workers 프로덕션 환경의 배포, 에러, 테스트, 보안 이벤트를 실시간으로 Slack에 알림하는 통합 봇입니다."
+  },
+  "features": {
+    "bot_user": {
+      "display_name": "SafeWork Bot",
+      "always_online": true
+    },
+    "slash_commands": [
+      {
+        "command": "/safework-status",
+        "description": "SafeWork 시스템 상태 조회",
+        "usage_hint": "[health|stats|errors]"
+      },
+      {
+        "command": "/safework-deploy",
+        "description": "SafeWork 배포 이력 조회",
+        "usage_hint": "[last|list|rollback]"
+      }
+    ]
+  },
+  "oauth_config": {
+    "scopes": {
+      "bot": [
+        "chat:write",
+        "chat:write.public",
+        "channels:read",
+        "channels:history",
+        "commands",
+        "incoming-webhook",
+        "users:read"
+      ]
+    }
+  },
+  "settings": {
+    "event_subscriptions": {
+      "bot_events": [
+        "app_mention",
+        "message.channels"
+      ]
+    },
+    "incoming_webhooks": {
+      "incoming_webhooks_enabled": true
+    },
+    "interactivity": {
+      "is_enabled": true
+    },
+    "org_deploy_enabled": false,
+    "socket_mode_enabled": false,
+    "token_rotation_enabled": false
+  }
+}
