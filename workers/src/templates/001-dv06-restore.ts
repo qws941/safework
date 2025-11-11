@@ -973,6 +973,173 @@ export const form001Dv06Template = `<!DOCTYPE html>
         margin-top: 5px;
         display: none;
     }
+
+    /* Success Modal Styles */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+        z-index: 9999;
+        animation: fadeIn 0.3s ease-out;
+    }
+
+    .modal-overlay.active {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .success-modal {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        max-width: 500px;
+        width: 90%;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        animation: slideUp 0.4s ease-out;
+        text-align: center;
+    }
+
+    .success-icon {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.5rem;
+        animation: scaleIn 0.5s ease-out 0.2s both;
+    }
+
+    .success-icon i {
+        font-size: 40px;
+        color: white;
+    }
+
+    .success-modal h3 {
+        color: #1f2937;
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+    }
+
+    .success-modal p {
+        color: #6b7280;
+        margin-bottom: 1.5rem;
+        font-size: 0.95rem;
+    }
+
+    .submission-id {
+        background: #f3f4f6;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        font-family: monospace;
+        font-size: 0.85rem;
+        color: #374151;
+        word-break: break-all;
+    }
+
+    .modal-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+    }
+
+    .modal-btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn-secondary {
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+    .btn-secondary:hover {
+        background: #e5e7eb;
+    }
+
+    /* Loading Spinner */
+    .loading-spinner {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 10000;
+    }
+
+    .loading-spinner.active {
+        display: block;
+    }
+
+    .spinner {
+        width: 50px;
+        height: 50px;
+        border: 4px solid rgba(99, 102, 241, 0.2);
+        border-top-color: #6366f1;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+
+    @keyframes slideUp {
+        from {
+            transform: translateY(50px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    @keyframes scaleIn {
+        from {
+            transform: scale(0);
+            opacity: 0;
+        }
+        to {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
 </style>
 
 
@@ -1595,25 +1762,54 @@ export const form001Dv06Template = `<!DOCTYPE html>
     </form>
 </div>
 
+<!-- Success Modal -->
+<div class="modal-overlay" id="successModal">
+    <div class="success-modal">
+        <div class="success-icon">
+            <i class="bi bi-check-lg"></i>
+        </div>
+        <h3>설문이 성공적으로 제출되었습니다!</h3>
+        <p>소중한 의견 감사합니다. 제출하신 내용은 안전하게 저장되었습니다.</p>
+        <div class="submission-id">
+            제출 ID: <span id="submissionIdDisplay"></span>
+        </div>
+        <div class="modal-actions">
+            <button class="modal-btn btn-primary" onclick="window.location.href='/'">
+                <i class="bi bi-house"></i> 홈으로
+            </button>
+            <button class="modal-btn btn-secondary" onclick="location.reload()">
+                <i class="bi bi-arrow-clockwise"></i> 새 설문 작성
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Spinner -->
+<div class="loading-spinner" id="loadingSpinner">
+    <div class="spinner"></div>
+</div>
+
 <script>
 // 선택된 부위 추적
 let selectedBodyParts = [];
 
-// 폼 검증 및 제출 처리
-document.getElementById('surveyForm').addEventListener('submit', function(e) {
+// 폼 검증 및 제출 처리 (AJAX)
+document.getElementById('surveyForm').addEventListener('submit', async function(e) {
+    e.preventDefault(); // 기본 form submit 방지
+
     // 직접입력 필드 검증
     const customFields = [
         { selectId: 'company_select', inputId: 'company_custom', errorId: 'company_error', name: '업체명' },
         { selectId: 'process_select', inputId: 'process_custom', errorId: 'process_error', name: '공정명' },
         { selectId: 'role_select', inputId: 'role_custom', errorId: 'role_error', name: '직위/역할' }
     ];
-    
+
     let customInputErrors = [];
-    
+
     customFields.forEach(field => {
         const input = document.getElementById(field.inputId);
         const select = document.getElementById(field.selectId);
-        
+
         // 직접입력 필드가 보이는 경우 검증
         if (input.style.display !== 'none' && input.required) {
             if (!validateCustomInput(field)) {
@@ -1622,51 +1818,48 @@ document.getElementById('surveyForm').addEventListener('submit', function(e) {
                 // 검증 통과 시 select에 임시 옵션 추가하고 선택
                 const customValue = input.value.trim();
                 const existingOption = Array.from(select.options).find(opt => opt.value === customValue);
-                
+
                 if (!existingOption) {
                     const newOption = new Option(customValue, customValue);
                     select.add(newOption);
                 }
                 select.value = customValue;
-                
+
                 // 입력 필드 숨기기
                 input.style.display = 'none';
                 input.required = false;
             }
         }
     });
-    
+
     if (customInputErrors.length > 0) {
-        e.preventDefault();
         alert('다음 항목을 올바르게 입력해주세요:\\n' + customInputErrors.join(', '));
         return false;
     }
-    
+
     const hasSymptoms = document.querySelector('input[name="has_symptoms"]:checked');
     if (!hasSymptoms) {
-        e.preventDefault();
         alert('통증 경험 여부를 선택해 주세요.');
         return false;
     }
-    
+
     // "예"를 선택한 경우 최소 하나의 부위는 선택되어야 함
     if (hasSymptoms.value === '예') {
         if (selectedBodyParts.length === 0) {
-            e.preventDefault();
             alert('통증 부위를 하나 이상 선택해 주세요.');
             return false;
         }
-        
+
         // 각 선택된 부위의 필수 문항 검증
         let validationErrors = [];
         selectedBodyParts.forEach(part => {
             const requiredFields = ['duration', 'severity', 'frequency', 'last_week', 'consequences'];
-            
+
             // 목과 허리가 아닌 경우에만 side 필드 체크
             if (part !== '목' && part !== '허리') {
                 requiredFields.unshift('side');
             }
-            
+
             requiredFields.forEach(field => {
                 if (field === 'consequences') {
                     // 다중선택 필드 검증
@@ -1689,7 +1882,7 @@ document.getElementById('surveyForm').addEventListener('submit', function(e) {
                     }
                 }
             });
-            
+
             // 기타 선택 시 텍스트 입력 검증
             const otherInput = document.querySelector(\`input[name="\${part}_consequence_other"]\`);
             const hasOtherSelected = document.querySelector(\`input[name="\${part}_consequences"][value="기타"]\`);
@@ -1697,15 +1890,67 @@ document.getElementById('surveyForm').addEventListener('submit', function(e) {
                 validationErrors.push(\`\${part} 부위의 기타 사항을 입력해주세요.\`);
             }
         });
-        
+
         if (validationErrors.length > 0) {
-            e.preventDefault();
             alert(validationErrors.join('\\n'));
             return false;
         }
-        
+
         // 증상 데이터 수집
         collectSymptomData();
+    }
+
+    // 검증 통과 - 이제 AJAX로 제출
+    try {
+        // 로딩 스피너 표시
+        document.getElementById('loadingSpinner').classList.add('active');
+
+        // FormData 수집
+        const formData = new FormData(this);
+        const jsonData = {};
+
+        // FormData를 JSON으로 변환
+        for (const [key, value] of formData.entries()) {
+            // 체크박스나 라디오 버튼 그룹 처리
+            if (jsonData[key]) {
+                // 이미 존재하는 키 - 배열로 변환
+                if (Array.isArray(jsonData[key])) {
+                    jsonData[key].push(value);
+                } else {
+                    jsonData[key] = [jsonData[key], value];
+                }
+            } else {
+                jsonData[key] = value;
+            }
+        }
+
+        // AJAX 요청
+        const response = await fetch('/api/survey/d1/submit', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(jsonData)
+        });
+
+        const result = await response.json();
+
+        // 로딩 스피너 숨김
+        document.getElementById('loadingSpinner').classList.remove('active');
+
+        if (result.success) {
+            // 성공 모달 표시
+            document.getElementById('submissionIdDisplay').textContent = result.submissionId || 'N/A';
+            document.getElementById('successModal').classList.add('active');
+        } else {
+            // 에러 알림
+            alert('제출 실패: ' + (result.error || '알 수 없는 오류'));
+        }
+    } catch (error) {
+        // 네트워크 에러
+        document.getElementById('loadingSpinner').classList.remove('active');
+        alert('네트워크 오류가 발생했습니다. 다시 시도해주세요.');
+        console.error('Submit error:', error);
     }
 });
 
