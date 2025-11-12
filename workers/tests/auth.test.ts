@@ -439,7 +439,7 @@ describe('Authentication - Login (/api/auth/login)', () => {
     const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
     it('should reject missing username', async () => {
-      await sleep(1000); // 1s delay to avoid rate limiting
+      await sleep(3000); // 3s delay to avoid rate limiting
       const response = await fetch(`${BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -453,7 +453,7 @@ describe('Authentication - Login (/api/auth/login)', () => {
     });
 
     it('should reject missing password', async () => {
-      await sleep(1000); // 1s delay to avoid rate limiting
+      await sleep(3000); // 3s delay to avoid rate limiting
       const response = await fetch(`${BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -467,7 +467,7 @@ describe('Authentication - Login (/api/auth/login)', () => {
     });
 
     it('should reject wrong password', async () => {
-      await sleep(1000); // 1s delay to avoid rate limiting
+      await sleep(3000); // 3s delay to avoid rate limiting
       const response = await fetch(`${BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -484,7 +484,7 @@ describe('Authentication - Login (/api/auth/login)', () => {
     });
 
     it('should reject non-existent username', async () => {
-      await sleep(1000); // 1s delay to avoid rate limiting
+      await sleep(3000); // 3s delay to avoid rate limiting
       const response = await fetch(`${BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -509,7 +509,7 @@ describe('Authentication - Token Verification (/api/auth/verify)', () => {
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
   beforeAll(async () => {
-    await sleep(1000); // 1s delay to avoid rate limiting
+    await sleep(3000); // 3s delay to avoid rate limiting
 
     // Get a valid token
     const loginResponse = await fetch(`${BASE_URL}/api/auth/login`, {
@@ -542,7 +542,7 @@ describe('Authentication - Token Verification (/api/auth/verify)', () => {
   });
 
   it('should verify valid token', async () => {
-    await sleep(1000); // 1s delay to avoid rate limiting
+    await sleep(3000); // 3s delay to avoid rate limiting
 
     const response = await fetch(`${BASE_URL}/api/auth/verify`, {
       method: 'GET',
@@ -558,7 +558,7 @@ describe('Authentication - Token Verification (/api/auth/verify)', () => {
   });
 
   it('should reject missing token', async () => {
-    await sleep(1000); // 1s delay to avoid rate limiting
+    await sleep(3000); // 3s delay to avoid rate limiting
 
     const response = await fetch(`${BASE_URL}/api/auth/verify`, {
       method: 'GET',
@@ -571,7 +571,7 @@ describe('Authentication - Token Verification (/api/auth/verify)', () => {
   });
 
   it('should reject malformed token', async () => {
-    await sleep(1000); // 1s delay to avoid rate limiting
+    await sleep(3000); // 3s delay to avoid rate limiting
 
     const response = await fetch(`${BASE_URL}/api/auth/verify`, {
       method: 'GET',
@@ -587,7 +587,7 @@ describe('Authentication - Token Verification (/api/auth/verify)', () => {
   });
 
   it('should reject token without Bearer prefix', async () => {
-    await sleep(1000); // 1s delay to avoid rate limiting
+    await sleep(3000); // 3s delay to avoid rate limiting
 
     const response = await fetch(`${BASE_URL}/api/auth/verify`, {
       method: 'GET',
@@ -610,7 +610,7 @@ describe('Authentication - Token Refresh (/api/auth/refresh)', () => {
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
   beforeAll(async () => {
-    await sleep(1000); // 1s delay to avoid rate limiting
+    await sleep(3000); // 3s delay to avoid rate limiting
 
     // Create user and get token
     const uniqueUsername = `refreshtest${Date.now()}`;
@@ -629,7 +629,7 @@ describe('Authentication - Token Refresh (/api/auth/refresh)', () => {
   });
 
   it('should refresh valid token', async () => {
-    await sleep(1000); // 1s delay to avoid rate limiting
+    await sleep(3000); // 3s delay to avoid rate limiting
 
     const response = await fetch(`${BASE_URL}/api/auth/refresh`, {
       method: 'POST',
@@ -648,7 +648,7 @@ describe('Authentication - Token Refresh (/api/auth/refresh)', () => {
   });
 
   it('should return new token with extended expiry', async () => {
-    await sleep(1000); // 1s delay to avoid rate limiting
+    await sleep(3000); // 3s delay to avoid rate limiting
 
     const response = await fetch(`${BASE_URL}/api/auth/refresh`, {
       method: 'POST',
@@ -665,7 +665,7 @@ describe('Authentication - Token Refresh (/api/auth/refresh)', () => {
   });
 
   it('should reject missing token', async () => {
-    await sleep(1000); // 1s delay to avoid rate limiting
+    await sleep(3000); // 3s delay to avoid rate limiting
 
     const response = await fetch(`${BASE_URL}/api/auth/refresh`, {
       method: 'POST',
