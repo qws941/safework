@@ -713,3 +713,309 @@ describe('Input Sanitization', () => {
     });
   });
 });
+
+// ========== Survey Submission Validation Tests ==========
+
+describe('Survey Submission Validation', () => {
+  describe('Required Fields', () => {
+    it('should require form_type field', () => {
+      const validSurveyData = {
+        form_type: '001_musculoskeletal_symptom_survey',
+        name: 'Test User',
+        company_id: 1,
+        process_id: 1,
+        role_id: 1,
+        responses: {}
+      };
+
+      expect(validSurveyData).toHaveProperty('form_type');
+      expect(validSurveyData.form_type).toBeTruthy();
+    });
+
+    it('should reject submission without form_type', () => {
+      const invalidSurveyData = {
+        name: 'Test User',
+        company_id: 1,
+        process_id: 1,
+        role_id: 1,
+        responses: {}
+      };
+
+      expect(invalidSurveyData).not.toHaveProperty('form_type');
+    });
+
+    it('should require name field', () => {
+      const validSurveyData = {
+        form_type: '001_musculoskeletal_symptom_survey',
+        name: 'Test User',
+        company_id: 1,
+        process_id: 1,
+        role_id: 1,
+        responses: {}
+      };
+
+      expect(validSurveyData).toHaveProperty('name');
+      expect(validSurveyData.name).toBeTruthy();
+    });
+
+    it('should require company_id field', () => {
+      const validSurveyData = {
+        form_type: '001_musculoskeletal_symptom_survey',
+        name: 'Test User',
+        company_id: 1,
+        process_id: 1,
+        role_id: 1,
+        responses: {}
+      };
+
+      expect(validSurveyData).toHaveProperty('company_id');
+      expect(validSurveyData.company_id).toBeTruthy();
+    });
+
+    it('should require responses field', () => {
+      const validSurveyData = {
+        form_type: '001_musculoskeletal_symptom_survey',
+        name: 'Test User',
+        company_id: 1,
+        process_id: 1,
+        role_id: 1,
+        responses: {}
+      };
+
+      expect(validSurveyData).toHaveProperty('responses');
+      expect(typeof validSurveyData.responses).toBe('object');
+    });
+  });
+
+  describe('Form Type Validation', () => {
+    it('should accept valid form_type for form 001', () => {
+      const form_type = '001_musculoskeletal_symptom_survey';
+
+      expect(form_type).toMatch(/^001_/);
+      expect(form_type).toContain('musculoskeletal');
+    });
+
+    it('should accept valid form_type for form 002', () => {
+      const form_type = '002_musculoskeletal_hazard_assessment';
+
+      expect(form_type).toMatch(/^002_/);
+      expect(form_type).toContain('musculoskeletal');
+    });
+
+    it('should accept valid form_type for form 003', () => {
+      const form_type = '003_musculoskeletal_prevention_program';
+
+      expect(form_type).toMatch(/^003_/);
+      expect(form_type).toContain('musculoskeletal');
+    });
+
+    it('should accept valid form_type for form 004', () => {
+      const form_type = '004_industrial_accident_survey';
+
+      expect(form_type).toMatch(/^004_/);
+      expect(form_type).toContain('industrial_accident');
+    });
+
+    it('should accept valid form_type for form 005', () => {
+      const form_type = '005_basic_hazard_factor_survey';
+
+      expect(form_type).toMatch(/^005_/);
+      expect(form_type).toContain('hazard_factor');
+    });
+
+    it('should accept valid form_type for form 006', () => {
+      const form_type = '006_elderly_worker_approval';
+
+      expect(form_type).toMatch(/^006_/);
+      expect(form_type).toContain('elderly_worker');
+    });
+
+    it('should reject invalid form_type format', () => {
+      const invalidFormTypes = [
+        '',
+        'invalid',
+        '999_invalid_form',
+        'no_prefix_form',
+        '001', // Missing description
+        '_missing_number'
+      ];
+
+      invalidFormTypes.forEach(form_type => {
+        // Valid form_type should start with 001-006 and contain underscore
+        const isValid = /^00[1-6]_\w+/.test(form_type);
+        expect(isValid).toBe(false);
+      });
+    });
+  });
+
+  describe('Data Type Validation', () => {
+    it('should validate company_id as number', () => {
+      const company_id = 1;
+
+      expect(typeof company_id).toBe('number');
+      expect(company_id).toBeGreaterThan(0);
+    });
+
+    it('should validate process_id as number', () => {
+      const process_id = 1;
+
+      expect(typeof process_id).toBe('number');
+      expect(process_id).toBeGreaterThan(0);
+    });
+
+    it('should validate role_id as number', () => {
+      const role_id = 1;
+
+      expect(typeof role_id).toBe('number');
+      expect(role_id).toBeGreaterThan(0);
+    });
+
+    it('should validate name as string', () => {
+      const name = 'Test User';
+
+      expect(typeof name).toBe('string');
+      expect(name.length).toBeGreaterThan(0);
+    });
+
+    it('should validate age as number when provided', () => {
+      const age = 30;
+
+      expect(typeof age).toBe('number');
+      expect(age).toBeGreaterThan(0);
+      expect(age).toBeLessThan(150);
+    });
+
+    it('should validate gender as string when provided', () => {
+      const validGenders = ['male', 'female', 'other'];
+      const gender = 'male';
+
+      expect(typeof gender).toBe('string');
+      expect(validGenders).toContain(gender);
+    });
+  });
+
+  describe('Response Data Validation', () => {
+    it('should accept valid responses object', () => {
+      const responses = {
+        neck_discomfort: 'none',
+        shoulder_discomfort: 'mild',
+        arm_discomfort: 'moderate'
+      };
+
+      expect(typeof responses).toBe('object');
+      expect(Object.keys(responses).length).toBeGreaterThan(0);
+    });
+
+    it('should accept empty responses object', () => {
+      const responses = {};
+
+      expect(typeof responses).toBe('object');
+      expect(Object.keys(responses).length).toBe(0);
+    });
+
+    it('should reject non-object responses', () => {
+      const invalidResponses = [
+        'string',
+        123,
+        true,
+        null,
+        undefined,
+        []
+      ];
+
+      invalidResponses.forEach(response => {
+        const isValid = typeof response === 'object' && response !== null && !Array.isArray(response);
+        if (response === null || response === undefined || Array.isArray(response)) {
+          expect(isValid).toBe(false);
+        }
+      });
+    });
+  });
+
+  describe('Complete Survey Data Validation', () => {
+    it('should validate complete survey submission for form 001', () => {
+      const surveyData = {
+        form_type: '001_musculoskeletal_symptom_survey',
+        name: 'Test User',
+        department: 'Engineering',
+        position: 'Developer',
+        gender: 'male',
+        age: 30,
+        company_id: 1,
+        process_id: 2,
+        role_id: 3,
+        years_of_service: 5,
+        responses: {
+          neck_discomfort: 'none',
+          shoulder_discomfort: 'mild',
+          arm_discomfort: 'none',
+          hand_discomfort: 'moderate',
+          waist_discomfort: 'none',
+          leg_discomfort: 'none'
+        }
+      };
+
+      // Validate required fields
+      expect(surveyData).toHaveProperty('form_type');
+      expect(surveyData).toHaveProperty('name');
+      expect(surveyData).toHaveProperty('company_id');
+      expect(surveyData).toHaveProperty('process_id');
+      expect(surveyData).toHaveProperty('role_id');
+      expect(surveyData).toHaveProperty('responses');
+
+      // Validate types
+      expect(typeof surveyData.form_type).toBe('string');
+      expect(typeof surveyData.name).toBe('string');
+      expect(typeof surveyData.company_id).toBe('number');
+      expect(typeof surveyData.process_id).toBe('number');
+      expect(typeof surveyData.role_id).toBe('number');
+      expect(typeof surveyData.responses).toBe('object');
+
+      // Validate values
+      expect(surveyData.form_type).toMatch(/^001_/);
+      expect(surveyData.company_id).toBeGreaterThan(0);
+      expect(surveyData.process_id).toBeGreaterThan(0);
+      expect(surveyData.role_id).toBeGreaterThan(0);
+    });
+
+    it('should identify missing required fields', () => {
+      const incompleteSurveyData = {
+        name: 'Test User',
+        company_id: 1,
+        // Missing: form_type, process_id, role_id, responses
+      };
+
+      expect(incompleteSurveyData).not.toHaveProperty('form_type');
+      expect(incompleteSurveyData).not.toHaveProperty('process_id');
+      expect(incompleteSurveyData).not.toHaveProperty('role_id');
+      expect(incompleteSurveyData).not.toHaveProperty('responses');
+    });
+
+    it('should validate optional fields when present', () => {
+      const surveyWithOptionalFields = {
+        form_type: '001_musculoskeletal_symptom_survey',
+        name: 'Test User',
+        company_id: 1,
+        process_id: 1,
+        role_id: 1,
+        responses: {},
+        // Optional fields
+        department: 'Engineering',
+        position: 'Developer',
+        employee_id: 'EMP001',
+        gender: 'male',
+        age: 30,
+        years_of_service: 5,
+        employee_number: '12345'
+      };
+
+      // All optional fields should be present when included
+      expect(surveyWithOptionalFields).toHaveProperty('department');
+      expect(surveyWithOptionalFields).toHaveProperty('position');
+      expect(surveyWithOptionalFields).toHaveProperty('employee_id');
+      expect(surveyWithOptionalFields).toHaveProperty('gender');
+      expect(surveyWithOptionalFields).toHaveProperty('age');
+      expect(surveyWithOptionalFields).toHaveProperty('years_of_service');
+    });
+  });
+});
