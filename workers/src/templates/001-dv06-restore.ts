@@ -1924,6 +1924,9 @@ document.getElementById('surveyForm').addEventListener('submit', async function(
             }
         }
 
+        // 필수 필드 추가
+        jsonData.form_type = '001_musculoskeletal_symptom_survey';
+
         // AJAX 요청
         const response = await fetch('/api/survey/d1/submit', {
             method: 'POST',
