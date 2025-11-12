@@ -1933,6 +1933,11 @@ document.getElementById('surveyForm').addEventListener('submit', async function(
             body: JSON.stringify(jsonData)
         });
 
+        // HTTP 상태 확인
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
         const result = await response.json();
 
         // 로딩 스피너 숨김
@@ -1943,13 +1948,16 @@ document.getElementById('surveyForm').addEventListener('submit', async function(
             document.getElementById('submissionIdDisplay').textContent = result.survey_id || 'N/A';
             document.getElementById('successModal').classList.add('active');
         } else {
-            // 에러 알림
-            alert('제출 실패: ' + (result.error || '알 수 없는 오류'));
+            // 에러 알림 (상세 정보 포함)
+            const errorMsg = result.error || result.message || '알 수 없는 오류';
+            alert('제출 실패: ' + errorMsg);
+            console.error('Survey submission failed:', result);
         }
     } catch (error) {
-        // 네트워크 에러
+        // 네트워크 에러 또는 예외
         document.getElementById('loadingSpinner').classList.remove('active');
-        alert('네트워크 오류가 발생했습니다. 다시 시도해주세요.');
+        const errorMsg = error.message || error.toString();
+        alert('네트워크 오류가 발생했습니다.\\n\\n상세: ' + errorMsg + '\\n\\n다시 시도해주세요.');
         console.error('Submit error:', error);
     }
 });
