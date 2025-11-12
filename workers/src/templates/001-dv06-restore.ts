@@ -1935,7 +1935,7 @@ document.getElementById('surveyForm').addEventListener('submit', async function(
 
         // HTTP 상태 확인
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            throw new Error('HTTP ' + response.status + ': ' + response.statusText);
         }
 
         const result = await response.json();
