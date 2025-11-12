@@ -569,10 +569,8 @@ surveyD1Routes.post('/test-submit', async (c) => {
       });
     }
 
-    // Get client info
-    const ip_address = c.req.header('CF-Connecting-IP') || 'test-client';
-    const user_agent = c.req.header('User-Agent') || 'Test Agent';
-    const user_id = 1; // Anonymous user
+    // Get authenticated user_id
+    const user_id = await getUserIdFromAuth(c);
 
     // Prepare survey data
     const surveyData: Record<string, unknown> = {
@@ -590,8 +588,6 @@ surveyD1Routes.post('/test-submit', async (c) => {
       responses: JSON.stringify(responses),
       data: JSON.stringify({}),
       symptoms_data: JSON.stringify(responses),
-      ip_address,
-      user_agent,
       status: 'submitted',
       submission_date: new Date().toISOString(),
       created_at: new Date().toISOString(),
