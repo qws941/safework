@@ -1940,7 +1940,7 @@ document.getElementById('surveyForm').addEventListener('submit', async function(
 
         if (result.success) {
             // 성공 모달 표시
-            document.getElementById('submissionIdDisplay').textContent = result.submissionId || 'N/A';
+            document.getElementById('submissionIdDisplay').textContent = result.survey_id || 'N/A';
             document.getElementById('successModal').classList.add('active');
         } else {
             // 에러 알림
