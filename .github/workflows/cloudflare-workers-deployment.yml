@@ -104,6 +104,7 @@ jobs:
 
       - name: 📢 Slack - Test Results
         if: always()
+        continue-on-error: true
         uses: slackapi/slack-github-action@v1
         with:
           payload: |
@@ -173,6 +174,7 @@ jobs:
       - run: npm ci
       - name: 📢 Slack - Deployment Started
         if: always()
+        continue-on-error: true
         uses: slackapi/slack-github-action@v1
         with:
           payload: |
@@ -244,6 +246,7 @@ jobs:
 
       - name: 📢 Slack - Deployment Success
         if: success()
+        continue-on-error: true
         uses: slackapi/slack-github-action@v1
         with:
           payload: |
@@ -302,6 +305,7 @@ jobs:
 
       - name: 📢 Slack - Deployment Failure
         if: failure()
+        continue-on-error: true
         uses: slackapi/slack-github-action@v1
         with:
           payload: |
