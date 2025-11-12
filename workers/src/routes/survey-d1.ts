@@ -585,7 +585,7 @@ surveyD1Routes.post('/test-submit', async (c) => {
       company_id: companyId,
       process_id: processId,
       role_id: roleId,
-      work_duration_years: testYears,
+      years_of_service: testYears,
       has_symptoms: fromBoolean(hasSymptoms),
       responses: JSON.stringify(responses),
       data: JSON.stringify({}),
