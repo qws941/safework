@@ -1,15 +1,14 @@
 # ==============================================================================
-# Gemini-Powered Production CI/CD Pipeline
+# Production CI/CD Pipeline
 # ==============================================================================
 # This workflow implements a complete CI/CD pipeline for production:
 # 1. AI Code Review: On every PR to 'master', Gemini reviews code changes.
 # 2. Build & Test: Runs unit tests, linting, and type checking.
 # 3. Deploy to Production: Deploys to production on pushes to 'master' branch.
-# 4. AI Release Notes: Automatically generates and publishes release notes.
-# 5. Post-Deployment Tests: Runs integration tests against live production.
+# 4. Post-Deployment Tests: Runs integration tests against live production.
 # ==============================================================================
 
-name: Gemini-Powered Production CI/CD
+name: Production CI/CD
 
 on:
   push:
@@ -360,38 +359,6 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
 
-      # ============================================
-      # 4. AI Release Notes Generation
-      # ============================================
-      - name: 📚 Get Commit History
-        id: git-log
-        run: |
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)
-          COMMIT_MESSAGES=$(git log $LATEST_TAG..HEAD --pretty=format:"- %s")
-          echo "commits<<EOF" >> $GITHUB_OUTPUT
-          echo "$COMMIT_MESSAGES" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      - name: 🤖 Generate Release Notes with Gemini
-        id: gemini-release-notes
-        if: steps.git-log.outputs.commits != ''
-        run: |
-          prompt="Based on the following commit messages, create a concise and user-friendly summary for a release note. Group related changes under headings like '✨ New Features', '🐛 Bug Fixes', and '🔨 Improvements'.\n\nCommits:\n${{ steps.git-log.outputs.commits }}"
-          json_payload=$(jq -n --arg p "$prompt" '{contents: [{parts: [{text: $p}]}]}')
-          response=$(curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${{ secrets.GEMINI_API_KEY }}" -H "Content-Type: application/json" -d "$json_payload")
-          release_notes=$(echo "$response" | jq -r '.candidates[0].content.parts[0].text')
-          echo "notes<<EOF" >> $GITHUB_OUTPUT
-          echo "$release_notes" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      - name: 📦 Create GitHub Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TAG_NAME="release-$(date +%Y-%m-%d-%H%M%S)"
-          RELEASE_NOTES="${{ steps.gemini-release-notes.outputs.notes || steps.git-log.outputs.commits }}"
-          gh release create "$TAG_NAME" --title "Release $TAG_NAME" --notes "$RELEASE_NOTES"
-          echo "✅ Created GitHub Release: $TAG_NAME"
 
   # ============================================
   # 5. Post-Deployment Verification Tests
