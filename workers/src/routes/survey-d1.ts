@@ -509,3 +509,123 @@ surveyD1Routes.get('/master-data', async (c) => {
     return c.json({ success: false, error: 'Failed to fetch master data' }, 500);
   }
 });
+
+/**
+ * Test endpoint: Auto-fill and submit survey
+ * POST /api/survey/d1/test-submit
+ */
+surveyD1Routes.post('/test-submit', async (c) => {
+  try {
+    const db = createD1Client(c.env.PRIMARY_DB);
+
+    // Get random master data
+    const [companies, processes, roles] = await Promise.all([
+      db.query('SELECT id FROM companies WHERE is_active = 1 LIMIT 5'),
+      db.query('SELECT id FROM processes WHERE is_active = 1 LIMIT 5'),
+      db.query('SELECT id FROM roles WHERE is_active = 1 LIMIT 5'),
+    ]);
+
+    const companyId = companies.results.length > 0
+      ? (companies.results[Math.floor(Math.random() * companies.results.length)] as { id: number }).id
+      : 1;
+    const processId = processes.results.length > 0
+      ? (processes.results[Math.floor(Math.random() * processes.results.length)] as { id: number }).id
+      : 1;
+    const roleId = roles.results.length > 0
+      ? (roles.results[Math.floor(Math.random() * roles.results.length)] as { id: number }).id
+      : 1;
+
+    // Generate test data
+    const testNames = ['김철수', '이영희', '박민수', '최지은', '정다은'];
+    const testName = testNames[Math.floor(Math.random() * testNames.length)];
+    const testAge = 25 + Math.floor(Math.random() * 35); // 25-59세
+    const testGender = Math.random() > 0.5 ? 'male' : 'female';
+    const testYears = Math.floor(Math.random() * 20) + 1; // 1-20년
+
+    // Generate symptom responses
+    const bodyParts = ['neck', 'shoulder', 'back', 'arm', 'hand', 'leg'];
+    const sides = ['left', 'right', 'both'];
+    const durations = ['1week', '1month', '3months', '6months'];
+    const severities = ['mild', 'moderate', 'severe'];
+
+    const responses: Record<string, string> = {};
+    const hasSymptoms = Math.random() > 0.5;
+
+    if (hasSymptoms) {
+      // Add 1-3 random symptoms
+      const numSymptoms = Math.floor(Math.random() * 3) + 1;
+      const selectedParts = bodyParts.sort(() => 0.5 - Math.random()).slice(0, numSymptoms);
+
+      selectedParts.forEach(part => {
+        responses[`${part}_pain`] = 'yes';
+        responses[`${part}_side`] = sides[Math.floor(Math.random() * sides.length)];
+        responses[`${part}_duration`] = durations[Math.floor(Math.random() * durations.length)];
+        responses[`${part}_severity`] = severities[Math.floor(Math.random() * severities.length)];
+      });
+    } else {
+      // No symptoms
+      bodyParts.forEach(part => {
+        responses[`${part}_pain`] = 'no';
+      });
+    }
+
+    // Get client info
+    const ip_address = c.req.header('CF-Connecting-IP') || 'test-client';
+    const user_agent = c.req.header('User-Agent') || 'Test Agent';
+    const user_id = 1; // Anonymous user
+
+    // Prepare survey data
+    const surveyData: Record<string, unknown> = {
+      user_id,
+      form_type: '001_musculoskeletal_symptom_survey',
+      name: testName,
+      department: '테스트부서',
+      gender: testGender,
+      age: testAge,
+      company_id: companyId,
+      process_id: processId,
+      role_id: roleId,
+      work_duration_years: testYears,
+      has_symptoms: fromBoolean(hasSymptoms),
+      responses: JSON.stringify(responses),
+      data: JSON.stringify({}),
+      symptoms_data: JSON.stringify(responses),
+      ip_address,
+      user_agent,
+      status: 'submitted',
+      submission_date: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    // Insert survey
+    const survey_id = await db.insert('surveys', surveyData);
+
+    if (!survey_id) {
+      throw new Error('Failed to insert test survey');
+    }
+
+    return c.json({
+      success: true,
+      message: '테스트 설문이 성공적으로 제출되었습니다',
+      survey_id,
+      test_data: {
+        name: testName,
+        age: testAge,
+        gender: testGender,
+        company_id: companyId,
+        process_id: processId,
+        role_id: roleId,
+        has_symptoms: hasSymptoms,
+        symptoms_count: Object.keys(responses).filter(k => k.endsWith('_pain') && responses[k] === 'yes').length,
+      },
+    });
+  } catch (error) {
+    console.error('Failed to submit test survey:', error);
+    return c.json({
+      success: false,
+      error: 'Failed to submit test survey',
+      details: error instanceof Error ? error.message : String(error),
+    }, 500);
+  }
+});
