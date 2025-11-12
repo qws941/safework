@@ -7,8 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 SafeWork is a comprehensive occupational safety and health management system designed for the Korean construction/industrial environment. It runs on a **100% Cloudflare Native Serverless** architecture with Workers, D1, KV, R2, and AI services.
 
 **Production URLs:**
-- Custom Domain: https://safework.jclee.me
-- Workers.dev: https://safework.jclee.workers.dev
+- Custom Domain: https://safework.jclee.me (primary)
+- Workers.dev: https://safework.jclee.workers.dev (Cloudflare default domain, same deployment)
 
 **Key Architecture Decision**: This project has fully migrated from Flask (PostgreSQL) to Cloudflare Workers (D1). The `app/` directory contains legacy code that is **no longer active**. All development work happens in `workers/`.
 
@@ -259,10 +259,13 @@ Located in `workers/src/routes/native-api.ts`:
 ### Running Tests
 ```bash
 cd workers/
-npm test              # Run all tests (167 tests total)
-npm run test:unit     # Run only unit tests (133 tests, excludes post-deployment)
+npm test              # Run all tests (191 tests total)
+npm run test:unit     # Run only unit tests (157 tests, excludes post-deployment)
 npm run test:post-deploy  # Run post-deployment integration tests
 npm run test:watch    # Watch mode for TDD
+
+# Run specific test file
+npm test -- survey-validation.test.ts
 ```
 
 Tests use Vitest (Vite-native test framework, faster than Jest for edge workers).
@@ -272,10 +275,10 @@ Tests use Vitest (Vite-native test framework, faster than Jest for edge workers)
 - `ui-automation.test.ts` - UI automation tests (19 tests)
 - `middleware-unit.test.ts` - Middleware functions (40 tests)
 - `auth.test.ts` - Authentication system (36 tests, 34 skipped by default)
-- `survey-validation.test.ts` - Survey validation & password hashing (65 tests)
+- `survey-validation.test.ts` - Survey validation & password hashing (89 tests, +24 new)
 
 **Current Test Status** (as of 2025-11-12):
-- Unit Tests: 133/133 passing ✅ (34 auth tests skipped to avoid rate limiting)
+- Unit Tests: 157/157 passing ✅ (up from 133, +24 survey submission validation tests)
 - Post-Deployment Tests: Integration tests for production endpoints
 - Test Coverage: Growing coverage with focus on critical paths
 
@@ -503,6 +506,24 @@ curl -X GET https://safework.jclee.me/api/auth/verify \
 - **ESLint 9 migration**: Project uses ESLint 9 flat config format (`eslint.config.js`). Package.json includes `"type": "module"` for compatibility. All interface parameters are allowed to be unused (configured via `args: 'none'` rule).
 
 - **Recent cleanup (2025-10-13)**: Root directory reduced from 60+ files to 22 files. Completed documentation archived to `docs/archive/`, deployment scripts moved to `scripts/deployment/`, operational guides in `docs/operations/`. Dependencies updated to latest versions (ESLint 9, TypeScript ESLint 8, TypeScript 5.9.3, Wrangler 4.42.2).
+
+## Recent Bug Fixes & Improvements
+
+### 2025-11-12: Form Submission Fix
+- **Issue**: Survey form 001 submissions were failing due to missing `form_type` field
+- **Fix**: Added `jsonData.form_type = '001_musculoskeletal_symptom_survey'` in form submission handler
+  - Location: `workers/src/templates/001-dv06-restore.ts:1928`
+  - Commit: `afd5318` - fix: Add missing form_type field to survey submission
+- **Testing**: Added 24 comprehensive validation tests for survey submission
+  - Test file: `workers/tests/survey-validation.test.ts`
+  - Coverage: Required fields, form type validation, data types, response structure
+  - Commit: `f78b3df` - test: Add 24 survey submission validation unit tests
+- **Status**: ✅ All 157 tests passing, deployed to production
+
+**URL Pattern Clarification**:
+- ✅ **Correct**: Survey form accessed via `/survey/001_musculoskeletal_symptom_survey`
+- ❌ **Incorrect**: `/api/form/001` (404 - route does not exist)
+- ℹ️  **Note**: `/api/form/001/*` routes are for structure/validation APIs only, not the form UI
 
 ## CI/CD Pipeline
 
