@@ -259,20 +259,27 @@ Located in `workers/src/routes/native-api.ts`:
 ### Running Tests
 ```bash
 cd workers/
-npm test              # Run all tests (40 tests total)
-npm run test:unit     # Run only unit tests (31 tests, excludes post-deployment)
-npm run test:post-deploy  # Run post-deployment integration tests (9 tests)
+npm test              # Run all tests (167 tests total)
+npm run test:unit     # Run only unit tests (133 tests, excludes post-deployment)
+npm run test:post-deploy  # Run post-deployment integration tests
 npm run test:watch    # Watch mode for TDD
 ```
 
 Tests use Vitest (Vite-native test framework, faster than Jest for edge workers).
 
-**Current Test Status** (as of 2025-10-13):
-- Unit Tests: 31/31 passing ✅
-- Post-Deployment Tests: 0/9 passing (known issue, pre-existing)
-- Test Coverage: 2.3% (target: 30-50% minimum, 80% ideal)
+**Test Files** (5 test suites):
+- `worker.test.ts` - Basic worker functionality (7 tests)
+- `ui-automation.test.ts` - UI automation tests (19 tests)
+- `middleware-unit.test.ts` - Middleware functions (40 tests)
+- `auth.test.ts` - Authentication system (36 tests, 34 skipped by default)
+- `survey-validation.test.ts` - Survey validation & password hashing (65 tests)
 
-**Note**: Post-deployment integration test failures are pre-existing and not related to recent code changes. These test complex user journeys and require further investigation.
+**Current Test Status** (as of 2025-11-12):
+- Unit Tests: 133/133 passing ✅ (34 auth tests skipped to avoid rate limiting)
+- Post-Deployment Tests: Integration tests for production endpoints
+- Test Coverage: Growing coverage with focus on critical paths
+
+**Note**: Some auth tests are skipped by default to avoid triggering rate limits during development. Run full test suite in CI/CD only.
 
 ### Manual Testing Endpoints
 ```bash
@@ -505,12 +512,13 @@ The GitHub Actions workflow (`.github/workflows/cloudflare-workers-deployment.ym
 2. **Build & Test**: TypeScript compilation, linting, type checking, Vitest tests
 3. **Deploy to Production**: Automatic deployment on push to master
 4. **Health Check Verification**: Ensures `/api/health` returns 200
-5. **AI Release Notes**: Gemini generates release notes from commit messages
+5. **Post-Deployment Tests**: Runs integration tests against live production
 
 **Environment secrets required**:
 - `CLOUDFLARE_API_TOKEN`: Cloudflare API token (Account-level, Edit Cloudflare Workers permission)
 - `CLOUDFLARE_ACCOUNT_ID`: Cloudflare account ID
-- `GEMINI_API_KEY`: Google Gemini API key (optional, for AI features)
+- `GEMINI_API_KEY`: Google Gemini API key (optional, for AI code review only)
+- `SLACK_WEBHOOK_URL`: Slack webhook for deployment notifications (optional)
 
 ## Documentation Resources
 
