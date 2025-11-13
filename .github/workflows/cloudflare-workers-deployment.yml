@@ -232,6 +232,15 @@ jobs:
           workingDirectory: workers
           command: deploy
 
+      - name: 📊 Apply D1 Database Schema
+        id: d1-schema
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: workers
+          command: d1 execute PRIMARY_DB --file=d1-schema.sql --remote
+
       - name: 🔍 Verify Production Deployment
         id: health-check
         run: |
