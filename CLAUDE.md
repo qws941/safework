@@ -10,6 +10,16 @@ SafeWork is a comprehensive occupational safety and health management system des
 - Custom Domain: https://safework.jclee.me (primary)
 - Workers.dev: https://safework.jclee.workers.dev (Cloudflare default domain, same deployment)
 
+**Quick Commands** (run from `workers/` directory):
+```bash
+npm run dev              # Local development server (localhost:8787)
+npm test                 # Run all tests (191 tests)
+npm run test:unit        # Unit tests only (excludes post-deployment)
+npm run type-check       # TypeScript type checking (0 errors)
+npm run lint             # ESLint (0 warnings, 0 errors)
+npm run deploy:prod      # Deploy to production
+```
+
 **Key Architecture Decision**: This project has fully migrated from Flask (PostgreSQL) to Cloudflare Workers (D1). The `app/` directory contains legacy code that is **no longer active**. All development work happens in `workers/`.
 
 ## Architecture
@@ -46,13 +56,31 @@ Applied in `workers/src/index.ts`:
 
 ### Route Organization
 Routes are organized by feature in `workers/src/routes/`:
-- **Survey APIs**: `survey-d1.ts` (001), `survey-002-d1.ts` (002) - D1-based CRUD operations
-- **Forms**: `form-001.ts` through `form-006.ts` - 6 specialized occupational health forms
-  - Each form has a corresponding structure file in `workers/src/config/form-*-structure.ts`
-- **Admin**: `admin-unified.ts` (new unified dashboard), `admin-002.ts`, `admin.ts` (legacy)
+- **Survey APIs**: `survey-d1.ts` - D1-based CRUD operations for all 6 form types
+- **Forms**: `form-001.ts` - Main survey form handler (consolidates all 6 form types)
+  - Form structures: `workers/src/config/form-001-structure.ts`
+  - Form templates: `workers/src/templates/001-dv06-restore.ts`, `work-system.ts`
+- **Health Examination**: `health-exam.ts` - **NEW** Forms 007-008 (건강진단 관리) [2025-11-13]
+  - Health exam target registration (Form 007)
+  - Health exam results management (Form 008)
+  - Based on 산업안전보건법 Article 129-132
+- **Work Environment Measurement**: `work-environment.ts` - **NEW** Forms 009-010 (작업환경측정) [2025-11-14]
+  - Hazard factors management (31 pre-defined factors)
+  - Measurement plan registration (Form 009)
+  - Measurement results tracking (Form 010)
+  - Compliance monitoring and statistics
+  - Based on 산업안전보건법 Article 125
+- **Safety Education Management**: `safety-education.ts` - **NEW** Forms 011-012 (안전보건교육) [2025-11-14]
+  - Education courses master data (11 pre-defined courses)
+  - Education plan management (Form 011)
+  - Session execution tracking (Form 012)
+  - Attendance and certificate management
+  - Based on 산업안전보건법 Article 29-31
+- **Analysis**: `analysis.ts` - Survey data analysis and reporting
+- **Admin**: `admin-unified.ts` - Unified dashboard with analytics
 - **Native Services**: `native-api.ts` (R2, AI, Queue integrations)
 - **Authentication**: `auth.ts` (login, registration, token refresh, JWT-based auth)
-- **Utilities**: `health.ts`, `excel-processor.ts`, `warning-sign.ts`
+- **Utilities**: `health.ts`, `excel-processor.ts`, `warning-sign.ts`, `metrics.ts`, `worker.ts`
 
 ## Development Commands
 
@@ -157,6 +185,19 @@ Located in `workers/d1-schema.sql`. Core tables:
   - Stores JSON data in `responses`, `data`, `symptoms_data` TEXT columns
   - Uses `form_type` to distinguish between different survey forms (001-006)
 - `survey_statistics`: Aggregated statistics (daily rollups)
+- **Health Examination Tables** (NEW - 2025-11-13):
+  - `health_exam_categories`: Exam types (일반/특수/배치전/수시건강진단)
+  - `health_exam_targets`: Target employees for health exams (Form 007)
+  - `health_exam_results`: Detailed health exam results (Form 008)
+- **Work Environment Measurement Tables** (NEW - 2025-11-14):
+  - `hazard_factors`: Master data for 31 hazard types (chemical/physical/dust/heavy metals)
+  - `work_environment_measurement_plans`: Measurement planning and scheduling (Form 009)
+  - `work_environment_measurements`: Measurement results with compliance tracking (Form 010)
+- **Safety Education Management Tables** (NEW - 2025-11-14):
+  - `safety_education_courses`: Master data for 11 pre-defined courses (regular/new_hire/task_change/special/manager)
+  - `safety_education_plans`: Education planning and scheduling (Form 011)
+  - `safety_education_sessions`: Session execution records (Form 012)
+  - `safety_education_attendance`: Attendance tracking and certificate issuance (Form 012 detail)
 - `audit_logs`: Action tracking
 
 **D1 Quirks**:
@@ -213,8 +254,10 @@ wrangler secret put JWT_SECRET --env production
 wrangler secret put ADMIN_PASSWORD_HASH --env production
 ```
 
-### Survey Forms (001-006)
-Six specialized occupational health survey forms:
+### Survey Forms (001-012)
+Twelve specialized occupational health survey forms:
+
+**Existing Forms (001-006)**:
 1. **001**: Musculoskeletal Symptom Survey (근골격계 증상조사표)
 2. **002**: Musculoskeletal Hazard Assessment (근골격계부담작업 유해요인조사)
 3. **003**: Musculoskeletal Disease Prevention Program (근골격계질환 예방관리 프로그램)
@@ -222,8 +265,49 @@ Six specialized occupational health survey forms:
 5. **005**: Basic Hazard Factor Survey (유해요인 기본조사표)
 6. **006**: Elderly Worker Approval Form (고령근로자 작업투입 승인요청서)
 
+**NEW: Health Examination Management (007-008)** [2025-11-13]:
+7. **007**: Health Examination Target Registration (건강진단 대상자 등록)
+   - Register employees for health examinations
+   - Track exam schedules, due dates, and completion status
+   - Support 4 exam types: 일반/특수/배치전/수시건강진단
+   - Based on 산업안전보건법 Article 129-132
+8. **008**: Health Examination Results (건강진단 결과 입력)
+   - Record comprehensive health exam results
+   - Physical measurements, blood tests, vision/hearing, X-ray, ECG
+   - Doctor's opinion and work fitness assessment
+   - Follow-up management
+
+**NEW: Work Environment Measurement (009-010)** [2025-11-14]:
+9. **009**: Work Environment Measurement Plan (작업환경측정 계획)
+   - Create and manage measurement plans
+   - Define target workplaces, processes, and hazard factors
+   - Schedule measurements and track completion status
+   - Support 3 measurement types: regular/special/complaint
+   - Based on 산업안전보건법 Article 125
+10. **010**: Work Environment Measurement Results (작업환경측정 결과)
+   - Record measurement results for each sampling point
+   - Track exposure levels vs legal limits (TWA - Time Weighted Average)
+   - Calculate compliance status (compliant/non_compliant/over_action_level)
+   - Environmental conditions (temperature, humidity, pressure)
+   - Follow-up actions for non-compliant results
+
+**NEW: Safety Education Management (011-012)** [2025-11-14]:
+11. **011**: Safety Education Plan (안전보건교육 계획)
+   - Create and manage safety education plans
+   - Select from 11 pre-defined courses (regular/new_hire/task_change/special/manager)
+   - Plan quarterly/annual education sessions
+   - Track instructor, location, curriculum, and materials
+   - Based on 산업안전보건법 Article 29-31
+12. **012**: Safety Education Session & Attendance (안전보건교육 실시 및 출석)
+   - Record education session execution details
+   - Track employee attendance (present/absent/late/excused)
+   - Calculate attendance rate and completion status
+   - Issue completion certificates
+   - Record participation scores and quiz results
+
 Form structures are defined in `workers/src/config/form-*-structure.ts`.
 Form templates (HTML) are in `workers/src/templates/*.ts`.
+Health exam APIs are in `workers/src/routes/health-exam.ts`.
 
 ### API Design Pattern
 All APIs follow RESTful conventions:
@@ -244,6 +328,130 @@ All APIs follow RESTful conventions:
   message?: string;
 }
 ```
+
+### Health Examination APIs (NEW - 2025-11-13)
+Located in `workers/src/routes/health-exam.ts`:
+
+**Form 007: Health Examination Target Management**:
+- `GET /api/health-exam/categories`: Get all exam categories (일반/특수/배치전/수시)
+- `POST /api/health-exam/targets`: Create new exam target
+- `GET /api/health-exam/targets`: List targets (with filters: employee_id, exam_year, exam_category_id, exam_completed)
+- `GET /api/health-exam/targets/:id`: Get single target details
+- `PUT /api/health-exam/targets/:id`: Update target (completion, results, follow-up)
+- `DELETE /api/health-exam/targets/:id`: Soft delete target (sets exam_completed = -1)
+- `GET /api/health-exam/stats`: Get statistics (overall + by category)
+
+**Form 008: Health Examination Results Management**:
+- `POST /api/health-exam/results`: Create or update exam results (upsert by target_id)
+- `GET /api/health-exam/results/:targetId`: Get results by target ID
+
+**Key Features**:
+- Comprehensive health data: Physical measurements, blood tests, vision/hearing, X-ray, ECG
+- Follow-up management: Track required follow-ups and completion status
+- Work fitness assessment: 적합/일부적합/부적합 classification
+- Pagination support for list endpoints (default: 50 items per page)
+- Soft delete support (no data loss)
+
+**Legal Compliance**: Based on 산업안전보건법 Article 129-132 (Occupational Safety and Health Act)
+
+### Work Environment Measurement APIs (NEW - 2025-11-14)
+Located in `workers/src/routes/work-environment.ts`:
+
+**Hazard Factors Management**:
+- `GET /api/work-environment/hazard-factors`: List all hazard factors (31 pre-defined)
+  - Query params: `category` (chemical/physical/biological/dust), `active_only`
+- `GET /api/work-environment/hazard-factors/:id`: Get single hazard factor details
+
+**Form 009: Measurement Plan Management**:
+- `POST /api/work-environment/plans`: Create new measurement plan
+- `GET /api/work-environment/plans`: List plans with filters
+  - Query params: `plan_year`, `measurement_type`, `plan_status`, `page`, `limit`
+- `GET /api/work-environment/plans/:id`: Get plan details
+- `PUT /api/work-environment/plans/:id`: Update plan (status, dates, results)
+- `DELETE /api/work-environment/plans/:id`: Soft delete plan (sets status to 'cancelled')
+
+**Form 010: Measurement Results Management**:
+- `POST /api/work-environment/measurements`: Create measurement result
+  - Auto-calculates exposure ratio: (measured_value / exposure_limit) * 100
+  - Updates plan statistics automatically
+- `GET /api/work-environment/measurements/:planId`: List all measurements for a plan
+- `GET /api/work-environment/measurements/detail/:id`: Get single measurement details
+- `PUT /api/work-environment/measurements/:id`: Update measurement result
+- `DELETE /api/work-environment/measurements/:id`: Delete measurement
+
+**Statistics & Compliance**:
+- `GET /api/work-environment/stats`: Overall statistics
+  - Query params: `year` (optional)
+  - Returns: Plan counts, compliance rates, category-wise breakdown
+- `GET /api/work-environment/stats/plan/:planId`: Statistics for specific plan
+
+**Key Features**:
+- 31 pre-defined hazard factors (10 chemical, 10 physical, 6 dust, 5 heavy metals)
+- CAS numbers for chemical identification
+- TWA (Time-Weighted Average) exposure limits
+- Automatic exposure ratio calculation
+- Compliance status tracking (compliant/non_compliant/over_action_level)
+- Environmental conditions recording (temperature, humidity, pressure)
+- R2 document storage integration (plan_document_url, report_document_url)
+- Auto-update plan statistics on measurement changes
+
+**Legal Compliance**: Based on 산업안전보건법 Article 125 (Work Environment Measurement)
+
+### Safety Education Management APIs (NEW - 2025-11-14)
+Located in `workers/src/routes/safety-education.ts`:
+
+**Education Courses Master Data**:
+- `GET /api/safety-education/courses`: List all education courses (11 pre-defined)
+  - Query params: `category` (regular/new_hire/task_change/special/manager), `active_only`
+- `GET /api/safety-education/courses/:id`: Get single course details
+
+**Form 011: Education Plan Management**:
+- `POST /api/safety-education/plans`: Create new education plan
+  - Required: plan_year, plan_title, course_id, planned_start_date, planned_hours
+  - Optional: plan_quarter, target_department, instructor, location, method, etc.
+- `GET /api/safety-education/plans`: List plans with filters
+  - Query params: `plan_year`, `plan_quarter`, `course_id`, `plan_status`, `page`, `limit`
+- `GET /api/safety-education/plans/:id`: Get plan details with sessions
+- `PUT /api/safety-education/plans/:id`: Update plan (status, dates, completion info)
+- `DELETE /api/safety-education/plans/:id`: Soft delete plan (sets status to 'cancelled')
+
+**Form 012: Education Session Management**:
+- `POST /api/safety-education/sessions`: Create education session
+  - Required: plan_id, session_number, session_date, actual_duration_hours, instructor_name
+  - Auto-updates plan statistics
+- `GET /api/safety-education/sessions/:planId`: List all sessions for a plan
+- `GET /api/safety-education/sessions/detail/:id`: Get session details with attendance records
+- `PUT /api/safety-education/sessions/:id`: Update session details
+- `DELETE /api/safety-education/sessions/:id`: Delete session (cascades to attendance)
+
+**Form 012 Detail: Attendance Management**:
+- `POST /api/safety-education/attendance`: Record employee attendance
+  - Required: session_id, employee_id, attendance_status
+  - Auto-updates session and plan statistics
+- `GET /api/safety-education/attendance/:sessionId`: List attendance for session
+- `PUT /api/safety-education/attendance/:id`: Update attendance record
+  - Supports: participation_score, quiz_score, certificate_issued, completion_status
+- `DELETE /api/safety-education/attendance/:id`: Delete attendance record
+
+**Statistics & Reporting**:
+- `GET /api/safety-education/stats`: Overall statistics
+  - Query params: `year`, `quarter` (optional)
+  - Returns: Plan counts by status, category-wise breakdown, attendance rates
+- `GET /api/safety-education/stats/plan/:planId`: Detailed statistics for specific plan
+  - Returns: Session stats, attendance stats, completion rates, evaluation scores
+
+**Key Features**:
+- 11 pre-defined safety education courses (3 regular, 2 new hire, 2 task change, 2 special, 2 manager)
+- Required hours compliance (3h office workers, 6h production, 16h supervisors, etc.)
+- Quarterly/annual education frequency tracking
+- Automatic attendance rate calculation
+- Completion status and certificate issuance
+- Participation scores and quiz results
+- Session evaluation and feedback
+- R2 document storage integration (plan_document_url, session_document_url)
+- Auto-update plan and session statistics on attendance changes
+
+**Legal Compliance**: Based on 산업안전보건법 Article 29-31 (Safety and Health Education)
 
 ### Native Service APIs
 Located in `workers/src/routes/native-api.ts`:
@@ -275,12 +483,14 @@ Tests use Vitest (Vite-native test framework, faster than Jest for edge workers)
 - `ui-automation.test.ts` - UI automation tests (19 tests)
 - `middleware-unit.test.ts` - Middleware functions (40 tests)
 - `auth.test.ts` - Authentication system (36 tests, 34 skipped by default)
-- `survey-validation.test.ts` - Survey validation & password hashing (89 tests, +24 new)
+- `survey-validation.test.ts` - Survey validation & password hashing (89 tests)
+- `post-deployment.test.ts` - Integration tests (20+ tests)
 
-**Current Test Status** (as of 2025-11-12):
-- Unit Tests: 157/157 passing ✅ (up from 133, +24 survey submission validation tests)
+**Current Test Status** (as of 2025-11-13):
+- Total Tests: 191 tests (all passing ✅)
+- Unit Tests: 157/157 passing ✅ (includes 24 survey submission validation tests)
 - Post-Deployment Tests: Integration tests for production endpoints
-- Test Coverage: Growing coverage with focus on critical paths
+- Test Coverage: 2.3% (target: 80%)
 
 **Note**: Some auth tests are skipped by default to avoid triggering rate limits during development. Run full test suite in CI/CD only.
 
@@ -334,6 +544,8 @@ curl -X GET https://safework.jclee.me/api/auth/verify \
 
 ### Adding a New Survey Form (Form 007 Example)
 
+**Note**: The current architecture consolidates form handling. To add a new form:
+
 1. **Create form structure**: `workers/src/config/form-007-structure.ts`
    ```typescript
    export const form007Structure = {
@@ -350,43 +562,40 @@ curl -X GET https://safework.jclee.me/api/auth/verify \
    };
    ```
 
-2. **Create route handler**: `workers/src/routes/form-007.ts`
-   ```typescript
-   import { Hono } from 'hono';
-   import { Env } from '../index';
-
-   const app = new Hono<{ Bindings: Env }>();
-
-   app.get('/', async (c) => {
-     // Render form template
-   });
-
-   app.post('/submit', async (c) => {
-     const db = c.env.PRIMARY_DB;
-     // Handle form submission
-   });
-
-   export { app as form007Routes };
-   ```
-
-3. **Update main router**: Add route in `workers/src/index.ts`
-   ```typescript
-   import { form007Routes } from './routes/form-007';
-   app.route('/api/form/007', form007Routes);
-   ```
-
-4. **Add UI template** (optional): Create `workers/src/templates/007.ts`
-   - Use existing templates (001.ts, 002.ts) as reference
+2. **Create template**: `workers/src/templates/007.ts`
+   - Use existing templates (`001-dv06-restore.ts`, `work-system.ts`) as reference
    - Bootstrap 5 for styling
-   - Client-side validation before submission
+   - Include client-side validation before submission
 
-5. **Update homepage**: Add form card in `workers/src/index.ts` homepage HTML
+3. **Update survey-d1.ts**: Add form type to validation logic
+   ```typescript
+   // In survey-d1.ts, add to form type validation
+   const validFormTypes = [
+     '001_musculoskeletal_symptom_survey',
+     // ... existing types ...
+     '007_new_form_type'  // Add new form type
+   ];
+   ```
+
+4. **Update D1 schema** (if needed): Modify `workers/d1-schema.sql`
+   - Add new columns or tables if form requires special data structure
+   - Apply schema: `wrangler d1 execute PRIMARY_DB --file=d1-schema.sql --local`
+
+5. **Update main router**: Add route in `workers/src/index.ts`
+   ```typescript
+   // Add form route to serve the template
+   app.get('/survey/007_new_form_type', async (c) => {
+     return c.html(form007Template());
+   });
+   ```
+
+6. **Update homepage**: Add form card in `workers/src/index.ts` homepage HTML
    - Look for the "작성 가능한 양식" section
    - Add a new card with appropriate styling (use unique color)
 
-6. **Test locally**: `cd workers && npm run dev`
-7. **Type check**: `npm run type-check`
-8. **Deploy**: `git push origin master`
+7. **Test locally**: `cd workers && npm run dev` then visit `/survey/007_new_form_type`
+8. **Type check**: `npm run type-check`
+9. **Deploy**: `git push origin master`
 
 ### Adding a New API Endpoint
 
@@ -525,6 +734,28 @@ curl -X GET https://safework.jclee.me/api/auth/verify \
 - ❌ **Incorrect**: `/api/form/001` (404 - route does not exist)
 - ℹ️  **Note**: `/api/form/001/*` routes are for structure/validation APIs only, not the form UI
 
+### 2025-11-13: Comprehensive TypeScript Refactoring ⭐
+- **Achievement**: Complete elimination of ESLint warnings and TypeScript errors
+- **Phases Completed**: 7 comprehensive refactoring phases
+  - Phase 1: Error handling (3 warnings fixed)
+  - Phase 2: Analysis routes (13 warnings fixed)
+  - Phase 3: Form routes (5 warnings fixed)
+  - Phase 4: Service files (13 warnings fixed)
+  - Phase 5: Route cleanup (2 warnings fixed)
+  - Phase 6: Utility files (2 warnings fixed)
+  - Phase 7: Admin & templates (13 warnings fixed)
+- **Results**:
+  - ESLint warnings: 56 → 0 (100% resolved) ✅
+  - TypeScript errors: 9 → 0 (100% resolved) ✅
+  - Type safety: All `any` types replaced with concrete types (51 instances)
+  - Tests: All 191 tests passing ✅
+- **Key Improvements**:
+  - Comprehensive interface definitions for survey data, Workers AI responses, Slack API blocks
+  - Type-safe D1 database operations with proper result typing
+  - Cloudflare-specific type definitions (Request extensions, environment bindings)
+  - NIOSH analysis and statistics template type safety
+- **Documentation**: See `workers/REFACTORING_SUMMARY.md` for detailed breakdown
+
 ## CI/CD Pipeline
 
 The GitHub Actions workflow (`.github/workflows/cloudflare-workers-deployment.yml`) includes:
@@ -595,8 +826,8 @@ All route handlers should use `Context<{ Bindings: Env }>` from Hono.
 - **Unused variables**: Prefix with `_` if intentionally unused (e.g., `_error`, `_result`)
 - **Catch blocks**: Use anonymous `catch` if error not used: `} catch { ... }`
 - **Interface parameters**: Allowed to be unused (configured with `args: 'none'`)
-- **Explicit any**: Avoid where possible, but warnings are acceptable (86 current warnings)
-- **Current status**: 0 errors ✅, 86 warnings ⚠️ (down from 102)
+- **Explicit any**: All replaced with concrete types (refactoring completed 2025-11-13)
+- **Current status**: 0 errors ✅, 0 warnings ✅ (100% clean code)
 
 ### TypeScript Configuration
 - **Compiler**: TypeScript 5.9.3

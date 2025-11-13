@@ -13,6 +13,9 @@ import { analysisRoutes } from './routes/analysis';
 import { unifiedAdminRoutes } from './routes/admin-unified';
 import warningSignRoutes from './routes/warning-sign';
 import { nativeApiRoutes } from './routes/native-api';
+import { healthExamRoutes } from './routes/health-exam';
+import { workEnvironmentRoutes } from './routes/work-environment';
+import { safetyEducationRoutes } from './routes/safety-education';
 import metricsRoutes from './routes/metrics';
 import queueHandler from './queue-handler';
 import { securityHeaders, ProductionSecurityHeaders } from './middleware/securityHeaders';
@@ -146,6 +149,9 @@ app.route('/api/form/001', form001Routes);
 app.route('/api/analysis', analysisRoutes);  // Form 002, 003, 004 - Analysis Tools based on Form 001 data
 app.route('/api/warning-sign', warningSignRoutes);  // Warning Sign Generator (Edge API)
 app.route('/api/native', nativeApiRoutes);  // Cloudflare Native Services (R2, Queue, AI)
+app.route('/api/health-exam', healthExamRoutes);  // Health Examination Management (Forms 007-008)
+app.route('/api/work-environment', workEnvironmentRoutes);  // Work Environment Measurement (Forms 009-010)
+app.route('/api/safety-education', safetyEducationRoutes);  // Safety Education Management (Forms 011-012)
 
 // Admin routes - Unified Dashboard (all forms 001-006)
 app.route('/admin', unifiedAdminRoutes);  // Unified Admin dashboard pages
